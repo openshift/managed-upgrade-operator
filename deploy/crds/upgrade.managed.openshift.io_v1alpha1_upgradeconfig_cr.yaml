@@ -1,0 +1,7 @@
+apiVersion: upgrade.managed.openshift.io/v1alpha1
+kind: UpgradeConfig
+metadata:
+  name: example-upgradeconfig
+spec:
+  # Add fields here
+  size: 3
