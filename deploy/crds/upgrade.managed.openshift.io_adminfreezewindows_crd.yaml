@@ -9,7 +9,7 @@ spec:
     listKind: AdminFreezeWindowList
     plural: adminfreezewindows
     singular: adminfreezewindow
-  scope: Namespaced
+  scope: Cluster
   subresources:
     status: {}
   validation:
@@ -29,7 +29,103 @@ spec:
         metadata:
           type: object
         spec:
-          description: AdminFreezeWindowSpec defines the desired state of AdminFreezeWindow
+          description: AdminFreezeWindowSpec defines a freeze window set by SRE
+          properties:
+            fromUtc:
+              properties:
+                dayOfMonth:
+                  maximum: 31
+                  minimum: 1
+                  type: integer
+                dayOfWeek:
+                  enum:
+                  - Monday
+                  - Tuesday
+                  - Wednesday
+                  - Thursday
+                  - Friday
+                  - Saturday
+                  - Sunday
+                  type: string
+                month:
+                  enum:
+                  - January
+                  - February
+                  - March
+                  - April
+                  - May
+                  - June
+                  - July
+                  - August
+                  - September
+                  - October
+                  - November
+                  - December
+                  type: string
+                time:
+                  description: Time in UTC like "01:00"
+                  format: ^([0-1][0-9]|[2][0-3]):([0-5][0-9])$
+                  type: string
+                timestamp:
+                  format: date-time
+                  type: string
+                weekOfMonth:
+                  maximum: 4
+                  minimum: 1
+                  type: integer
+              required:
+              - month
+              - time
+              type: object
+            toUtc:
+              properties:
+                dayOfMonth:
+                  maximum: 31
+                  minimum: 1
+                  type: integer
+                dayOfWeek:
+                  enum:
+                  - Monday
+                  - Tuesday
+                  - Wednesday
+                  - Thursday
+                  - Friday
+                  - Saturday
+                  - Sunday
+                  type: string
+                month:
+                  enum:
+                  - January
+                  - February
+                  - March
+                  - April
+                  - May
+                  - June
+                  - July
+                  - August
+                  - September
+                  - October
+                  - November
+                  - December
+                  type: string
+                time:
+                  description: Time in UTC like "01:00"
+                  format: ^([0-1][0-9]|[2][0-3]):([0-5][0-9])$
+                  type: string
+                timestamp:
+                  format: date-time
+                  type: string
+                weekOfMonth:
+                  maximum: 4
+                  minimum: 1
+                  type: integer
+              required:
+              - month
+              - time
+              type: object
+          required:
+          - fromUtc
+          - toUtc
           type: object
         status:
           description: AdminFreezeWindowStatus defines the observed state of AdminFreezeWindow
