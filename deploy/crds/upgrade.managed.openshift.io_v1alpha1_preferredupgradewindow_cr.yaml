@@ -1,7 +1,0 @@
-apiVersion: upgrade.managed.openshift.io/v1alpha1
-kind: PreferredUpgradeWindow
-metadata:
-  name: example-preferredupgradewindow
-spec:
-  # Add fields here
-  size: 3

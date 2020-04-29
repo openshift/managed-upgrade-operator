@@ -1,7 +1,7 @@
 apiVersion: upgrade.managed.openshift.io/v1alpha1
-kind: UpgradeConfig
+kind: PreferredUpgradeStartTime
 metadata:
-  name: example-upgradeconfig
+  name: example-preferredupgradestarttime
 spec:
   # Add fields here
   size: 3

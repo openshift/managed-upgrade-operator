@@ -1,12 +1,8 @@
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   name: upgradeconfigs.upgrade.managed.openshift.io
 spec:
-  additionalPrinterColumns:
-  - JSONPath: .status.phase
-    name: status
-    type: string
   group: upgrade.managed.openshift.io
   names:
     kind: UpgradeConfig
@@ -16,80 +12,107 @@ spec:
     - upgrade
     singular: upgradeconfig
   scope: Cluster
-  subresources:
-    status: {}
-  validation:
-    openAPIV3Schema:
-      description: UpgradeConfig is the Schema for the upgradeconfigs API
-      properties:
-        apiVersion:
-          description: 'APIVersion defines the versioned schema of this representation
-            of an object. Servers should convert recognized schemas to the latest
-            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
-          type: string
-        kind:
-          description: 'Kind is a string value representing the REST resource this
-            object represents. Servers may infer this from the endpoint the client
-            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
-          type: string
-        metadata:
-          type: object
-        spec:
-          description: UpgradeConfigSpec defines the desired state of UpgradeConfig
-            and upgrade window and freeze window
-          properties:
-            desired:
-              description: Specify the desired release
-              properties:
-                channel:
-                  description: Channel we gonna use for upgrades
-                  type: string
-                force:
-                  default: false
-                  description: Force upgrade, default value is False
-                  type: boolean
-                version:
-                  description: Version of openshift release
-                  type: string
-              required:
-              - channel
-              - force
-              - version
-              type: object
-            freezeWindow:
-              description: FreezeWindow describe the upgrade freeze time window
-              properties:
-                maximumCount:
-                  description: Maximum customerFreezeWindow can be created
-                  format: int32
-                  minimum: 0
-                  type: integer
-                maximumDuration:
-                  description: Maximum duration for a customer freeze window
-                  properties:
-                    unitOfMeasure:
-                      description: 'Valid values are: "Day", "week", "Month"'
-                      enum:
-                      - Day
-                      - Week
-                      - Month
-                      type: string
-                    value:
-                      format: int32
-                      minimum: 0
-                      type: integer
-                  required:
-                  - unitOfMeasure
-                  - value
-                  type: object
-              required:
-              - maximumCount
-              type: object
-            upgradeWindow:
-              description: UpgradeWindow describes the upgrade time window
-              properties:
-                defaults:
-                  items:
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.phase
+      name: status
+      type: string
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: UpgradeConfig is the Schema for the upgradeconfigs API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: UpgradeConfigSpec defines the desired state of UpgradeConfig
+              and upgrade window and freeze window
+            properties:
+              desired:
+                description: Specify the desired release
+                properties:
+                  channel:
+                    description: Channel we gonna use for upgrades
+                    type: string
+                  force:
+                    default: false
+                    description: Force upgrade, default value is False
+                    type: boolean
+                  version:
+                    description: Version of openshift release
+                    type: string
+                required:
+                - channel
+                - force
+                - version
+                type: object
+              freezeWindow:
+                description: FreezeWindow describe the upgrade freeze time window
+                properties:
+                  maximumCount:
+                    description: Maximum customerFreezeWindow can be created
+                    format: int32
+                    minimum: 0
+                    type: integer
+                  maximumDuration:
+                    description: Maximum duration for a customer freeze window
+                    properties:
+                      unitOfMeasure:
+                        description: 'Valid values are: "Day", "week", "Month"'
+                        enum:
+                        - Day
+                        - Week
+                        - Month
+                        type: string
+                      value:
+                        format: int32
+                        minimum: 0
+                        type: integer
+                    required:
+                    - unitOfMeasure
+                    - value
+                    type: object
+                required:
+                - maximumCount
+                type: object
+              upgradeWindow:
+                description: UpgradeWindow describes the upgrade time window
+                properties:
+                  defaults:
+                    items:
+                      description: UpgradeTime defines a time point for an upgrade
+                      properties:
+                        dayOfWeek:
+                          description: Which Day of Week
+                          enum:
+                          - Monday
+                          - Tuesday
+                          - Wednesday
+                          - Thursday
+                          - Friday
+                          - Saturday
+                          - Sunday
+                          type: string
+                        timeUtc:
+                          description: Time in UTC like "01:00"
+                          format: ^([0-1][0-9]|[2][0-3]):([0-5][0-9])$
+                          type: string
+                      required:
+                      - dayOfWeek
+                      - timeUtc
+                      type: object
+                    type: array
+                  maximumUtc:
                     description: UpgradeTime defines a time point for an upgrade
                     properties:
                       dayOfWeek:
@@ -111,115 +134,91 @@ spec:
                     - dayOfWeek
                     - timeUtc
                     type: object
-                  type: array
-                maximumUtc:
-                  description: UpgradeTime defines a time point for an upgrade
-                  properties:
-                    dayOfWeek:
-                      description: Which Day of Week
-                      enum:
-                      - Monday
-                      - Tuesday
-                      - Wednesday
-                      - Thursday
-                      - Friday
-                      - Saturday
-                      - Sunday
-                      type: string
-                    timeUtc:
-                      description: Time in UTC like "01:00"
-                      format: ^([0-1][0-9]|[2][0-3]):([0-5][0-9])$
-                      type: string
-                  required:
-                  - dayOfWeek
-                  - timeUtc
-                  type: object
-                minimumUtc:
-                  description: UpgradeTime defines a time point for an upgrade
-                  properties:
-                    dayOfWeek:
-                      description: Which Day of Week
-                      enum:
-                      - Monday
-                      - Tuesday
-                      - Wednesday
-                      - Thursday
-                      - Friday
-                      - Saturday
-                      - Sunday
-                      type: string
-                    timeUtc:
-                      description: Time in UTC like "01:00"
-                      format: ^([0-1][0-9]|[2][0-3]):([0-5][0-9])$
-                      type: string
-                  required:
-                  - dayOfWeek
-                  - timeUtc
-                  type: object
-              required:
-              - defaults
-              - maximumUtc
-              - minimumUtc
-              type: object
-          required:
-          - desired
-          - freezeWindow
-          - upgradeWindow
-          type: object
-        status:
-          description: UpgradeConfigStatus defines the observed state of UpgradeConfig
-          properties:
-            completeTime:
-              format: date-time
-              type: string
-            conditions:
-              items:
-                properties:
-                  lastProbeTime:
-                    description: Last time the condition was checked.
-                    format: date-time
-                    type: string
-                  lastTransitionTime:
-                    description: Last time the condition transit from one status to
-                      another.
-                    format: date-time
-                    type: string
-                  message:
-                    description: Human readable message indicating details about last
-                      transition.
-                    type: string
-                  reason:
-                    description: (brief) reason for the condition's last transition.
-                    type: string
-                  status:
-                    description: Status of condition, one of True, False, Unknown
-                    type: string
-                  type:
-                    description: Type of upgrade condition
-                    type: string
+                  minimumUtc:
+                    description: UpgradeTime defines a time point for an upgrade
+                    properties:
+                      dayOfWeek:
+                        description: Which Day of Week
+                        enum:
+                        - Monday
+                        - Tuesday
+                        - Wednesday
+                        - Thursday
+                        - Friday
+                        - Saturday
+                        - Sunday
+                        type: string
+                      timeUtc:
+                        description: Time in UTC like "01:00"
+                        format: ^([0-1][0-9]|[2][0-3]):([0-5][0-9])$
+                        type: string
+                    required:
+                    - dayOfWeek
+                    - timeUtc
+                    type: object
                 required:
-                - status
-                - type
+                - defaults
+                - maximumUtc
+                - minimumUtc
                 type: object
-              type: array
-            phase:
-              description: This describe the status of the upgrade process
-              enum:
-              - New
-              - Pending
-              - Upgrading
-              - Upgraded
-              - Failed
-              type: string
-            startTime:
-              format: date-time
-              type: string
-          required:
-          - phase
-          type: object
-      type: object
-  version: v1alpha1
-  versions:
-  - name: v1alpha1
+            required:
+            - desired
+            - freezeWindow
+            - upgradeWindow
+            type: object
+          status:
+            description: UpgradeConfigStatus defines the observed state of UpgradeConfig
+            properties:
+              completeTime:
+                format: date-time
+                type: string
+              conditions:
+                items:
+                  properties:
+                    lastProbeTime:
+                      description: Last time the condition was checked.
+                      format: date-time
+                      type: string
+                    lastTransitionTime:
+                      description: Last time the condition transit from one status
+                        to another.
+                      format: date-time
+                      type: string
+                    message:
+                      description: Human readable message indicating details about
+                        last transition.
+                      type: string
+                    reason:
+                      description: (brief) reason for the condition's last transition.
+                      type: string
+                    status:
+                      description: Status of condition, one of True, False, Unknown
+                      type: string
+                    type:
+                      description: Type of upgrade condition
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
+              phase:
+                description: This describe the status of the upgrade process
+                enum:
+                - New
+                - Pending
+                - Upgrading
+                - Upgraded
+                - Failed
+                type: string
+              startTime:
+                format: date-time
+                type: string
+            required:
+            - phase
+            type: object
+        type: object
     served: true
     storage: true
+    subresources:
+      status: {}

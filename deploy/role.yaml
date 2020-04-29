@@ -70,9 +70,9 @@ rules:
   - upgrade.managed.openshift.io
   resources:
   - '*'
-  - preferredupgradewindows
   - adminfreezewindows
   - customerfreezewindows
+  - preferredupgradestarttimes
   verbs:
   - create
   - delete

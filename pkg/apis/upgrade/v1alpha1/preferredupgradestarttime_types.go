@@ -7,8 +7,8 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// PreferredUpgradeWindowSpec defines the desired state of PreferredUpgradeWindow
-type PreferredUpgradeWindowSpec struct {
+// PreferredUpgradeStartTimeSpec defines the desired state of PreferredUpgradeStartTime
+type PreferredUpgradeStartTimeSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html
@@ -21,8 +21,8 @@ type PreferredUpgradeWindowSpec struct {
 	TimeUtc string `json:"timeUtc"`
 }
 
-// PreferredUpgradeWindowStatus defines the observed state of PreferredUpgradeWindow
-type PreferredUpgradeWindowStatus struct {
+// PreferredUpgradeStartTimeStatus defines the observed state of PreferredUpgradeStartTime
+type PreferredUpgradeStartTimeStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html
@@ -30,26 +30,26 @@ type PreferredUpgradeWindowStatus struct {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// PreferredUpgradeWindow is the Schema for the preferredupgradewindows API
+// PreferredUpgradeStartTime is the Schema for the preferredupgradestarttimes API
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:path=preferredupgradewindows,scope=Cluster
-type PreferredUpgradeWindow struct {
+// +kubebuilder:resource:path=preferredupgradestarttimes,scope=Namespaced
+type PreferredUpgradeStartTime struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   PreferredUpgradeWindowSpec   `json:"spec,omitempty"`
-	Status PreferredUpgradeWindowStatus `json:"status,omitempty"`
+	Spec   PreferredUpgradeStartTimeSpec   `json:"spec,omitempty"`
+	Status PreferredUpgradeStartTimeStatus `json:"status,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// PreferredUpgradeWindowList contains a list of PreferredUpgradeWindow
-type PreferredUpgradeWindowList struct {
+// PreferredUpgradeStartTimeList contains a list of PreferredUpgradeStartTime
+type PreferredUpgradeStartTimeList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []PreferredUpgradeWindow `json:"items"`
+	Items           []PreferredUpgradeStartTime `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&PreferredUpgradeWindow{}, &PreferredUpgradeWindowList{})
+	SchemeBuilder.Register(&PreferredUpgradeStartTime{}, &PreferredUpgradeStartTimeList{})
 }
