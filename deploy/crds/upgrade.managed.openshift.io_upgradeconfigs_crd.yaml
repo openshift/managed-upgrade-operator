@@ -68,7 +68,7 @@ spec:
                     description: Maximum duration for a customer freeze window
                     properties:
                       unitOfMeasure:
-                        description: 'Valid values are: "Day", "week", "Month"'
+                        description: 'Valid values are: "Day", "Week", "Month"'
                         enum:
                         - Day
                         - Week

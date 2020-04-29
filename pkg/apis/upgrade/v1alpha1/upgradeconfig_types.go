@@ -31,7 +31,7 @@ type UpgradeConditionType string
 
 const (
 	UpgradeValidated UpgradeConditionType = "Validated"
-	UpgradeComplete  UpgradeConditionType = "Completed"
+	UpgradeCompleted  UpgradeConditionType = "Completed"
 	UpgradeFailed    UpgradeConditionType = "Failed"
 )
 
@@ -61,7 +61,7 @@ const (
 	UpgradePhasePending   UpgradePhase = "Pending"
 	UpgradePhaseUpgrading UpgradePhase = "Upgrading"
 	UpgradePhaseUpgraded  UpgradePhase = "Upgraded"
-	UpgradePhaseFaild     UpgradePhase = "Failed"
+	UpgradePhaseFailed     UpgradePhase = "Failed"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -143,7 +143,7 @@ type MaximumDuration struct {
 	// +kubebuilder:validation:Minimum=0
 	Value int32 `json:"value"`
 	// +kubebuilder:validation:Enum={"Day","Week","Month"}
-	// Valid values are: "Day", "week", "Month"
+	// Valid values are: "Day", "Week", "Month"
 	UnitOfMeasure TimeUnit `json:"unitOfMeasure"`
 }
 
