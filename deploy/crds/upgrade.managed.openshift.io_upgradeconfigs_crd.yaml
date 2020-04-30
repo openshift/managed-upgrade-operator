@@ -39,7 +39,7 @@ spec:
               and upgrade window and freeze window
             properties:
               desired:
-                description: Specify the desired release
+                description: Specify the desired OpenShift release
                 properties:
                   channel:
                     description: Channel we gonna use for upgrades
@@ -85,6 +85,27 @@ spec:
                 required:
                 - maximumCount
                 type: object
+              subscriptions:
+                description: This defines the 3rd party operator subscriptions upgrade
+                items:
+                  description: SubscriptionUpdate describe the 3rd party operator
+                    update config
+                  properties:
+                    channel:
+                      description: Describe the channel for the Subscription
+                      type: string
+                    name:
+                      description: Describe the name of the Subscription
+                      type: string
+                    namespace:
+                      description: Describe the namespace of the Subscription
+                      type: string
+                  required:
+                  - channel
+                  - name
+                  - namespace
+                  type: object
+                type: array
               upgradeWindow:
                 description: UpgradeWindow describes the upgrade time window
                 properties:

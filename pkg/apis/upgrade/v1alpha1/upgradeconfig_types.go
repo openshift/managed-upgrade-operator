@@ -7,8 +7,12 @@ import (
 
 // UpgradeConfigSpec defines the desired state of UpgradeConfig and upgrade window and freeze window
 type UpgradeConfigSpec struct {
-	// Specify the desired release
+	// Specify the desired OpenShift release
 	Desired       Update        `json:"desired"`
+
+	// This defines the 3rd party operator subscriptions upgrade
+	// +kubebuilder:validation:Optional
+	Subscriptions []SubscriptionUpdate `json:"subscriptions,omitempty"`
 	UpgradeWindow UpgradeWindow `json:"upgradeWindow"`
 	FreezeWindow  FreezeWindow  `json:"freezeWindow"`
 }
@@ -99,6 +103,15 @@ type Update struct {
 	Force bool `json:"force""`
 }
 
+// SubscriptionUpdate describe the 3rd party operator update config
+type SubscriptionUpdate struct {
+	// Describe the channel for the Subscription
+	Channel string `json:"channel"`
+	// Describe the namespace of the Subscription
+	Namespace string `json:"namespace"`
+	// Describe the name of the Subscription
+	Name string `json:"name"`
+}
 // UpgradeTime defines a time point for an upgrade
 type UpgradeTime struct {
 	// +kubebuilder:validation:Enum={"Monday","Tuesday","Wednesday","Thursday", "Friday", "Saturday", "Sunday"}
