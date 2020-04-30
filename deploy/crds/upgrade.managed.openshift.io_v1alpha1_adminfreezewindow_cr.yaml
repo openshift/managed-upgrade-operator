@@ -1,0 +1,7 @@
+apiVersion: upgrade.managed.openshift.io/v1alpha1
+kind: AdminFreezeWindow
+metadata:
+  name: example-adminfreezewindow
+spec:
+  # Add fields here
+  size: 3
