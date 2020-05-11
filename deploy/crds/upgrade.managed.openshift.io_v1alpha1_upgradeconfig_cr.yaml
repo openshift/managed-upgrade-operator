@@ -1,0 +1,24 @@
+apiVersion: upgrade.managed.openshift.io/v1alpha1
+kind: UpgradeConfig
+metadata:
+  name: example-upgrade-config
+spec:
+  desired:
+    channel: "stable"
+    force: false
+    version: "4.5"
+  freezeWindow:
+    maximumCount: 1
+    maximumDuration:
+      unitOfMeasure: "Day"
+      value: 1
+  upgradeWindow:
+    defaults:
+      - dayOfWeek: "Monday"
+        timeUtc: "23:00"
+    minimumUtc:
+      dayOfWeek: "Monday"
+      timeUtc: "23:00"
+    maximumUtc:
+      dayOfWeek: "Monday"
+      timeUtc: "23:00"
