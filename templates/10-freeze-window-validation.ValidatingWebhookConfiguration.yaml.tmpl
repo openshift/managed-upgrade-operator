@@ -1,0 +1,26 @@
+apiVersion: admissionregistration.k8s.io/v1beta1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: freeze-window-validation
+  annotations:
+   managed.openshift.io/inject-cabundle-from: openshift-validation-webhook/webhook-cert
+webhooks:
+  - clientConfig:
+     service:
+      namespace: openshift-validation-webhook
+      name: validation-webhook
+      path: /freeze-window
+    failurePolicy: 
+      "Fail"
+    name: freeze-window-validation.managed.openshift.io
+    rules:
+     - operations:
+       - "UPDATE"
+       - "CREATE"
+       apiGroups:
+        - "upgrade.managed.openshift.io"
+       apiVersions:
+       - "*"
+       resources:
+       - "CustomerFreezeWindow"
+       scope: "Cluster"
