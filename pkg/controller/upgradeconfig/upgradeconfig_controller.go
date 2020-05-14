@@ -2,6 +2,7 @@ package upgradeconfig
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
@@ -27,6 +28,14 @@ func Add(mgr manager.Manager) error {
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 	return &ReconcileUpgradeConfig{client: mgr.GetClient(), scheme: mgr.GetScheme()}
+}
+
+func NewReconcileUpgradeConfig(client client.Client, scheme *runtime.Scheme) (reconcile.Reconciler, error) {
+	if scheme == nil {
+		return nil, fmt.Errorf("scheme cannot be nil")
+	}
+
+	return &ReconcileUpgradeConfig{client, scheme}, nil
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -79,7 +88,6 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
-
 
 	return reconcile.Result{
 		RequeueAfter: time.Hour,
