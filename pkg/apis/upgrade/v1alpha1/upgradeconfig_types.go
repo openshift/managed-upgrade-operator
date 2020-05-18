@@ -12,7 +12,7 @@ type UpgradeConfigSpec struct {
 
 	// This defines the 3rd party operator subscriptions upgrade
 	// +kubebuilder:validation:Optional
-	Subscriptions []SubscriptionUpdate `json:"subscriptions,omitempty"`
+	SubscriptionUpdates []SubscriptionUpdate `json:"subscriptionUpdates,omitempty"`
 	UpgradeWindow UpgradeWindow `json:"upgradeWindow"`
 	FreezeWindow  FreezeWindow  `json:"freezeWindow"`
 }

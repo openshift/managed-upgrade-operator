@@ -85,7 +85,7 @@ spec:
                 required:
                 - maximumCount
                 type: object
-              subscriptions:
+              subscriptionUpdates:
                 description: This defines the 3rd party operator subscriptions upgrade
                 items:
                   description: SubscriptionUpdate describe the 3rd party operator

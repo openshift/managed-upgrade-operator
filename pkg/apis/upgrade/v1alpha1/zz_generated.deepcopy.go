@@ -443,8 +443,8 @@ func (in *UpgradeConfigList) DeepCopyObject() runtime.Object {
 func (in *UpgradeConfigSpec) DeepCopyInto(out *UpgradeConfigSpec) {
 	*out = *in
 	out.Desired = in.Desired
-	if in.Subscriptions != nil {
-		in, out := &in.Subscriptions, &out.Subscriptions
+	if in.SubscriptionUpdates != nil {
+		in, out := &in.SubscriptionUpdates, &out.SubscriptionUpdates
 		*out = make([]SubscriptionUpdate, len(*in))
 		copy(*out, *in)
 	}
