@@ -3,9 +3,11 @@ package upgradeconfig
 import (
 	"context"
 	"fmt"
+	"reflect"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"time"
 
-	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -15,6 +17,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 )
 
 var log = logf.Log.WithName("controller_upgradeconfig")
@@ -46,12 +50,11 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// Watch for changes to primary resource UpgradeConfig
-	err = c.Watch(&source.Kind{Type: &upgradev1alpha1.UpgradeConfig{}}, &handler.EnqueueRequestForObject{})
+	// Watch for changes to primary resource UpgradeConfig, status change will not trigger a reconcile
+	err = c.Watch(&source.Kind{Type: &upgradev1alpha1.UpgradeConfig{}}, &handler.EnqueueRequestForObject{}, StatusChangedPredicate{})
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -75,6 +78,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling UpgradeConfig")
 
+	upgrader := NewUpgrader(reqLogger, r.client)
 	// Fetch the UpgradeConfig instance
 	instance := &upgradev1alpha1.UpgradeConfig{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
@@ -89,7 +93,93 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 		return reconcile.Result{}, err
 	}
 
-	return reconcile.Result{
-		RequeueAfter: time.Hour,
-	}, nil
+	// If cluster is already upgrading with different version, we should wait until it completed
+	upgrading, err := lastUpgradeNotFinished(r.client, instance.Spec.Desired.Version)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	if upgrading {
+		return reconcile.Result{}, nil
+		reqLogger.Info("cluster is upgrading with different version, cannot upgrade now")
+	}
+
+	var history upgradev1alpha1.UpgradeHistory
+	found := false
+	for _, h := range instance.Status.History {
+		if h.Version == instance.Spec.Desired.Version {
+			history = h
+			found = true
+		}
+	}
+	if !found {
+		history = upgradev1alpha1.UpgradeHistory{Version: instance.Spec.Desired.Version, Phase: upgradev1alpha1.UpgradePhaseNew}
+		history.Conditions = upgradev1alpha1.NewConditions()
+		instance.Status.History = append([]upgradev1alpha1.UpgradeHistory{history}, instance.Status.History...)
+		err := r.client.Status().Update(context.TODO(), instance)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+	}
+
+	status := history.Phase
+	reqLogger.Info("current cluster status", "status", status)
+
+	switch status {
+	case "", upgradev1alpha1.UpgradePhaseNew, upgradev1alpha1.UpgradePhasePending:
+		// TODO verify if it's time to do upgrade, if no, set to "pending", if it's yes, perform upgrade, and set status to "upgrading"
+		reqLogger.Info("checking whether it's ready to do upgrade")
+		ready := readyToUpgrade(instance)
+		if ready {
+			reqLogger.Info("it's ready to start upgrade now", "time", time.Now())
+
+			upgrader.UpgradeCluster(r.client, instance, reqLogger)
+
+		} else {
+			r.updateStatusPending(reqLogger, instance)
+			return reconcile.Result{}, nil
+		}
+	case upgradev1alpha1.UpgradePhaseUpgrading:
+		reqLogger.Info("it's upgrading now")
+		upgrader.UpgradeCluster(r.client, instance, reqLogger)
+	case upgradev1alpha1.UpgradePhaseUpgraded:
+		reqLogger.Info("cluster is already already upgraded")
+		return reconcile.Result{}, nil
+	case upgradev1alpha1.UpgradePhaseFailed:
+		reqLogger.Info("the cluster failed the upgrade")
+		return reconcile.Result{}, nil
+	default:
+		reqLogger.Info("unknown status")
+	}
+
+	return reconcile.Result{}, nil
+}
+
+type StatusChangedPredicate struct {
+	predicate.Funcs
+}
+
+// Update implements default UpdateEvent filter for validating generation change
+func (StatusChangedPredicate) Update(e event.UpdateEvent) bool {
+	if e.MetaOld == nil {
+		log.Error(nil, "Update event has no old metadata", "event", e)
+		return false
+	}
+	if e.ObjectOld == nil {
+		log.Error(nil, "Update event has no old runtime object to update", "event", e)
+		return false
+	}
+	if e.ObjectNew == nil {
+		log.Error(nil, "Update event has no new runtime object for update", "event", e)
+		return false
+	}
+	if e.MetaNew == nil {
+		log.Error(nil, "Update event has no new metadata", "event", e)
+		return false
+	}
+	newUp := e.ObjectNew.(*upgradev1alpha1.UpgradeConfig)
+	oldUp := e.ObjectOld.(*upgradev1alpha1.UpgradeConfig)
+	if !reflect.DeepEqual(newUp.Status, oldUp.Status) {
+		return false
+	}
+	return true
 }
