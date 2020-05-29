@@ -2,6 +2,7 @@ package upgradeconfig
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -579,8 +580,11 @@ func performClusterHealthCheck(c client.Client) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
 
-	hclient := http.Client{}
+	hclient := http.Client{Transport: tr}
 	url := "https://" + route.Spec.Host + "/api/v1/query"
 
 	req, err := http.NewRequest("GET", url, nil)
@@ -591,11 +595,11 @@ func performClusterHealthCheck(c client.Client) (bool, error) {
 	req.URL.RawQuery = q.Encode()
 	req.Header.Add("Authorization", "Bearer "+string(token))
 	resp, err := hclient.Do(req)
-	defer resp.Body.Close()
-
 	if err != nil {
 		return false, err
 	}
+
+	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 
 	log.Info(fmt.Sprintf("alerts : %s", body))
@@ -609,7 +613,7 @@ func performClusterHealthCheck(c client.Client) (bool, error) {
 	if len(alerts.Data.Result) > 0 {
 		log.Info("there are critical alerts exists, cannot upgrade now")
 		//TODO send out upgrade alerts
-		return false, nil
+		return false, fmt.Errorf("there are %d critical alerts", len(alerts.Data.Result))
 	}
 
 	//check co status
