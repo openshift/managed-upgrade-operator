@@ -78,7 +78,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling UpgradeConfig")
 
-	upgrader := NewUpgrader(reqLogger, r.client)
+	upgrader := NewUpgrader()
 	// Fetch the UpgradeConfig instance
 	instance := &upgradev1alpha1.UpgradeConfig{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
@@ -94,7 +94,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 	}
 
 	// If cluster is already upgrading with different version, we should wait until it completed
-	upgrading, err := lastUpgradeNotFinished(r.client, instance.Spec.Desired.Version)
+	upgrading, err := clusterUpgrading(r.client, instance.Spec.Desired.Version)
 	if err != nil {
 		return reconcile.Result{}, err
 	}

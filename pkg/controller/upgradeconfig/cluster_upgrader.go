@@ -39,11 +39,10 @@ var (
 		upgradev1alpha1.CommenceUpgrade,
 		upgradev1alpha1.ControlPlaneMaintWindow,
 		upgradev1alpha1.ControlPlaneUpgraded,
-		upgradev1alpha1.AllMastersUpgraded,
+		upgradev1alpha1.AllMasterNodesUpgraded,
 		upgradev1alpha1.RemoveControlPlaneMaintWindow,
 		upgradev1alpha1.WorkersMaintWindow,
-		upgradev1alpha1.AllWorkerUpgraded,
-		upgradev1alpha1.PostUpgradeFix,
+		upgradev1alpha1.AllWorkerNodesUpgraded,
 		upgradev1alpha1.RemoveExtraScaledNodes,
 		upgradev1alpha1.UpdateSubscriptions,
 		upgradev1alpha1.PostUpgradeVerification,
@@ -67,7 +66,7 @@ func Ordering() []upgradev1alpha1.UpgradeConditionType {
 
 type UpgradeStep func(client client.Client, upgradeConfig *upgradev1alpha1.UpgradeConfig, reqLogger logr.Logger) (bool, error)
 
-func NewUpgrader(reqLogger logr.Logger, client client.Client) ClusterUpgrader {
+func NewUpgrader() ClusterUpgrader {
 	once.Do(func() {
 		upgrader = map[upgradev1alpha1.UpgradeConditionType]UpgradeStep{
 			upgradev1alpha1.UpgradeValidated:              ValidateUpgradeConfig,
@@ -76,11 +75,10 @@ func NewUpgrader(reqLogger logr.Logger, client client.Client) ClusterUpgrader {
 			upgradev1alpha1.ControlPlaneMaintWindow:       CreateControlPlaneMaintWindow,
 			upgradev1alpha1.CommenceUpgrade:               CommenceUpgrade,
 			upgradev1alpha1.ControlPlaneUpgraded:          ControlPlaneUpgraded,
-			upgradev1alpha1.AllMastersUpgraded:            AllMastersUpgraded,
+			upgradev1alpha1.AllMasterNodesUpgraded:        AllMastersUpgraded,
 			upgradev1alpha1.RemoveControlPlaneMaintWindow: RemoveControlPlaneMaintWindow,
 			upgradev1alpha1.WorkersMaintWindow:            CreateWorkerMaintWindow,
-			upgradev1alpha1.AllWorkerUpgraded:             AllWorkersUpgraded,
-			upgradev1alpha1.PostUpgradeFix:                PostUpgradeFix,
+			upgradev1alpha1.AllWorkerNodesUpgraded:        AllWorkersUpgraded,
 			upgradev1alpha1.RemoveExtraScaledNodes:        RemoveExtraScaledNodes,
 			upgradev1alpha1.UpdateSubscriptions:           UpdateSubscriptions,
 			upgradev1alpha1.PostUpgradeVerification:       PostUpgradeVerification,
@@ -92,40 +90,13 @@ func NewUpgrader(reqLogger logr.Logger, client client.Client) ClusterUpgrader {
 	return upgrader
 }
 
-var postFixes = map[string]func(c client.Client, upgradeConfig *upgradev1alpha1.UpgradeConfig, reqLogger logr.Logger) (bool, error){
-	"4.3.0": func(c client.Client, upgradeConfig *upgradev1alpha1.UpgradeConfig, reqLogger logr.Logger) (bool, error) {
-		deployment := &appsv1.Deployment{}
-		err := c.Get(context.TODO(), types.NamespacedName{"openshift-ingress-operator", "ingress-operator"}, deployment)
-		if err != nil {
-			return false, err
-		}
-		err = c.Delete(context.TODO(), deployment, []client.DeleteOption{}...)
-		if err != nil {
-			return false, err
-		}
-
-		err = c.Get(context.TODO(), types.NamespacedName{"openshift-machine-api", "cluster-autoscaler-operator"}, deployment)
-		if err != nil {
-			return false, err
-		}
-		err = c.Delete(context.TODO(), deployment, []client.DeleteOption{}...)
-		if err != nil {
-			return false, err
-		}
-
-		return true, nil
-	},
-}
-
 // ClusterHealthCheck performs cluster healthy check
 func PreClusterHealthCheck(c client.Client, upgradeConfig *upgradev1alpha1.UpgradeConfig, reqLogger logr.Logger) (bool, error) {
-
 	return performClusterHealthCheck(c)
 }
 
 // This will create a new machineset with 1 extra replicas for workers in every region
 func EnsureExtraUpgradeWorkers(c client.Client, upgradeConfig *upgradev1alpha1.UpgradeConfig, reqLogger logr.Logger) (bool, error) {
-
 	upgradeMachinesets := &machineapi.MachineSetList{}
 
 	err := c.List(context.TODO(), upgradeMachinesets, []client.ListOption{
@@ -259,9 +230,15 @@ func CommenceUpgrade(c client.Client, upgradeConfig *upgradev1alpha1.UpgradeConf
 	if err != nil {
 		return false, err
 	}
+	if clusterVersion.Spec.DesiredUpdate != nil &&
+		clusterVersion.Spec.DesiredUpdate.Version == upgradeConfig.Spec.Desired.Version &&
+		clusterVersion.Spec.Channel == upgradeConfig.Spec.Desired.Channel {
+		return true, nil
+	}
 	// https://issues.redhat.com/browse/OSD-3442
 	clusterVersion.Spec.Overrides = []configv1.ComponentOverride{}
 	clusterVersion.Spec.DesiredUpdate = &configv1.Update{Version: upgradeConfig.Spec.Desired.Version}
+	clusterVersion.Spec.Channel = upgradeConfig.Spec.Desired.Channel
 	err = c.Update(context.TODO(), clusterVersion)
 	if err != nil {
 		return false, err
@@ -301,17 +278,6 @@ func AllWorkersUpgraded(c client.Client, upgradeConfig *upgradev1alpha1.UpgradeC
 
 }
 
-// This will apply extra fixes for different version
-func PostUpgradeFix(c client.Client, upgradeConfig *upgradev1alpha1.UpgradeConfig, reqLogger logr.Logger) (bool, error) {
-	fix := postFixes[upgradeConfig.Spec.Desired.Version]
-	if fix != nil {
-		log.Info(fmt.Sprintf("running post fixes for version: %s", upgradeConfig.Spec.Desired.Version))
-		return fix(c, upgradeConfig, reqLogger)
-	}
-
-	return true, nil
-}
-
 // This will remove the extra worker nodes we added before kick off upgrade
 func RemoveExtraScaledNodes(c client.Client, upgradeConfig *upgradev1alpha1.UpgradeConfig, reqLogger logr.Logger) (bool, error) {
 	upgradeMachinesets := &machineapi.MachineSetList{}
@@ -347,10 +313,12 @@ func UpdateSubscriptions(c client.Client, upgradeConfig *upgradev1alpha1.Upgrade
 				return false, err
 			}
 		}
-		sub.Spec.Channel = item.Channel
-		err = c.Update(context.TODO(), sub)
-		if err != nil {
-			return false, err
+		if sub.Spec.Channel != item.Channel {
+			sub.Spec.Channel = item.Channel
+			err = c.Update(context.TODO(), sub)
+			if err != nil {
+				return false, err
+			}
 		}
 	}
 
@@ -428,8 +396,8 @@ func NodesUpgraded(c client.Client, nodeType string, reqLogger logr.Logger) (boo
 		return false, nil
 	}
 	//TODO send timeout alert if wait timeout
-	if configPool.Status.ReadyMachineCount != configPool.Status.UpdatedMachineCount {
-		errMsg := fmt.Sprintf("not all %s are upgraded, upgraded: %v, ready: %v", nodeType, configPool.Status.UpdatedMachineCount, configPool.Status.ReadyMachineCount)
+	if configPool.Status.MachineCount != configPool.Status.UpdatedMachineCount {
+		errMsg := fmt.Sprintf("not all %s are upgraded, upgraded: %v, totall: %v", nodeType, configPool.Status.UpdatedMachineCount, configPool.Status.MachineCount)
 		reqLogger.Info(errMsg)
 		return false, fmt.Errorf(errMsg)
 	}
@@ -493,7 +461,6 @@ func (c ClusterUpgrader) UpgradeCluster(cl client.Client, upgradeConfig *upgrade
 		result, err := c[key](cl, upgradeConfig, reqLogger)
 
 		if err != nil {
-
 			reqLogger.Error(err, fmt.Sprintf("error when %s", key))
 			condition.Reason = fmt.Sprintf("%s not done", key)
 			condition.Message = err.Error()
@@ -650,10 +617,11 @@ type AlertData struct {
 	Result []interface{} `json:"result"`
 }
 
+// TODO move to https://github.com/openshift/managed-cluster-validating-webhooks
 // validateUpgradeConfig will validate the UpgradeConfig, the desired version should be grater than or equal to the current version
 func ValidateUpgradeConfig(c client.Client, upgradeConfig *upgradev1alpha1.UpgradeConfig, reqLogger logr.Logger) (result bool, err error) {
+
 	log.Info("validating upgradeconfig")
-	log.Info("get clusterversion")
 	clusterVersion := &configv1.ClusterVersion{}
 	err = c.Get(context.TODO(), types.NamespacedName{Name: "version"}, clusterVersion)
 	if err != nil {
@@ -677,7 +645,7 @@ func ValidateUpgradeConfig(c client.Client, upgradeConfig *upgradev1alpha1.Upgra
 		return false, fmt.Errorf("cluster is already on version %s", current)
 	}
 
-	// Compare the versions, if the current version is greater than desired, failed the validation
+	// Compare the versions, if the current version is greater than desired, failed the validation, we don't support version rollback
 	versions := []string{current, upgradeConfig.Spec.Desired.Version}
 	log.Info("compare two versions")
 	sort.Strings(versions)
@@ -716,7 +684,7 @@ func ValidateUpgradeConfig(c client.Client, upgradeConfig *upgradev1alpha1.Upgra
 	avalibleVersions := clusterVersion.Status.AvailableUpdates
 	found := false
 	for _, v := range avalibleVersions {
-		if v.Version == upgradeConfig.Spec.Desired.Version {
+		if v.Version == upgradeConfig.Spec.Desired.Version && v.Force == false {
 			found = true
 		}
 	}
@@ -725,10 +693,6 @@ func ValidateUpgradeConfig(c client.Client, upgradeConfig *upgradev1alpha1.Upgra
 		log.Info(fmt.Sprintf("failed to find the desired version %s in channel %s", upgradeConfig.Spec.Desired.Version, upgradeConfig.Spec.Desired.Channel))
 		//We need update the condition
 		errMsg := fmt.Sprintf("cannot find version %s in available updates", upgradeConfig.Spec.Desired.Version)
-		err = c.Get(context.TODO(), types.NamespacedName{Name: upgradeConfig.Name}, upgradeConfig)
-		if err != nil {
-			log.Error(err, "failed to get upgradeconfig")
-		}
 		return false, fmt.Errorf(errMsg)
 	}
 
@@ -745,7 +709,7 @@ func getCurrentlVersion(clusterVersion *configv1.ClusterVersion) string {
 }
 
 // This return the current upgrade status
-func lastUpgradeNotFinished(c client.Client, version string) (bool, error) {
+func clusterUpgrading(c client.Client, version string) (bool, error) {
 
 	clusterVersion := &configv1.ClusterVersion{}
 	err := c.Get(context.TODO(), types.NamespacedName{Name: "version"}, clusterVersion)
