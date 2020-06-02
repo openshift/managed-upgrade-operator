@@ -403,7 +403,7 @@ func NodesUpgraded(c client.Client, nodeType string, reqLogger logr.Logger) (boo
 	if configPool.Status.MachineCount != configPool.Status.UpdatedMachineCount {
 		errMsg := fmt.Sprintf("not all %s are upgraded, upgraded: %v, totall: %v", nodeType, configPool.Status.UpdatedMachineCount, configPool.Status.MachineCount)
 		reqLogger.Info(errMsg)
-		return false, fmt.Errorf(errMsg)
+		return false, nil
 	}
 
 	return true, nil
