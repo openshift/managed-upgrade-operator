@@ -213,7 +213,7 @@ func EnsureExtraUpgradeWorkers(c client.Client, upgradeConfig *upgradev1alpha1.U
 			if time.Now().After(startTime.Time.Add(TIMEOUT_SCALE_EXTRAL_NODES)) {
 				log.Info("node is not ready within 30mins")
 				//TODO send out timeout alerts
-				return false, fmt.Errorf("timeout waiting node:%s become ready", nodeName)
+				return false, fmt.Errorf("timeout waiting for node:%s to become ready", nodeName)
 
 			}
 		}
