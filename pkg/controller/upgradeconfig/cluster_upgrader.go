@@ -401,7 +401,7 @@ func NodesUpgraded(c client.Client, nodeType string, reqLogger logr.Logger) (boo
 	}
 	//TODO send timeout alert if wait timeout
 	if configPool.Status.MachineCount != configPool.Status.UpdatedMachineCount {
-		errMsg := fmt.Sprintf("not all %s are upgraded, upgraded: %v, totall: %v", nodeType, configPool.Status.UpdatedMachineCount, configPool.Status.MachineCount)
+		errMsg := fmt.Sprintf("not all %s are upgraded, upgraded: %v, total: %v", nodeType, configPool.Status.UpdatedMachineCount, configPool.Status.MachineCount)
 		reqLogger.Info(errMsg)
 		return false, nil
 	}
