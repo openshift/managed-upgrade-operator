@@ -182,7 +182,7 @@ func EnsureExtraUpgradeWorkers(c client.Client, upgradeConfig *upgradev1alpha1.U
 				//TODO send out timeout alerts
 				log.Info(fmt.Sprintf("machineset provisioning timout"))
 			}
-			log.Info(fmt.Sprintf("not all mahines are ready for machineset:%s", ms.Name))
+			log.Info(fmt.Sprintf("not all machines are ready for machineset:%s", ms.Name))
 			return false, nil
 		}
 		machines := &machineapi.MachineList{}
