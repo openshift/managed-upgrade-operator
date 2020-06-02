@@ -6,16 +6,20 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"net/http"
+	"net/url"
+	"runtime"
 	"sort"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/blang/semver"
 	"github.com/go-logr/logr"
+	"github.com/google/uuid"
 	configv1 "github.com/openshift/api/config/v1"
 	routev1 "github.com/openshift/api/route/v1"
+	"github.com/openshift/cluster-version-operator/pkg/cincinnati"
 	machineapi "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
 	machineconfigapi "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
@@ -23,9 +27,9 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -655,35 +659,36 @@ func ValidateUpgradeConfig(c client.Client, upgradeConfig *upgradev1alpha1.Upgra
 		return false, fmt.Errorf("desired version %s is greater than current version %s", upgradeConfig.Spec.Desired.Version, current)
 	}
 
-	// Update the channel if it's not match
-	if clusterVersion.Spec.Channel != upgradeConfig.Spec.Desired.Channel {
-		log.Info("channel in upgradeconfig is not matching the one in clusterversion, now update and get the available updates",
-			"desired", upgradeConfig.Spec.Desired.Channel,
-			"current", clusterVersion.Spec.Channel)
-		clusterVersion.Spec.Channel = upgradeConfig.Spec.Desired.Channel
-		err = c.Update(context.TODO(), clusterVersion)
-		if err != nil {
-			return false, err
-		}
-		log.Info("wait for 30s to retrieve available updates")
-		wait.Poll(time.Second, time.Second*30, func() (done bool, err error) {
-			err = c.Get(context.TODO(), types.NamespacedName{Name: "version"}, clusterVersion)
-			if err != nil {
-				return false, err
-			}
-			for _, c := range clusterVersion.Status.Conditions {
-				if c.Type == configv1.RetrievedUpdates && c.Status == configv1.ConditionTrue {
-					return true, nil
-				}
-			}
-			return false, nil
-		})
+	// Find the available versions from cincinnati
+	uuid, err := uuid.Parse(string(clusterVersion.Spec.ClusterID))
+	if err != nil {
+		return false, err
+	}
+	upstreamURI, err := url.Parse(string(clusterVersion.Spec.Upstream))
+	if err != nil {
+		return false, err
+	}
+	currentVersion, err := semver.Parse(current)
+	if err != nil {
+		return false, err
 	}
 
+	updates, err := cincinnati.NewClient(uuid, nil, nil).GetUpdates(upstreamURI, runtime.GOARCH, upgradeConfig.Spec.Desired.Channel, currentVersion)
+	if err != nil {
+		return false, err
+	}
+
+	var cvoUpdates []configv1.Update
+	for _, update := range updates {
+		cvoUpdates = append(cvoUpdates, configv1.Update{
+			Version: update.Version.String(),
+			Image:   update.Image,
+		})
+	}
 	// Check whether the desired version exists in availableUpdates
-	avalibleVersions := clusterVersion.Status.AvailableUpdates
+
 	found := false
-	for _, v := range avalibleVersions {
+	for _, v := range cvoUpdates {
 		if v.Version == upgradeConfig.Spec.Desired.Version && v.Force == false {
 			found = true
 		}

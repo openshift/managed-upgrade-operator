@@ -7,10 +7,12 @@ require (
 	github.com/coreos/ignition v0.35.0 // indirect
 	github.com/go-logr/logr v0.1.0
 	github.com/golang/protobuf v1.4.1 // indirect
+	github.com/google/uuid v1.1.1
 	github.com/onsi/ginkgo v1.12.0
 	github.com/onsi/gomega v1.10.0
 	github.com/openshift/api v0.0.0-20200522173408-17ada6e4245b
-	github.com/openshift/machine-api-operator v0.2.1-0.20200226185612-9b0170a1ba07
+	github.com/openshift/cluster-version-operator v3.11.1-0.20190629164025-08cac1c02538+incompatible
+	github.com/openshift/machine-api-operator v0.0.0-00010101000000-000000000000
 	github.com/openshift/machine-config-operator v4.2.0-alpha.0.0.20190917115525-033375cbe820+incompatible
 	github.com/operator-framework/api v0.3.6
 	github.com/operator-framework/operator-sdk v0.17.0
@@ -28,6 +30,8 @@ replace (
 	github.com/Azure/go-autorest => github.com/Azure/go-autorest v13.3.2+incompatible // Required by OLM
 	github.com/InVisionApp/go-health => github.com/InVisionApp/go-health v1.1.7-0.20190926150048-b5cab38233bb
 	github.com/go-log/log => github.com/go-log/log v0.1.1-0.20181211034820-a514cf01a3eb
+	github.com/openshift/cluster-version-operator => github.com/openshift/cluster-version-operator v1.0.1-0.20200601145814-7cb7909ed945
+	github.com/openshift/machine-api-operator => github.com/openshift/machine-api-operator v0.2.1-0.20200226185612-9b0170a1ba07
 	github.com/openshift/machine-config-operator => github.com/openshift/machine-config-operator v4.2.0-alpha.0+incompatible
 	k8s.io/api => k8s.io/api v0.0.0-20191016110408-35e52d86657a
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.0.0-20191016113550-5357c4baaf65
