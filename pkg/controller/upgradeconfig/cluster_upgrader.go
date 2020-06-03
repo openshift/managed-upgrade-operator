@@ -434,13 +434,16 @@ func (c ClusterUpgrader) UpgradeCluster(cl client.Client, upgradeConfig *upgrade
 	history := upgradeConfig.Status.History.GetHistory(upgradeConfig.Spec.Desired.Version)
 	conditions := history.Conditions
 
-	history.Phase = upgradev1alpha1.UpgradePhaseUpgrading
-	history.StartTime = &metav1.Time{Time: time.Now()}
-	upgradeConfig.Status.History.SetHistory(*history)
-	err := cl.Status().Update(context.TODO(), upgradeConfig)
-	if err != nil {
-		log.Error(err, "failed to update upgradeconfig")
+	if history.Phase != upgradev1alpha1.UpgradePhaseUpgrading {
+		history.Phase = upgradev1alpha1.UpgradePhaseUpgrading
+		history.StartTime = &metav1.Time{Time: time.Now()}
+		upgradeConfig.Status.History.SetHistory(*history)
+		err := cl.Status().Update(context.TODO(), upgradeConfig)
+		if err != nil {
+			log.Error(err, "failed to update upgradeconfig")
+		}
 	}
+
 	for _, key := range Ordering() {
 
 		log.Info(fmt.Sprintf("Perform %s", key))
@@ -506,7 +509,7 @@ func (c ClusterUpgrader) UpgradeCluster(cl client.Client, upgradeConfig *upgrade
 	history.Phase = upgradev1alpha1.UpgradePhaseUpgraded
 	history.CompleteTime = &metav1.Time{Time: time.Now()}
 	upgradeConfig.Status.History.SetHistory(*history)
-	err = cl.Status().Update(context.TODO(), upgradeConfig)
+	err := cl.Status().Update(context.TODO(), upgradeConfig)
 	if err != nil {
 		return err
 	}
@@ -637,7 +640,7 @@ func ValidateUpgradeConfig(c client.Client, upgradeConfig *upgradev1alpha1.Upgra
 	//TODO get available version from ocm api like : ocm get "https://api.openshift.com/api/clusters_mgmt/v1/versions" --parameter search="enabled='t'"
 
 	//Get current version, then compare
-	current := getCurrentlVersion(clusterVersion)
+	current := getCurrentVersion(clusterVersion)
 	log.Info(fmt.Sprintf("current version is %s", current))
 	if len(current) == 0 {
 
@@ -704,7 +707,7 @@ func ValidateUpgradeConfig(c client.Client, upgradeConfig *upgradev1alpha1.Upgra
 	return true, nil
 }
 
-func getCurrentlVersion(clusterVersion *configv1.ClusterVersion) string {
+func getCurrentVersion(clusterVersion *configv1.ClusterVersion) string {
 	for _, history := range clusterVersion.Status.History {
 		if history.State == configv1.CompletedUpdate {
 			return history.Version
