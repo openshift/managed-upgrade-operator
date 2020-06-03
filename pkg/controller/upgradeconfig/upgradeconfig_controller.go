@@ -142,7 +142,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 		reqLogger.Info("it's upgrading now")
 		upgrader.UpgradeCluster(r.client, instance, reqLogger)
 	case upgradev1alpha1.UpgradePhaseUpgraded:
-		reqLogger.Info("cluster is already already upgraded")
+		reqLogger.Info("cluster is already upgraded")
 		return reconcile.Result{}, nil
 	case upgradev1alpha1.UpgradePhaseFailed:
 		reqLogger.Info("the cluster failed the upgrade")

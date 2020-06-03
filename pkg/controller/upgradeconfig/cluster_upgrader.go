@@ -182,7 +182,7 @@ func EnsureExtraUpgradeWorkers(c client.Client, upgradeConfig *upgradev1alpha1.U
 				//TODO send out timeout alerts
 				log.Info(fmt.Sprintf("machineset provisioning timout"))
 			}
-			log.Info(fmt.Sprintf("not all mahines are ready for machineset:%s", ms.Name))
+			log.Info(fmt.Sprintf("not all machines are ready for machineset:%s", ms.Name))
 			return false, nil
 		}
 		machines := &machineapi.MachineList{}
@@ -213,7 +213,7 @@ func EnsureExtraUpgradeWorkers(c client.Client, upgradeConfig *upgradev1alpha1.U
 			if time.Now().After(startTime.Time.Add(TIMEOUT_SCALE_EXTRAL_NODES)) {
 				log.Info("node is not ready within 30mins")
 				//TODO send out timeout alerts
-				return false, fmt.Errorf("timeout waiting node:%s become ready", nodeName)
+				return false, fmt.Errorf("timeout waiting for node:%s to become ready", nodeName)
 
 			}
 		}
@@ -401,9 +401,9 @@ func NodesUpgraded(c client.Client, nodeType string, reqLogger logr.Logger) (boo
 	}
 	//TODO send timeout alert if wait timeout
 	if configPool.Status.MachineCount != configPool.Status.UpdatedMachineCount {
-		errMsg := fmt.Sprintf("not all %s are upgraded, upgraded: %v, totall: %v", nodeType, configPool.Status.UpdatedMachineCount, configPool.Status.MachineCount)
+		errMsg := fmt.Sprintf("not all %s are upgraded, upgraded: %v, total: %v", nodeType, configPool.Status.UpdatedMachineCount, configPool.Status.MachineCount)
 		reqLogger.Info(errMsg)
-		return false, fmt.Errorf(errMsg)
+		return false, nil
 	}
 
 	return true, nil
