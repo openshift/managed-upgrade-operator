@@ -3,22 +3,21 @@ package upgradeconfig
 import (
 	"context"
 	"fmt"
-	"reflect"
-	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"time"
-
+	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
+	"github.com/openshift/managed-upgrade-operator/pkg/maintenance"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-
-	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
+	"time"
 )
 
 var log = logf.Log.WithName("controller_upgradeconfig")
@@ -99,8 +98,8 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 		return reconcile.Result{}, err
 	}
 	if upgrading {
-		return reconcile.Result{}, nil
 		reqLogger.Info("cluster is upgrading with different version, cannot upgrade now")
+		return reconcile.Result{}, nil
 	}
 
 	var history upgradev1alpha1.UpgradeHistory
@@ -130,17 +129,24 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 		reqLogger.Info("checking whether it's ready to do upgrade")
 		ready := readyToUpgrade(instance)
 		if ready {
+			m, err := maintenance.NewClient(r.client)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
 			reqLogger.Info("it's ready to start upgrade now", "time", time.Now())
-
-			upgrader.UpgradeCluster(r.client, instance, reqLogger)
+			upgrader.UpgradeCluster(r.client, m, instance, reqLogger)
 
 		} else {
 			r.updateStatusPending(reqLogger, instance)
 			return reconcile.Result{}, nil
 		}
 	case upgradev1alpha1.UpgradePhaseUpgrading:
+		m, err := maintenance.NewClient(r.client)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
 		reqLogger.Info("it's upgrading now")
-		upgrader.UpgradeCluster(r.client, instance, reqLogger)
+		upgrader.UpgradeCluster(r.client, m, instance, reqLogger)
 	case upgradev1alpha1.UpgradePhaseUpgraded:
 		reqLogger.Info("cluster is already upgraded")
 		return reconcile.Result{}, nil
