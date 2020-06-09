@@ -1,11 +1,19 @@
+FROM registry.svc.ci.openshift.org/openshift/release:golang-1.13 AS builder
+
+RUN mkdir -p /workdir
+WORKDIR /workdir
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN make gobuild
+
+####
 FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
 
-ENV OPERATOR=/usr/local/bin/managed-upgrade-operator \
-    USER_UID=1001 \
+ENV USER_UID=1001 \
     USER_NAME=managed-upgrade-operator
 
-# install operator binary
-COPY build/_output/bin/managed-upgrade-operator ${OPERATOR}
+COPY --from=builder /workdir/build/_output/bin/* /usr/local/bin/
 
 COPY build/bin /usr/local/bin
 RUN  /usr/local/bin/user_setup
@@ -13,3 +21,6 @@ RUN  /usr/local/bin/user_setup
 ENTRYPOINT ["/usr/local/bin/entrypoint"]
 
 USER ${USER_UID}
+
+LABEL io.openshift.managed.name="managed-upgrade-operator" \
+      io.openshift.managed.description="Operator to manage upgrades for Openshift version 4 clusters"
