@@ -4,6 +4,7 @@ go 1.13
 
 require (
 	github.com/ajeddeloh/go-json v0.0.0-20200220154158-5ae607161559 // indirect
+	github.com/blang/semver v3.5.1+incompatible
 	github.com/coreos/ignition v0.35.0 // indirect
 	github.com/go-logr/logr v0.1.0
 	github.com/golang/protobuf v1.4.1 // indirect
