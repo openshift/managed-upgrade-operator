@@ -15,7 +15,7 @@ type alertManagerSilenceClient struct {
 
 // Creates a silence in Alertmanager instance defined in transport
 func (ams *alertManagerSilenceClient) create(matchers amv2Models.Matchers, startsAt strfmt.DateTime, endsAt strfmt.DateTime, creator string, comment string) error {
-	psParams := &amSilence.PostSilencesParams{
+	pParams := &amSilence.PostSilencesParams{
 		Silence: &amv2Models.PostableSilence{
 			Silence: amv2Models.Silence{
 				CreatedBy: &creator,
@@ -30,7 +30,7 @@ func (ams *alertManagerSilenceClient) create(matchers amv2Models.Matchers, start
 	}
 
 	silenceClient := amSilence.New(ams.transport, strfmt.Default)
-	_, err := silenceClient.PostSilences(psParams)
+	_, err := silenceClient.PostSilences(pParams)
 	if err != nil {
 		return err
 	}
@@ -55,7 +55,7 @@ func (ams *alertManagerSilenceClient) List(filter []string) (*amSilence.GetSilen
 	return results, nil
 }
 
-// list silence in Alertmanager instance defined in transport
+// Delete silence in Alertmanager instance defined in transport
 func (ams *alertManagerSilenceClient) Delete(id string) error {
 	dParams := &amSilence.DeleteSilenceParams{
 		SilenceID:  strfmt.UUID(id),

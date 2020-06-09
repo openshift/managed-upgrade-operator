@@ -253,7 +253,8 @@ func CommenceUpgrade(c client.Client, m maintenance.Maintenance, upgradeConfig *
 
 // Create the maintenance window for control plane
 func CreateControlPlaneMaintWindow(c client.Client, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, reqLogger logr.Logger) (bool, error) {
-	err := m.Start(time.Now().Add(time.Minute * 90))
+	endTime := time.Now().Add(90 * time.Minute)
+	err := m.Start(endTime)
 	if err != nil {
 		return false, err
 	}
@@ -280,9 +281,10 @@ func CreateWorkerMaintWindow(c client.Client, m maintenance.Maintenance, upgrade
 	}
 
 	pendingWorkerCount := configPool.Status.MachineCount - configPool.Status.UpdatedMachineCount
-	var maintenanceTimePerNode int32 = 8
-	workerMaintenanceExpectedMins := time.Duration(pendingWorkerCount * maintenanceTimePerNode)
-	err = m.Start(time.Now().Add(time.Minute * workerMaintenanceExpectedMins))
+	maintenanceDurationPerNode := 8 * time.Minute
+	workerMaintenanceExpectedDuration := time.Duration(pendingWorkerCount) * maintenanceDurationPerNode
+	endTime := time.Now().Add(workerMaintenanceExpectedDuration)
+	err = m.Start(endTime)
 	if err != nil {
 		return false, err
 	}
