@@ -6,7 +6,10 @@ require (
 	github.com/ajeddeloh/go-json v0.0.0-20200220154158-5ae607161559 // indirect
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/coreos/ignition v0.35.0 // indirect
+	github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f
 	github.com/go-logr/logr v0.1.0
+	github.com/go-openapi/runtime v0.19.4
+	github.com/go-openapi/strfmt v0.19.3
 	github.com/golang/protobuf v1.4.1 // indirect
 	github.com/google/uuid v1.1.1
 	github.com/onsi/ginkgo v1.12.0
@@ -17,6 +20,7 @@ require (
 	github.com/openshift/machine-config-operator v4.2.0-alpha.0.0.20190917115525-033375cbe820+incompatible
 	github.com/operator-framework/api v0.3.6
 	github.com/operator-framework/operator-sdk v0.17.0
+	github.com/prometheus/alertmanager v0.20.0
 	github.com/spf13/pflag v1.0.5
 	github.com/vincent-petithory/dataurl v0.0.0-20191104211930-d1553a71de50 // indirect
 	golang.org/x/net v0.0.0-20200506145744-7e3656a0809f // indirect
