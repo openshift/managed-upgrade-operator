@@ -553,7 +553,7 @@ func performClusterHealthCheck(c client.Client) (bool, error) {
 
 	err := c.Get(context.TODO(), types.NamespacedName{Namespace: "openshift-monitoring", Name: "prometheus-k8s"}, sa)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("Unable to fetch prometheus-k8s service account: %s", err)
 	}
 
 	tokenSecret := ""
@@ -572,7 +572,7 @@ func performClusterHealthCheck(c client.Client) (bool, error) {
 
 	err = c.Get(context.TODO(), types.NamespacedName{Namespace: "openshift-monitoring", Name: tokenSecret}, secret)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("Unable to fetch secret %s: %s", tokenSecret, err)
 	}
 
 	token := secret.Data[corev1.ServiceAccountTokenKey]
@@ -591,7 +591,7 @@ func performClusterHealthCheck(c client.Client) (bool, error) {
 
 	req, err := http.NewRequest("GET", promurl, nil)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("Could not query Prometheus: %s", err)
 	}
 	q := req.URL.Query()
 	alertQuery := "ALERTS{alertstate=\"firing\",severity=\"critical\",namespace=~\"^openshift.*|^kube.*|^default$\",namespace!=\"openshift-customer-monitoring\",alertname!=\"ClusterUpgradingSRE\",alertname!=\"DNSErrors05MinSRE\",alertname!=\"MetricsClientSendFailingSRE\"}"
@@ -607,7 +607,7 @@ func performClusterHealthCheck(c client.Client) (bool, error) {
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("Error when querying Prometheus alerts: %s", err)
 	}
 
 	log.Info(fmt.Sprintf("alerts : %s", body))
