@@ -135,9 +135,9 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 				return reconcile.Result{}, err
 			}
 			reqLogger.Info("it's ready to start upgrade now", "time", time.Now())
-			e := upgrader.UpgradeCluster(r.client, m, instance, reqLogger)
-			if e != nil {
-				reqLogger.Error(e, "Failed to upgrade cluster")
+			err = upgrader.UpgradeCluster(r.client, m, instance, reqLogger)
+			if err != nil {
+				reqLogger.Error(err, "Failed to upgrade cluster")
 			}
 
 		} else {
@@ -154,9 +154,9 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 			return reconcile.Result{}, err
 		}
 		reqLogger.Info("it's upgrading now")
-		e := upgrader.UpgradeCluster(r.client, m, instance, reqLogger)
-		if e != nil {
-			reqLogger.Error(e, "Failed to upgrade cluster")
+		err = upgrader.UpgradeCluster(r.client, m, instance, reqLogger)
+		if err != nil {
+			reqLogger.Error(err, "Failed to upgrade cluster")
 		}
 	case upgradev1alpha1.UpgradePhaseUpgraded:
 		reqLogger.Info("cluster is already upgraded")
