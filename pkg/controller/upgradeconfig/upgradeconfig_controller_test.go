@@ -4,6 +4,7 @@ import (
 	"os"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	configv1 "github.com/openshift/api/config/v1"
 	routev1 "github.com/openshift/api/route/v1"
 	machineapi "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
@@ -66,8 +67,8 @@ var _ = Describe("UpgradeConfigController", func() {
 		})
 
 		It("Returns without error", func() {
-			reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
-			//Expect(err).NotTo(HaveOccurred())
+			_, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
+			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 })

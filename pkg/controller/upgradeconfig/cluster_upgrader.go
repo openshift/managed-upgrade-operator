@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"github.com/openshift/managed-upgrade-operator/pkg/maintenance"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -14,6 +13,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/openshift/managed-upgrade-operator/pkg/maintenance"
 
 	"github.com/blang/semver"
 	"github.com/go-logr/logr"
@@ -181,7 +182,7 @@ func EnsureExtraUpgradeWorkers(c client.Client, m maintenance.Maintenance, upgra
 
 			if time.Now().After(startTime.Time.Add(TIMEOUT_SCALE_EXTRAL_NODES)) {
 				//TODO send out timeout alerts
-				log.Info(fmt.Sprintf("machineset provisioning timout"))
+				log.Info("machineset provisioning timout")
 			}
 			log.Info(fmt.Sprintf("not all machines are ready for machineset:%s", ms.Name))
 			return false, nil
@@ -332,7 +333,7 @@ func RemoveExtraScaledNodes(c client.Client, m maintenance.Maintenance, upgradeC
 func UpdateSubscriptions(c client.Client, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, reqLogger logr.Logger) (bool, error) {
 	for _, item := range upgradeConfig.Spec.SubscriptionUpdates {
 		sub := &operatorv1alpha1.Subscription{}
-		err := c.Get(context.TODO(), types.NamespacedName{item.Namespace, item.Name}, sub)
+		err := c.Get(context.TODO(), types.NamespacedName{Namespace: item.Namespace, Name: item.Name}, sub)
 		if err != nil {
 			if errors.IsNotFound(err) {
 				reqLogger.Info("subscription :%s in namespace %s not exists, do not need update")
@@ -403,6 +404,7 @@ func PostUpgradeVerification(c client.Client, m maintenance.Maintenance, upgrade
 
 	return true, nil
 }
+
 // Remove maintenance
 func RemoveMaintWindow(c client.Client, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, reqLogger logr.Logger) (bool, error) {
 	err := m.End()
@@ -478,7 +480,7 @@ func (cu ClusterUpgrader) UpgradeCluster(c client.Client, m maintenance.Maintena
 		if condition == nil {
 			reqLogger.Info(fmt.Sprintf("Adding %s condition", key))
 			condition = newUpgradeCondition(fmt.Sprintf("start %s", key), fmt.Sprintf("start %s", key), key, corev1.ConditionFalse)
-			condition.StartTime = &metav1.Time{time.Now()}
+			condition.StartTime = &metav1.Time{Time: time.Now()}
 			conditions.SetCondition(*condition)
 			history.Conditions = conditions
 			upgradeConfig.Status.History.SetHistory(*history)
@@ -549,7 +551,7 @@ func (cu ClusterUpgrader) UpgradeCluster(c client.Client, m maintenance.Maintena
 func performClusterHealthCheck(c client.Client) (bool, error) {
 	sa := &corev1.ServiceAccount{}
 
-	err := c.Get(context.TODO(), types.NamespacedName{"openshift-monitoring", "prometheus-k8s"}, sa)
+	err := c.Get(context.TODO(), types.NamespacedName{Namespace: "openshift-monitoring", Name: "prometheus-k8s"}, sa)
 	if err != nil {
 		return false, err
 	}
@@ -568,7 +570,7 @@ func performClusterHealthCheck(c client.Client) (bool, error) {
 
 	secret := &corev1.Secret{}
 
-	err = c.Get(context.TODO(), types.NamespacedName{"openshift-monitoring", tokenSecret}, secret)
+	err = c.Get(context.TODO(), types.NamespacedName{Namespace: "openshift-monitoring", Name: tokenSecret}, secret)
 	if err != nil {
 		return false, err
 	}
@@ -588,6 +590,9 @@ func performClusterHealthCheck(c client.Client) (bool, error) {
 	promurl := "https://" + route.Spec.Host + "/api/v1/query"
 
 	req, err := http.NewRequest("GET", promurl, nil)
+	if err != nil {
+		return false, err
+	}
 	q := req.URL.Query()
 	alertQuery := "ALERTS{alertstate=\"firing\",severity=\"critical\",namespace=~\"^openshift.*|^kube.*|^default$\",namespace!=\"openshift-customer-monitoring\",alertname!=\"ClusterUpgradingSRE\",alertname!=\"DNSErrors05MinSRE\",alertname!=\"MetricsClientSendFailingSRE\"}"
 	q.Add("query", alertQuery)
@@ -601,6 +606,9 @@ func performClusterHealthCheck(c client.Client) (bool, error) {
 
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return false, err
+	}
 
 	log.Info(fmt.Sprintf("alerts : %s", body))
 	alerts := &AlertResponse{}
@@ -658,7 +666,7 @@ func ValidateUpgradeConfig(c client.Client, m maintenance.Maintenance, upgradeCo
 	clusterVersion := &configv1.ClusterVersion{}
 	err = c.Get(context.TODO(), types.NamespacedName{Name: "version"}, clusterVersion)
 	if err != nil {
-		log.Info(fmt.Sprintf("failed to get clusterversion"))
+		log.Info("failed to get clusterversion")
 		log.Error(err, "failed to get clusterversion")
 		return false, err
 	}
@@ -718,7 +726,7 @@ func ValidateUpgradeConfig(c client.Client, m maintenance.Maintenance, upgradeCo
 
 	found := false
 	for _, v := range cvoUpdates {
-		if v.Version == upgradeConfig.Spec.Desired.Version && v.Force == false {
+		if v.Version == upgradeConfig.Spec.Desired.Version && !v.Force {
 			found = true
 		}
 	}

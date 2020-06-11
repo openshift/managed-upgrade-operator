@@ -78,7 +78,7 @@ const (
 	ControlPlaneMaintWindow       UpgradeConditionType = "ControlPlaneMaintWindow"
 	CommenceUpgrade               UpgradeConditionType = "CommenceUpgrade"
 	ControlPlaneUpgraded          UpgradeConditionType = "ControlPlaneUpgraded"
-	AllMasterNodesUpgraded       UpgradeConditionType = "AllMasterNodesUpgraded"
+	AllMasterNodesUpgraded        UpgradeConditionType = "AllMasterNodesUpgraded"
 	RemoveControlPlaneMaintWindow UpgradeConditionType = "RemoveControlPlaneMaintWindow"
 	WorkersMaintWindow            UpgradeConditionType = "WorkersMaintWindow"
 	AllWorkerNodesUpgraded        UpgradeConditionType = "AllWorkerNodesUpgraded"
@@ -137,7 +137,7 @@ type Update struct {
 	Channel string `json:"channel"`
 	// +kubebuilder:default:=false
 	// Force upgrade, default value is False
-	Force bool `json:"force""`
+	Force bool `json:"force"`
 }
 
 // SubscriptionUpdate describe the 3rd party operator update config

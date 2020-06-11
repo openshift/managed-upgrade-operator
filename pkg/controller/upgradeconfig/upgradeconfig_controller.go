@@ -3,11 +3,13 @@ package upgradeconfig
 import (
 	"context"
 	"fmt"
+	"reflect"
+	"time"
+
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 	"github.com/openshift/managed-upgrade-operator/pkg/maintenance"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -17,7 +19,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-	"time"
 )
 
 var log = logf.Log.WithName("controller_upgradeconfig")
@@ -134,10 +135,17 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 				return reconcile.Result{}, err
 			}
 			reqLogger.Info("it's ready to start upgrade now", "time", time.Now())
-			upgrader.UpgradeCluster(r.client, m, instance, reqLogger)
+			e := upgrader.UpgradeCluster(r.client, m, instance, reqLogger)
+			if e != nil {
+				reqLogger.Error(e, "Failed to upgrade cluster")
+			}
 
 		} else {
-			r.updateStatusPending(reqLogger, instance)
+			err := r.updateStatusPending(reqLogger, instance)
+			if err != nil {
+				// TODO updateStatusPending implements nothing so far so below logged message to be changed when implemented
+				reqLogger.Info("Failed to set pending status for upgrade!")
+			}
 			return reconcile.Result{}, nil
 		}
 	case upgradev1alpha1.UpgradePhaseUpgrading:
@@ -146,7 +154,10 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 			return reconcile.Result{}, err
 		}
 		reqLogger.Info("it's upgrading now")
-		upgrader.UpgradeCluster(r.client, m, instance, reqLogger)
+		e := upgrader.UpgradeCluster(r.client, m, instance, reqLogger)
+		if e != nil {
+			reqLogger.Error(e, "Failed to upgrade cluster")
+		}
 	case upgradev1alpha1.UpgradePhaseUpgraded:
 		reqLogger.Info("cluster is already upgraded")
 		return reconcile.Result{}, nil
@@ -184,8 +195,6 @@ func (StatusChangedPredicate) Update(e event.UpdateEvent) bool {
 	}
 	newUp := e.ObjectNew.(*upgradev1alpha1.UpgradeConfig)
 	oldUp := e.ObjectOld.(*upgradev1alpha1.UpgradeConfig)
-	if !reflect.DeepEqual(newUp.Status, oldUp.Status) {
-		return false
-	}
-	return true
+
+	return (reflect.DeepEqual(newUp.Status, oldUp.Status))
 }
