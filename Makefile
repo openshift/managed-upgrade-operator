@@ -25,3 +25,6 @@ generate:
 		-h /dev/null \
 		-r "-"
 
+.PHONY: run
+run: 
+	operator-sdk run --local --watch-namespace ""
