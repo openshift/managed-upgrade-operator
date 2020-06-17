@@ -21,6 +21,11 @@ var (
 	alertManagerRouteName          = "alertmanager-main"
 	alertManagerServiceAccountName = "prometheus-k8s"
 	alertManagerBasePath           = "/api/v2/"
+
+	// Generally upgrades should not fire critical alerts but there are some critical alerts that will fire.
+	// e.g. 'etcdMembersDown' happens as the masters drain/reboot and a master is offline but this is expected and will resolve.
+	// This is a regex of critical alerts that can be ignored while upgrading of controlplane occurs
+	controlPlaneIgnoredCriticalAlerts = "(etcdMembersDown)"
 )
 
 type alertManagerMaintenance struct {
@@ -84,21 +89,34 @@ func getAuthentication(c client.Client) (runtime.ClientAuthInfoWriter, error) {
 	return httptransport.BearerToken(token), nil
 }
 
-// Start a maintenance in Alertmanager
-func (amm *alertManagerMaintenance) Start(endsAt time.Time) error {
-	isRegex := true
-	alertMatchKey := "alertname"
-	// TODO: refine these alerts -> https://github.com/openshift/managed-upgrade-operator/pull/10#discussion_r434249118
-	alertRegex := "[A-Z].*"
-	silenceComment := "Silence for OSD upgrade"
-	matchers := amv2Models.Matchers{
-		{
-			Name:    &alertMatchKey,
-			IsRegex: &isRegex,
-			Value:   &alertRegex,
-		},
+// Start a control plane maintenance in Alertmanager
+func (amm *alertManagerMaintenance) StartControlPlane(endsAt time.Time) error {
+	now := strfmt.DateTime(time.Now().UTC())
+	end := strfmt.DateTime(endsAt)
+	err := amm.client.create(createDefaultMatchers(), now, end, config.OperatorName, "Silence for OSD upgrade")
+	if err != nil {
+		return err
 	}
-	return amm.client.create(matchers, strfmt.DateTime(time.Now().UTC()), strfmt.DateTime(endsAt), config.OperatorName, silenceComment)
+
+	matchers := []*amv2Models.Matcher{createMatcher("alertname", controlPlaneIgnoredCriticalAlerts, true)}
+	err = amm.client.create(matchers, now, end, config.OperatorName, "Silence for OSD upgrade")
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Start a control plane maintenance in Alertmanager
+func (amm *alertManagerMaintenance) StartWorker(endsAt time.Time) error {
+	now := strfmt.DateTime(time.Now().UTC())
+	end := strfmt.DateTime(endsAt)
+	err := amm.client.create(createDefaultMatchers(), now, end, config.OperatorName, "Silence for OSD upgrade")
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // End all active maintenances created by managed-upgrade-operator in Alertmanager
@@ -122,4 +140,20 @@ func (amm *alertManagerMaintenance) End() error {
 	}
 
 	return nil
+}
+
+func createMatcher(alertMatchKey string, alertValue string, isRegex bool) *amv2Models.Matcher {
+	return &amv2Models.Matcher{
+		Name:    &alertMatchKey,
+		IsRegex: &isRegex,
+		Value:   &alertValue,
+	}
+}
+
+func createDefaultMatchers() []*amv2Models.Matcher {
+	// Upgrades can impact some availability which may trigger info/warning alerts. ignore those.
+	nonCriticalAlertMatcher := createMatcher("severity", "(warning|info|none)", true)
+
+	inNamespaceAlertMatcher := createMatcher("namespace", "(^openshift.*|^kube.*|^redhat.*|^default$)", true)
+	return amv2Models.Matchers{nonCriticalAlertMatcher, inNamespaceAlertMatcher}
 }

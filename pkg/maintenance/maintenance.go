@@ -6,7 +6,8 @@ import (
 )
 
 type Maintenance interface {
-	Start(endsAt time.Time) error
+	StartControlPlane(endsAt time.Time) error
+	StartWorker(endsAt time.Time) error
 	End() error
 }
 
