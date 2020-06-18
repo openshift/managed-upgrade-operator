@@ -2,7 +2,6 @@ package upgradeconfig
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 	"time"
 
@@ -31,15 +30,12 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileUpgradeConfig{client: mgr.GetClient(), scheme: mgr.GetScheme()}
-}
-
-func NewReconcileUpgradeConfig(client client.Client, scheme *runtime.Scheme) (reconcile.Reconciler, error) {
-	if scheme == nil {
-		return nil, fmt.Errorf("scheme cannot be nil")
+	return &ReconcileUpgradeConfig{
+		client:                   mgr.GetClient(),
+		scheme:                   mgr.GetScheme(),
+		maintenanceClientBuilder: maintenance.NewClient,
+		clusterUpgraderBuilder:   NewUpgrader,
 	}
-
-	return &ReconcileUpgradeConfig{client, scheme}, nil
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -65,8 +61,10 @@ var _ reconcile.Reconciler = &ReconcileUpgradeConfig{}
 type ReconcileUpgradeConfig struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client client.Client
-	scheme *runtime.Scheme
+	client                   client.Client
+	scheme                   *runtime.Scheme
+	maintenanceClientBuilder func(client client.Client) (maintenance.Maintenance, error)
+	clusterUpgraderBuilder   func() ClusterUpgrader
 }
 
 // Reconcile reads that state of the cluster for a UpgradeConfig object and makes changes based on the state read
@@ -78,7 +76,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling UpgradeConfig")
 
-	upgrader := NewUpgrader()
+	upgrader := r.clusterUpgraderBuilder()
 	// Fetch the UpgradeConfig instance
 	instance := &upgradev1alpha1.UpgradeConfig{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
@@ -130,7 +128,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 		reqLogger.Info("checking whether it's ready to do upgrade")
 		ready := readyToUpgrade(instance)
 		if ready {
-			m, err := maintenance.NewClient(r.client)
+			m, err := r.getMaintenanceClient(r.client)
 			if err != nil {
 				return reconcile.Result{}, err
 			}
@@ -149,7 +147,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 			return reconcile.Result{}, nil
 		}
 	case upgradev1alpha1.UpgradePhaseUpgrading:
-		m, err := maintenance.NewClient(r.client)
+		m, err := r.getMaintenanceClient(r.client)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -169,6 +167,10 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 	}
 
 	return reconcile.Result{}, nil
+}
+
+func (r *ReconcileUpgradeConfig) getMaintenanceClient(client client.Client) (maintenance.Maintenance, error) {
+	return r.maintenanceClientBuilder(client)
 }
 
 type StatusChangedPredicate struct {
