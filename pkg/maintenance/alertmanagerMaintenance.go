@@ -90,9 +90,10 @@ func getAuthentication(c client.Client) (runtime.ClientAuthInfoWriter, error) {
 }
 
 // Start a control plane maintenance in Alertmanager
+// Time is converted to UTC
 func (amm *alertManagerMaintenance) StartControlPlane(endsAt time.Time) error {
 	now := strfmt.DateTime(time.Now().UTC())
-	end := strfmt.DateTime(endsAt)
+	end := strfmt.DateTime(endsAt.UTC())
 	err := amm.client.create(createDefaultMatchers(), now, end, config.OperatorName, "Silence for OSD upgrade")
 	if err != nil {
 		return err
@@ -108,9 +109,10 @@ func (amm *alertManagerMaintenance) StartControlPlane(endsAt time.Time) error {
 }
 
 // Start a control plane maintenance in Alertmanager
+// Time is converted to UTC
 func (amm *alertManagerMaintenance) StartWorker(endsAt time.Time) error {
 	now := strfmt.DateTime(time.Now().UTC())
-	end := strfmt.DateTime(endsAt)
+	end := strfmt.DateTime(endsAt.UTC())
 	err := amm.client.create(createDefaultMatchers(), now, end, config.OperatorName, "Silence for OSD upgrade")
 	if err != nil {
 		return err
