@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+//go:generate mockgen -destination=../../util/mocks/maintenance.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/maintenance Maintenance
 type Maintenance interface {
 	StartControlPlane(endsAt time.Time) error
 	StartWorker(endsAt time.Time) error

@@ -63,6 +63,7 @@ const (
 )
 
 // Interface describing the functions of a cluster upgrader.
+//go:generate mockgen -destination=../../util/mocks/cluster_upgrader.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/controller/upgradeconfig ClusterUpgrader
 type ClusterUpgrader interface {
 	UpgradeCluster(c client.Client, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, reqLogger logr.Logger) error
 }
