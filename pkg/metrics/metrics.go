@@ -53,16 +53,28 @@ func init() {
 	metrics.Registry.MustRegister(metricPostVerificationFailed)
 }
 
-func UpdateMetricValidationFailed(x int, upgradeconfig string) {
+func UpdateMetricValidationFailed(upgradeconfig string) {
 	metricValidationFailed.With(prometheus.Labels{
 		nameLabel: upgradeconfig}).Set(
-			float64(x))
+			float64(1))
 }
 
-func UpdateMetricClusterCheckFailed(x int, upgradeconfig string) {
+func UpdateMetricValidationSucceeded(upgradeconfig string) {
+	metricValidationFailed.With(prometheus.Labels{
+		nameLabel: upgradeconfig}).Set(
+			float64(0))
+}
+
+func UpdateMetricClusterCheckFailed(upgradeconfig string) {
 	metricClusterCheckFailed.With(prometheus.Labels{
 		nameLabel: upgradeconfig}).Set(
-			float64(x))
+			float64(1))
+}
+
+func UpdateMetricClusterCheckSucceeded(upgradeconfig string) {
+	metricClusterCheckFailed.With(prometheus.Labels{
+		nameLabel: upgradeconfig}).Set(
+			float64(0))
 }
 
 func UpdateMetricUpgradeStartTime(time time.Time, upgradeconfig string) {
@@ -80,11 +92,18 @@ func UpdateMetricControlPlaneEndTime(time time.Time, upgradeconfig string) {
 func UpdateMetricNodeUpgradeEndTime(time time.Time, upgradeconfig string) {
 	metricNodeUpgradeEndTime.With(prometheus.Labels{
 		nameLabel: upgradeconfig}).Set(
-		float64(time.Unix()))
+			float64(time.Unix()))
 }
 
-func UpdateMetricPostVerificationFailed(x int, upgradeconfig string) {
+func UpdateMetricPostVerificationFailed(upgradeconfig string) {
 	metricPostVerificationFailed.With(prometheus.Labels{
 		nameLabel: upgradeconfig}).Set(
-			float64(x))
+			float64(1))
 }
+
+func UpdateMetricPostVerificationSucceeded(upgradeconfig string) {
+	metricPostVerificationFailed.With(prometheus.Labels{
+		nameLabel: upgradeconfig}).Set(
+			float64(0))
+}
+
