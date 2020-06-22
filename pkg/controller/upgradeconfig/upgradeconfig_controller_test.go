@@ -3,17 +3,19 @@ package upgradeconfig
 import (
 	"fmt"
 	"github.com/golang/mock/gomock"
+	"github.com/hashicorp/go-multierror"
 	"github.com/onsi/gomega/gstruct"
-	"github.com/openshift/managed-upgrade-operator/pkg/maintenance"
-	"github.com/openshift/managed-upgrade-operator/util/mocks"
-	"os"
-	"sigs.k8s.io/controller-runtime/pkg/event"
-
 	configv1 "github.com/openshift/api/config/v1"
 	routev1 "github.com/openshift/api/route/v1"
 	machineapi "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
 	machineconfigapi "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
+	"github.com/openshift/managed-upgrade-operator/pkg/cluster_upgrader"
+	"github.com/openshift/managed-upgrade-operator/pkg/maintenance"
+	"github.com/openshift/managed-upgrade-operator/util/mocks"
+
+	mockUpgrader "github.com/openshift/managed-upgrade-operator/util/mocks/cluster_upgrader"
+	mockMaintenance "github.com/openshift/managed-upgrade-operator/util/mocks/maintenance"
 	testStructs "github.com/openshift/managed-upgrade-operator/util/mocks/structs"
 
 	k8serrs "k8s.io/apimachinery/pkg/api/errors"
@@ -34,37 +36,24 @@ var _ = Describe("UpgradeConfigController", func() {
 		reconciler            *ReconcileUpgradeConfig
 		mockKubeClient        *mocks.MockClient
 		mockUpdater           *mocks.MockStatusWriter
-		mockMaintenanceClient *mocks.MockMaintenance
-		mockClusterUpgrader   *mocks.MockClusterUpgrader
+		mockMaintenanceClient *mockMaintenance.MockMaintenance
+		mockClusterUpgrader   *mockUpgrader.MockClusterUpgrader
 		mockCtrl              *gomock.Controller
 		testScheme            *runtime.Scheme
 	)
 
 	BeforeEach(func() {
-		testScheme = runtime.NewScheme()
-		if err := configv1.Install(testScheme); err != nil {
-			log.Error(err, "Unable to add config version to scheme: %s", err)
-			os.Exit(1)
-		}
-		if err := routev1.Install(testScheme); err != nil {
-			log.Error(err, "Unable to add route version to scheme: %s", err)
-			os.Exit(1)
-		}
-		if err := machineapi.AddToScheme(testScheme); err != nil {
-			log.Error(err, "Unable to add machineapi version to scheme: %s", err)
-			os.Exit(1)
-		}
-		if err := machineconfigapi.Install(testScheme); err != nil {
-			log.Error(err, "Unable to add machineconfigapi version to scheme: %s", err)
-			os.Exit(1)
-		}
+		var err error
+		testScheme, err = buildScheme()
+		Expect(err).NotTo(HaveOccurred())
+
 		_ = upgradev1alpha1.SchemeBuilder.AddToScheme(testScheme)
 
 		mockCtrl = gomock.NewController(GinkgoT())
 		mockKubeClient = mocks.NewMockClient(mockCtrl)
 		mockUpdater = mocks.NewMockStatusWriter(mockCtrl)
-		mockMaintenanceClient = mocks.NewMockMaintenance(mockCtrl)
-		mockClusterUpgrader = mocks.NewMockClusterUpgrader(mockCtrl)
+		mockMaintenanceClient = mockMaintenance.NewMockMaintenance(mockCtrl)
+		mockClusterUpgrader = mockUpgrader.NewMockClusterUpgrader(mockCtrl)
 		upgradeConfigName = types.NamespacedName{
 			Name:      "test-upgradeconfig",
 			Namespace: "test-namespace",
@@ -73,7 +62,7 @@ var _ = Describe("UpgradeConfigController", func() {
 		maintenanceBuilder := func(client client.Client) (maintenance.Maintenance, error) {
 			return mockMaintenanceClient, nil
 		}
-		clusterUpgraderBuilder := func() ClusterUpgrader {
+		clusterUpgraderBuilder := func() cluster_upgrader.ClusterUpgrader {
 			return mockClusterUpgrader
 		}
 		reconciler = &ReconcileUpgradeConfig{
@@ -368,50 +357,15 @@ var _ = Describe("UpgradeConfigController", func() {
 			})
 		})
 	})
-
-	Context("Update", func() {
-		var scp StatusChangedPredicate
-		Context("When the old object meta doesn't exist", func() {
-			It("will not return true", func() {
-				result := scp.Update(event.UpdateEvent{MetaOld: nil, ObjectOld: upgradeConfig, MetaNew: upgradeConfig.GetObjectMeta(), ObjectNew: upgradeConfig})
-				Expect(result).To(BeFalse())
-			})
-		})
-		Context("When the old object doesn't exist", func() {
-			It("will not return true", func() {
-				result := scp.Update(event.UpdateEvent{MetaOld: upgradeConfig.GetObjectMeta(), ObjectOld: nil, MetaNew: upgradeConfig.GetObjectMeta(), ObjectNew: upgradeConfig})
-				Expect(result).To(BeFalse())
-			})
-		})
-		Context("When the new object meta doesn't exist", func() {
-			It("will not return true", func() {
-				result := scp.Update(event.UpdateEvent{MetaOld: upgradeConfig.GetObjectMeta(), ObjectOld: upgradeConfig, MetaNew: nil, ObjectNew: upgradeConfig})
-				Expect(result).To(BeFalse())
-			})
-		})
-		Context("When the new object doesn't exist", func() {
-			It("will not return true", func() {
-				result := scp.Update(event.UpdateEvent{MetaOld: upgradeConfig.GetObjectMeta(), ObjectOld: upgradeConfig, MetaNew: upgradeConfig.GetObjectMeta(), ObjectNew: nil})
-				Expect(result).To(BeFalse())
-			})
-		})
-		Context("When the old and new events match", func() {
-			It("will return true", func() {
-				uc1 := testStructs.NewUpgradeConfigBuilder().WithNamespacedName(upgradeConfigName).GetUpgradeConfig()
-				uc2 := testStructs.NewUpgradeConfigBuilder().WithNamespacedName(upgradeConfigName).GetUpgradeConfig()
-				result := scp.Update(event.UpdateEvent{MetaOld: uc1.GetObjectMeta(), ObjectOld: uc1, MetaNew: uc2.GetObjectMeta(), ObjectNew: uc2})
-				Expect(result).To(BeTrue())
-			})
-		})
-		Context("When the old and new events do not match", func() {
-			It("will not return true", func() {
-				uc1 := testStructs.NewUpgradeConfigBuilder().WithNamespacedName(upgradeConfigName).GetUpgradeConfig()
-				uc2 := testStructs.NewUpgradeConfigBuilder().WithNamespacedName(upgradeConfigName).GetUpgradeConfig()
-				uc2.Status.History = []upgradev1alpha1.UpgradeHistory{{Version: "something else"}}
-				result := scp.Update(event.UpdateEvent{MetaOld: uc1.GetObjectMeta(), ObjectOld: uc1, MetaNew: uc2.GetObjectMeta(), ObjectNew: uc2})
-				Expect(result).To(BeFalse())
-			})
-		})
-
-	})
 })
+
+func buildScheme() (*runtime.Scheme, error) {
+	testScheme := runtime.NewScheme()
+	var schemeErrors *multierror.Error
+	schemeErrors = multierror.Append(schemeErrors, configv1.Install(testScheme))
+	schemeErrors = multierror.Append(schemeErrors, routev1.Install(testScheme))
+	schemeErrors = multierror.Append(schemeErrors, machineapi.AddToScheme(testScheme))
+	schemeErrors = multierror.Append(schemeErrors, machineconfigapi.Install(testScheme))
+	schemeErrors = multierror.Append(schemeErrors, upgradev1alpha1.SchemeBuilder.AddToScheme(testScheme))
+	return testScheme, schemeErrors.ErrorOrNil()
+}

@@ -1,4 +1,4 @@
-package upgradeconfig
+package cluster_upgrader
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"runtime"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sort"
 	"strings"
 	"sync"
@@ -36,6 +37,7 @@ import (
 )
 
 var (
+	log                 = logf.Log.WithName("cluster_upgrader")
 	once                sync.Once
 	upgradeSteps        UpgradeSteps
 	UpgradeStepOrdering = []upgradev1alpha1.UpgradeConditionType{
@@ -63,7 +65,7 @@ const (
 )
 
 // Interface describing the functions of a cluster upgrader.
-//go:generate mockgen -destination=../../util/mocks/cluster_upgrader.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/controller/upgradeconfig ClusterUpgrader
+//go:generate mockgen -destination=../../util/mocks/$GOPACKAGE/cluster_upgrader.go -package=$GOPACKAGE github.com/openshift/managed-upgrade-operator/pkg/cluster_upgrader ClusterUpgrader
 type ClusterUpgrader interface {
 	UpgradeCluster(c client.Client, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, reqLogger logr.Logger) error
 }
@@ -765,7 +767,7 @@ func getCurrentVersion(clusterVersion *configv1.ClusterVersion) string {
 }
 
 // This return the current upgrade status
-func clusterUpgrading(c client.Client, version string) (bool, error) {
+func ClusterUpgrading(c client.Client, version string) (bool, error) {
 
 	clusterVersion := &configv1.ClusterVersion{}
 	err := c.Get(context.TODO(), types.NamespacedName{Name: "version"}, clusterVersion)
@@ -782,7 +784,16 @@ func clusterUpgrading(c client.Client, version string) (bool, error) {
 	return false, nil
 }
 
+func newUpgradeCondition(reason, msg string, conditionType upgradev1alpha1.UpgradeConditionType, s corev1.ConditionStatus) *upgradev1alpha1.UpgradeCondition {
+	return &upgradev1alpha1.UpgradeCondition{
+		Type:    conditionType,
+		Status:  s,
+		Reason:  reason,
+		Message: msg,
+	}
+}
+
 // TODO readyToUpgrade checks whether it's ready to upgrade based on the scheduling
-func readyToUpgrade(upgradeConfig *upgradev1alpha1.UpgradeConfig) bool {
+func ReadyToUpgrade(upgradeConfig *upgradev1alpha1.UpgradeConfig) bool {
 	return true
 }

@@ -24,7 +24,6 @@ generate:
 		-p ./pkg/apis/upgrade/v1alpha1 \
 		-h /dev/null \
 		-r "-"
-	go get github.com/golang/mock/mockgen
 	go generate pkg/controller/upgradeconfig/cluster_upgrader.go
 	go generate pkg/maintenance/maintenance.go
 
