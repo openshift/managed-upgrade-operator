@@ -247,7 +247,7 @@ func CommenceUpgrade(c client.Client, m maintenance.Maintenance, upgradeConfig *
 	clusterVersion.Spec.Channel = upgradeConfig.Spec.Desired.Channel
 
 	//Record the timestamp when we start the upgrade
-	metrics.UpdateMetricUpgradeStartTime(time.Now(), upgradeConfig.Name)
+	metrics.UpdateMetricUpgradeStartTime(time.Now().UTC(), upgradeConfig.Name)
 	err = c.Update(context.TODO(), clusterVersion)
 	if err != nil {
 		return false, err
@@ -441,7 +441,7 @@ func NodesUpgraded(c client.Client, nodeType string, upgradeConfig *upgradev1alp
 	}
 
 	// send node upgrade complete metrics
-	metrics.UpdateMetricNodeUpgradeEndTime(time.Now(), upgradeConfig.Name)
+	metrics.UpdateMetricNodeUpgradeEndTime(time.Now().UTC(), upgradeConfig.Name)
 	return true, nil
 }
 
@@ -456,7 +456,7 @@ func ControlPlaneUpgraded(c client.Client, m maintenance.Maintenance, upgradeCon
 	for _, c := range clusterVersion.Status.History {
 		if c.State == configv1.CompletedUpdate && c.Version == upgradeConfig.Spec.Desired.Version {
 			// send controlplane upgrade complete timestamp
-			metrics.UpdateMetricControlPlaneEndTime(time.Now(), upgradeConfig.Name)
+			metrics.UpdateMetricControlPlaneEndTime(time.Now().UTC(), upgradeConfig.Name)
 			return true, nil
 		}
 	}
