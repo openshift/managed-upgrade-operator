@@ -5,6 +5,8 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"github.com/openshift/managed-upgrade-operator/pkg/maintenance"
+	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -14,8 +16,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/openshift/managed-upgrade-operator/pkg/maintenance"
 
 	"github.com/blang/semver"
 	"github.com/go-logr/logr"
@@ -114,7 +114,14 @@ func NewUpgrader() ClusterUpgrader {
 
 // ClusterHealthCheck performs cluster healthy check
 func PreClusterHealthCheck(c client.Client, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, reqLogger logr.Logger) (bool, error) {
-	return performClusterHealthCheck(c)
+	ok, err := performClusterHealthCheck(c)
+	if err != nil || !ok {
+		metrics.UpdateMetricClusterCheckFailed(upgradeConfig.Name)
+		return false, err
+	}
+
+	metrics.UpdateMetricClusterCheckSucceeded(upgradeConfig.Name)
+	return true, nil
 }
 
 // This will create a new machineset with 1 extra replicas for workers in every region
@@ -261,6 +268,9 @@ func CommenceUpgrade(c client.Client, m maintenance.Maintenance, upgradeConfig *
 	clusterVersion.Spec.Overrides = []configv1.ComponentOverride{}
 	clusterVersion.Spec.DesiredUpdate = &configv1.Update{Version: upgradeConfig.Spec.Desired.Version}
 	clusterVersion.Spec.Channel = upgradeConfig.Spec.Desired.Channel
+
+	//Record the timestamp when we start the upgrade
+	metrics.UpdateMetricUpgradeStartTime(time.Now(), upgradeConfig.Name)
 	err = c.Update(context.TODO(), clusterVersion)
 	if err != nil {
 		return false, err
@@ -312,14 +322,14 @@ func CreateWorkerMaintWindow(c client.Client, m maintenance.Maintenance, upgrade
 // This check whether all the master nodes are ready with new config
 func AllMastersUpgraded(c client.Client, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, reqLogger logr.Logger) (bool, error) {
 
-	return NodesUpgraded(c, "master", reqLogger)
+	return NodesUpgraded(c, "master", upgradeConfig, reqLogger)
 
 }
 
 // This check whether all the worker nodes are ready with new config
 func AllWorkersUpgraded(c client.Client, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, reqLogger logr.Logger) (bool, error) {
 
-	return NodesUpgraded(c, "worker", reqLogger)
+	return NodesUpgraded(c, "worker", upgradeConfig, reqLogger)
 
 }
 
@@ -393,6 +403,7 @@ func PostUpgradeVerification(c client.Client, m maintenance.Maintenance, upgrade
 
 	if totalRs != readyRs {
 		reqLogger.Info(fmt.Sprintf("not all replicaset are ready:expected number :%v , ready number %v", len(replicaSetList.Items), readyRs))
+		metrics.UpdateMetricPostVerificationFailed(upgradeConfig.Name)
 		return false, nil
 	}
 
@@ -415,9 +426,11 @@ func PostUpgradeVerification(c client.Client, m maintenance.Maintenance, upgrade
 	}
 	if len(dsList.Items) != readyDS {
 		reqLogger.Info(fmt.Sprintf("not all daemonset are ready:expected number :%v , ready number %v", len(dsList.Items), readyDS))
+		metrics.UpdateMetricPostVerificationFailed(upgradeConfig.Name)
 		return false, nil
 	}
 
+	metrics.UpdateMetricPostVerificationSucceeded(upgradeConfig.Name)
 	return true, nil
 }
 
@@ -433,24 +446,31 @@ func RemoveMaintWindow(c client.Client, m maintenance.Maintenance, upgradeConfig
 
 // This perform cluster health check after upgrade
 func PostClusterHealthCheck(c client.Client, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, reqLogger logr.Logger) (bool, error) {
+	ok, err := performClusterHealthCheck(c)
+	if err != nil || !ok {
+		metrics.UpdateMetricClusterCheckFailed(upgradeConfig.Name)
+		return false, err
+	}
 
-	return performClusterHealthCheck(c)
+	metrics.UpdateMetricClusterCheckSucceeded(upgradeConfig.Name)
+	return true, nil
 }
 
 // Check whether nodes are upgraded or not
-func NodesUpgraded(c client.Client, nodeType string, reqLogger logr.Logger) (bool, error) {
+func NodesUpgraded(c client.Client, nodeType string, upgradeConfig *upgradev1alpha1.UpgradeConfig, reqLogger logr.Logger) (bool, error) {
 	configPool := &machineconfigapi.MachineConfigPool{}
 	err := c.Get(context.TODO(), types.NamespacedName{Name: nodeType}, configPool)
 	if err != nil {
 		return false, nil
 	}
-	//TODO send timeout alert if wait timeout
 	if configPool.Status.MachineCount != configPool.Status.UpdatedMachineCount {
 		errMsg := fmt.Sprintf("not all %s are upgraded, upgraded: %v, total: %v", nodeType, configPool.Status.UpdatedMachineCount, configPool.Status.MachineCount)
 		reqLogger.Info(errMsg)
 		return false, nil
 	}
 
+	// send node upgrade complete metrics
+	metrics.UpdateMetricNodeUpgradeEndTime(time.Now(), upgradeConfig.Name)
 	return true, nil
 }
 
@@ -464,6 +484,8 @@ func ControlPlaneUpgraded(c client.Client, m maintenance.Maintenance, upgradeCon
 	}
 	for _, c := range clusterVersion.Status.History {
 		if c.State == configv1.CompletedUpdate && c.Version == upgradeConfig.Spec.Desired.Version {
+			// send controlplane upgrade complete timestamp
+			metrics.UpdateMetricControlPlaneEndTime(time.Now(), upgradeConfig.Name)
 			return true, nil
 		}
 	}
@@ -636,7 +658,7 @@ func performClusterHealthCheck(c client.Client) (bool, error) {
 
 	if len(alerts.Data.Result) > 0 {
 		log.Info("there are critical alerts exists, cannot upgrade now")
-		//TODO send out upgrade alerts
+		// Send the metrics for the cluster check failed if we have opening alerts
 		return false, fmt.Errorf("there are %d critical alerts", len(alerts.Data.Result))
 	}
 
@@ -659,6 +681,7 @@ func performClusterHealthCheck(c client.Client) (bool, error) {
 
 	if len(degradedOperators) > 0 {
 		log.Info(fmt.Sprintf("degraded operators :%s", strings.Join(degradedOperators, ",")))
+		// Send the metrics for the cluster check failed if we have degraded operators
 		return false, fmt.Errorf("degraded operators :%s", strings.Join(degradedOperators, ","))
 	}
 	return true, nil
@@ -684,6 +707,7 @@ func ValidateUpgradeConfig(c client.Client, m maintenance.Maintenance, upgradeCo
 	if err != nil {
 		log.Info("failed to get clusterversion")
 		log.Error(err, "failed to get clusterversion")
+		metrics.UpdateMetricValidationFailed(upgradeConfig.Name)
 		return false, err
 	}
 
@@ -693,12 +717,12 @@ func ValidateUpgradeConfig(c client.Client, m maintenance.Maintenance, upgradeCo
 	current := getCurrentVersion(clusterVersion)
 	log.Info(fmt.Sprintf("current version is %s", current))
 	if len(current) == 0 {
-
 		return false, fmt.Errorf("failed to get current version")
 	}
 	// If the version match, it means it's already upgraded or at least control plane is upgraded.
 	if current == upgradeConfig.Spec.Desired.Version {
 		log.Info("the expected version match current version")
+		metrics.UpdateMetricValidationFailed(upgradeConfig.Name)
 		return false, fmt.Errorf("cluster is already on version %s", current)
 	}
 
@@ -708,7 +732,7 @@ func ValidateUpgradeConfig(c client.Client, m maintenance.Maintenance, upgradeCo
 	sort.Strings(versions)
 	if versions[0] != current {
 		log.Info(fmt.Sprintf("validation failed, current version %s is greater than desired %s", current, upgradeConfig.Spec.Desired.Version))
-
+		metrics.UpdateMetricValidationFailed(upgradeConfig.Name)
 		return false, fmt.Errorf("desired version %s is greater than current version %s", upgradeConfig.Spec.Desired.Version, current)
 	}
 
@@ -728,6 +752,7 @@ func ValidateUpgradeConfig(c client.Client, m maintenance.Maintenance, upgradeCo
 
 	updates, err := cincinnati.NewClient(uuid, nil, nil).GetUpdates(upstreamURI, runtime.GOARCH, upgradeConfig.Spec.Desired.Channel, currentVersion)
 	if err != nil {
+		metrics.UpdateMetricValidationFailed(upgradeConfig.Name)
 		return false, err
 	}
 
@@ -751,9 +776,12 @@ func ValidateUpgradeConfig(c client.Client, m maintenance.Maintenance, upgradeCo
 		log.Info(fmt.Sprintf("failed to find the desired version %s in channel %s", upgradeConfig.Spec.Desired.Version, upgradeConfig.Spec.Desired.Channel))
 		//We need update the condition
 		errMsg := fmt.Sprintf("cannot find version %s in available updates", upgradeConfig.Spec.Desired.Version)
+		metrics.UpdateMetricValidationFailed(upgradeConfig.Name)
 		return false, fmt.Errorf(errMsg)
 	}
 
+	//Send the metrics for the validation passed
+	metrics.UpdateMetricValidationSucceeded(upgradeConfig.Name)
 	return true, nil
 }
 
