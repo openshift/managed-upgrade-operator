@@ -90,7 +90,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 	}
 
 	// If cluster is already upgrading with different version, we should wait until it completed
-	upgrading, err := cluster_upgrader.ClusterUpgrading(r.client, instance.Spec.Desired.Version)
+	upgrading, err := cluster_upgrader.IsClusterUpgrading(r.client, instance.Spec.Desired.Version)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -124,7 +124,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 	case "", upgradev1alpha1.UpgradePhaseNew, upgradev1alpha1.UpgradePhasePending:
 		// TODO verify if it's time to do upgrade, if no, set to "pending", if it's yes, perform upgrade, and set status to "upgrading"
 		reqLogger.Info("checking whether it's ready to do upgrade")
-		ready := cluster_upgrader.ReadyToUpgrade(instance)
+		ready := cluster_upgrader.IsReadyToUpgrade(instance)
 		if ready {
 			m, err := r.getMaintenanceClient(r.client)
 			if err != nil {

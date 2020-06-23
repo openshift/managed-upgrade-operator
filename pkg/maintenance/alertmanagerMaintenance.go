@@ -2,7 +2,7 @@ package maintenance
 
 import (
 	"context"
-	"github.com/coreos/pkg/multierror"
+	"github.com/hashicorp/go-multierror"
 	"github.com/go-openapi/runtime"
 	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"
@@ -128,20 +128,16 @@ func (amm *alertManagerMaintenance) End() error {
 		return err
 	}
 
-	var deleteErrors multierror.Error
+	var deleteErrors *multierror.Error
 	for _, s := range silences.Payload {
 		if *s.CreatedBy == config.OperatorName && *s.Status.State == amv2Models.SilenceStatusStateActive {
 			err := amm.client.Delete(*s.ID)
 			if err != nil {
-				deleteErrors = append(deleteErrors, err)
+				deleteErrors = multierror.Append(deleteErrors, err)
 			}
 		}
 	}
-	if len(deleteErrors) > 0 {
-		return deleteErrors.AsError()
-	}
-
-	return nil
+	return deleteErrors.ErrorOrNil()
 }
 
 func createMatcher(alertMatchKey string, alertValue string, isRegex bool) *amv2Models.Matcher {

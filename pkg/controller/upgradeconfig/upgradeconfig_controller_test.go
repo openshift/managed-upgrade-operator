@@ -14,8 +14,8 @@ import (
 	"github.com/openshift/managed-upgrade-operator/pkg/maintenance"
 	"github.com/openshift/managed-upgrade-operator/util/mocks"
 
-	mockUpgrader "github.com/openshift/managed-upgrade-operator/util/mocks/cluster_upgrader"
-	mockMaintenance "github.com/openshift/managed-upgrade-operator/util/mocks/maintenance"
+	mockUpgrader "github.com/openshift/managed-upgrade-operator/pkg/cluster_upgrader/mocks"
+	mockMaintenance "github.com/openshift/managed-upgrade-operator/pkg/maintenance/mocks"
 	testStructs "github.com/openshift/managed-upgrade-operator/util/mocks/structs"
 
 	k8serrs "k8s.io/apimachinery/pkg/api/errors"

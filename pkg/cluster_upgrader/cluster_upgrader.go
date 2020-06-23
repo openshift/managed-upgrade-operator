@@ -65,7 +65,7 @@ const (
 )
 
 // Interface describing the functions of a cluster upgrader.
-//go:generate mockgen -destination=../../util/mocks/$GOPACKAGE/cluster_upgrader.go -package=$GOPACKAGE github.com/openshift/managed-upgrade-operator/pkg/cluster_upgrader ClusterUpgrader
+//go:generate mockgen -destination=mocks/cluster_upgrader.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/cluster_upgrader ClusterUpgrader
 type ClusterUpgrader interface {
 	UpgradeCluster(c client.Client, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, reqLogger logr.Logger) error
 }
@@ -795,7 +795,7 @@ func getCurrentVersion(clusterVersion *configv1.ClusterVersion) string {
 }
 
 // This return the current upgrade status
-func ClusterUpgrading(c client.Client, version string) (bool, error) {
+func IsClusterUpgrading(c client.Client, version string) (bool, error) {
 
 	clusterVersion := &configv1.ClusterVersion{}
 	err := c.Get(context.TODO(), types.NamespacedName{Name: "version"}, clusterVersion)
@@ -822,6 +822,6 @@ func newUpgradeCondition(reason, msg string, conditionType upgradev1alpha1.Upgra
 }
 
 // TODO readyToUpgrade checks whether it's ready to upgrade based on the scheduling
-func ReadyToUpgrade(upgradeConfig *upgradev1alpha1.UpgradeConfig) bool {
+func IsReadyToUpgrade(upgradeConfig *upgradev1alpha1.UpgradeConfig) bool {
 	return true
 }
