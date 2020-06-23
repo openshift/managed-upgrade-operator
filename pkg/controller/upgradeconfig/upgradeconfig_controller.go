@@ -31,7 +31,7 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 	return &ReconcileUpgradeConfig{
 		client:                   mgr.GetClient(),
 		scheme:                   mgr.GetScheme(),
-		maintenanceClientBuilder: maintenance.NewClient,
+		maintenanceClientBuilder: maintenance.NewBuilder(),
 		clusterUpgraderBuilder:   cluster_upgrader.NewUpgrader,
 	}
 }
@@ -61,7 +61,7 @@ type ReconcileUpgradeConfig struct {
 	// that reads objects from the cache and writes to the apiserver
 	client                   client.Client
 	scheme                   *runtime.Scheme
-	maintenanceClientBuilder func(client client.Client) (maintenance.Maintenance, error)
+	maintenanceClientBuilder maintenance.MaintenanceBuilder
 	clusterUpgraderBuilder   func() cluster_upgrader.ClusterUpgrader
 }
 
@@ -126,7 +126,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 		reqLogger.Info("checking whether it's ready to do upgrade")
 		ready := cluster_upgrader.IsReadyToUpgrade(instance)
 		if ready {
-			m, err := r.getMaintenanceClient(r.client)
+			m, err := r.maintenanceClientBuilder.NewClient(r.client)
 			if err != nil {
 				return reconcile.Result{}, err
 			}
@@ -145,7 +145,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 			return reconcile.Result{}, nil
 		}
 	case upgradev1alpha1.UpgradePhaseUpgrading:
-		m, err := r.getMaintenanceClient(r.client)
+		m, err := r.maintenanceClientBuilder.NewClient(r.client)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -165,9 +165,5 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 	}
 
 	return reconcile.Result{}, nil
-}
-
-func (r *ReconcileUpgradeConfig) getMaintenanceClient(client client.Client) (maintenance.Maintenance, error) {
-	return r.maintenanceClientBuilder(client)
 }
 
