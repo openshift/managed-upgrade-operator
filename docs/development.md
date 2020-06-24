@@ -12,6 +12,14 @@ This document should entail all you need to develop this operator locally.
 
 `operator-sdk version: "v0.17.0"`
 
+## Dependencies
+
+### GoMock
+
+[`GoMock`](https://github.com/golang/mock) is used for building or re-building mock interfaces used in [testing](./testing.md).
+
+`GO111MODULE=on go get github.com/golang/mock/mockgen@latest`
+
 ## How to run
 
 1. Either fork your own or checkout the repo from https://github.com/openshift/managed-upgrade-operator into your working directory. For example:

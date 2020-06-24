@@ -2,21 +2,18 @@ package upgradeconfig
 
 import (
 	"context"
-	"fmt"
-	"reflect"
 	"time"
 
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 	"github.com/openshift/managed-upgrade-operator/pkg/maintenance"
+	"github.com/openshift/managed-upgrade-operator/pkg/cluster_upgrader"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
@@ -31,15 +28,12 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileUpgradeConfig{client: mgr.GetClient(), scheme: mgr.GetScheme()}
-}
-
-func NewReconcileUpgradeConfig(client client.Client, scheme *runtime.Scheme) (reconcile.Reconciler, error) {
-	if scheme == nil {
-		return nil, fmt.Errorf("scheme cannot be nil")
+	return &ReconcileUpgradeConfig{
+		client:                   mgr.GetClient(),
+		scheme:                   mgr.GetScheme(),
+		maintenanceClientBuilder: maintenance.NewClient,
+		clusterUpgraderBuilder:   cluster_upgrader.NewUpgrader,
 	}
-
-	return &ReconcileUpgradeConfig{client, scheme}, nil
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -65,8 +59,10 @@ var _ reconcile.Reconciler = &ReconcileUpgradeConfig{}
 type ReconcileUpgradeConfig struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client client.Client
-	scheme *runtime.Scheme
+	client                   client.Client
+	scheme                   *runtime.Scheme
+	maintenanceClientBuilder func(client client.Client) (maintenance.Maintenance, error)
+	clusterUpgraderBuilder   func() cluster_upgrader.ClusterUpgrader
 }
 
 // Reconcile reads that state of the cluster for a UpgradeConfig object and makes changes based on the state read
@@ -78,7 +74,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling UpgradeConfig")
 
-	upgrader := NewUpgrader()
+	upgrader := r.clusterUpgraderBuilder()
 	// Fetch the UpgradeConfig instance
 	instance := &upgradev1alpha1.UpgradeConfig{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
@@ -94,7 +90,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 	}
 
 	// If cluster is already upgrading with different version, we should wait until it completed
-	upgrading, err := clusterUpgrading(r.client, instance.Spec.Desired.Version)
+	upgrading, err := cluster_upgrader.IsClusterUpgrading(r.client, instance.Spec.Desired.Version)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -128,9 +124,9 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 	case "", upgradev1alpha1.UpgradePhaseNew, upgradev1alpha1.UpgradePhasePending:
 		// TODO verify if it's time to do upgrade, if no, set to "pending", if it's yes, perform upgrade, and set status to "upgrading"
 		reqLogger.Info("checking whether it's ready to do upgrade")
-		ready := readyToUpgrade(instance)
+		ready := cluster_upgrader.IsReadyToUpgrade(instance)
 		if ready {
-			m, err := maintenance.NewClient(r.client)
+			m, err := r.getMaintenanceClient(r.client)
 			if err != nil {
 				return reconcile.Result{}, err
 			}
@@ -149,7 +145,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 			return reconcile.Result{}, nil
 		}
 	case upgradev1alpha1.UpgradePhaseUpgrading:
-		m, err := maintenance.NewClient(r.client)
+		m, err := r.getMaintenanceClient(r.client)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -171,30 +167,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 	return reconcile.Result{}, nil
 }
 
-type StatusChangedPredicate struct {
-	predicate.Funcs
+func (r *ReconcileUpgradeConfig) getMaintenanceClient(client client.Client) (maintenance.Maintenance, error) {
+	return r.maintenanceClientBuilder(client)
 }
 
-// Update implements default UpdateEvent filter for validating generation change
-func (StatusChangedPredicate) Update(e event.UpdateEvent) bool {
-	if e.MetaOld == nil {
-		log.Error(nil, "Update event has no old metadata", "event", e)
-		return false
-	}
-	if e.ObjectOld == nil {
-		log.Error(nil, "Update event has no old runtime object to update", "event", e)
-		return false
-	}
-	if e.ObjectNew == nil {
-		log.Error(nil, "Update event has no new runtime object for update", "event", e)
-		return false
-	}
-	if e.MetaNew == nil {
-		log.Error(nil, "Update event has no new metadata", "event", e)
-		return false
-	}
-	newUp := e.ObjectNew.(*upgradev1alpha1.UpgradeConfig)
-	oldUp := e.ObjectOld.(*upgradev1alpha1.UpgradeConfig)
-
-	return (reflect.DeepEqual(newUp.Status, oldUp.Status))
-}

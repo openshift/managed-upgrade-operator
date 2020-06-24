@@ -1,4 +1,4 @@
-package upgradeconfig
+package cluster_upgrader
 
 import (
 	"context"
@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"runtime"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sort"
 	"strings"
 	"sync"
@@ -36,8 +37,9 @@ import (
 )
 
 var (
+	log                 = logf.Log.WithName("cluster_upgrader")
 	once                sync.Once
-	upgrader            ClusterUpgrader
+	upgradeSteps        UpgradeSteps
 	UpgradeStepOrdering = []upgradev1alpha1.UpgradeConditionType{
 		upgradev1alpha1.UpgradeValidated,
 		upgradev1alpha1.UpgradePreHealthCheck,
@@ -59,22 +61,35 @@ var (
 
 const (
 	TIMEOUT_SCALE_EXTRAL_NODES = 30 * time.Minute
-
-	LABEL_UPGRADE = "upgrade.managed.openshift.io"
+	LABEL_UPGRADE              = "upgrade.managed.openshift.io"
 )
 
-type ClusterUpgrader map[upgradev1alpha1.UpgradeConditionType]UpgradeStep
+// Interface describing the functions of a cluster upgrader.
+//go:generate mockgen -destination=mocks/cluster_upgrader.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/cluster_upgrader ClusterUpgrader
+type ClusterUpgrader interface {
+	UpgradeCluster(c client.Client, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, reqLogger logr.Logger) error
+}
+
+// Represents a named series of steps as part of an upgrade process
+type UpgradeSteps map[upgradev1alpha1.UpgradeConditionType]UpgradeStep
+
+// Represents an individual step in the upgrade process
+type UpgradeStep func(c client.Client, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, reqLogger logr.Logger) (bool, error)
+
+// An OSD cluster upgrader implementing the ClusterUpgrader interface
+type osdClusterUpgrader struct {
+	Steps UpgradeSteps
+}
 
 // Ordering returns the ordering of predicates.
 func Ordering() []upgradev1alpha1.UpgradeConditionType {
 	return UpgradeStepOrdering
 }
 
-type UpgradeStep func(c client.Client, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, reqLogger logr.Logger) (bool, error)
-
+// Builds and returns a new cluster upgrader
 func NewUpgrader() ClusterUpgrader {
 	once.Do(func() {
-		upgrader = map[upgradev1alpha1.UpgradeConditionType]UpgradeStep{
+		upgradeSteps = map[upgradev1alpha1.UpgradeConditionType]UpgradeStep{
 			upgradev1alpha1.UpgradeValidated:              ValidateUpgradeConfig,
 			upgradev1alpha1.UpgradePreHealthCheck:         PreClusterHealthCheck,
 			upgradev1alpha1.UpgradeScaleUpExtraNodes:      EnsureExtraUpgradeWorkers,
@@ -92,8 +107,9 @@ func NewUpgrader() ClusterUpgrader {
 			upgradev1alpha1.PostClusterHealthCheck:        PostClusterHealthCheck,
 		}
 	})
-
-	return upgrader
+	return &osdClusterUpgrader{
+		Steps: upgradeSteps,
+	}
 }
 
 // ClusterHealthCheck performs cluster healthy check
@@ -478,7 +494,7 @@ func ControlPlaneUpgraded(c client.Client, m maintenance.Maintenance, upgradeCon
 }
 
 // This trigger the upgrade process
-func (cu ClusterUpgrader) UpgradeCluster(c client.Client, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, reqLogger logr.Logger) error {
+func (cu osdClusterUpgrader) UpgradeCluster(c client.Client, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, reqLogger logr.Logger) error {
 
 	log.Info("upgrading cluster")
 	history := upgradeConfig.Status.History.GetHistory(upgradeConfig.Spec.Desired.Version)
@@ -515,7 +531,7 @@ func (cu ClusterUpgrader) UpgradeCluster(c client.Client, m maintenance.Maintena
 			reqLogger.Info(fmt.Sprintf("%s already done, skip", key))
 			continue
 		}
-		result, err := cu[key](c, m, upgradeConfig, reqLogger)
+		result, err := cu.Steps[key](c, m, upgradeConfig, reqLogger)
 
 		if err != nil {
 			reqLogger.Error(err, fmt.Sprintf("error when %s", key))
@@ -779,7 +795,7 @@ func getCurrentVersion(clusterVersion *configv1.ClusterVersion) string {
 }
 
 // This return the current upgrade status
-func clusterUpgrading(c client.Client, version string) (bool, error) {
+func IsClusterUpgrading(c client.Client, version string) (bool, error) {
 
 	clusterVersion := &configv1.ClusterVersion{}
 	err := c.Get(context.TODO(), types.NamespacedName{Name: "version"}, clusterVersion)
@@ -796,7 +812,16 @@ func clusterUpgrading(c client.Client, version string) (bool, error) {
 	return false, nil
 }
 
+func newUpgradeCondition(reason, msg string, conditionType upgradev1alpha1.UpgradeConditionType, s corev1.ConditionStatus) *upgradev1alpha1.UpgradeCondition {
+	return &upgradev1alpha1.UpgradeCondition{
+		Type:    conditionType,
+		Status:  s,
+		Reason:  reason,
+		Message: msg,
+	}
+}
+
 // TODO readyToUpgrade checks whether it's ready to upgrade based on the scheduling
-func readyToUpgrade(upgradeConfig *upgradev1alpha1.UpgradeConfig) bool {
+func IsReadyToUpgrade(upgradeConfig *upgradev1alpha1.UpgradeConfig) bool {
 	return true
 }

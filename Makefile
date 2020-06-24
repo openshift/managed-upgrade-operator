@@ -24,6 +24,8 @@ generate:
 		-p ./pkg/apis/upgrade/v1alpha1 \
 		-h /dev/null \
 		-r "-"
+	go generate pkg/cluster_upgrader/cluster_upgrader.go
+	go generate pkg/maintenance/maintenance.go
 
 .PHONY: run
 run: 
