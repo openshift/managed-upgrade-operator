@@ -28,11 +28,9 @@ var (
 	controlPlaneIgnoredCriticalAlerts = "(etcdMembersDown)"
 )
 
-type alertManagerMaintenance struct {
-	client alertManagerSilenceClient
-}
+type alertManagerMaintenanceBuilder struct{}
 
-func newAlertManagerMaintenance(client client.Client) (Maintenance, error) {
+func (ammb *alertManagerMaintenanceBuilder) NewClient(client client.Client) (Maintenance, error) {
 	transport, err := getTransport(client)
 	if err != nil {
 		return nil, err
@@ -48,6 +46,10 @@ func newAlertManagerMaintenance(client client.Client) (Maintenance, error) {
 			transport: transport,
 		},
 	}, nil
+}
+
+type alertManagerMaintenance struct {
+	client alertManagerSilenceClient
 }
 
 func getTransport(c client.Client) (*httptransport.Runtime, error) {

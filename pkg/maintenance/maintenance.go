@@ -12,11 +12,11 @@ type Maintenance interface {
 	End() error
 }
 
-func NewClient(client client.Client) (Maintenance, error) {
-	amm, err := newAlertManagerMaintenance(client)
-	if err != nil {
-		return nil, err
-	}
+//go:generate mockgen -destination=mocks/maintenanceBuilder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/maintenance MaintenanceBuilder
+type MaintenanceBuilder interface {
+	NewClient(client client.Client) (Maintenance, error)
+}
 
-	return amm, nil
+func NewBuilder() MaintenanceBuilder {
+	return &alertManagerMaintenanceBuilder{}
 }

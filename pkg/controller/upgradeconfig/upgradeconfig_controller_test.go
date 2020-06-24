@@ -11,7 +11,6 @@ import (
 	machineconfigapi "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 	"github.com/openshift/managed-upgrade-operator/pkg/cluster_upgrader"
-	"github.com/openshift/managed-upgrade-operator/pkg/maintenance"
 	"github.com/openshift/managed-upgrade-operator/util/mocks"
 
 	mockUpgrader "github.com/openshift/managed-upgrade-operator/pkg/cluster_upgrader/mocks"
@@ -22,7 +21,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	. "github.com/onsi/ginkgo"
@@ -31,15 +29,15 @@ import (
 
 var _ = Describe("UpgradeConfigController", func() {
 	var (
-		upgradeConfigName     types.NamespacedName
-		upgradeConfig         *upgradev1alpha1.UpgradeConfig
-		reconciler            *ReconcileUpgradeConfig
-		mockKubeClient        *mocks.MockClient
-		mockUpdater           *mocks.MockStatusWriter
-		mockMaintenanceClient *mockMaintenance.MockMaintenance
-		mockClusterUpgrader   *mockUpgrader.MockClusterUpgrader
-		mockCtrl              *gomock.Controller
-		testScheme            *runtime.Scheme
+		upgradeConfigName      types.NamespacedName
+		upgradeConfig          *upgradev1alpha1.UpgradeConfig
+		reconciler             *ReconcileUpgradeConfig
+		mockKubeClient         *mocks.MockClient
+		mockUpdater            *mocks.MockStatusWriter
+		mockMaintenanceBuilder *mockMaintenance.MockMaintenanceBuilder
+		mockClusterUpgrader    *mockUpgrader.MockClusterUpgrader
+		mockCtrl               *gomock.Controller
+		testScheme             *runtime.Scheme
 	)
 
 	BeforeEach(func() {
@@ -47,28 +45,23 @@ var _ = Describe("UpgradeConfigController", func() {
 		testScheme, err = buildScheme()
 		Expect(err).NotTo(HaveOccurred())
 
-		_ = upgradev1alpha1.SchemeBuilder.AddToScheme(testScheme)
-
 		mockCtrl = gomock.NewController(GinkgoT())
 		mockKubeClient = mocks.NewMockClient(mockCtrl)
 		mockUpdater = mocks.NewMockStatusWriter(mockCtrl)
-		mockMaintenanceClient = mockMaintenance.NewMockMaintenance(mockCtrl)
+		mockMaintenanceBuilder = mockMaintenance.NewMockMaintenanceBuilder(mockCtrl)
 		mockClusterUpgrader = mockUpgrader.NewMockClusterUpgrader(mockCtrl)
 		upgradeConfigName = types.NamespacedName{
 			Name:      "test-upgradeconfig",
 			Namespace: "test-namespace",
 		}
 		upgradeConfig = testStructs.NewUpgradeConfigBuilder().WithNamespacedName(upgradeConfigName).GetUpgradeConfig()
-		maintenanceBuilder := func(client client.Client) (maintenance.Maintenance, error) {
-			return mockMaintenanceClient, nil
-		}
 		clusterUpgraderBuilder := func() cluster_upgrader.ClusterUpgrader {
 			return mockClusterUpgrader
 		}
 		reconciler = &ReconcileUpgradeConfig{
 			mockKubeClient,
 			testScheme,
-			maintenanceBuilder,
+			mockMaintenanceBuilder,
 			clusterUpgraderBuilder,
 		}
 	})
@@ -180,6 +173,7 @@ var _ = Describe("UpgradeConfigController", func() {
 						mockKubeClient.EXPECT().Status().Return(mockUpdater).AnyTimes()
 						mockUpdater.EXPECT().Update(gomock.Any(), matcher).AnyTimes()
 						mockClusterUpgrader.EXPECT().UpgradeCluster(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(1)
+						mockMaintenanceBuilder.EXPECT().NewClient(gomock.Any())
 						_, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
 						Expect(err).NotTo(HaveOccurred())
 						Expect(matcher.ActualUpgradeConfig.Status.History).To(ContainElement(
@@ -214,6 +208,7 @@ var _ = Describe("UpgradeConfigController", func() {
 				Context("When the cluster is ready to upgrade", func() {
 					It("Invokes the upgrader", func() {
 						mockClusterUpgrader.EXPECT().UpgradeCluster(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(1)
+						mockMaintenanceBuilder.EXPECT().NewClient(gomock.Any())
 						result, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
 						Expect(err).NotTo(HaveOccurred())
 						Expect(result.Requeue).To(BeFalse())
@@ -230,14 +225,9 @@ var _ = Describe("UpgradeConfigController", func() {
 				Context("When the cluster is ready to upgrade", func() {
 					Context("When a maintenance client can't be built", func() {
 						var fakeError = fmt.Errorf("a maintenance builder error")
-						JustBeforeEach(func() {
-							maintenanceBuilder := func(client client.Client) (maintenance.Maintenance, error) {
-								return mockMaintenanceClient, fakeError
-							}
-							reconciler.maintenanceClientBuilder = maintenanceBuilder
-						})
 						It("does not proceed with upgrading the cluster", func() {
 							mockClusterUpgrader.EXPECT().UpgradeCluster(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+							mockMaintenanceBuilder.EXPECT().NewClient(gomock.Any()).Return(nil, fakeError)
 							result, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
 							Expect(err).To(Equal(fakeError))
 							Expect(result.Requeue).To(BeFalse())
@@ -248,6 +238,7 @@ var _ = Describe("UpgradeConfigController", func() {
 					Context("When a maintenance client can be built", func() {
 						It("Invokes the upgrader", func() {
 							mockClusterUpgrader.EXPECT().UpgradeCluster(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(1)
+							mockMaintenanceBuilder.EXPECT().NewClient(gomock.Any())
 							result, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
 							Expect(err).NotTo(HaveOccurred())
 							Expect(result.Requeue).To(BeFalse())
@@ -260,6 +251,7 @@ var _ = Describe("UpgradeConfigController", func() {
 						It("reacts accordingly", func() {
 							// All it does here is log at the moment
 							mockClusterUpgrader.EXPECT().UpgradeCluster(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(1).Return(fakeError)
+							mockMaintenanceBuilder.EXPECT().NewClient(gomock.Any())
 							result, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
 							Expect(err).NotTo(HaveOccurred())
 							Expect(result.Requeue).To(BeFalse())
@@ -280,14 +272,9 @@ var _ = Describe("UpgradeConfigController", func() {
 
 				Context("When a maintenance client can't be built", func() {
 					var fakeError = fmt.Errorf("a maintenance builder error")
-					JustBeforeEach(func() {
-						maintenanceBuilder := func(client client.Client) (maintenance.Maintenance, error) {
-							return mockMaintenanceClient, fakeError
-						}
-						reconciler.maintenanceClientBuilder = maintenanceBuilder
-					})
 					It("does not proceed with upgrading the cluster", func() {
 						mockClusterUpgrader.EXPECT().UpgradeCluster(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+						mockMaintenanceBuilder.EXPECT().NewClient(gomock.Any()).Return(nil, fakeError)
 						result, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
 						Expect(err).To(Equal(fakeError))
 						Expect(result.Requeue).To(BeFalse())
@@ -298,6 +285,7 @@ var _ = Describe("UpgradeConfigController", func() {
 				Context("When a maintenance client can be built", func() {
 					It("proceeds with upgrading the cluster", func() {
 						mockClusterUpgrader.EXPECT().UpgradeCluster(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(1)
+						mockMaintenanceBuilder.EXPECT().NewClient(gomock.Any())
 						result, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
 						Expect(err).NotTo(HaveOccurred())
 						Expect(result.Requeue).To(BeFalse())
@@ -309,6 +297,7 @@ var _ = Describe("UpgradeConfigController", func() {
 					var fakeError = fmt.Errorf("the upgrader failed")
 					It("reacts accordingly", func() {
 						mockClusterUpgrader.EXPECT().UpgradeCluster(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(1).Return(fakeError)
+						mockMaintenanceBuilder.EXPECT().NewClient(gomock.Any())
 						result, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
 						Expect(err).NotTo(HaveOccurred())
 						Expect(result.Requeue).To(BeFalse())
