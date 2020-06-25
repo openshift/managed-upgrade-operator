@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"net/url"
 	"runtime"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sort"
 	"strings"
 	"sync"
@@ -37,9 +36,8 @@ import (
 )
 
 var (
-	log                 = logf.Log.WithName("cluster_upgrader")
 	once                sync.Once
-	upgradeSteps        UpgradeSteps
+	osdUpgradeSteps     UpgradeSteps
 	UpgradeStepOrdering = []upgradev1alpha1.UpgradeConditionType{
 		upgradev1alpha1.UpgradeValidated,
 		upgradev1alpha1.UpgradePreHealthCheck,
@@ -67,29 +65,38 @@ const (
 // Interface describing the functions of a cluster upgrader.
 //go:generate mockgen -destination=mocks/cluster_upgrader.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/cluster_upgrader ClusterUpgrader
 type ClusterUpgrader interface {
-	UpgradeCluster(c client.Client, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, reqLogger logr.Logger) error
+	UpgradeCluster(upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) error
+}
+
+//go:generate mockgen -destination=mocks/cluster_upgrader_builder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/cluster_upgrader ClusterUpgraderBuilder
+type ClusterUpgraderBuilder interface {
+	NewClient(client client.Client) (ClusterUpgrader, error)
+}
+
+func NewBuilder() ClusterUpgraderBuilder {
+	return &clusterUpgraderBuilder{
+		maintenanceBuilder: maintenance.NewBuilder(),
+	}
 }
 
 // Represents a named series of steps as part of an upgrade process
 type UpgradeSteps map[upgradev1alpha1.UpgradeConditionType]UpgradeStep
 
 // Represents an individual step in the upgrade process
-type UpgradeStep func(c client.Client, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, reqLogger logr.Logger) (bool, error)
+type UpgradeStep func(c client.Client, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error)
 
-// An OSD cluster upgrader implementing the ClusterUpgrader interface
-type osdClusterUpgrader struct {
-	Steps UpgradeSteps
+type clusterUpgraderBuilder struct {
+	maintenanceBuilder maintenance.MaintenanceBuilder
 }
 
-// Ordering returns the ordering of predicates.
-func Ordering() []upgradev1alpha1.UpgradeConditionType {
-	return UpgradeStepOrdering
-}
+func (cub *clusterUpgraderBuilder) NewClient(c client.Client) (ClusterUpgrader, error) {
+	m, err := cub.maintenanceBuilder.NewClient(c)
+	if err != nil {
+		return nil, err
+	}
 
-// Builds and returns a new cluster upgrader
-func NewUpgrader() ClusterUpgrader {
 	once.Do(func() {
-		upgradeSteps = map[upgradev1alpha1.UpgradeConditionType]UpgradeStep{
+		osdUpgradeSteps = map[upgradev1alpha1.UpgradeConditionType]UpgradeStep{
 			upgradev1alpha1.UpgradeValidated:              ValidateUpgradeConfig,
 			upgradev1alpha1.UpgradePreHealthCheck:         PreClusterHealthCheck,
 			upgradev1alpha1.UpgradeScaleUpExtraNodes:      EnsureExtraUpgradeWorkers,
@@ -107,14 +114,28 @@ func NewUpgrader() ClusterUpgrader {
 			upgradev1alpha1.PostClusterHealthCheck:        PostClusterHealthCheck,
 		}
 	})
-	return &osdClusterUpgrader{
-		Steps: upgradeSteps,
-	}
+	return &clusterUpgrader{
+		Steps:       osdUpgradeSteps,
+		client:      c,
+		maintenance: m,
+	}, nil
+}
+
+// An cluster upgrader implementing the ClusterUpgrader interface
+type clusterUpgrader struct {
+	Steps       UpgradeSteps
+	client      client.Client
+	maintenance maintenance.Maintenance
+}
+
+// Ordering returns the ordering of predicates.
+func Ordering() []upgradev1alpha1.UpgradeConditionType {
+	return UpgradeStepOrdering
 }
 
 // ClusterHealthCheck performs cluster healthy check
-func PreClusterHealthCheck(c client.Client, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, reqLogger logr.Logger) (bool, error) {
-	ok, err := performClusterHealthCheck(c)
+func PreClusterHealthCheck(c client.Client, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
+	ok, err := performClusterHealthCheck(c, logger)
 	if err != nil || !ok {
 		metrics.UpdateMetricClusterCheckFailed(upgradeConfig.Name)
 		return false, err
@@ -125,7 +146,7 @@ func PreClusterHealthCheck(c client.Client, m maintenance.Maintenance, upgradeCo
 }
 
 // This will create a new machineset with 1 extra replicas for workers in every region
-func EnsureExtraUpgradeWorkers(c client.Client, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, reqLogger logr.Logger) (bool, error) {
+func EnsureExtraUpgradeWorkers(c client.Client, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
 	upgradeMachinesets := &machineapi.MachineSetList{}
 
 	err := c.List(context.TODO(), upgradeMachinesets, []client.ListOption{
@@ -133,7 +154,7 @@ func EnsureExtraUpgradeWorkers(c client.Client, m maintenance.Maintenance, upgra
 		client.MatchingLabels{LABEL_UPGRADE: "true"},
 	}...)
 	if err != nil {
-		log.Error(err, "failed to get upgrade extra machinesets")
+		logger.Error(err, "failed to get upgrade extra machinesets")
 		return false, err
 	}
 	originalMachineSets := &machineapi.MachineSetList{}
@@ -143,11 +164,11 @@ func EnsureExtraUpgradeWorkers(c client.Client, m maintenance.Maintenance, upgra
 		client.MatchingLabels{"hive.openshift.io/machine-pool": "worker"},
 	}...)
 	if err != nil {
-		log.Error(err, "failed to get original machinesets")
+		logger.Error(err, "failed to get original machinesets")
 		return false, err
 	}
 	if len(originalMachineSets.Items) == 0 {
-		log.Info("failed to get machineset")
+		logger.Info("failed to get machineset")
 		return false, fmt.Errorf("failed to get original machineset")
 	}
 
@@ -161,7 +182,7 @@ func EnsureExtraUpgradeWorkers(c client.Client, m maintenance.Maintenance, upgra
 			}
 		}
 		if found {
-			log.Info(fmt.Sprintf("machineset for upgrade already created :%s", ms.Name))
+			logger.Info(fmt.Sprintf("machineset for upgrade already created :%s", ms.Name))
 			continue
 		}
 		updated = true
@@ -178,11 +199,11 @@ func EnsureExtraUpgradeWorkers(c client.Client, m maintenance.Maintenance, upgra
 		newMs.Spec.Replicas = &replica
 		newMs.Spec.Template.Labels[LABEL_UPGRADE] = "true"
 		newMs.Spec.Selector.MatchLabels[LABEL_UPGRADE] = "true"
-		log.Info(fmt.Sprintf("creating machineset %s for upgrade", newMs.Name))
+		logger.Info(fmt.Sprintf("creating machineset %s for upgrade", newMs.Name))
 
 		err = c.Create(context.TODO(), newMs)
 		if err != nil {
-			log.Error(err, "failed to create machineset")
+			logger.Error(err, "failed to create machineset")
 			return false, err
 		}
 
@@ -194,7 +215,7 @@ func EnsureExtraUpgradeWorkers(c client.Client, m maintenance.Maintenance, upgra
 	nodes := &corev1.NodeList{}
 	err = c.List(context.TODO(), nodes)
 	if err != nil {
-		log.Error(err, "failed to list nodes")
+		logger.Error(err, "failed to list nodes")
 		return false, err
 	}
 	allNodeReady := true
@@ -205,9 +226,9 @@ func EnsureExtraUpgradeWorkers(c client.Client, m maintenance.Maintenance, upgra
 
 			if time.Now().After(startTime.Time.Add(TIMEOUT_SCALE_EXTRAL_NODES)) {
 				//TODO send out timeout alerts
-				log.Info("machineset provisioning timout")
+				logger.Info("machineset provisioning timout")
 			}
-			log.Info(fmt.Sprintf("not all machines are ready for machineset:%s", ms.Name))
+			logger.Info(fmt.Sprintf("not all machines are ready for machineset:%s", ms.Name))
 			return false, nil
 		}
 		machines := &machineapi.MachineList{}
@@ -216,7 +237,7 @@ func EnsureExtraUpgradeWorkers(c client.Client, m maintenance.Maintenance, upgra
 			client.MatchingLabels{LABEL_UPGRADE: "true"},
 		}...)
 		if err != nil {
-			log.Error(err, "failed to list extra upgrade machine")
+			logger.Error(err, "failed to list extra upgrade machine")
 			return false, err
 		}
 		nodeReady := false
@@ -236,7 +257,7 @@ func EnsureExtraUpgradeWorkers(c client.Client, m maintenance.Maintenance, upgra
 		if !nodeReady {
 			allNodeReady = false
 			if time.Now().After(startTime.Time.Add(TIMEOUT_SCALE_EXTRAL_NODES)) {
-				log.Info("node is not ready within 30mins")
+				logger.Info("node is not ready within 30mins")
 				//TODO send out timeout alerts
 				return false, fmt.Errorf("timeout waiting for node:%s to become ready", nodeName)
 
@@ -253,7 +274,7 @@ func EnsureExtraUpgradeWorkers(c client.Client, m maintenance.Maintenance, upgra
 }
 
 // CommenceUpgrade will update the clusterversion object to apply the desired version to trigger real OCP upgrade
-func CommenceUpgrade(c client.Client, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, reqLogger logr.Logger) (bool, error) {
+func CommenceUpgrade(c client.Client, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
 	clusterVersion := &configv1.ClusterVersion{}
 	err := c.Get(context.TODO(), types.NamespacedName{Name: "version"}, clusterVersion)
 	if err != nil {
@@ -279,7 +300,7 @@ func CommenceUpgrade(c client.Client, m maintenance.Maintenance, upgradeConfig *
 }
 
 // Create the maintenance window for control plane
-func CreateControlPlaneMaintWindow(c client.Client, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, reqLogger logr.Logger) (bool, error) {
+func CreateControlPlaneMaintWindow(c client.Client, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
 	endTime := time.Now().Add(90 * time.Minute)
 	err := m.StartControlPlane(endTime)
 	if err != nil {
@@ -290,7 +311,7 @@ func CreateControlPlaneMaintWindow(c client.Client, m maintenance.Maintenance, u
 }
 
 // Remove the maintenance window for control plane
-func RemoveControlPlaneMaintWindow(c client.Client, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, reqLogger logr.Logger) (bool, error) {
+func RemoveControlPlaneMaintWindow(c client.Client, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
 	err := m.End()
 	if err != nil {
 		return false, err
@@ -300,7 +321,7 @@ func RemoveControlPlaneMaintWindow(c client.Client, m maintenance.Maintenance, u
 }
 
 // Create the maintenance window for workers
-func CreateWorkerMaintWindow(c client.Client, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, reqLogger logr.Logger) (bool, error) {
+func CreateWorkerMaintWindow(c client.Client, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
 	configPool := &machineconfigapi.MachineConfigPool{}
 	err := c.Get(context.TODO(), types.NamespacedName{Name: "worker"}, configPool)
 	if err != nil {
@@ -320,21 +341,21 @@ func CreateWorkerMaintWindow(c client.Client, m maintenance.Maintenance, upgrade
 }
 
 // This check whether all the master nodes are ready with new config
-func AllMastersUpgraded(c client.Client, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, reqLogger logr.Logger) (bool, error) {
+func AllMastersUpgraded(c client.Client, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
 
-	return NodesUpgraded(c, "master", upgradeConfig, reqLogger)
+	return NodesUpgraded(c, "master", upgradeConfig, logger)
 
 }
 
 // This check whether all the worker nodes are ready with new config
-func AllWorkersUpgraded(c client.Client, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, reqLogger logr.Logger) (bool, error) {
+func AllWorkersUpgraded(c client.Client, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
 
-	return NodesUpgraded(c, "worker", upgradeConfig, reqLogger)
+	return NodesUpgraded(c, "worker", upgradeConfig, logger)
 
 }
 
 // This will remove the extra worker nodes we added before kick off upgrade
-func RemoveExtraScaledNodes(c client.Client, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, reqLogger logr.Logger) (bool, error) {
+func RemoveExtraScaledNodes(c client.Client, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
 	upgradeMachinesets := &machineapi.MachineSetList{}
 
 	err := c.List(context.TODO(), upgradeMachinesets, []client.ListOption{
@@ -342,7 +363,7 @@ func RemoveExtraScaledNodes(c client.Client, m maintenance.Maintenance, upgradeC
 		client.MatchingLabels{LABEL_UPGRADE: "true"},
 	}...)
 	if err != nil {
-		reqLogger.Error(err, "failed to get upgrade extra machinesets")
+		logger.Error(err, "failed to get upgrade extra machinesets")
 		return false, err
 	}
 	for _, item := range upgradeMachinesets.Items {
@@ -356,13 +377,13 @@ func RemoveExtraScaledNodes(c client.Client, m maintenance.Maintenance, upgradeC
 }
 
 // This will update the 3rd subscriptions
-func UpdateSubscriptions(c client.Client, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, reqLogger logr.Logger) (bool, error) {
+func UpdateSubscriptions(c client.Client, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
 	for _, item := range upgradeConfig.Spec.SubscriptionUpdates {
 		sub := &operatorv1alpha1.Subscription{}
 		err := c.Get(context.TODO(), types.NamespacedName{Namespace: item.Namespace, Name: item.Name}, sub)
 		if err != nil {
 			if errors.IsNotFound(err) {
-				reqLogger.Info("subscription :%s in namespace %s not exists, do not need update")
+				logger.Info("subscription :%s in namespace %s not exists, do not need update")
 				continue
 			} else {
 				return false, err
@@ -381,7 +402,7 @@ func UpdateSubscriptions(c client.Client, m maintenance.Maintenance, upgradeConf
 }
 
 // PostUpgradeVerification verify all replicasets are at expected counts and all daemonsets are at expected counts
-func PostUpgradeVerification(c client.Client, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, reqLogger logr.Logger) (bool, error) {
+func PostUpgradeVerification(c client.Client, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
 	replicaSetList := &appsv1.ReplicaSetList{}
 	err := c.List(context.TODO(), replicaSetList)
 	if err != nil {
@@ -402,7 +423,7 @@ func PostUpgradeVerification(c client.Client, m maintenance.Maintenance, upgrade
 	}
 
 	if totalRs != readyRs {
-		reqLogger.Info(fmt.Sprintf("not all replicaset are ready:expected number :%v , ready number %v", len(replicaSetList.Items), readyRs))
+		logger.Info(fmt.Sprintf("not all replicaset are ready:expected number :%v , ready number %v", len(replicaSetList.Items), readyRs))
 		metrics.UpdateMetricPostVerificationFailed(upgradeConfig.Name)
 		return false, nil
 	}
@@ -425,7 +446,7 @@ func PostUpgradeVerification(c client.Client, m maintenance.Maintenance, upgrade
 		}
 	}
 	if len(dsList.Items) != readyDS {
-		reqLogger.Info(fmt.Sprintf("not all daemonset are ready:expected number :%v , ready number %v", len(dsList.Items), readyDS))
+		logger.Info(fmt.Sprintf("not all daemonset are ready:expected number :%v , ready number %v", len(dsList.Items), readyDS))
 		metrics.UpdateMetricPostVerificationFailed(upgradeConfig.Name)
 		return false, nil
 	}
@@ -435,7 +456,7 @@ func PostUpgradeVerification(c client.Client, m maintenance.Maintenance, upgrade
 }
 
 // Remove maintenance
-func RemoveMaintWindow(c client.Client, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, reqLogger logr.Logger) (bool, error) {
+func RemoveMaintWindow(c client.Client, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
 	err := m.End()
 	if err != nil {
 		return false, err
@@ -445,8 +466,8 @@ func RemoveMaintWindow(c client.Client, m maintenance.Maintenance, upgradeConfig
 }
 
 // This perform cluster health check after upgrade
-func PostClusterHealthCheck(c client.Client, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, reqLogger logr.Logger) (bool, error) {
-	ok, err := performClusterHealthCheck(c)
+func PostClusterHealthCheck(c client.Client, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
+	ok, err := performClusterHealthCheck(c, logger)
 	if err != nil || !ok {
 		metrics.UpdateMetricClusterCheckFailed(upgradeConfig.Name)
 		return false, err
@@ -457,7 +478,7 @@ func PostClusterHealthCheck(c client.Client, m maintenance.Maintenance, upgradeC
 }
 
 // Check whether nodes are upgraded or not
-func NodesUpgraded(c client.Client, nodeType string, upgradeConfig *upgradev1alpha1.UpgradeConfig, reqLogger logr.Logger) (bool, error) {
+func NodesUpgraded(c client.Client, nodeType string, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
 	configPool := &machineconfigapi.MachineConfigPool{}
 	err := c.Get(context.TODO(), types.NamespacedName{Name: nodeType}, configPool)
 	if err != nil {
@@ -465,7 +486,7 @@ func NodesUpgraded(c client.Client, nodeType string, upgradeConfig *upgradev1alp
 	}
 	if configPool.Status.MachineCount != configPool.Status.UpdatedMachineCount {
 		errMsg := fmt.Sprintf("not all %s are upgraded, upgraded: %v, total: %v", nodeType, configPool.Status.UpdatedMachineCount, configPool.Status.MachineCount)
-		reqLogger.Info(errMsg)
+		logger.Info(errMsg)
 		return false, nil
 	}
 
@@ -475,7 +496,7 @@ func NodesUpgraded(c client.Client, nodeType string, upgradeConfig *upgradev1alp
 }
 
 // This check whether control plane is upgraded or not
-func ControlPlaneUpgraded(c client.Client, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, reqLogger logr.Logger) (bool, error) {
+func ControlPlaneUpgraded(c client.Client, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
 	clusterVersion := &configv1.ClusterVersion{}
 
 	err := c.Get(context.TODO(), types.NamespacedName{Name: "version"}, clusterVersion)
@@ -494,9 +515,9 @@ func ControlPlaneUpgraded(c client.Client, m maintenance.Maintenance, upgradeCon
 }
 
 // This trigger the upgrade process
-func (cu osdClusterUpgrader) UpgradeCluster(c client.Client, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, reqLogger logr.Logger) error {
+func (cu clusterUpgrader) UpgradeCluster(upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) error {
 
-	log.Info("upgrading cluster")
+	logger.Info("upgrading cluster")
 	history := upgradeConfig.Status.History.GetHistory(upgradeConfig.Spec.Desired.Version)
 	conditions := history.Conditions
 
@@ -504,43 +525,43 @@ func (cu osdClusterUpgrader) UpgradeCluster(c client.Client, m maintenance.Maint
 		history.Phase = upgradev1alpha1.UpgradePhaseUpgrading
 		history.StartTime = &metav1.Time{Time: time.Now()}
 		upgradeConfig.Status.History.SetHistory(*history)
-		err := c.Status().Update(context.TODO(), upgradeConfig)
+		err := cu.client.Status().Update(context.TODO(), upgradeConfig)
 		if err != nil {
-			log.Error(err, "failed to update upgradeconfig")
+			logger.Error(err, "failed to update upgradeconfig")
 		}
 	}
 
 	for _, key := range Ordering() {
 
-		log.Info(fmt.Sprintf("Perform %s", key))
+		logger.Info(fmt.Sprintf("Perform %s", key))
 
 		condition := conditions.GetCondition(key)
 		if condition == nil {
-			reqLogger.Info(fmt.Sprintf("Adding %s condition", key))
+			logger.Info(fmt.Sprintf("Adding %s condition", key))
 			condition = newUpgradeCondition(fmt.Sprintf("start %s", key), fmt.Sprintf("start %s", key), key, corev1.ConditionFalse)
 			condition.StartTime = &metav1.Time{Time: time.Now()}
 			conditions.SetCondition(*condition)
 			history.Conditions = conditions
 			upgradeConfig.Status.History.SetHistory(*history)
-			err := c.Status().Update(context.TODO(), upgradeConfig)
+			err := cu.client.Status().Update(context.TODO(), upgradeConfig)
 			if err != nil {
 				return err
 			}
 		}
 		if condition.Status == corev1.ConditionTrue {
-			reqLogger.Info(fmt.Sprintf("%s already done, skip", key))
+			logger.Info(fmt.Sprintf("%s already done, skip", key))
 			continue
 		}
-		result, err := cu.Steps[key](c, m, upgradeConfig, reqLogger)
+		result, err := cu.Steps[key](cu.client, cu.maintenance, upgradeConfig, logger)
 
 		if err != nil {
-			reqLogger.Error(err, fmt.Sprintf("error when %s", key))
+			logger.Error(err, fmt.Sprintf("error when %s", key))
 			condition.Reason = fmt.Sprintf("%s not done", key)
 			condition.Message = err.Error()
 			conditions.SetCondition(*condition)
 			history.Conditions = conditions
 			upgradeConfig.Status.History.SetHistory(*history)
-			err = c.Status().Update(context.TODO(), upgradeConfig)
+			err = cu.client.Status().Update(context.TODO(), upgradeConfig)
 			if err != nil {
 				return err
 			}
@@ -554,18 +575,18 @@ func (cu osdClusterUpgrader) UpgradeCluster(c client.Client, m maintenance.Maint
 			conditions.SetCondition(*condition)
 			history.Conditions = conditions
 			upgradeConfig.Status.History.SetHistory(*history)
-			err = c.Status().Update(context.TODO(), upgradeConfig)
+			err = cu.client.Status().Update(context.TODO(), upgradeConfig)
 			if err != nil {
 				return err
 			}
 		} else {
-			log.Info(fmt.Sprintf("%s not done, skip following steps", key))
+			logger.Info(fmt.Sprintf("%s not done, skip following steps", key))
 			condition.Reason = fmt.Sprintf("%s not done", key)
 			condition.Message = fmt.Sprintf("%s still in progress", key)
 			conditions.SetCondition(*condition)
 			history.Conditions = conditions
 			upgradeConfig.Status.History.SetHistory(*history)
-			err = c.Status().Update(context.TODO(), upgradeConfig)
+			err = cu.client.Status().Update(context.TODO(), upgradeConfig)
 			if err != nil {
 				return err
 			}
@@ -575,7 +596,7 @@ func (cu osdClusterUpgrader) UpgradeCluster(c client.Client, m maintenance.Maint
 	history.Phase = upgradev1alpha1.UpgradePhaseUpgraded
 	history.CompleteTime = &metav1.Time{Time: time.Now()}
 	upgradeConfig.Status.History.SetHistory(*history)
-	err := c.Status().Update(context.TODO(), upgradeConfig)
+	err := cu.client.Status().Update(context.TODO(), upgradeConfig)
 	if err != nil {
 		return err
 	}
@@ -586,7 +607,7 @@ func (cu osdClusterUpgrader) UpgradeCluster(c client.Client, m maintenance.Maint
 // check several things about the cluster and report problems
 // * critical alerts
 // * degraded operators (if there are critical alerts only)
-func performClusterHealthCheck(c client.Client) (bool, error) {
+func performClusterHealthCheck(c client.Client, logger logr.Logger) (bool, error) {
 	sa := &corev1.ServiceAccount{}
 
 	err := c.Get(context.TODO(), types.NamespacedName{Namespace: "openshift-monitoring", Name: "prometheus-k8s"}, sa)
@@ -604,7 +625,7 @@ func performClusterHealthCheck(c client.Client) (bool, error) {
 		return false, fmt.Errorf("failed to find token secret for prommetheus-k8s SA")
 	}
 
-	log.Info(fmt.Sprintf("found out secret %s", tokenSecret))
+	logger.Info(fmt.Sprintf("found out secret %s", tokenSecret))
 
 	secret := &corev1.Secret{}
 
@@ -648,7 +669,7 @@ func performClusterHealthCheck(c client.Client) (bool, error) {
 		return false, fmt.Errorf("Error when querying Prometheus alerts: %s", err)
 	}
 
-	log.Info(fmt.Sprintf("alerts : %s", body))
+	logger.Info(fmt.Sprintf("alerts : %s", body))
 	alerts := &AlertResponse{}
 
 	err = json.Unmarshal(body, alerts)
@@ -657,7 +678,7 @@ func performClusterHealthCheck(c client.Client) (bool, error) {
 	}
 
 	if len(alerts.Data.Result) > 0 {
-		log.Info("there are critical alerts exists, cannot upgrade now")
+		logger.Info("there are critical alerts exists, cannot upgrade now")
 		// Send the metrics for the cluster check failed if we have opening alerts
 		return false, fmt.Errorf("there are %d critical alerts", len(alerts.Data.Result))
 	}
@@ -680,7 +701,7 @@ func performClusterHealthCheck(c client.Client) (bool, error) {
 	}
 
 	if len(degradedOperators) > 0 {
-		log.Info(fmt.Sprintf("degraded operators :%s", strings.Join(degradedOperators, ",")))
+		logger.Info(fmt.Sprintf("degraded operators :%s", strings.Join(degradedOperators, ",")))
 		// Send the metrics for the cluster check failed if we have degraded operators
 		return false, fmt.Errorf("degraded operators :%s", strings.Join(degradedOperators, ","))
 	}
@@ -699,14 +720,14 @@ type AlertData struct {
 
 // TODO move to https://github.com/openshift/managed-cluster-validating-webhooks
 // validateUpgradeConfig will validate the UpgradeConfig, the desired version should be grater than or equal to the current version
-func ValidateUpgradeConfig(c client.Client, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, reqLogger logr.Logger) (result bool, err error) {
+func ValidateUpgradeConfig(c client.Client, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (result bool, err error) {
 
-	log.Info("validating upgradeconfig")
+	logger.Info("validating upgradeconfig")
 	clusterVersion := &configv1.ClusterVersion{}
 	err = c.Get(context.TODO(), types.NamespacedName{Name: "version"}, clusterVersion)
 	if err != nil {
-		log.Info("failed to get clusterversion")
-		log.Error(err, "failed to get clusterversion")
+		logger.Info("failed to get clusterversion")
+		logger.Error(err, "failed to get clusterversion")
 		metrics.UpdateMetricValidationFailed(upgradeConfig.Name)
 		return false, err
 	}
@@ -715,29 +736,29 @@ func ValidateUpgradeConfig(c client.Client, m maintenance.Maintenance, upgradeCo
 
 	//Get current version, then compare
 	current := getCurrentVersion(clusterVersion)
-	log.Info(fmt.Sprintf("current version is %s", current))
+	logger.Info(fmt.Sprintf("current version is %s", current))
 	if len(current) == 0 {
 		return false, fmt.Errorf("failed to get current version")
 	}
 	// If the version match, it means it's already upgraded or at least control plane is upgraded.
 	if current == upgradeConfig.Spec.Desired.Version {
-		log.Info("the expected version match current version")
+		logger.Info("the expected version match current version")
 		metrics.UpdateMetricValidationFailed(upgradeConfig.Name)
 		return false, fmt.Errorf("cluster is already on version %s", current)
 	}
 
 	// Compare the versions, if the current version is greater than desired, failed the validation, we don't support version rollback
 	versions := []string{current, upgradeConfig.Spec.Desired.Version}
-	log.Info("compare two versions")
+	logger.Info("compare two versions")
 	sort.Strings(versions)
 	if versions[0] != current {
-		log.Info(fmt.Sprintf("validation failed, current version %s is greater than desired %s", current, upgradeConfig.Spec.Desired.Version))
+		logger.Info(fmt.Sprintf("validation failed, current version %s is greater than desired %s", current, upgradeConfig.Spec.Desired.Version))
 		metrics.UpdateMetricValidationFailed(upgradeConfig.Name)
 		return false, fmt.Errorf("desired version %s is greater than current version %s", upgradeConfig.Spec.Desired.Version, current)
 	}
 
 	// Find the available versions from cincinnati
-	uuid, err := uuid.Parse(string(clusterVersion.Spec.ClusterID))
+	clusterId, err := uuid.Parse(string(clusterVersion.Spec.ClusterID))
 	if err != nil {
 		return false, err
 	}
@@ -750,7 +771,7 @@ func ValidateUpgradeConfig(c client.Client, m maintenance.Maintenance, upgradeCo
 		return false, err
 	}
 
-	updates, err := cincinnati.NewClient(uuid, nil, nil).GetUpdates(upstreamURI, runtime.GOARCH, upgradeConfig.Spec.Desired.Channel, currentVersion)
+	updates, err := cincinnati.NewClient(clusterId, nil, nil).GetUpdates(upstreamURI, runtime.GOARCH, upgradeConfig.Spec.Desired.Channel, currentVersion)
 	if err != nil {
 		metrics.UpdateMetricValidationFailed(upgradeConfig.Name)
 		return false, err
@@ -773,7 +794,7 @@ func ValidateUpgradeConfig(c client.Client, m maintenance.Maintenance, upgradeCo
 	}
 
 	if !found {
-		log.Info(fmt.Sprintf("failed to find the desired version %s in channel %s", upgradeConfig.Spec.Desired.Version, upgradeConfig.Spec.Desired.Channel))
+		logger.Info(fmt.Sprintf("failed to find the desired version %s in channel %s", upgradeConfig.Spec.Desired.Version, upgradeConfig.Spec.Desired.Channel))
 		//We need update the condition
 		errMsg := fmt.Sprintf("cannot find version %s in available updates", upgradeConfig.Spec.Desired.Version)
 		metrics.UpdateMetricValidationFailed(upgradeConfig.Name)
@@ -796,11 +817,9 @@ func getCurrentVersion(clusterVersion *configv1.ClusterVersion) string {
 
 // This return the current upgrade status
 func IsClusterUpgrading(c client.Client, version string) (bool, error) {
-
 	clusterVersion := &configv1.ClusterVersion{}
 	err := c.Get(context.TODO(), types.NamespacedName{Name: "version"}, clusterVersion)
 	if err != nil {
-		log.Error(err, "failed to get cluster version")
 		return false, err
 	}
 	for _, c := range clusterVersion.Status.Conditions {

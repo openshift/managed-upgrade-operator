@@ -8,9 +8,7 @@ import (
 	logr "github.com/go-logr/logr"
 	gomock "github.com/golang/mock/gomock"
 	v1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
-	maintenance "github.com/openshift/managed-upgrade-operator/pkg/maintenance"
 	reflect "reflect"
-	client "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // MockClusterUpgrader is a mock of ClusterUpgrader interface
@@ -37,15 +35,15 @@ func (m *MockClusterUpgrader) EXPECT() *MockClusterUpgraderMockRecorder {
 }
 
 // UpgradeCluster mocks base method
-func (m *MockClusterUpgrader) UpgradeCluster(arg0 client.Client, arg1 maintenance.Maintenance, arg2 *v1alpha1.UpgradeConfig, arg3 logr.Logger) error {
+func (m *MockClusterUpgrader) UpgradeCluster(arg0 *v1alpha1.UpgradeConfig, arg1 logr.Logger) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpgradeCluster", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "UpgradeCluster", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // UpgradeCluster indicates an expected call of UpgradeCluster
-func (mr *MockClusterUpgraderMockRecorder) UpgradeCluster(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+func (mr *MockClusterUpgraderMockRecorder) UpgradeCluster(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpgradeCluster", reflect.TypeOf((*MockClusterUpgrader)(nil).UpgradeCluster), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpgradeCluster", reflect.TypeOf((*MockClusterUpgrader)(nil).UpgradeCluster), arg0, arg1)
 }
