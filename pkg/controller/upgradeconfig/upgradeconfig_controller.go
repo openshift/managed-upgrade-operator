@@ -5,7 +5,6 @@ import (
 	"time"
 
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
-	"github.com/openshift/managed-upgrade-operator/pkg/maintenance"
 	"github.com/openshift/managed-upgrade-operator/pkg/cluster_upgrader"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -29,10 +28,9 @@ func Add(mgr manager.Manager) error {
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 	return &ReconcileUpgradeConfig{
-		client:                   mgr.GetClient(),
-		scheme:                   mgr.GetScheme(),
-		maintenanceClientBuilder: maintenance.NewBuilder(),
-		clusterUpgraderBuilder:   cluster_upgrader.NewUpgrader,
+		client:                 mgr.GetClient(),
+		scheme:                 mgr.GetScheme(),
+		clusterUpgraderBuilder: cluster_upgrader.NewBuilder(),
 	}
 }
 
@@ -59,10 +57,9 @@ var _ reconcile.Reconciler = &ReconcileUpgradeConfig{}
 type ReconcileUpgradeConfig struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client                   client.Client
-	scheme                   *runtime.Scheme
-	maintenanceClientBuilder maintenance.MaintenanceBuilder
-	clusterUpgraderBuilder   func() cluster_upgrader.ClusterUpgrader
+	client                 client.Client
+	scheme                 *runtime.Scheme
+	clusterUpgraderBuilder cluster_upgrader.ClusterUpgraderBuilder
 }
 
 // Reconcile reads that state of the cluster for a UpgradeConfig object and makes changes based on the state read
@@ -74,7 +71,6 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling UpgradeConfig")
 
-	upgrader := r.clusterUpgraderBuilder()
 	// Fetch the UpgradeConfig instance
 	instance := &upgradev1alpha1.UpgradeConfig{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
@@ -126,12 +122,12 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 		reqLogger.Info("checking whether it's ready to do upgrade")
 		ready := cluster_upgrader.IsReadyToUpgrade(instance)
 		if ready {
-			m, err := r.maintenanceClientBuilder.NewClient(r.client)
+			upgrader, err := r.clusterUpgraderBuilder.NewClient(r.client)
 			if err != nil {
 				return reconcile.Result{}, err
 			}
 			reqLogger.Info("it's ready to start upgrade now", "time", time.Now())
-			err = upgrader.UpgradeCluster(r.client, m, instance, reqLogger)
+			err = upgrader.UpgradeCluster(instance, reqLogger)
 			if err != nil {
 				reqLogger.Error(err, "Failed to upgrade cluster")
 			}
@@ -145,12 +141,12 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 			return reconcile.Result{}, nil
 		}
 	case upgradev1alpha1.UpgradePhaseUpgrading:
-		m, err := r.maintenanceClientBuilder.NewClient(r.client)
+		upgrader, err := r.clusterUpgraderBuilder.NewClient(r.client)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
 		reqLogger.Info("it's upgrading now")
-		err = upgrader.UpgradeCluster(r.client, m, instance, reqLogger)
+		err = upgrader.UpgradeCluster(instance, reqLogger)
 		if err != nil {
 			reqLogger.Error(err, "Failed to upgrade cluster")
 		}
@@ -166,4 +162,3 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 
 	return reconcile.Result{}, nil
 }
-
