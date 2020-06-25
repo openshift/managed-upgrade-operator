@@ -68,7 +68,7 @@ type ClusterUpgrader interface {
 	UpgradeCluster(upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) error
 }
 
-//go:generate mockgen -destination=mocks/cluster_upgrader.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/cluster_upgrader ClusterUpgraderBuilder
+//go:generate mockgen -destination=mocks/cluster_upgrader_builder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/cluster_upgrader ClusterUpgraderBuilder
 type ClusterUpgraderBuilder interface {
 	NewClient(client client.Client) (ClusterUpgrader, error)
 }
