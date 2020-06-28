@@ -347,13 +347,13 @@ func CreateWorkerMaintWindow(c client.Client, metricsClient metrics.Metrics, m m
 // This check whether all the master nodes are ready with new config
 func AllMastersUpgraded(c client.Client, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
 
-	return NodesUpgraded(c, "master", upgradeConfig, logger)
+	return nodesUpgraded(c, "master", logger)
 
 }
 
 // This check whether all the worker nodes are ready with new config
 func AllWorkersUpgraded(c client.Client, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
-	ok, err := NodesUpgraded(c, "worker", upgradeConfig, logger)
+	ok, err := nodesUpgraded(c, "worker", logger)
 	if err != nil || !ok {
 		return false, err
 	}
@@ -411,7 +411,7 @@ func UpdateSubscriptions(c client.Client, metricsClient metrics.Metrics, m maint
 
 // PostUpgradeVerification run the verification steps which defined in performUpgradeVerification
 func PostUpgradeVerification(c client.Client, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
-	ok, err := performUpgradeVerification(c, metricsClient, m, upgradeConfig, logger)
+	ok, err := performUpgradeVerification(c, logger)
 	if err != nil || !ok {
 		metricsClient.UpdateMetricClusterVerificationFailed(upgradeConfig.Name)
 		return false, err
@@ -422,7 +422,7 @@ func PostUpgradeVerification(c client.Client, metricsClient metrics.Metrics, m m
 }
 
 // performPostUpgradeVerification verify all replicasets are at expected counts and all daemonsets are at expected counts
-func performUpgradeVerification(c client.Client, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
+func performUpgradeVerification(c client.Client, logger logr.Logger) (bool, error) {
 	replicaSetList := &appsv1.ReplicaSetList{}
 	err := c.List(context.TODO(), replicaSetList)
 	if err != nil {
@@ -495,7 +495,7 @@ func PostClusterHealthCheck(c client.Client, metricsClient metrics.Metrics, m ma
 }
 
 // Check whether nodes are upgraded or not
-func NodesUpgraded(c client.Client, nodeType string, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
+func nodesUpgraded(c client.Client, nodeType string, logger logr.Logger) (bool, error) {
 	configPool := &machineconfigapi.MachineConfigPool{}
 	err := c.Get(context.TODO(), types.NamespacedName{Name: nodeType}, configPool)
 	if err != nil {
@@ -736,7 +736,7 @@ type AlertData struct {
 
 // ValidateUpgradeConfig will run the validation steps which defined in performValidateUpgradeConfig
 func ValidateUpgradeConfig(c client.Client, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error){
-	ok, err := performValidateUpgradeConfig(c, metricsClient, m, upgradeConfig, logger)
+	ok, err := performValidateUpgradeConfig(c, upgradeConfig, logger)
 	if err != nil || !ok {
 		metricsClient.UpdateMetricValidationFailed(upgradeConfig.Name)
 		return false, err
@@ -748,7 +748,7 @@ func ValidateUpgradeConfig(c client.Client, metricsClient metrics.Metrics, m mai
 
 // TODO move to https://github.com/openshift/managed-cluster-validating-webhooks
 // performValidateUpgradeConfig will validate the UpgradeConfig, the desired version should be grater than or equal to the current version
-func performValidateUpgradeConfig(c client.Client, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (result bool, err error) {
+func performValidateUpgradeConfig(c client.Client, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (result bool, err error) {
 
 	logger.Info("validating upgradeconfig")
 	clusterVersion := &configv1.ClusterVersion{}
@@ -779,7 +779,6 @@ func performValidateUpgradeConfig(c client.Client, metricsClient metrics.Metrics
 	sort.Strings(versions)
 	if versions[0] != current {
 		logger.Info(fmt.Sprintf("validation failed, current version %s is greater than desired %s", current, upgradeConfig.Spec.Desired.Version))
-		metricsClient.UpdateMetricValidationFailed(upgradeConfig.Name)
 		return false, fmt.Errorf("desired version %s is greater than current version %s", upgradeConfig.Spec.Desired.Version, current)
 	}
 
@@ -825,7 +824,6 @@ func performValidateUpgradeConfig(c client.Client, metricsClient metrics.Metrics
 		return false, fmt.Errorf(errMsg)
 	}
 
-	//Send the metrics for the validation passed
 	return true, nil
 }
 
