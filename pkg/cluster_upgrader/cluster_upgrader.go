@@ -92,7 +92,7 @@ type clusterUpgraderBuilder struct {
 
 func (cub *clusterUpgraderBuilder) NewClient(c client.Client) (ClusterUpgrader, error) {
 	m, err := cub.maintenanceBuilder.NewClient(c)
-	ms := &metrics.Counter{}
+	metricsClient := &metrics.Counter{}
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +120,7 @@ func (cub *clusterUpgraderBuilder) NewClient(c client.Client) (ClusterUpgrader, 
 		Steps:       osdUpgradeSteps,
 		client:      c,
 		maintenance: m,
-		metrics:     ms,
+		metrics:     metricsClient,
 	}, nil
 }
 
