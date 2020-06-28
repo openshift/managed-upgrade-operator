@@ -42,7 +42,7 @@ var (
 	UpgradeStepOrdering = []upgradev1alpha1.UpgradeConditionType{
 		upgradev1alpha1.UpgradeValidated,
 		upgradev1alpha1.UpgradePreHealthCheck,
-		upgradev1alpha1.UpgradeScaleUpExtraNodes,
+//		upgradev1alpha1.UpgradeScaleUpExtraNodes,
 		upgradev1alpha1.CommenceUpgrade,
 		upgradev1alpha1.ControlPlaneMaintWindow,
 		upgradev1alpha1.ControlPlaneUpgraded,
@@ -101,7 +101,7 @@ func (cub *clusterUpgraderBuilder) NewClient(c client.Client) (ClusterUpgrader, 
 		osdUpgradeSteps = map[upgradev1alpha1.UpgradeConditionType]UpgradeStep{
 			upgradev1alpha1.UpgradeValidated:              ValidateUpgradeConfig,
 			upgradev1alpha1.UpgradePreHealthCheck:         PreClusterHealthCheck,
-			upgradev1alpha1.UpgradeScaleUpExtraNodes:      EnsureExtraUpgradeWorkers,
+//			upgradev1alpha1.UpgradeScaleUpExtraNodes:      EnsureExtraUpgradeWorkers,
 			upgradev1alpha1.ControlPlaneMaintWindow:       CreateControlPlaneMaintWindow,
 			upgradev1alpha1.CommenceUpgrade:               CommenceUpgrade,
 			upgradev1alpha1.ControlPlaneUpgraded:          ControlPlaneUpgraded,
@@ -409,8 +409,20 @@ func UpdateSubscriptions(c client.Client, ms metrics.Metrics, m maintenance.Main
 	return true, nil
 }
 
-// PostUpgradeVerification verify all replicasets are at expected counts and all daemonsets are at expected counts
+// PostUpgradeVerification run the verification steps which defined in performUpgradeVerification
 func PostUpgradeVerification(c client.Client, ms metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
+	ok, err := performUpgradeVerification(c, ms, m, upgradeConfig, logger)
+	if err != nil || !ok {
+		ms.UpdateMetricClusterVerificationFailed(upgradeConfig.Name)
+		return false, err
+	}
+
+	ms.UpdateMetricClusterVerificationSucceeded(upgradeConfig.Name)
+	return true, nil
+}
+
+// performPostUpgradeVerification verify all replicasets are at expected counts and all daemonsets are at expected counts
+func performUpgradeVerification(c client.Client, ms metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
 	replicaSetList := &appsv1.ReplicaSetList{}
 	err := c.List(context.TODO(), replicaSetList)
 	if err != nil {
@@ -432,7 +444,6 @@ func PostUpgradeVerification(c client.Client, ms metrics.Metrics, m maintenance.
 
 	if totalRs != readyRs {
 		logger.Info(fmt.Sprintf("not all replicaset are ready:expected number :%v , ready number %v", len(replicaSetList.Items), readyRs))
-		ms.UpdateMetricPostVerificationFailed(upgradeConfig.Name)
 		return false, nil
 	}
 
@@ -455,11 +466,9 @@ func PostUpgradeVerification(c client.Client, ms metrics.Metrics, m maintenance.
 	}
 	if len(dsList.Items) != readyDS {
 		logger.Info(fmt.Sprintf("not all daemonset are ready:expected number :%v , ready number %v", len(dsList.Items), readyDS))
-		ms.UpdateMetricPostVerificationFailed(upgradeConfig.Name)
 		return false, nil
 	}
 
-	ms.UpdateMetricPostVerificationSucceeded(upgradeConfig.Name)
 	return true, nil
 }
 
@@ -725,9 +734,21 @@ type AlertData struct {
 	Result []interface{} `json:"result"`
 }
 
+// ValidateUpgradeConfig will run the validation steps which defined in performValidateUpgradeConfig
+func ValidateUpgradeConfig(c client.Client, ms metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error){
+	ok, err := performValidateUpgradeConfig(c, ms, m, upgradeConfig, logger)
+	if err != nil || !ok {
+		ms.UpdateMetricValidationFailed(upgradeConfig.Name)
+		return false, err
+	}
+
+	ms.UpdateMetricValidationSucceeded(upgradeConfig.Name)
+	return true, nil
+}
+
 // TODO move to https://github.com/openshift/managed-cluster-validating-webhooks
-// validateUpgradeConfig will validate the UpgradeConfig, the desired version should be grater than or equal to the current version
-func ValidateUpgradeConfig(c client.Client, ms metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (result bool, err error) {
+// performValidateUpgradeConfig will validate the UpgradeConfig, the desired version should be grater than or equal to the current version
+func performValidateUpgradeConfig(c client.Client, ms metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (result bool, err error) {
 
 	logger.Info("validating upgradeconfig")
 	clusterVersion := &configv1.ClusterVersion{}
@@ -735,7 +756,6 @@ func ValidateUpgradeConfig(c client.Client, ms metrics.Metrics, m maintenance.Ma
 	if err != nil {
 		logger.Info("failed to get clusterversion")
 		logger.Error(err, "failed to get clusterversion")
-		ms.UpdateMetricValidationFailed(upgradeConfig.Name)
 		return false, err
 	}
 
@@ -750,7 +770,6 @@ func ValidateUpgradeConfig(c client.Client, ms metrics.Metrics, m maintenance.Ma
 	// If the version match, it means it's already upgraded or at least control plane is upgraded.
 	if current == upgradeConfig.Spec.Desired.Version {
 		logger.Info("the expected version match current version")
-		ms.UpdateMetricValidationFailed(upgradeConfig.Name)
 		return false, fmt.Errorf("cluster is already on version %s", current)
 	}
 
@@ -780,7 +799,6 @@ func ValidateUpgradeConfig(c client.Client, ms metrics.Metrics, m maintenance.Ma
 
 	updates, err := cincinnati.NewClient(clusterId, nil, nil).GetUpdates(upstreamURI, runtime.GOARCH, upgradeConfig.Spec.Desired.Channel, currentVersion)
 	if err != nil {
-		ms.UpdateMetricValidationFailed(upgradeConfig.Name)
 		return false, err
 	}
 
@@ -804,12 +822,10 @@ func ValidateUpgradeConfig(c client.Client, ms metrics.Metrics, m maintenance.Ma
 		logger.Info(fmt.Sprintf("failed to find the desired version %s in channel %s", upgradeConfig.Spec.Desired.Version, upgradeConfig.Spec.Desired.Channel))
 		//We need update the condition
 		errMsg := fmt.Sprintf("cannot find version %s in available updates", upgradeConfig.Spec.Desired.Version)
-		ms.UpdateMetricValidationFailed(upgradeConfig.Name)
 		return false, fmt.Errorf(errMsg)
 	}
 
 	//Send the metrics for the validation passed
-	ms.UpdateMetricValidationSucceeded(upgradeConfig.Name)
 	return true, nil
 }
 
