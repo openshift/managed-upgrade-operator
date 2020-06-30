@@ -1,15 +1,29 @@
 package metrics
 
 import (
-	"time"
 	"github.com/prometheus/client_golang/prometheus"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
+	"time"
 )
 
 const (
-	metricsTag 	= "upgradeoperator"
-	nameLabel 	= "upgradeconfig_name"
+	metricsTag	= "upgradeoperator"
+	nameLabel	= "upgradeconfig_name"
 )
+
+type Metrics interface {
+	UpdateMetricValidationFailed(string)
+	UpdateMetricValidationSucceeded(string)
+	UpdateMetricClusterCheckFailed(string)
+	UpdateMetricClusterCheckSucceeded(string)
+	UpdateMetricUpgradeStartTime(time.Time, string)
+	UpdateMetricControlPlaneEndTime(time.Time, string)
+	UpdateMetricNodeUpgradeEndTime(time.Time, string)
+	UpdateMetricClusterVerificationFailed(string)
+	UpdateMetricClusterVerificationSucceeded(string)
+}
+
+type Counter struct {}
 
 var (
 	metricValidationFailed = prometheus.NewGaugeVec(prometheus.GaugeOpts{
@@ -37,10 +51,10 @@ var (
 		Name: "node_upgrade_end_timestamp",
 		Help: "Timestamp for the node upgrade is finished",
 	}, []string{nameLabel})
-	metricPostVerificationFailed = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+	metricClusterVerificationFailed = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Subsystem: metricsTag,
-		Name: "post_verification_failed",
-		Help: "Failed on the post upgrade verification step",
+		Name: "cluster_verification_failed",
+		Help: "Failed on the cluster upgrade verification step",
 	}, []string{nameLabel})
 )
 
@@ -50,59 +64,59 @@ func init() {
 	metrics.Registry.MustRegister(metricUpgradeStartTime)
 	metrics.Registry.MustRegister(metricControlPlaneUpgradeEndTime)
 	metrics.Registry.MustRegister(metricNodeUpgradeEndTime)
-	metrics.Registry.MustRegister(metricPostVerificationFailed)
+	metrics.Registry.MustRegister(metricClusterVerificationFailed)
 }
 
-func UpdateMetricValidationFailed(upgradeconfig string) {
+func (c *Counter) UpdateMetricValidationFailed(upgradeconfig string) {
 	metricValidationFailed.With(prometheus.Labels{
 		nameLabel: upgradeconfig}).Set(
 			float64(1))
 }
 
-func UpdateMetricValidationSucceeded(upgradeconfig string) {
+func (c *Counter) UpdateMetricValidationSucceeded(upgradeconfig string) {
 	metricValidationFailed.With(prometheus.Labels{
 		nameLabel: upgradeconfig}).Set(
 			float64(0))
 }
 
-func UpdateMetricClusterCheckFailed(upgradeconfig string) {
+func (c *Counter) UpdateMetricClusterCheckFailed(upgradeconfig string) {
 	metricClusterCheckFailed.With(prometheus.Labels{
 		nameLabel: upgradeconfig}).Set(
 			float64(1))
 }
 
-func UpdateMetricClusterCheckSucceeded(upgradeconfig string) {
+func (c *Counter) UpdateMetricClusterCheckSucceeded(upgradeconfig string) {
 	metricClusterCheckFailed.With(prometheus.Labels{
 		nameLabel: upgradeconfig}).Set(
 			float64(0))
 }
 
-func UpdateMetricUpgradeStartTime(time time.Time, upgradeconfig string) {
+func (c *Counter) UpdateMetricUpgradeStartTime(time time.Time, upgradeconfig string) {
 	metricUpgradeStartTime.With(prometheus.Labels{
 		nameLabel: upgradeconfig}).Set(
 			float64(time.Unix()))
 }
 
-func UpdateMetricControlPlaneEndTime(time time.Time, upgradeconfig string) {
+func (c *Counter) UpdateMetricControlPlaneEndTime(time time.Time, upgradeconfig string) {
 	metricControlPlaneUpgradeEndTime.With(prometheus.Labels{
 		nameLabel: upgradeconfig}).Set(
 			float64(time.Unix()))
 }
 
-func UpdateMetricNodeUpgradeEndTime(time time.Time, upgradeconfig string) {
+func (c *Counter) UpdateMetricNodeUpgradeEndTime(time time.Time, upgradeconfig string) {
 	metricNodeUpgradeEndTime.With(prometheus.Labels{
 		nameLabel: upgradeconfig}).Set(
 			float64(time.Unix()))
 }
 
-func UpdateMetricPostVerificationFailed(upgradeconfig string) {
-	metricPostVerificationFailed.With(prometheus.Labels{
+func (c *Counter) UpdateMetricClusterVerificationFailed(upgradeconfig string) {
+	metricClusterVerificationFailed.With(prometheus.Labels{
 		nameLabel: upgradeconfig}).Set(
 			float64(1))
 }
 
-func UpdateMetricPostVerificationSucceeded(upgradeconfig string) {
-	metricPostVerificationFailed.With(prometheus.Labels{
+func (c *Counter) UpdateMetricClusterVerificationSucceeded(upgradeconfig string) {
+	metricClusterVerificationFailed.With(prometheus.Labels{
 		nameLabel: upgradeconfig}).Set(
 			float64(0))
 }
