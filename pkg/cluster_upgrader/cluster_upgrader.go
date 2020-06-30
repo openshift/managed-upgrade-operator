@@ -2,7 +2,6 @@ package cluster_upgrader
 
 import (
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -657,14 +656,17 @@ func performClusterHealthCheck(c client.Client, logger logr.Logger) (bool, error
 	if err != nil {
 		return false, err
 	}
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	netTransport := &http.Transport{
+		TLSHandshakeTimeout: time.Second * 5,
 	}
 
-	hclient := http.Client{Transport: tr}
-	promurl := "https://" + route.Spec.Host + "/api/v1/query"
+	hClient := http.Client{
+		Transport: netTransport,
+		Timeout: time.Second * 5,
+	}
+	promUrl := "https://" + route.Spec.Host + "/api/v1/query"
 
-	req, err := http.NewRequest("GET", promurl, nil)
+	req, err := http.NewRequest("GET", promUrl, nil)
 	if err != nil {
 		return false, fmt.Errorf("Could not query Prometheus: %s", err)
 	}
@@ -674,7 +676,7 @@ func performClusterHealthCheck(c client.Client, logger logr.Logger) (bool, error
 
 	req.URL.RawQuery = q.Encode()
 	req.Header.Add("Authorization", "Bearer "+string(token))
-	resp, err := hclient.Do(req)
+	resp, err := hClient.Do(req)
 	if err != nil {
 		return false, err
 	}
