@@ -16,7 +16,8 @@ spec:
       containers:
         - name: managed-upgrade-operator
           # Replace this with the built image name
-          image: REPLACE_IMAGE
+          # This will get replaced on deploy by /hack/generate-operator-bundle.py
+          image: quay.io/app-sre/managed-upgrade-operator:latest
           command:
           - managed-upgrade-operator
           imagePullPolicy: Always
