@@ -91,17 +91,17 @@ var (
 		Subsystem: metricsTag,
 		Name:      "upgrade_start_timestamp",
 		Help:      "Timestamp for the real upgrade process is started",
-	}, []string{nameLabel})
+	}, []string{nameLabel, versionLabel})
 	metricControlPlaneUpgradeEndTime = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Subsystem: metricsTag,
 		Name:      "controlplane_upgrade_end_timestamp",
 		Help:      "Timestamp for the control plane upgrade is finished",
-	}, []string{nameLabel})
+	}, []string{nameLabel, versionLabel})
 	metricNodeUpgradeEndTime = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Subsystem: metricsTag,
 		Name:      "node_upgrade_end_timestamp",
 		Help:      "Timestamp for the node upgrade is finished",
-	}, []string{nameLabel})
+	}, []string{nameLabel, versionLabel})
 	metricClusterVerificationFailed = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Subsystem: metricsTag,
 		Name:      "cluster_verification_failed",
