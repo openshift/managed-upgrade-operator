@@ -18,7 +18,7 @@ import shutil
 # This script will append the current number of commits given as an arg
 # (presumably since some past base tag), and the git hash arg for a final
 # version like: 0.1.189-3f73a592
-VERSION_BASE = "0.2"
+VERSION_BASE = "0.1"
 
 OPERATOR_NAME="managed-upgrade-operator"
 
