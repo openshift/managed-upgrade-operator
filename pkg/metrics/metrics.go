@@ -67,7 +67,9 @@ type prometheusRoundTripper struct {
 
 func (prt *prometheusRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	req.Header.Add("Authorization", "Bearer "+prt.token)
-	transport := http.Transport{}
+	transport := http.Transport{
+		TLSHandshakeTimeout: time.Second * 5,
+	}
 	return transport.RoundTrip(req)
 }
 
@@ -157,7 +159,7 @@ func (c *Counter) UpdateMetricControlPlaneEndTime(time time.Time, upgradeConfigN
 }
 
 func (c *Counter) IsMetricUpgradeStartTimeSet(upgradeConfigName string, version string) (bool, error) {
-	cpMetrics, err := c.Query(fmt.Sprintf("upgrade_start_timestamp{%s=\"%s\",%s=\"%s\"", nameLabel, upgradeConfigName, versionLabel, version))
+	cpMetrics, err := c.Query(fmt.Sprintf("%s_upgrade_start_timestamp{%s=\"%s\",%s=\"%s\"}", metricsTag, nameLabel, upgradeConfigName, versionLabel, version))
 	if err != nil {
 		return false, err
 	}
@@ -170,7 +172,7 @@ func (c *Counter) IsMetricUpgradeStartTimeSet(upgradeConfigName string, version 
 }
 
 func (c *Counter) IsMetricControlPlaneEndTimeSet(upgradeConfigName string, version string) (bool, error) {
-	cpMetrics, err := c.Query(fmt.Sprintf("controlplane_upgrade_end_timestamp{%s=\"%s\",%s=\"%s\"", nameLabel, upgradeConfigName, versionLabel, version))
+	cpMetrics, err := c.Query(fmt.Sprintf("%s_controlplane_upgrade_end_timestamp{%s=\"%s\",%s=\"%s\"}", metricsTag, nameLabel, upgradeConfigName, versionLabel, version))
 	if err != nil {
 		return false, err
 	}
@@ -183,7 +185,7 @@ func (c *Counter) IsMetricControlPlaneEndTimeSet(upgradeConfigName string, versi
 }
 
 func (c *Counter) IsMetricNodeUpgradeEndTimeSet(upgradeConfigName string, version string) (bool, error) {
-	cpMetrics, err := c.Query(fmt.Sprintf("node_upgrade_end_timestamp{%s=\"%s\",%s=\"%s\"", nameLabel, upgradeConfigName, versionLabel, version))
+	cpMetrics, err := c.Query(fmt.Sprintf("%s_node_upgrade_end_timestamp{%s=\"%s\",%s=\"%s\"}", metricsTag, nameLabel, upgradeConfigName, versionLabel, version))
 	if err != nil {
 		return false, err
 	}
