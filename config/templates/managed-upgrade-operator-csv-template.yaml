@@ -1,0 +1,44 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  name: managed-upgrade-operator-0.0.1
+  namespace: placeholder
+  annotations:
+    categories: A list of comma separated categories that your operator falls under.
+    certified: "false"
+    description: Operator to manage upgrades for Openshift version 4 clusters
+    containerImage: quay.io/app-sre/managed-upgrade-operator:latest
+    support: Red Hat OpenShift SRE
+spec:
+  displayName: managed-upgrade-operator
+  description: Operator to manage upgrades for Openshift version 4 clusters
+  keywords:
+  - kubernetes
+  - openshift
+  - multi-cluster
+  - cluster
+  version: 0.0.1
+  provider:
+    name: Red Hat, Inc
+  maturity: alpha
+  installModes:
+  - type: OwnNamespace
+    supported: true
+  - type: SingleNamespace
+    supported: true
+  - type: MultiNamespace
+    supported: false
+  - type: AllNamespaces
+    supported: false
+  install:
+    strategy: deployment
+    spec:
+      clusterPermissions:
+      - serviceAccountName: managed-upgrade-operator
+        # Rules will be added here by the generate-operator-bundle.py script.
+      deployments:
+      - name: managed-upgrade-operator
+        # Deployment spec will be added here by the generate-operator-bundle.py script.
+  customresourcedefinitions:
+    owned:
+    # CRD's will be added here by the generate-operator-bundle.py
