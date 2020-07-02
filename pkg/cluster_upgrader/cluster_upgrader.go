@@ -13,9 +13,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/openshift/managed-upgrade-operator/pkg/maintenance"
-	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
-
 	"github.com/blang/semver"
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
