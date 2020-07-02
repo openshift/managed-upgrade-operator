@@ -143,12 +143,12 @@ func Ordering() []upgradev1alpha1.UpgradeConditionType {
 
 // ClusterHealthCheck performs cluster healthy check
 func PreClusterHealthCheck(c client.Client, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
-	cv, err := getClusterVersion(c)
+	upgradeCommenced, err := hasUpgradeCommenced(c, upgradeConfig)
 	if err != nil {
 		return false, err
 	}
 	desired := upgradeConfig.Spec.Desired
-	if isEqualVersion(cv, upgradeConfig) {
+	if upgradeCommenced {
 		logger.Info(fmt.Sprintf("ClusterVersion is already set to Channel %s Version %s, skipping %s", desired.Channel, desired.Version, upgradev1alpha1.UpgradePreHealthCheck))
 		return true, nil
 	}
@@ -165,12 +165,12 @@ func PreClusterHealthCheck(c client.Client, metricsClient metrics.Metrics, m mai
 
 // This will create a new machineset with 1 extra replicas for workers in every region
 func EnsureExtraUpgradeWorkers(c client.Client, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
-	cv, err := getClusterVersion(c)
+	upgradeCommenced, err := hasUpgradeCommenced(c, upgradeConfig)
 	if err != nil {
 		return false, err
 	}
 	desired := upgradeConfig.Spec.Desired
-	if isEqualVersion(cv, upgradeConfig) {
+	if upgradeCommenced {
 		logger.Info(fmt.Sprintf("ClusterVersion is already set to Channel %s Version %s, skipping %s", desired.Channel, desired.Version, upgradev1alpha1.UpgradeScaleUpExtraNodes))
 		return true, nil
 	}
@@ -303,22 +303,20 @@ func EnsureExtraUpgradeWorkers(c client.Client, metricsClient metrics.Metrics, m
 
 // CommenceUpgrade will update the clusterversion object to apply the desired version to trigger real OCP upgrade
 func CommenceUpgrade(c client.Client, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
-	cv, err := getClusterVersion(c)
+	upgradeCommenced, err := hasUpgradeCommenced(c, upgradeConfig)
 	if err != nil {
 		return false, err
 	}
 	desired := upgradeConfig.Spec.Desired
-	if isEqualVersion(cv, upgradeConfig) {
+	if upgradeCommenced {
 		logger.Info(fmt.Sprintf("ClusterVersion is already set to Channel %s Version %s, skipping %s", desired.Channel, desired.Version, upgradev1alpha1.CommenceUpgrade))
 		return true, nil
 	}
 
-	if cv.Spec.DesiredUpdate != nil &&
-		cv.Spec.DesiredUpdate.Version == upgradeConfig.Spec.Desired.Version &&
-		cv.Spec.Channel == upgradeConfig.Spec.Desired.Channel {
-		return true, nil
+	cv, err := getClusterVersion(c)
+	if err != nil {
+		return false, err
 	}
-
 	cv.Spec.Overrides = []configv1.ComponentOverride{}
 	cv.Spec.DesiredUpdate = &configv1.Update{Version: upgradeConfig.Spec.Desired.Version}
 	cv.Spec.Channel = upgradeConfig.Spec.Desired.Channel
@@ -336,7 +334,6 @@ func CommenceUpgrade(c client.Client, metricsClient metrics.Metrics, m maintenan
 		//Record the timestamp when we start the upgrade
 		metricsClient.UpdateMetricUpgradeStartTime(time.Now(), upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
 	}
-
 	return true, nil
 }
 
@@ -395,7 +392,6 @@ func AllMastersUpgraded(c client.Client, metricsClient metrics.Metrics, m mainte
 	if !isSet {
 		metricsClient.UpdateMetricControlPlaneEndTime(time.Now(), upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
 	}
-
 	return true, nil
 }
 
@@ -413,11 +409,10 @@ func AllWorkersUpgraded(c client.Client, metricsClient metrics.Metrics, m mainte
 	if !isSet {
 		metricsClient.UpdateMetricNodeUpgradeEndTime(time.Now(), upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
 	}
-
 	return true, nil
 }
 
-// This will remove the extra worker nodes we added before kick off upgrade
+// This will remove the extra worker nodes we added pre upgrade
 func RemoveExtraScaledNodes(c client.Client, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
 	upgradeMachinesets := &machineapi.MachineSetList{}
 
@@ -429,6 +424,7 @@ func RemoveExtraScaledNodes(c client.Client, metricsClient metrics.Metrics, m ma
 		logger.Error(err, "failed to get upgrade extra machinesets")
 		return false, err
 	}
+
 	for _, item := range upgradeMachinesets.Items {
 		err = c.Delete(context.TODO(), &item)
 		if err != nil {
@@ -720,12 +716,12 @@ type AlertData struct {
 
 // ValidateUpgradeConfig will run the validation steps which defined in performValidateUpgradeConfig
 func ValidateUpgradeConfig(c client.Client, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
-	cv, err := getClusterVersion(c)
+	upgradeCommenced, err := hasUpgradeCommenced(c, upgradeConfig)
 	if err != nil {
 		return false, err
 	}
 	desired := upgradeConfig.Spec.Desired
-	if isEqualVersion(cv, upgradeConfig) {
+	if upgradeCommenced {
 		logger.Info(fmt.Sprintf("ClusterVersion is already set to Channel %s Version %s, skipping %s", desired.Channel, desired.Version, upgradev1alpha1.UpgradeValidated))
 		return true, nil
 	}
@@ -882,4 +878,17 @@ func getClusterVersion(c client.Client) (*configv1.ClusterVersion, error) {
 	}
 
 	return nil, errors.NewNotFound(schema.GroupResource{Group: configv1.GroupName, Resource: "ClusterVersion"}, "ClusterVersion")
+}
+
+func hasUpgradeCommenced(c client.Client, uc *upgradev1alpha1.UpgradeConfig) (bool, error) {
+	cv, err := getClusterVersion(c)
+	if err != nil {
+		return false, err
+	}
+
+	if !isEqualVersion(cv, uc) {
+		return false, nil
+	}
+
+	return true, nil
 }

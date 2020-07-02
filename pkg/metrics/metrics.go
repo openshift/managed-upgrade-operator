@@ -41,7 +41,7 @@ type Metrics interface {
 type MetricsBuilder struct{}
 
 func (mb *MetricsBuilder) NewClient(c client.Client) (Metrics, error) {
-	promUrl, err := getPromUrl(c)
+	promHost, err := getPromHost(c)
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +52,7 @@ func (mb *MetricsBuilder) NewClient(c client.Client) (Metrics, error) {
 	}
 
 	return &Counter{
-		promBaseUrl: *promUrl,
+		promHost: *promHost,
 		promClient: http.Client{
 			Transport: &prometheusRoundTripper{
 				token: *token,
@@ -74,8 +74,8 @@ func (prt *prometheusRoundTripper) RoundTrip(req *http.Request) (*http.Response,
 }
 
 type Counter struct {
-	promClient  http.Client
-	promBaseUrl string
+	promClient http.Client
+	promHost   string
 }
 
 var (
@@ -216,7 +216,7 @@ func (c *Counter) UpdateMetricClusterVerificationSucceeded(upgradeConfigName str
 		float64(0))
 }
 
-func getPromUrl(c client.Client) (*string, error) {
+func getPromHost(c client.Client) (*string, error) {
 	route := &routev1.Route{}
 	err := c.Get(context.TODO(), types.NamespacedName{Namespace: "openshift-monitoring", Name: "prometheus-k8s"}, route)
 	if err != nil {
@@ -227,7 +227,7 @@ func getPromUrl(c client.Client) (*string, error) {
 }
 
 func (c *Counter) Query(query string) (*AlertResponse, error) {
-	req, err := http.NewRequest("GET", "https://"+c.promBaseUrl+"/api/v1/query", nil)
+	req, err := http.NewRequest("GET", "https://"+c.promHost+"/api/v1/query", nil)
 	if err != nil {
 		return nil, fmt.Errorf("Could not query Prometheus: %s", err)
 	}
