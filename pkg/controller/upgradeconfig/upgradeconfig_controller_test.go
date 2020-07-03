@@ -97,46 +97,6 @@ var _ = Describe("UpgradeConfigController", func() {
 				mockKubeClient.EXPECT().Get(gomock.Any(), upgradeConfigName, gomock.Any()).SetArg(2, *upgradeConfig).Times(1)
 			})
 
-			Context("When getting a clusterversion fails", func() {
-				var fakeError = fmt.Errorf("error getting clusterversion")
-				JustBeforeEach(func() {
-					mockKubeClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Name: "version"}, gomock.Any()).Times(1).Return(fakeError)
-				})
-				It("Does not proceed and returns the error", func() {
-					result, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
-					Expect(err).To(Equal(fakeError))
-					Expect(result.Requeue).To(BeFalse())
-					Expect(result.RequeueAfter).To(BeZero())
-				})
-			})
-
-			Context("When a cluster is upgrading", func() {
-				JustBeforeEach(func() {
-					mockKubeClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Name: "version"}, gomock.Any()).SetArg(2, configv1.ClusterVersion{
-						Spec: configv1.ClusterVersionSpec{
-							DesiredUpdate: &configv1.Update{
-								Version: "not the same version",
-							},
-						},
-						Status: configv1.ClusterVersionStatus{
-							Conditions: []configv1.ClusterOperatorStatusCondition{
-								{
-									Type:   configv1.OperatorProgressing,
-									Status: configv1.ConditionTrue,
-								},
-							},
-						},
-					}).Times(1)
-				})
-
-				It("Returns an empty result and no error", func() {
-					result, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
-					Expect(err).NotTo(HaveOccurred())
-					Expect(result.Requeue).To(BeFalse())
-					Expect(result.RequeueAfter).To(BeZero())
-				})
-			})
-
 			Context("When the desired version isn't in the UpgradeConfig's history", func() {
 				var desiredVersion = "a new version"
 				var existingVersion = "not the same as desired version"

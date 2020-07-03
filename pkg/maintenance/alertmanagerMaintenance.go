@@ -2,12 +2,14 @@ package maintenance
 
 import (
 	"context"
-	"github.com/hashicorp/go-multierror"
+	"fmt"
 	"github.com/go-openapi/runtime"
 	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"
+	"github.com/hashicorp/go-multierror"
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/openshift/managed-upgrade-operator/config"
+	amSilence "github.com/prometheus/alertmanager/api/v2/client/silence"
 	amv2Models "github.com/prometheus/alertmanager/api/v2/models"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -91,31 +93,58 @@ func getAuthentication(c client.Client) (runtime.ClientAuthInfoWriter, error) {
 	return httptransport.BearerToken(token), nil
 }
 
-// Start a control plane maintenance in Alertmanager
+// Start a control plane maintenance in Alertmanager for version
 // Time is converted to UTC
-func (amm *alertManagerMaintenance) StartControlPlane(endsAt time.Time) error {
-	now := strfmt.DateTime(time.Now().UTC())
-	end := strfmt.DateTime(endsAt.UTC())
-	err := amm.client.create(createDefaultMatchers(), now, end, config.OperatorName, "Silence for OSD upgrade")
+func (amm *alertManagerMaintenance) StartControlPlane(endsAt time.Time, version string) error {
+	defaultComment := fmt.Sprintf("Silence for OSD control plane upgrade to version %s", version)
+	criticalAlertComment := fmt.Sprintf("Silence for critical alerts during OSD control plane upgrade to version %s", version)
+	mList, err := amm.client.List([]string{})
 	if err != nil {
 		return err
 	}
+	defaultExists := silenceExists(mList, defaultComment)
+	criticalExists := silenceExists(mList, criticalAlertComment)
 
-	matchers := []*amv2Models.Matcher{createMatcher("alertname", controlPlaneIgnoredCriticalAlerts, true)}
-	err = amm.client.create(matchers, now, end, config.OperatorName, "Silence for OSD upgrade")
-	if err != nil {
-		return err
+	if defaultExists && criticalExists {
+		return nil
+	}
+
+	now := strfmt.DateTime(time.Now().UTC())
+	end := strfmt.DateTime(endsAt.UTC())
+	if !defaultExists {
+		err = amm.client.create(createDefaultMatchers(), now, end, config.OperatorName, defaultComment)
+		if err != nil {
+			return err
+		}
+	}
+
+	if !criticalExists {
+		matchers := []*amv2Models.Matcher{createMatcher("alertname", controlPlaneIgnoredCriticalAlerts, true)}
+		err = amm.client.create(matchers, now, end, config.OperatorName, criticalAlertComment)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
-// Start a control plane maintenance in Alertmanager
+// Start a worker node maintenance in Alertmanager for version
 // Time is converted to UTC
-func (amm *alertManagerMaintenance) StartWorker(endsAt time.Time) error {
+func (amm *alertManagerMaintenance) StartWorker(endsAt time.Time, version string) error {
+	comment := fmt.Sprintf("Silence for OSD worker node upgrade to version %s", version)
+	mList, err := amm.client.List([]string{})
+	if err != nil {
+		return err
+	}
+	exists := silenceExists(mList, comment)
+	if exists {
+		return nil
+	}
+
 	now := strfmt.DateTime(time.Now().UTC())
 	end := strfmt.DateTime(endsAt.UTC())
-	err := amm.client.create(createDefaultMatchers(), now, end, config.OperatorName, "Silence for OSD upgrade")
+	err = amm.client.create(createDefaultMatchers(), now, end, config.OperatorName, comment)
 	if err != nil {
 		return err
 	}
@@ -156,4 +185,15 @@ func createDefaultMatchers() []*amv2Models.Matcher {
 
 	inNamespaceAlertMatcher := createMatcher("namespace", "(^openshift.*|^kube.*|^redhat.*|^default$)", true)
 	return amv2Models.Matchers{nonCriticalAlertMatcher, inNamespaceAlertMatcher}
+}
+
+// Check if a silence with comment exists
+func silenceExists(mList *amSilence.GetSilencesOK, comment string) bool {
+	for _, m := range mList.Payload {
+		if *m.Comment == comment {
+			return true
+		}
+	}
+
+	return false
 }

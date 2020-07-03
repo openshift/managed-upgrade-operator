@@ -2,10 +2,10 @@ package cluster_upgrader
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"net/http"
+	"github.com/openshift/managed-upgrade-operator/pkg/maintenance"
+	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"net/url"
 	"runtime"
 	"sort"
@@ -13,14 +13,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/openshift/managed-upgrade-operator/pkg/maintenance"
-	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
-
 	"github.com/blang/semver"
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
 	configv1 "github.com/openshift/api/config/v1"
-	routev1 "github.com/openshift/api/route/v1"
 	"github.com/openshift/cluster-version-operator/pkg/cincinnati"
 	machineapi "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
 	machineconfigapi "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
@@ -76,6 +72,7 @@ type ClusterUpgraderBuilder interface {
 func NewBuilder() ClusterUpgraderBuilder {
 	return &clusterUpgraderBuilder{
 		maintenanceBuilder: maintenance.NewBuilder(),
+		metricsBuilder:     metrics.MetricsBuilder{},
 	}
 }
 
@@ -87,11 +84,16 @@ type UpgradeStep func(c client.Client, metricsClient metrics.Metrics, m maintena
 
 type clusterUpgraderBuilder struct {
 	maintenanceBuilder maintenance.MaintenanceBuilder
+	metricsBuilder     metrics.MetricsBuilder
 }
 
 func (cub *clusterUpgraderBuilder) NewClient(c client.Client) (ClusterUpgrader, error) {
 	m, err := cub.maintenanceBuilder.NewClient(c)
-	metricsClient := &metrics.Counter{}
+	if err != nil {
+		return nil, err
+	}
+
+	metricsClient, err := cub.metricsBuilder.NewClient(c)
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +140,17 @@ func Ordering() []upgradev1alpha1.UpgradeConditionType {
 
 // ClusterHealthCheck performs cluster healthy check
 func PreClusterHealthCheck(c client.Client, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
-	ok, err := performClusterHealthCheck(c, logger)
+	upgradeCommenced, err := hasUpgradeCommenced(c, upgradeConfig)
+	if err != nil {
+		return false, err
+	}
+	desired := upgradeConfig.Spec.Desired
+	if upgradeCommenced {
+		logger.Info(fmt.Sprintf("ClusterVersion is already set to Channel %s Version %s, skipping %s", desired.Channel, desired.Version, upgradev1alpha1.UpgradePreHealthCheck))
+		return true, nil
+	}
+
+	ok, err := performClusterHealthCheck(c, metricsClient, logger)
 	if err != nil || !ok {
 		metricsClient.UpdateMetricClusterCheckFailed(upgradeConfig.Name)
 		return false, err
@@ -150,9 +162,19 @@ func PreClusterHealthCheck(c client.Client, metricsClient metrics.Metrics, m mai
 
 // This will create a new machineset with 1 extra replicas for workers in every region
 func EnsureExtraUpgradeWorkers(c client.Client, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
+	upgradeCommenced, err := hasUpgradeCommenced(c, upgradeConfig)
+	if err != nil {
+		return false, err
+	}
+	desired := upgradeConfig.Spec.Desired
+	if upgradeCommenced {
+		logger.Info(fmt.Sprintf("ClusterVersion is already set to Channel %s Version %s, skipping %s", desired.Channel, desired.Version, upgradev1alpha1.UpgradeScaleUpExtraNodes))
+		return true, nil
+	}
+
 	upgradeMachinesets := &machineapi.MachineSetList{}
 
-	err := c.List(context.TODO(), upgradeMachinesets, []client.ListOption{
+	err = c.List(context.TODO(), upgradeMachinesets, []client.ListOption{
 		client.InNamespace("openshift-machine-api"),
 		client.MatchingLabels{LABEL_UPGRADE: "true"},
 	}...)
@@ -278,26 +300,36 @@ func EnsureExtraUpgradeWorkers(c client.Client, metricsClient metrics.Metrics, m
 
 // CommenceUpgrade will update the clusterversion object to apply the desired version to trigger real OCP upgrade
 func CommenceUpgrade(c client.Client, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
-	clusterVersion := &configv1.ClusterVersion{}
-	err := c.Get(context.TODO(), types.NamespacedName{Name: "version"}, clusterVersion)
+	upgradeCommenced, err := hasUpgradeCommenced(c, upgradeConfig)
 	if err != nil {
 		return false, err
 	}
-	if clusterVersion.Spec.DesiredUpdate != nil &&
-		clusterVersion.Spec.DesiredUpdate.Version == upgradeConfig.Spec.Desired.Version &&
-		clusterVersion.Spec.Channel == upgradeConfig.Spec.Desired.Channel {
+	desired := upgradeConfig.Spec.Desired
+	if upgradeCommenced {
+		logger.Info(fmt.Sprintf("ClusterVersion is already set to Channel %s Version %s, skipping %s", desired.Channel, desired.Version, upgradev1alpha1.CommenceUpgrade))
 		return true, nil
 	}
-	// https://issues.redhat.com/browse/OSD-3442
-	clusterVersion.Spec.Overrides = []configv1.ComponentOverride{}
-	clusterVersion.Spec.DesiredUpdate = &configv1.Update{Version: upgradeConfig.Spec.Desired.Version}
-	clusterVersion.Spec.Channel = upgradeConfig.Spec.Desired.Channel
 
-	//Record the timestamp when we start the upgrade
-	metricsClient.UpdateMetricUpgradeStartTime(time.Now(), upgradeConfig.Name)
-	err = c.Update(context.TODO(), clusterVersion)
+	cv, err := getClusterVersion(c)
 	if err != nil {
 		return false, err
+	}
+	cv.Spec.Overrides = []configv1.ComponentOverride{}
+	cv.Spec.DesiredUpdate = &configv1.Update{Version: upgradeConfig.Spec.Desired.Version}
+	cv.Spec.Channel = upgradeConfig.Spec.Desired.Channel
+
+	err = c.Update(context.TODO(), cv)
+	if err != nil {
+		return false, err
+	}
+
+	isSet, err := metricsClient.IsMetricUpgradeStartTimeSet(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
+	if err != nil {
+		return false, err
+	}
+	if !isSet {
+		//Record the timestamp when we start the upgrade
+		metricsClient.UpdateMetricUpgradeStartTime(time.Now(), upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
 	}
 	return true, nil
 }
@@ -305,7 +337,7 @@ func CommenceUpgrade(c client.Client, metricsClient metrics.Metrics, m maintenan
 // Create the maintenance window for control plane
 func CreateControlPlaneMaintWindow(c client.Client, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
 	endTime := time.Now().Add(90 * time.Minute)
-	err := m.StartControlPlane(endTime)
+	err := m.StartControlPlane(endTime, upgradeConfig.Spec.Desired.Version)
 	if err != nil {
 		return false, err
 	}
@@ -335,7 +367,7 @@ func CreateWorkerMaintWindow(c client.Client, metricsClient metrics.Metrics, m m
 	maintenanceDurationPerNode := 8 * time.Minute
 	workerMaintenanceExpectedDuration := time.Duration(pendingWorkerCount) * maintenanceDurationPerNode
 	endTime := time.Now().Add(workerMaintenanceExpectedDuration)
-	err = m.StartWorker(endTime)
+	err = m.StartWorker(endTime, upgradeConfig.Spec.Desired.Version)
 	if err != nil {
 		return false, err
 	}
@@ -345,9 +377,19 @@ func CreateWorkerMaintWindow(c client.Client, metricsClient metrics.Metrics, m m
 
 // This check whether all the master nodes are ready with new config
 func AllMastersUpgraded(c client.Client, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
+	ok, err := nodesUpgraded(c, "master", logger)
+	if err != nil || !ok {
+		return false, err
+	}
 
-	return nodesUpgraded(c, "master", logger)
-
+	isSet, err := metricsClient.IsMetricControlPlaneEndTimeSet(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
+	if err != nil {
+		return false, err
+	}
+	if !isSet {
+		metricsClient.UpdateMetricControlPlaneEndTime(time.Now(), upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
+	}
+	return true, nil
 }
 
 // This check whether all the worker nodes are ready with new config
@@ -357,11 +399,17 @@ func AllWorkersUpgraded(c client.Client, metricsClient metrics.Metrics, m mainte
 		return false, err
 	}
 
-	metricsClient.UpdateMetricNodeUpgradeEndTime(time.Now(), upgradeConfig.Name)
+	isSet, err := metricsClient.IsMetricNodeUpgradeEndTimeSet(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
+	if err != nil {
+		return false, err
+	}
+	if !isSet {
+		metricsClient.UpdateMetricNodeUpgradeEndTime(time.Now(), upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
+	}
 	return true, nil
 }
 
-// This will remove the extra worker nodes we added before kick off upgrade
+// This will remove the extra worker nodes we added pre upgrade
 func RemoveExtraScaledNodes(c client.Client, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
 	upgradeMachinesets := &machineapi.MachineSetList{}
 
@@ -373,6 +421,7 @@ func RemoveExtraScaledNodes(c client.Client, metricsClient metrics.Metrics, m ma
 		logger.Error(err, "failed to get upgrade extra machinesets")
 		return false, err
 	}
+
 	for _, item := range upgradeMachinesets.Items {
 		err = c.Delete(context.TODO(), &item)
 		if err != nil {
@@ -483,7 +532,7 @@ func RemoveMaintWindow(c client.Client, metricsClient metrics.Metrics, m mainten
 
 // This perform cluster health check after upgrade
 func PostClusterHealthCheck(c client.Client, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
-	ok, err := performClusterHealthCheck(c, logger)
+	ok, err := performClusterHealthCheck(c, metricsClient, logger)
 	if err != nil || !ok {
 		metricsClient.UpdateMetricClusterCheckFailed(upgradeConfig.Name)
 		return false, err
@@ -512,16 +561,12 @@ func nodesUpgraded(c client.Client, nodeType string, logger logr.Logger) (bool, 
 
 // This check whether control plane is upgraded or not
 func ControlPlaneUpgraded(c client.Client, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
-	clusterVersion := &configv1.ClusterVersion{}
-
-	err := c.Get(context.TODO(), types.NamespacedName{Name: "version"}, clusterVersion)
+	clusterVersion, err := getClusterVersion(c)
 	if err != nil {
 		return false, err
 	}
 	for _, c := range clusterVersion.Status.History {
 		if c.State == configv1.CompletedUpdate && c.Version == upgradeConfig.Spec.Desired.Version {
-			// send controlplane upgrade complete timestamp
-			metricsClient.UpdateMetricControlPlaneEndTime(time.Now(), upgradeConfig.Name)
 			return true, nil
 		}
 	}
@@ -531,7 +576,6 @@ func ControlPlaneUpgraded(c client.Client, metricsClient metrics.Metrics, m main
 
 // This trigger the upgrade process
 func (cu clusterUpgrader) UpgradeCluster(upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) error {
-
 	logger.Info("upgrading cluster")
 	history := upgradeConfig.Status.History.GetHistory(upgradeConfig.Spec.Desired.Version)
 	conditions := history.Conditions
@@ -563,10 +607,7 @@ func (cu clusterUpgrader) UpgradeCluster(upgradeConfig *upgradev1alpha1.UpgradeC
 				return err
 			}
 		}
-		if condition.Status == corev1.ConditionTrue {
-			logger.Info(fmt.Sprintf("%s already done, skip", key))
-			continue
-		}
+
 		result, err := cu.Steps[key](cu.client, cu.metrics, cu.maintenance, upgradeConfig, logger)
 
 		if err != nil {
@@ -622,83 +663,15 @@ func (cu clusterUpgrader) UpgradeCluster(upgradeConfig *upgradev1alpha1.UpgradeC
 // check several things about the cluster and report problems
 // * critical alerts
 // * degraded operators (if there are critical alerts only)
-func performClusterHealthCheck(c client.Client, logger logr.Logger) (bool, error) {
-	sa := &corev1.ServiceAccount{}
-
-	err := c.Get(context.TODO(), types.NamespacedName{Namespace: "openshift-monitoring", Name: "prometheus-k8s"}, sa)
+func performClusterHealthCheck(c client.Client, metricsClient metrics.Metrics, logger logr.Logger) (bool, error) {
+	alerts, err := metricsClient.Query("ALERTS{alertstate=\"firing\",severity=\"critical\",namespace=~\"^openshift.*|^kube.*|^default$\",namespace!=\"openshift-customer-monitoring\",alertname!=\"ClusterUpgradingSRE\",alertname!=\"DNSErrors05MinSRE\",alertname!=\"MetricsClientSendFailingSRE\"}")
 	if err != nil {
-		return false, fmt.Errorf("Unable to fetch prometheus-k8s service account: %s", err)
-	}
-
-	tokenSecret := ""
-	for _, secret := range sa.Secrets {
-		if strings.HasPrefix(secret.Name, "prometheus-k8s-token") {
-			tokenSecret = secret.Name
-		}
-	}
-	if len(tokenSecret) == 0 {
-		return false, fmt.Errorf("failed to find token secret for prommetheus-k8s SA")
-	}
-
-	logger.Info(fmt.Sprintf("found out secret %s", tokenSecret))
-
-	secret := &corev1.Secret{}
-
-	err = c.Get(context.TODO(), types.NamespacedName{Namespace: "openshift-monitoring", Name: tokenSecret}, secret)
-	if err != nil {
-		return false, fmt.Errorf("Unable to fetch secret %s: %s", tokenSecret, err)
-	}
-
-	token := secret.Data[corev1.ServiceAccountTokenKey]
-
-	route := &routev1.Route{}
-	err = c.Get(context.TODO(), types.NamespacedName{Namespace: "openshift-monitoring", Name: "prometheus-k8s"}, route)
-	if err != nil {
-		return false, err
-	}
-	netTransport := &http.Transport{
-		TLSHandshakeTimeout: time.Second * 5,
-	}
-
-	hClient := http.Client{
-		Transport: netTransport,
-		Timeout: time.Second * 5,
-	}
-	promUrl := "https://" + route.Spec.Host + "/api/v1/query"
-
-	req, err := http.NewRequest("GET", promUrl, nil)
-	if err != nil {
-		return false, fmt.Errorf("Could not query Prometheus: %s", err)
-	}
-	q := req.URL.Query()
-	alertQuery := "ALERTS{alertstate=\"firing\",severity=\"critical\",namespace=~\"^openshift.*|^kube.*|^default$\",namespace!=\"openshift-customer-monitoring\",alertname!=\"ClusterUpgradingSRE\",alertname!=\"DNSErrors05MinSRE\",alertname!=\"MetricsClientSendFailingSRE\"}"
-	q.Add("query", alertQuery)
-
-	req.URL.RawQuery = q.Encode()
-	req.Header.Add("Authorization", "Bearer "+string(token))
-	resp, err := hClient.Do(req)
-	if err != nil {
-		return false, err
-	}
-
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return false, fmt.Errorf("Error when querying Prometheus alerts: %s", err)
-	}
-
-	logger.Info(fmt.Sprintf("alerts : %s", body))
-	alerts := &AlertResponse{}
-
-	err = json.Unmarshal(body, alerts)
-	if err != nil {
-		return false, err
+		return false, fmt.Errorf("Unable to query critical alerts: %s", err)
 	}
 
 	if len(alerts.Data.Result) > 0 {
-		logger.Info("there are critical alerts exists, cannot upgrade now")
-		// Send the metrics for the cluster check failed if we have opening alerts
-		return false, fmt.Errorf("there are %d critical alerts", len(alerts.Data.Result))
+		logger.Info("There are critical alerts exists, cannot upgrade now")
+		return false, fmt.Errorf("There are %d critical alerts", len(alerts.Data.Result))
 	}
 
 	//check co status
@@ -737,7 +710,17 @@ type AlertData struct {
 }
 
 // ValidateUpgradeConfig will run the validation steps which defined in performValidateUpgradeConfig
-func ValidateUpgradeConfig(c client.Client, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error){
+func ValidateUpgradeConfig(c client.Client, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
+	upgradeCommenced, err := hasUpgradeCommenced(c, upgradeConfig)
+	if err != nil {
+		return false, err
+	}
+	desired := upgradeConfig.Spec.Desired
+	if upgradeCommenced {
+		logger.Info(fmt.Sprintf("ClusterVersion is already set to Channel %s Version %s, skipping %s", desired.Channel, desired.Version, upgradev1alpha1.UpgradeValidated))
+		return true, nil
+	}
+
 	ok, err := performValidateUpgradeConfig(c, upgradeConfig, logger)
 	if err != nil || !ok {
 		metricsClient.UpdateMetricValidationFailed(upgradeConfig.Name)
@@ -840,8 +823,7 @@ func getCurrentVersion(clusterVersion *configv1.ClusterVersion) string {
 
 // This return the current upgrade status
 func IsClusterUpgrading(c client.Client, version string) (bool, error) {
-	clusterVersion := &configv1.ClusterVersion{}
-	err := c.Get(context.TODO(), types.NamespacedName{Name: "version"}, clusterVersion)
+	clusterVersion, err := getClusterVersion(c)
 	if err != nil {
 		return false, err
 	}
@@ -866,4 +848,42 @@ func newUpgradeCondition(reason, msg string, conditionType upgradev1alpha1.Upgra
 // TODO readyToUpgrade checks whether it's ready to upgrade based on the scheduling
 func IsReadyToUpgrade(upgradeConfig *upgradev1alpha1.UpgradeConfig) bool {
 	return true
+}
+
+func isEqualVersion(cv *configv1.ClusterVersion, uc *upgradev1alpha1.UpgradeConfig) bool {
+	if cv.Spec.DesiredUpdate != nil &&
+		cv.Spec.DesiredUpdate.Version == uc.Spec.Desired.Version &&
+		cv.Spec.Channel == uc.Spec.Desired.Channel {
+		return true
+	}
+
+	return false
+}
+
+func getClusterVersion(c client.Client) (*configv1.ClusterVersion, error) {
+	cvList := &configv1.ClusterVersionList{}
+	err := c.List(context.TODO(), cvList)
+	if err != nil {
+		return nil, err
+	}
+
+	// ClusterVersion is a singleton
+	for _, cv := range cvList.Items {
+		return &cv, nil
+	}
+
+	return nil, errors.NewNotFound(schema.GroupResource{Group: configv1.GroupName, Resource: "ClusterVersion"}, "ClusterVersion")
+}
+
+func hasUpgradeCommenced(c client.Client, uc *upgradev1alpha1.UpgradeConfig) (bool, error) {
+	cv, err := getClusterVersion(c)
+	if err != nil {
+		return false, err
+	}
+
+	if !isEqualVersion(cv, uc) {
+		return false, nil
+	}
+
+	return true, nil
 }

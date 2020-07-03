@@ -48,29 +48,29 @@ func (mr *MockMaintenanceMockRecorder) End() *gomock.Call {
 }
 
 // StartControlPlane mocks base method
-func (m *MockMaintenance) StartControlPlane(arg0 time.Time) error {
+func (m *MockMaintenance) StartControlPlane(arg0 time.Time, arg1 string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StartControlPlane", arg0)
+	ret := m.ctrl.Call(m, "StartControlPlane", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // StartControlPlane indicates an expected call of StartControlPlane
-func (mr *MockMaintenanceMockRecorder) StartControlPlane(arg0 interface{}) *gomock.Call {
+func (mr *MockMaintenanceMockRecorder) StartControlPlane(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartControlPlane", reflect.TypeOf((*MockMaintenance)(nil).StartControlPlane), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartControlPlane", reflect.TypeOf((*MockMaintenance)(nil).StartControlPlane), arg0, arg1)
 }
 
 // StartWorker mocks base method
-func (m *MockMaintenance) StartWorker(arg0 time.Time) error {
+func (m *MockMaintenance) StartWorker(arg0 time.Time, arg1 string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StartWorker", arg0)
+	ret := m.ctrl.Call(m, "StartWorker", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // StartWorker indicates an expected call of StartWorker
-func (mr *MockMaintenanceMockRecorder) StartWorker(arg0 interface{}) *gomock.Call {
+func (mr *MockMaintenanceMockRecorder) StartWorker(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartWorker", reflect.TypeOf((*MockMaintenance)(nil).StartWorker), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartWorker", reflect.TypeOf((*MockMaintenance)(nil).StartWorker), arg0, arg1)
 }

@@ -47,6 +47,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -83,16 +84,6 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 		}
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
-	}
-
-	// If cluster is already upgrading with different version, we should wait until it completed
-	upgrading, err := cluster_upgrader.IsClusterUpgrading(r.client, instance.Spec.Desired.Version)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-	if upgrading {
-		reqLogger.Info("cluster is upgrading with different version, cannot upgrade now")
-		return reconcile.Result{}, nil
 	}
 
 	var history upgradev1alpha1.UpgradeHistory
