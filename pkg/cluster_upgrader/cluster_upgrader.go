@@ -567,8 +567,6 @@ func ControlPlaneUpgraded(c client.Client, metricsClient metrics.Metrics, m main
 	}
 	for _, c := range clusterVersion.Status.History {
 		if c.State == configv1.CompletedUpdate && c.Version == upgradeConfig.Spec.Desired.Version {
-			// send controlplane upgrade complete timestamp
-			metricsClient.UpdateMetricControlPlaneEndTime(time.Now(), upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
 			return true, nil
 		}
 	}
