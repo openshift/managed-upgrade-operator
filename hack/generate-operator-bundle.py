@@ -65,7 +65,7 @@ for file_name in crd_files:
             "description": crd["spec"]["names"]["kind"],
             "displayName": crd["spec"]["names"]["kind"],
             "kind": crd["spec"]["names"]["kind"],
-            "version": crd["spec"]["version"]
+            "version": crd["spec"]["versions"][0]["name"]
         }
     )
 
@@ -89,24 +89,6 @@ with open('deploy/cluster_role.yaml', 'r') as stream:
         })
 
 csv['spec']['install']['spec']['permissions'] = []
-
-# Add operator roles to the CSV:
-with open('deploy/role.yaml', 'r') as stream:
-    operator_role = yaml.safe_load(stream)
-    csv['spec']['install']['spec']['permissions'].append(
-        {
-            'rules': operator_role['rules'],
-            'serviceAccountName': OPERATOR_NAME,
-        })
-
-# Add cluster_config_v1_reader role to the CSV:
-with open('deploy/cluster_config_v1_reader_role.yaml', 'r') as stream:
-    operator_role = yaml.safe_load(stream)
-    csv['spec']['install']['spec']['permissions'].append(
-        {
-            'rules': operator_role['rules'],
-            'serviceAccountName': OPERATOR_NAME,
-        })
 
 # Add our deployment spec for the hive operator:
 with open('deploy/operator.yaml', 'r') as stream:
