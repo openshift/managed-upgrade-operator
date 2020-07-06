@@ -27,6 +27,10 @@ generate:
 	go generate pkg/cluster_upgrader/cluster_upgrader.go
 	go generate pkg/maintenance/maintenance.go
 
+.PHONY: coverage
+coverage:
+	hack/codecov.sh
+
 .PHONY: run
 run: 
 	operator-sdk run --local --watch-namespace ""

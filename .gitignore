@@ -78,4 +78,5 @@ tags
 # End of https://www.gitignore.io/api/go,vim,emacs,visualstudiocode
 ### Goland ###
 .idea/*
-
+# Output of the go coverage tool
+*.out
