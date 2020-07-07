@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"github.com/openshift/managed-upgrade-operator/pkg/maintenance"
 	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/selection"
 	"net/url"
 	"runtime"
 	"sort"
@@ -395,6 +397,26 @@ func AllWorkersUpgraded(c client.Client, metricsClient metrics.Metrics, m mainte
 	return true, nil
 }
 
+type NotMatchingLabels map[string]string
+
+func (m NotMatchingLabels) ApplyToList(opts *client.ListOptions) {
+	sel := NotSelectorFromSet(map[string]string(m))
+	opts.LabelSelector = sel
+}
+
+func NotSelectorFromSet(ls map[string]string) labels.Selector {
+	if ls == nil || len(ls) == 0 {
+		return labels.NewSelector()
+	}
+	selector := labels.Everything()
+	for label, value := range ls {
+		r, _ := labels.NewRequirement(label, selection.NotEquals, []string{value})
+		selector = selector.Add(*r)
+	}
+
+	return selector
+}
+
 // This will remove the extra worker nodes we added pre upgrade
 func RemoveExtraScaledNodes(c client.Client, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
 	upgradeMachinesets := &machineapi.MachineSetList{}
@@ -408,11 +430,43 @@ func RemoveExtraScaledNodes(c client.Client, metricsClient metrics.Metrics, m ma
 		return false, err
 	}
 
-	for _, item := range upgradeMachinesets.Items {
-		err = c.Delete(context.TODO(), &item)
-		if err != nil {
-			return false, err
+	for _, ms := range upgradeMachinesets.Items {
+		if ms.ObjectMeta.DeletionTimestamp == nil {
+			err = c.Delete(context.TODO(), &ms)
+			if err != nil {
+				return false, err
+			}
 		}
+	}
+
+	// MachineSets control workers and infras nodes.
+	originalMachineSets := &machineapi.MachineSetList{}
+	err = c.List(context.TODO(), originalMachineSets, []client.ListOption{
+		client.InNamespace("openshift-machine-api"),
+		NotMatchingLabels{LABEL_UPGRADE: "true"},
+	}...)
+	if err != nil {
+		logger.Error(err, "failed to get upgrade extra machinesets")
+		return false, err
+	}
+
+	// Desired replicas should match worker and infra count of nodes.
+	nonMasterNodes := &corev1.NodeList{}
+	err = c.List(context.TODO(), nonMasterNodes, []client.ListOption{
+		NotMatchingLabels{"node-role.kubernetes.io/master": ""},
+	}...)
+	if err != nil {
+		logger.Error(err, "failed to list nodes")
+		return false, err
+	}
+
+	var desiredNodeCount int32 = 0
+	for _, ms := range originalMachineSets.Items {
+		desiredNodeCount += *ms.Spec.Replicas
+	}
+
+	if desiredNodeCount != int32(len(nonMasterNodes.Items)){
+		return false, nil
 	}
 
 	return true, nil
