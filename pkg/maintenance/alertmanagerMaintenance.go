@@ -3,6 +3,9 @@ package maintenance
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/go-openapi/runtime"
 	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"
@@ -14,8 +17,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strings"
-	"time"
 )
 
 var (
@@ -44,14 +45,15 @@ func (ammb *alertManagerMaintenanceBuilder) NewClient(client client.Client) (Mai
 	}
 
 	return &alertManagerMaintenance{
-		client: alertManagerSilenceClient{
+		client: &alertManagerSilenceClient{
 			transport: transport,
 		},
 	}, nil
 }
 
 type alertManagerMaintenance struct {
-	client alertManagerSilenceClient
+	//	client alertManagerSilenceClient
+	client AlertManagerSilencer
 }
 
 func getTransport(c client.Client) (*httptransport.Runtime, error) {
@@ -112,7 +114,7 @@ func (amm *alertManagerMaintenance) StartControlPlane(endsAt time.Time, version 
 	now := strfmt.DateTime(time.Now().UTC())
 	end := strfmt.DateTime(endsAt.UTC())
 	if !defaultExists {
-		err = amm.client.create(createDefaultMatchers(), now, end, config.OperatorName, defaultComment)
+		err = amm.client.Create(createDefaultMatchers(), now, end, config.OperatorName, defaultComment)
 		if err != nil {
 			return err
 		}
@@ -120,7 +122,7 @@ func (amm *alertManagerMaintenance) StartControlPlane(endsAt time.Time, version 
 
 	if !criticalExists {
 		matchers := []*amv2Models.Matcher{createMatcher("alertname", controlPlaneIgnoredCriticalAlerts, true)}
-		err = amm.client.create(matchers, now, end, config.OperatorName, criticalAlertComment)
+		err = amm.client.Create(matchers, now, end, config.OperatorName, criticalAlertComment)
 		if err != nil {
 			return err
 		}
@@ -144,7 +146,7 @@ func (amm *alertManagerMaintenance) StartWorker(endsAt time.Time, version string
 
 	now := strfmt.DateTime(time.Now().UTC())
 	end := strfmt.DateTime(endsAt.UTC())
-	err = amm.client.create(createDefaultMatchers(), now, end, config.OperatorName, comment)
+	err = amm.client.Create(createDefaultMatchers(), now, end, config.OperatorName, comment)
 	if err != nil {
 		return err
 	}
