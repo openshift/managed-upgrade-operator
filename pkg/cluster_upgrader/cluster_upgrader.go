@@ -41,7 +41,6 @@ var (
 		upgradev1alpha1.CommenceUpgrade,
 		upgradev1alpha1.ControlPlaneMaintWindow,
 		upgradev1alpha1.ControlPlaneUpgraded,
-		upgradev1alpha1.AllMasterNodesUpgraded,
 		upgradev1alpha1.RemoveControlPlaneMaintWindow,
 		upgradev1alpha1.WorkersMaintWindow,
 		upgradev1alpha1.AllWorkerNodesUpgraded,
@@ -106,7 +105,6 @@ func (cub *clusterUpgraderBuilder) NewClient(c client.Client) (ClusterUpgrader, 
 			upgradev1alpha1.ControlPlaneMaintWindow:       CreateControlPlaneMaintWindow,
 			upgradev1alpha1.CommenceUpgrade:               CommenceUpgrade,
 			upgradev1alpha1.ControlPlaneUpgraded:          ControlPlaneUpgraded,
-			upgradev1alpha1.AllMasterNodesUpgraded:        AllMastersUpgraded,
 			upgradev1alpha1.RemoveControlPlaneMaintWindow: RemoveControlPlaneMaintWindow,
 			upgradev1alpha1.WorkersMaintWindow:            CreateWorkerMaintWindow,
 			upgradev1alpha1.AllWorkerNodesUpgraded:        AllWorkersUpgraded,
@@ -318,12 +316,11 @@ func CommenceUpgrade(c client.Client, metricsClient metrics.Metrics, m maintenan
 	cv.Spec.DesiredUpdate = &configv1.Update{Version: upgradeConfig.Spec.Desired.Version}
 	cv.Spec.Channel = upgradeConfig.Spec.Desired.Channel
 
-	err = c.Update(context.TODO(), cv)
+	isSet, err := metricsClient.IsMetricUpgradeStartTimeSet(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
 	if err != nil {
 		return false, err
 	}
-
-	isSet, err := metricsClient.IsMetricUpgradeStartTimeSet(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
+	err = c.Update(context.TODO(), cv)
 	if err != nil {
 		return false, err
 	}
@@ -363,7 +360,13 @@ func CreateWorkerMaintWindow(c client.Client, metricsClient metrics.Metrics, m m
 		return false, nil
 	}
 
+	// Depending on how long the Control Plane takes all workers may be already upgraded.
 	pendingWorkerCount := configPool.Status.MachineCount - configPool.Status.UpdatedMachineCount
+	if pendingWorkerCount == 0 {
+		logger.Info(fmt.Sprintf("Worker nodes are already upgraded. Skipping worker maintenace for %s", upgradeConfig.Spec.Desired.Version))
+		return true, nil
+	}
+
 	maintenanceDurationPerNode := 8 * time.Minute
 	workerMaintenanceExpectedDuration := time.Duration(pendingWorkerCount) * maintenanceDurationPerNode
 	endTime := time.Now().Add(workerMaintenanceExpectedDuration)
@@ -372,23 +375,6 @@ func CreateWorkerMaintWindow(c client.Client, metricsClient metrics.Metrics, m m
 		return false, err
 	}
 
-	return true, nil
-}
-
-// This check whether all the master nodes are ready with new config
-func AllMastersUpgraded(c client.Client, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
-	ok, err := nodesUpgraded(c, "master", logger)
-	if err != nil || !ok {
-		return false, err
-	}
-
-	isSet, err := metricsClient.IsMetricControlPlaneEndTimeSet(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
-	if err != nil {
-		return false, err
-	}
-	if !isSet {
-		metricsClient.UpdateMetricControlPlaneEndTime(time.Now(), upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
-	}
 	return true, nil
 }
 
@@ -559,19 +545,30 @@ func nodesUpgraded(c client.Client, nodeType string, logger logr.Logger) (bool, 
 	return true, nil
 }
 
-// This check whether control plane is upgraded or not
+// This check whether control plane is upgraded or not. The ClusterVersion reports when cvo and master nodes are upgraded.
 func ControlPlaneUpgraded(c client.Client, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
 	clusterVersion, err := getClusterVersion(c)
 	if err != nil {
 		return false, err
 	}
+	isCompleted := false
 	for _, c := range clusterVersion.Status.History {
 		if c.State == configv1.CompletedUpdate && c.Version == upgradeConfig.Spec.Desired.Version {
-			return true, nil
+			isCompleted = true
 		}
 	}
-	return false, nil
+	if isCompleted {
+		isSet, err := metricsClient.IsMetricControlPlaneEndTimeSet(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
+		if err != nil {
+			return false, err
+		}
+		if !isSet {
+			metricsClient.UpdateMetricControlPlaneEndTime(time.Now(), upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
+		}
+		return true, nil
+	}
 
+	return false, nil
 }
 
 // This trigger the upgrade process

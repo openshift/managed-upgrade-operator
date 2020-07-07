@@ -78,7 +78,6 @@ const (
 	ControlPlaneMaintWindow       UpgradeConditionType = "ControlPlaneMaintWindow"
 	CommenceUpgrade               UpgradeConditionType = "CommenceUpgrade"
 	ControlPlaneUpgraded          UpgradeConditionType = "ControlPlaneUpgraded"
-	AllMasterNodesUpgraded        UpgradeConditionType = "AllMasterNodesUpgraded"
 	RemoveControlPlaneMaintWindow UpgradeConditionType = "RemoveControlPlaneMaintWindow"
 	WorkersMaintWindow            UpgradeConditionType = "WorkersMaintWindow"
 	AllWorkerNodesUpgraded        UpgradeConditionType = "AllWorkerNodesUpgraded"
