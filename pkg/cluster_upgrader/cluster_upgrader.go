@@ -34,7 +34,7 @@ import (
 var (
 	once                sync.Once
 	osdUpgradeSteps     UpgradeSteps
-	UpgradeStepOrdering = []upgradev1alpha1.UpgradeConditionType{
+	osdUpgradeStepOrdering = []upgradev1alpha1.UpgradeConditionType{
 		upgradev1alpha1.UpgradeValidated,
 		upgradev1alpha1.UpgradePreHealthCheck,
 		upgradev1alpha1.UpgradeScaleUpExtraNodes,
@@ -81,6 +81,9 @@ type UpgradeSteps map[upgradev1alpha1.UpgradeConditionType]UpgradeStep
 // Represents an individual step in the upgrade process
 type UpgradeStep func(c client.Client, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error)
 
+// Represents the order in which to undertake upgrade steps
+type UpgradeStepOrdering []upgradev1alpha1.UpgradeConditionType
+
 type clusterUpgraderBuilder struct {
 	maintenanceBuilder maintenance.MaintenanceBuilder
 	metricsBuilder     metrics.MetricsBuilder
@@ -117,6 +120,7 @@ func (cub *clusterUpgraderBuilder) NewClient(c client.Client) (ClusterUpgrader, 
 	})
 	return &clusterUpgrader{
 		Steps:       osdUpgradeSteps,
+		Ordering:    osdUpgradeStepOrdering,
 		client:      c,
 		maintenance: m,
 		metrics:     metricsClient,
@@ -126,14 +130,10 @@ func (cub *clusterUpgraderBuilder) NewClient(c client.Client) (ClusterUpgrader, 
 // An cluster upgrader implementing the ClusterUpgrader interface
 type clusterUpgrader struct {
 	Steps       UpgradeSteps
+	Ordering    UpgradeStepOrdering
 	client      client.Client
 	maintenance maintenance.Maintenance
 	metrics     metrics.Metrics
-}
-
-// Ordering returns the ordering of predicates.
-func Ordering() []upgradev1alpha1.UpgradeConditionType {
-	return UpgradeStepOrdering
 }
 
 // ClusterHealthCheck performs cluster healthy check
@@ -498,7 +498,7 @@ func performUpgradeVerification(c client.Client, logger logr.Logger) (bool, erro
 			}
 		}
 	}
-	if len(dsList.Items) != readyDS {
+	if totalDS != readyDS {
 		logger.Info(fmt.Sprintf("not all daemonset are ready:expected number :%v , ready number %v", len(dsList.Items), readyDS))
 		return false, nil
 	}
@@ -587,7 +587,7 @@ func (cu clusterUpgrader) UpgradeCluster(upgradeConfig *upgradev1alpha1.UpgradeC
 		}
 	}
 
-	for _, key := range Ordering() {
+	for _, key := range cu.Ordering {
 
 		logger.Info(fmt.Sprintf("Perform %s", key))
 
@@ -816,21 +816,6 @@ func getCurrentVersion(clusterVersion *configv1.ClusterVersion) string {
 		}
 	}
 	return ""
-}
-
-// This return the current upgrade status
-func IsClusterUpgrading(c client.Client, version string) (bool, error) {
-	clusterVersion, err := getClusterVersion(c)
-	if err != nil {
-		return false, err
-	}
-	for _, c := range clusterVersion.Status.Conditions {
-		if c.Type == configv1.OperatorProgressing && c.Status == configv1.ConditionTrue && version != clusterVersion.Spec.DesiredUpdate.Version {
-			return true, nil
-
-		}
-	}
-	return false, nil
 }
 
 func newUpgradeCondition(reason, msg string, conditionType upgradev1alpha1.UpgradeConditionType, s corev1.ConditionStatus) *upgradev1alpha1.UpgradeCondition {

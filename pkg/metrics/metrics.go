@@ -22,6 +22,7 @@ const (
 	versionLabel = "version"
 )
 
+//go:generate mockgen -destination=mocks/metrics.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/metrics Metrics
 type Metrics interface {
 	UpdateMetricValidationFailed(string)
 	UpdateMetricValidationSucceeded(string)
