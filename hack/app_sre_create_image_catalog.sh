@@ -27,8 +27,8 @@ git clone \
 REMOVED_VERSIONS=""
 if [[ "$REMOVE_UNDEPLOYED" == true ]]; then
     DEPLOYED_HASH=$(
-        curl -s "https://gitlab.cee.redhat.com/service/saas-osd-operators/raw/master/${_OPERATOR_NAME}-services/${_OPERATOR_NAME}.yaml" | \
-            docker run --rm -i evns/yq -r '.services[]|select(.name="${_OPERATOR_NAME}").hash'
+        curl -s "https://gitlab.cee.redhat.com/service/app-interface/raw/master/data/services/osd-operators/cicd/saas/saas-${_OPERATOR_NAME}.yaml" | \
+            docker run --rm -i evns/yq -r '.resourceTemplates[]|select(.name="managed-upgrade-operator").targets[]|select(.namespace["$ref"]=="/services/osd-operators/namespaces/managed-upgrade-operator-production.yml")|.ref'
     )
 
     delete=false
