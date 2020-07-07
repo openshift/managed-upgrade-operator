@@ -32,14 +32,6 @@ For the purpose of upgrading a cluster, an `UpgradeConfig` resource _must_ be co
 | `channel` | The [channel](https://github.com/openshift/cincinnati/blob/master/docs/design/openshift.md#Channels) the Cluster Version Operator should be using to validate update versions | `fast-4.4` |
 | `force` | Whether to force an update | `false` |
 
-Optionally, the configuration of cluster operator subscriptions can be managed through the following properties:
-
-| Item | Definition | Example |
-| ---- | ---------- | ------- |
-| `name` | The name of the operator subscription | `configure-alertmanager-operator` |
-| `channel` | The channel for the operator subscription | `staging` |
-| `namespace` | The namespace of the subscription | `openshift-monitoring` |
- 
 A populated `UpgradeConfig` example is presented below:
 
 ```yaml
@@ -52,10 +44,6 @@ spec:
     channel: "fast-4.4"
     force: false
     version: "4.4.6"
-  subscriptionUpdates:
-    - channel: "staging"
-      namespace: "openshift-monitoring"
-      name: "configure-alertmanager-operator"
 ```
 
 The CRD is available to [view in the repository](../deploy/crds/upgrade.managed.openshift.io_upgradeconfigs_crd.yaml). 
