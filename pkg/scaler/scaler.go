@@ -5,7 +5,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-//go:generate mockgen -destination=mocks/scaler.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/mscaler Scaler
+//go:generate mockgen -destination=mocks/scaler.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/scaler Scaler
 type Scaler interface {
 	EnsureScaleUpNodes(client.Client, logr.Logger) (bool, error)
 	EnsureScaleDownNodes(client.Client, logr.Logger) (bool, error)

@@ -32,8 +32,8 @@ import (
 )
 
 var (
-	once                sync.Once
-	osdUpgradeSteps     UpgradeSteps
+	once                   sync.Once
+	osdUpgradeSteps        UpgradeSteps
 	osdUpgradeStepOrdering = []upgradev1alpha1.UpgradeConditionType{
 		upgradev1alpha1.UpgradeValidated,
 		upgradev1alpha1.UpgradePreHealthCheck,
@@ -157,7 +157,7 @@ func PreClusterHealthCheck(c client.Client, scaler scaler.Scaler, metricsClient 
 
 // This will scale up new workers to ensure customer capacity while upgrading.
 func EnsureExtraUpgradeWorkers(c client.Client, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
-		upgradeCommenced, err := hasUpgradeCommenced(c, upgradeConfig)
+	upgradeCommenced, err := hasUpgradeCommenced(c, upgradeConfig)
 	if err != nil {
 		return false, err
 	}
@@ -167,7 +167,7 @@ func EnsureExtraUpgradeWorkers(c client.Client, scaler scaler.Scaler, metricsCli
 		return true, nil
 	}
 
-        isScaled, err := scaler.EnsureScaleUpNodes(c, logger)
+	isScaled, err := scaler.EnsureScaleUpNodes(c, logger)
 	if err != nil {
 		return false, err
 	}
