@@ -436,7 +436,6 @@ func ControlPlaneUpgraded(c client.Client, scaler scaler.Scaler, metricsClient m
 	}
 
 	return false, nil
-
 }
 
 // This trigger the upgrade process

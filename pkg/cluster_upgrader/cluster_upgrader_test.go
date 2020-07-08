@@ -3,10 +3,11 @@ package cluster_upgrader
 import (
 	"context"
 	"fmt"
-	"github.com/openshift/managed-upgrade-operator/pkg/scaler"
 
 	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	configv1 "github.com/openshift/api/config/v1"
 	machineconfigapi "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -19,12 +20,10 @@ import (
 	mockMaintenance "github.com/openshift/managed-upgrade-operator/pkg/maintenance/mocks"
 	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
 	mockMetrics "github.com/openshift/managed-upgrade-operator/pkg/metrics/mocks"
+	"github.com/openshift/managed-upgrade-operator/pkg/scaler"
 	mockScaler "github.com/openshift/managed-upgrade-operator/pkg/scaler/mocks"
 	"github.com/openshift/managed-upgrade-operator/util/mocks"
 	testStructs "github.com/openshift/managed-upgrade-operator/util/mocks/structs"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 var stepCounter map[upgradev1alpha1.UpgradeConditionType]int
