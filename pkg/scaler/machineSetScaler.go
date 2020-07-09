@@ -3,6 +3,8 @@ package scaler
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/go-logr/logr"
 	machineapi "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -10,18 +12,16 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"time"
 )
 
 const (
-	TIMEOUT_SCALE_EXTRAL_NODES = 30 * time.Minute
-	LABEL_UPGRADE              = "upgrade.managed.openshift.io"
+	LABEL_UPGRADE = "upgrade.managed.openshift.io"
 )
 
 type machineSetScaler struct{}
 
 // This will create a new MachineSet with 1 extra replicas for workers in every region and report when the nodes are ready.
-func (s *machineSetScaler) EnsureScaleUpNodes(c client.Client, logger logr.Logger) (bool, error) {
+func (s *machineSetScaler) EnsureScaleUpNodes(c client.Client, timeOut time.Duration, logger logr.Logger) (bool, error) {
 	upgradeMachinesets := &machineapi.MachineSetList{}
 
 	err := c.List(context.TODO(), upgradeMachinesets, []client.ListOption{
@@ -99,9 +99,8 @@ func (s *machineSetScaler) EnsureScaleUpNodes(c client.Client, logger logr.Logge
 		startTime := ms.CreationTimestamp
 		if ms.Status.Replicas != ms.Status.ReadyReplicas {
 
-			if time.Now().After(startTime.Time.Add(TIMEOUT_SCALE_EXTRAL_NODES)) {
-				//TODO send out timeout alerts
-				logger.Info("machineset provisioning timout")
+			if time.Now().After(startTime.Time.Add(timeOut)) {
+				return false, &scaleTimeOutError{message: fmt.Sprintf("Machineset %s provisioning timout", ms.Name)}
 			}
 			logger.Info(fmt.Sprintf("not all machines are ready for machineset:%s", ms.Name))
 			return false, nil
@@ -131,11 +130,9 @@ func (s *machineSetScaler) EnsureScaleUpNodes(c client.Client, logger logr.Logge
 		}
 		if !nodeReady {
 			allNodeReady = false
-			if time.Now().After(startTime.Time.Add(TIMEOUT_SCALE_EXTRAL_NODES)) {
-				logger.Info("node is not ready within 30mins")
-				//TODO send out timeout alerts
-				return false, fmt.Errorf("timeout waiting for node:%s to become ready", nodeName)
-
+			if time.Now().After(startTime.Time.Add(timeOut)) {
+				logger.Info("node is not ready within timeout time")
+				return false, &scaleTimeOutError{message: fmt.Sprintf("Timeout waiting for node:%s to become ready", nodeName)}
 			}
 		}
 
