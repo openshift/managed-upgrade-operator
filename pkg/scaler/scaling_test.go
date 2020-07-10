@@ -39,13 +39,14 @@ var _ = Describe("Node scaling tests", func() {
 	Context("When the upgrade is scaling out workers", func() {
 		var upgradeMachinesets *machineapi.MachineSetList
 		var originalMachineSets *machineapi.MachineSetList
+		testDuration := 30 * time.Minute
 		Context("When looking for the upgrade machineset fails", func() {
 			It("Indicates an error", func() {
 				fakeError := fmt.Errorf("fake error")
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
 					client.InNamespace("openshift-machine-api"), client.MatchingLabels{LABEL_UPGRADE: "true"},
 				}).Times(1).Return(fakeError)
-				result, err := scaler.EnsureScaleUpNodes(mockKubeClient, logger)
+				result, err := scaler.EnsureScaleUpNodes(mockKubeClient, testDuration, logger)
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(Equal(fakeError))
 				Expect(result).To(BeFalse())
@@ -62,7 +63,7 @@ var _ = Describe("Node scaling tests", func() {
 						client.InNamespace("openshift-machine-api"), client.MatchingLabels{"hive.openshift.io/machine-pool": "worker"},
 					}).Times(1).Return(fakeError),
 				)
-				result, err := scaler.EnsureScaleUpNodes(mockKubeClient, logger)
+				result, err := scaler.EnsureScaleUpNodes(mockKubeClient, testDuration, logger)
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(Equal(fakeError))
 				Expect(result).To(BeFalse())
@@ -79,7 +80,7 @@ var _ = Describe("Node scaling tests", func() {
 						client.InNamespace("openshift-machine-api"), client.MatchingLabels{"hive.openshift.io/machine-pool": "worker"},
 					}).SetArg(1, *originalMachineSets).Times(1),
 				)
-				result, err := scaler.EnsureScaleUpNodes(mockKubeClient, logger)
+				result, err := scaler.EnsureScaleUpNodes(mockKubeClient, testDuration, logger)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("failed to get original machineset"))
 				Expect(result).To(BeFalse())
@@ -131,7 +132,7 @@ var _ = Describe("Node scaling tests", func() {
 						Expect(ms.Spec.Selector.MatchLabels[LABEL_UPGRADE]).To(Equal("true"))
 						return nil
 					})
-				result, err := scaler.EnsureScaleUpNodes(mockKubeClient, logger)
+				result, err := scaler.EnsureScaleUpNodes(mockKubeClient, testDuration, logger)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(BeFalse())
 			})
@@ -146,7 +147,7 @@ var _ = Describe("Node scaling tests", func() {
 					}).SetArg(1, *originalMachineSets).Times(1),
 				)
 				mockKubeClient.EXPECT().Create(gomock.Any(), gomock.Any()).Times(1).Return(fakeError)
-				result, err := scaler.EnsureScaleUpNodes(mockKubeClient, logger)
+				result, err := scaler.EnsureScaleUpNodes(mockKubeClient, testDuration, logger)
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(Equal(fakeError))
 				Expect(result).To(BeFalse())
@@ -162,6 +163,7 @@ var _ = Describe("Node scaling tests", func() {
 							ObjectMeta: metav1.ObjectMeta{
 								Name:      "test-infra-upgrade",
 								Namespace: "openshift-machine-api",
+								CreationTimestamp: metav1.Time{Time: time.Now()},
 							},
 							Status: machineapi.MachineSetStatus{
 								Replicas:      1,
@@ -189,7 +191,7 @@ var _ = Describe("Node scaling tests", func() {
 					}).SetArg(1, *originalMachineSets).Times(1),
 				)
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).Times(1)
-				result, err := scaler.EnsureScaleUpNodes(mockKubeClient, logger)
+				result, err := scaler.EnsureScaleUpNodes(mockKubeClient, testDuration, logger)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(BeFalse())
 			})
@@ -275,9 +277,9 @@ var _ = Describe("Node scaling tests", func() {
 							client.InNamespace("openshift-machine-api"), client.MatchingLabels{LABEL_UPGRADE: "true"},
 						}).SetArg(1, *upgradeMachines).Times(1),
 					)
-					result, err := scaler.EnsureScaleUpNodes(mockKubeClient, logger)
+					result, err := scaler.EnsureScaleUpNodes(mockKubeClient, testDuration, logger)
 					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("timeout waiting for node"))
+					Expect(IsScaleTimeOutError(err)).To(BeTrue())
 					Expect(result).To(BeFalse())
 				})
 			})
@@ -295,7 +297,7 @@ var _ = Describe("Node scaling tests", func() {
 							client.InNamespace("openshift-machine-api"), client.MatchingLabels{LABEL_UPGRADE: "true"},
 						}).SetArg(1, *upgradeMachines).Times(1),
 					)
-					result, err := scaler.EnsureScaleUpNodes(mockKubeClient, logger)
+					result, err := scaler.EnsureScaleUpNodes(mockKubeClient, testDuration, logger)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(result).To(BeFalse())
 				})
@@ -371,7 +373,7 @@ var _ = Describe("Node scaling tests", func() {
 						client.InNamespace("openshift-machine-api"), client.MatchingLabels{LABEL_UPGRADE: "true"},
 					}).SetArg(1, *upgradeMachines).Times(1),
 				)
-				result, err := scaler.EnsureScaleUpNodes(mockKubeClient, logger)
+				result, err := scaler.EnsureScaleUpNodes(mockKubeClient, testDuration, logger)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(BeTrue())
 			})

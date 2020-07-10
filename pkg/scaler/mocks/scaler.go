@@ -9,6 +9,7 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
+	time "time"
 )
 
 // MockScaler is a mock of Scaler interface
@@ -50,16 +51,16 @@ func (mr *MockScalerMockRecorder) EnsureScaleDownNodes(arg0, arg1 interface{}) *
 }
 
 // EnsureScaleUpNodes mocks base method
-func (m *MockScaler) EnsureScaleUpNodes(arg0 client.Client, arg1 logr.Logger) (bool, error) {
+func (m *MockScaler) EnsureScaleUpNodes(arg0 client.Client, arg1 time.Duration, arg2 logr.Logger) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnsureScaleUpNodes", arg0, arg1)
+	ret := m.ctrl.Call(m, "EnsureScaleUpNodes", arg0, arg1, arg2)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // EnsureScaleUpNodes indicates an expected call of EnsureScaleUpNodes
-func (mr *MockScalerMockRecorder) EnsureScaleUpNodes(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockScalerMockRecorder) EnsureScaleUpNodes(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureScaleUpNodes", reflect.TypeOf((*MockScaler)(nil).EnsureScaleUpNodes), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureScaleUpNodes", reflect.TypeOf((*MockScaler)(nil).EnsureScaleUpNodes), arg0, arg1, arg2)
 }
