@@ -29,3 +29,7 @@ func IsScaleTimeOutError(err error) bool {
 	_, ok := err.(*scaleTimeOutError)
 	return ok
 }
+
+func NewScaleTimeOutError(msg string) *scaleTimeOutError {
+	return &scaleTimeOutError{message: msg}
+}

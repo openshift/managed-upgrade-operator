@@ -100,7 +100,7 @@ func (s *machineSetScaler) EnsureScaleUpNodes(c client.Client, timeOut time.Dura
 		if ms.Status.Replicas != ms.Status.ReadyReplicas {
 
 			if time.Now().After(startTime.Time.Add(timeOut)) {
-				return false, &scaleTimeOutError{message: fmt.Sprintf("Machineset %s provisioning timout", ms.Name)}
+				return false, NewScaleTimeOutError(fmt.Sprintf("Machineset %s provisioning timout", ms.Name))
 			}
 			logger.Info(fmt.Sprintf("not all machines are ready for machineset:%s", ms.Name))
 			return false, nil
@@ -132,7 +132,7 @@ func (s *machineSetScaler) EnsureScaleUpNodes(c client.Client, timeOut time.Dura
 			allNodeReady = false
 			if time.Now().After(startTime.Time.Add(timeOut)) {
 				logger.Info("node is not ready within timeout time")
-				return false, &scaleTimeOutError{message: fmt.Sprintf("Timeout waiting for node:%s to become ready", nodeName)}
+				return false, NewScaleTimeOutError(fmt.Sprintf("Timeout waiting for node:%s to become ready", nodeName))
 			}
 		}
 
