@@ -1,41 +1,111 @@
 apiVersion: v1
 kind: Template
 metadata:
-  name: olm-artifacts-template
+  name: selectorsyncset-template
 
 parameters:
-- name: REGISTRY_IMG
-  required: true
-- name: CHANNEL
-  value: staging
-- name: IMAGE_TAG
-  value: latest
+  - name: REGISTRY_IMG
+    required: true
+  - name: CHANNEL
+    value: staging
+    required: true
+  - name: IMAGE_TAG
+    required: true
+  - name: REPO_NAME
+    value: managed-upgrade-operator
+    required: true
 
 objects:
-- apiVersion: operators.coreos.com/v1alpha1
-  kind: CatalogSource
-  metadata:
-    name: managed-upgrade-operator-catalog
-  spec:
-    sourceType: grpc
-    image: ${REGISTRY_IMG}:${CHANNEL}-${IMAGE_TAG}
-    displayName: managed-upgrade-operator Registry
-    publisher: SRE
-
-- apiVersion: operators.coreos.com/v1alpha2
-  kind: OperatorGroup
-  metadata:
-    name: managed-upgrade-operator-og
-  spec:
-    targetNamespaces:
-    - managed-upgrade-operator
-
-- apiVersion: operators.coreos.com/v1alpha1
-  kind: Subscription
-  metadata:
-    name: managed-upgrade-operator
-  spec:
-    channel: ${CHANNEL}
-    name: managed-upgrade-operator
-    source: managed-upgrade-operator-catalog
-    sourceNamespace: managed-upgrade-operator
+  - apiVersion: hive.openshift.io/v1alpha1
+    kind: SelectorSyncSet
+    metadata:
+      labels:
+        managed.openshift.io/gitHash: ${IMAGE_TAG}
+        managed.openshift.io/gitRepoName: ${REPO_NAME}
+        managed.openshift.io/osd: "true"
+      name: managed-upgrade-operator
+    spec:
+      clusterDeploymentSelector:
+        matchLabels:
+          api.openshift.com/managed: "true"
+      resourceApplyMode: Sync
+      resources:
+        - apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: managed-upgrade-operator
+            labels:
+              openshift.io/cluster-monitoring: "true"
+        - apiVersion: v1
+          kind: ServiceAccount
+          metadata:
+            name: managed-upgrade-operator
+            namespace: managed-upgrade-operator
+        - kind: ClusterRoleBinding
+          apiVersion: rbac.authorization.k8s.io/v1
+          metadata:
+            name: managed-upgrade-operator-crb
+          subjects:
+            - kind: ServiceAccount
+              name: managed-upgrade-operator
+              namespace: managed-upgrade-operator
+          roleRef:
+            kind: ClusterRole
+            name: cluster-admin
+            apiGroup: rbac.authorization.k8s.io
+        - apiVersion: rbac.authorization.k8s.io/v1
+          kind: Role
+          metadata:
+            name: prometheus-k8s
+            namespace: managed-upgrade-operator
+          rules:
+            - apiGroups:
+                - ""
+              resources:
+                - services
+                - endpoints
+                - pods
+              verbs:
+                - get
+                - list
+                - watch
+        - apiVersion: rbac.authorization.k8s.io/v1
+          kind: RoleBinding
+          metadata:
+            name: prometheus-k8s
+            namespace: managed-upgrade-operator
+          roleRef:
+            kind: Role
+            name: prometheus-k8s
+          subjects:
+            - kind: ServiceAccount
+              name: prometheus-k8s
+              namespace: openshift-monitoring
+        - apiVersion: operators.coreos.com/v1alpha1
+          kind: CatalogSource
+          metadata:
+            name: managed-upgrade-operator-catalog
+            namespace: managed-upgrade-operator
+          spec:
+            sourceType: grpc
+            image: ${REGISTRY_IMG}:${CHANNEL}-${IMAGE_TAG}
+            displayName: Managed Upgrade Operator
+            publisher: Red Hat
+        - apiVersion: operators.coreos.com/v1alpha2
+          kind: OperatorGroup
+          metadata:
+            name: managed-upgrade-operator-og
+            namespace: managed-upgrade-operator
+          spec:
+            targetNamespaces:
+              - managed-upgrade-operator
+        - apiVersion: operators.coreos.com/v1alpha1
+          kind: Subscription
+          metadata:
+            name: managed-upgrade-operator
+            namespace: managed-upgrade-operator
+          spec:
+            channel: ${CHANNEL}
+            name: managed-upgrade-operator
+            source: managed-upgrade-operator-catalog
+            sourceNamespace: managed-upgrade-operator
