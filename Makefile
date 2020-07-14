@@ -26,6 +26,7 @@ generate:
 		-r "-"
 	go generate pkg/cluster_upgrader/cluster_upgrader.go
 	go generate pkg/maintenance/maintenance.go
+	go generate pkg/metrics/metrics.go
 	go generate pkg/scaler/scaler.go
 
 .PHONY: run

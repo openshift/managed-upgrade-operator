@@ -28,6 +28,8 @@ type Metrics interface {
 	UpdateMetricValidationSucceeded(string)
 	UpdateMetricClusterCheckFailed(string)
 	UpdateMetricClusterCheckSucceeded(string)
+	UpdateMetricScalingFailed(string)
+	UpdateMetricScalingSucceeded(string)
 	UpdateMetricUpgradeStartTime(time.Time, string, string)
 	UpdateMetricControlPlaneEndTime(time.Time, string, string)
 	UpdateMetricNodeUpgradeEndTime(time.Time, string, string)
@@ -90,6 +92,11 @@ var (
 		Name:      "cluster_check_failed",
 		Help:      "Failed on the cluster check step",
 	}, []string{nameLabel})
+	metricScalingFailed = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Subsystem: metricsTag,
+		Name:      "scaling_failed",
+		Help:      "Failed to scale up extra workers",
+	}, []string{nameLabel})
 	metricUpgradeStartTime = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Subsystem: metricsTag,
 		Name:      "upgrade_start_timestamp",
@@ -115,6 +122,7 @@ var (
 func init() {
 	metrics.Registry.MustRegister(metricValidationFailed)
 	metrics.Registry.MustRegister(metricClusterCheckFailed)
+	metrics.Registry.MustRegister(metricScalingFailed)
 	metrics.Registry.MustRegister(metricUpgradeStartTime)
 	metrics.Registry.MustRegister(metricControlPlaneUpgradeEndTime)
 	metrics.Registry.MustRegister(metricNodeUpgradeEndTime)
@@ -141,6 +149,18 @@ func (c *Counter) UpdateMetricClusterCheckFailed(upgradeConfigName string) {
 
 func (c *Counter) UpdateMetricClusterCheckSucceeded(upgradeConfigName string) {
 	metricClusterCheckFailed.With(prometheus.Labels{
+		nameLabel: upgradeConfigName}).Set(
+		float64(0))
+}
+
+func (c *Counter) UpdateMetricScalingFailed(upgradeConfigName string) {
+	metricScalingFailed.With(prometheus.Labels{
+		nameLabel: upgradeConfigName}).Set(
+		float64(1))
+}
+
+func (c *Counter) UpdateMetricScalingSucceeded(upgradeConfigName string) {
+	metricScalingFailed.With(prometheus.Labels{
 		nameLabel: upgradeConfigName}).Set(
 		float64(0))
 }

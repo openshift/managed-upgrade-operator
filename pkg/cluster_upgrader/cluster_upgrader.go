@@ -3,9 +3,7 @@ package cluster_upgrader
 import (
 	"context"
 	"fmt"
-	"github.com/openshift/managed-upgrade-operator/pkg/maintenance"
-	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
-	"github.com/openshift/managed-upgrade-operator/pkg/scaler"
+
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"net/url"
 	"runtime"
@@ -20,7 +18,6 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 	"github.com/openshift/cluster-version-operator/pkg/cincinnati"
 	machineconfigapi "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
-	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 	operatorv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -29,6 +26,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
+	"github.com/openshift/managed-upgrade-operator/pkg/maintenance"
+	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
+	"github.com/openshift/managed-upgrade-operator/pkg/scaler"
+)
+
+const (
+	TIMEOUT_SCALE_EXTRAL_NODES = 30 * time.Minute
 )
 
 var (
@@ -156,7 +162,7 @@ func PreClusterHealthCheck(c client.Client, scaler scaler.Scaler, metricsClient 
 }
 
 // This will scale up new workers to ensure customer capacity while upgrading.
-func EnsureExtraUpgradeWorkers(c client.Client, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
+func EnsureExtraUpgradeWorkers(c client.Client, s scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
 	upgradeCommenced, err := hasUpgradeCommenced(c, upgradeConfig)
 	if err != nil {
 		return false, err
@@ -167,9 +173,16 @@ func EnsureExtraUpgradeWorkers(c client.Client, scaler scaler.Scaler, metricsCli
 		return true, nil
 	}
 
-	isScaled, err := scaler.EnsureScaleUpNodes(c, logger)
+	isScaled, err := s.EnsureScaleUpNodes(c, TIMEOUT_SCALE_EXTRAL_NODES, logger)
 	if err != nil {
+		if scaler.IsScaleTimeOutError(err) {
+			metricsClient.UpdateMetricScalingFailed(upgradeConfig.Name)
+		}
 		return false, err
+	}
+
+	if isScaled {
+		metricsClient.UpdateMetricScalingSucceeded(upgradeConfig.Name)
 	}
 
 	return isScaled, nil

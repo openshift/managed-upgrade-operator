@@ -140,6 +140,25 @@ var _ = Describe("ClusterUpgrader", func() {
 		})
 	})
 
+	Context("Scaling", func() {
+		It("Should scale up extra nodes and set success metric on successful scaling", func() {
+			mockScalerClient.EXPECT().EnsureScaleUpNodes(gomock.Any(), TIMEOUT_SCALE_EXTRAL_NODES, gomock.Any()).Return(true, nil)
+			mockMetricsClient.EXPECT().UpdateMetricScalingSucceeded(gomock.Any())
+			expectUpgradeHasNotCommenced(mockKubeClient, upgradeConfig, nil)
+			ok, err := EnsureExtraUpgradeWorkers(mockKubeClient, mockScalerClient, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(ok).To(BeTrue())
+		})
+		It("Should set failed metric on scaling time out", func() {
+			mockScalerClient.EXPECT().EnsureScaleUpNodes(gomock.Any(), TIMEOUT_SCALE_EXTRAL_NODES, gomock.Any()).Return(false, scaler.NewScaleTimeOutError("test scale timed out"))
+			mockMetricsClient.EXPECT().UpdateMetricScalingFailed(gomock.Any())
+			expectUpgradeHasNotCommenced(mockKubeClient, upgradeConfig, nil)
+			ok, err := EnsureExtraUpgradeWorkers(mockKubeClient, mockScalerClient, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
+			Expect(err).To(HaveOccurred())
+			Expect(ok).To(BeFalse())
+		})
+	})
+
 	Context("When requesting the cluster to begin upgrading", func() {
 		Context("When the clusterversion version can't be fetched", func() {
 			It("Indicates an error", func() {
