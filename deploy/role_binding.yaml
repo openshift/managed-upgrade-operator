@@ -5,7 +5,7 @@ metadata:
 subjects:
 - kind: ServiceAccount
   name: managed-upgrade-operator
-  namespace: managed-upgrade-operator
+  namespace: openshift-managed-upgrade-operator
 roleRef:
   kind: ClusterRole
   name: managed-upgrade-operator
