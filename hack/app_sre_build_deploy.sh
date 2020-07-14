@@ -29,9 +29,6 @@ skopeo copy --dest-creds "${QUAY_USER}:${QUAY_TOKEN}" \
 # create and push staging image catalog
 "$CURRENT_DIR"/app_sre_create_image_catalog.sh staging "$QUAY_IMAGE"
 
-# create and push integration image catalog
-"$CURRENT_DIR"/app_sre_create_image_catalog.sh integration "$QUAY_IMAGE"
-
 # create and push production image catalog
 ## Disabling production image pruning for now as it's not required
 REMOVE_UNDEPLOYED=false "$CURRENT_DIR"/app_sre_create_image_catalog.sh production "$QUAY_IMAGE"
