@@ -47,6 +47,12 @@ $ oc create -f deploy/crds/upgrade.managed.openshift.io_upgradeconfigs_crd.yaml
 
 * If you are not using an account that has `cluster-admin` privileges, you will need to [elevate permissions](https://github.com/openshift/ops-sop/blob/master/v4/howto/manage-privileges.md) to possess them.
 
+* Create a project for the operator to run inside of.
+
+```
+$ oc new-project managed-upgrade-operator
+```
+
 * Run the operator via the Operator SDK:
 
 ```
@@ -62,6 +68,12 @@ oc apply -f deploy/crds/upgrade.managed.openshift.io_v1alpha1_upgradeconfig_cr.y
 ```
 
 ### Remotely
+
+* Create a project for the operator to run inside of.
+
+```
+$ oc new-project managed-upgrade-operator
+```
 
 * Build the image. In this example, we will use [Quay](http://quay.io/) as the container registry for our image.
 
