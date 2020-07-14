@@ -24,7 +24,7 @@ generate:
 		-p ./pkg/apis/upgrade/v1alpha1 \
 		-h /dev/null \
 		-r "-"
-	go generate pkg/cluster_upgrader/cluster_upgrader.go
+	go generate pkg/cluster_upgrader_builder/cluster_upgrader_builder.go
 	go generate pkg/maintenance/maintenance.go
 	go generate pkg/metrics/metrics.go
 	go generate pkg/scaler/scaler.go

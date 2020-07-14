@@ -1,4 +1,4 @@
-package cluster_upgrader
+package osd_cluster_upgrader
 
 import (
 	"context"
@@ -355,7 +355,7 @@ var _ = Describe("ClusterUpgrader", func() {
 	Context("When performing Cluster Upgrade steps", func() {
 		var testSteps UpgradeSteps
 		var testOrder UpgradeStepOrdering
-		var cu *clusterUpgrader
+		var cu *osdClusterUpgrader
 		var step1 = upgradev1alpha1.UpgradeValidated
 		BeforeEach(func() {
 			testOrder = []upgradev1alpha1.UpgradeConditionType{
@@ -364,7 +364,7 @@ var _ = Describe("ClusterUpgrader", func() {
 			testSteps = map[upgradev1alpha1.UpgradeConditionType]UpgradeStep{
 				step1: makeMockSucceedStep(step1),
 			}
-			cu = &clusterUpgrader{
+			cu = &osdClusterUpgrader{
 				Steps:       testSteps,
 				Ordering:    testOrder,
 				client:      mockKubeClient,

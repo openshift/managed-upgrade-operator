@@ -24,6 +24,7 @@ func NewUpgradeConfigBuilder() *testUpgradeConfigBuilder {
 				Namespace:                  "fakeNamespace",
 			},
 			Spec: api.UpgradeConfigSpec{
+				Type: api.OSD,
 				Desired:             api.Update{
 					Version: "fakeVersion",
 					Channel: "fakeChannel",

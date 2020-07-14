@@ -76,6 +76,11 @@ spec:
                 description: Procceed whether to upgrade or not, this gives operator
                   the ability to cancel the upgrade if upgrade hasn't started
                 type: boolean
+              type:
+                description: Type indicates the ClusterUpgrader implementation to use to perform an upgrade of the cluster
+                enum:
+                  - OSD
+                type: string
               subscriptionUpdates:
                 description: This defines the 3rd party operator subscriptions upgrade
                 items:

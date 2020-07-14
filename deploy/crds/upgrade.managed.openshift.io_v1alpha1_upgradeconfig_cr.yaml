@@ -3,6 +3,7 @@ kind: UpgradeConfig
 metadata:
   name: example-upgrade-config
 spec:
+  type: "OSD"
   desired:
     channel: "fast-4.4"
     force: false
