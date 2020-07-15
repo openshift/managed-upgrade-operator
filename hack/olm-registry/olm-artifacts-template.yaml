@@ -16,7 +16,7 @@ parameters:
     required: true
 
 objects:
-  - apiVersion: hive.openshift.io/v1alpha1
+  - apiVersion: hive.openshift.io/v1
     kind: SelectorSyncSet
     metadata:
       labels:
