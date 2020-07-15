@@ -16,7 +16,7 @@ type UpgradeConfigSpec struct {
 	UpgradeAt string `json:"upgradeAt"`
 
 	// +kubebuilder:default:=true
-	// Procceed whether to upgrade or not, this gives operator the ability to cancel the upgrade if upgrade hasn't started
+	// Given all conditions have passed and cluster is ready to upgrade, proceed governs this decision to continue and commence the upgrade
 	Proceed bool `json:"proceed"`
 
 	// This defines the 3rd party operator subscriptions upgrade
