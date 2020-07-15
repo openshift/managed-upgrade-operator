@@ -4,6 +4,8 @@ metadata:
   name: example-upgrade-config
 spec:
   type: "OSD"
+  upgradeAt: "2020-01-01T00:00:00Z"
+  proceed: true
   desired:
     channel: "fast-4.4"
     force: false
