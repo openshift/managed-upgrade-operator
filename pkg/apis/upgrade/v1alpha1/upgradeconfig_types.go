@@ -7,6 +7,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+type UpgradeType string
+
+const (
+	OSD UpgradeType = "OSD"
+)
+
 // UpgradeConfigSpec defines the desired state of UpgradeConfig and upgrade window and freeze window
 type UpgradeConfigSpec struct {
 	// Specify the desired OpenShift release
@@ -18,6 +24,8 @@ type UpgradeConfigSpec struct {
 	// +kubebuilder:default:=true
 	// Given all conditions have passed and cluster is ready to upgrade, proceed governs this decision to continue and commence the upgrade
 	Proceed bool `json:"proceed"`
+
+	Type UpgradeType `json:"type"`
 
 	// This defines the 3rd party operator subscriptions upgrade
 	// +kubebuilder:validation:Optional

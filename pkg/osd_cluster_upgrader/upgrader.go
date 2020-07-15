@@ -1,9 +1,8 @@
-package cluster_upgrader
+package osd_cluster_upgrader
 
 import (
 	"context"
 	"fmt"
-
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"net/url"
 	"runtime"
@@ -19,7 +18,6 @@ import (
 	"github.com/openshift/cluster-version-operator/pkg/cincinnati"
 	machineconfigapi "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	operatorv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
-
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -39,7 +37,7 @@ const (
 
 var (
 	once                   sync.Once
-	osdUpgradeSteps        UpgradeSteps
+	steps                  UpgradeSteps
 	osdUpgradeStepOrdering = []upgradev1alpha1.UpgradeConditionType{
 		upgradev1alpha1.UpgradeValidated,
 		upgradev1alpha1.UpgradePreHealthCheck,
@@ -58,24 +56,6 @@ var (
 	}
 )
 
-// Interface describing the functions of a cluster upgrader.
-//go:generate mockgen -destination=mocks/cluster_upgrader.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/cluster_upgrader ClusterUpgrader
-type ClusterUpgrader interface {
-	UpgradeCluster(upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) error
-}
-
-//go:generate mockgen -destination=mocks/cluster_upgrader_builder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/cluster_upgrader ClusterUpgraderBuilder
-type ClusterUpgraderBuilder interface {
-	NewClient(client client.Client) (ClusterUpgrader, error)
-}
-
-func NewBuilder() ClusterUpgraderBuilder {
-	return &clusterUpgraderBuilder{
-		maintenanceBuilder: maintenance.NewBuilder(),
-		metricsBuilder:     metrics.MetricsBuilder{},
-	}
-}
-
 // Represents a named series of steps as part of an upgrade process
 type UpgradeSteps map[upgradev1alpha1.UpgradeConditionType]UpgradeStep
 
@@ -85,24 +65,20 @@ type UpgradeStep func(client.Client, scaler.Scaler, metrics.Metrics, maintenance
 // Represents the order in which to undertake upgrade steps
 type UpgradeStepOrdering []upgradev1alpha1.UpgradeConditionType
 
-type clusterUpgraderBuilder struct {
-	maintenanceBuilder maintenance.MaintenanceBuilder
-	metricsBuilder     metrics.MetricsBuilder
-}
-
-func (cub *clusterUpgraderBuilder) NewClient(c client.Client) (ClusterUpgrader, error) {
-	m, err := cub.maintenanceBuilder.NewClient(c)
+func NewClient(c client.Client) (*osdClusterUpgrader, error) {
+	m, err := maintenance.NewBuilder().NewClient(c)
 	if err != nil {
 		return nil, err
 	}
 
-	metricsClient, err := cub.metricsBuilder.NewClient(c)
+	mb := &metrics.MetricsBuilder{}
+	metricsClient, err := mb.NewClient(c)
 	if err != nil {
 		return nil, err
 	}
 
 	once.Do(func() {
-		osdUpgradeSteps = map[upgradev1alpha1.UpgradeConditionType]UpgradeStep{
+		steps = map[upgradev1alpha1.UpgradeConditionType]UpgradeStep{
 			upgradev1alpha1.UpgradeValidated:              ValidateUpgradeConfig,
 			upgradev1alpha1.UpgradePreHealthCheck:         PreClusterHealthCheck,
 			upgradev1alpha1.UpgradeScaleUpExtraNodes:      EnsureExtraUpgradeWorkers,
@@ -119,8 +95,8 @@ func (cub *clusterUpgraderBuilder) NewClient(c client.Client) (ClusterUpgrader, 
 			upgradev1alpha1.PostClusterHealthCheck:        PostClusterHealthCheck,
 		}
 	})
-	return &clusterUpgrader{
-		Steps:       osdUpgradeSteps,
+	return &osdClusterUpgrader{
+		Steps:       steps,
 		Ordering:    osdUpgradeStepOrdering,
 		client:      c,
 		maintenance: m,
@@ -129,8 +105,8 @@ func (cub *clusterUpgraderBuilder) NewClient(c client.Client) (ClusterUpgrader, 
 	}, nil
 }
 
-// An cluster upgrader implementing the ClusterUpgrader interface
-type clusterUpgrader struct {
+// An OSD cluster upgrader implementing the ClusterUpgrader interface
+type osdClusterUpgrader struct {
 	Steps       UpgradeSteps
 	Ordering    UpgradeStepOrdering
 	client      client.Client
@@ -452,7 +428,7 @@ func ControlPlaneUpgraded(c client.Client, scaler scaler.Scaler, metricsClient m
 }
 
 // This trigger the upgrade process
-func (cu clusterUpgrader) UpgradeCluster(upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) error {
+func (cu osdClusterUpgrader) UpgradeCluster(upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) error {
 	logger.Info("upgrading cluster")
 	history := upgradeConfig.Status.History.GetHistory(upgradeConfig.Spec.Desired.Version)
 	conditions := history.Conditions
