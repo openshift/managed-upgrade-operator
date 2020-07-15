@@ -71,6 +71,11 @@ spec:
                 - force
                 - version
                 type: object
+              proceed:
+                default: true
+                description: Procceed whether to upgrade or not, this gives operator
+                  the ability to cancel the upgrade if upgrade hasn't started
+                type: boolean
               subscriptionUpdates:
                 description: This defines the 3rd party operator subscriptions upgrade
                 items:
@@ -92,8 +97,13 @@ spec:
                   - namespace
                   type: object
                 type: array
+              upgradeAt:
+                description: Specify the upgrade start time
+                type: string
             required:
             - desired
+            - proceed
+            - upgradeAt
             type: object
           status:
             description: UpgradeConfigStatus defines the observed state of UpgradeConfig

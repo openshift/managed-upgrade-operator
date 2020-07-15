@@ -16,7 +16,7 @@ docker-build: build
 .PHONY: generate
 generate:
 	operator-sdk generate k8s
-	operator-sdk generate crds
+	operator-sdk generate crds --crd-version v1
 	openapi-gen --logtostderr=true \
 		-i ./pkg/apis/upgrade/v1alpha1 \
 		-o "" \
