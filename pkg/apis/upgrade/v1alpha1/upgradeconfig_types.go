@@ -12,6 +12,13 @@ type UpgradeConfigSpec struct {
 	// Specify the desired OpenShift release
 	Desired Update `json:"desired"`
 
+	// Specify the upgrade start time
+	UpgradeAt string `json:"upgradeAt"`
+
+	// +kubebuilder:default:=true
+	// Procceed whether to upgrade or not, this gives operator the ability to cancel the upgrade if upgrade hasn't started
+	Proceed bool `json:"proceed"`
+
 	// This defines the 3rd party operator subscriptions upgrade
 	// +kubebuilder:validation:Optional
 	SubscriptionUpdates []SubscriptionUpdate `json:"subscriptionUpdates,omitempty"`
