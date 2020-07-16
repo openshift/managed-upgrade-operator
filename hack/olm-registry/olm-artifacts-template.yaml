@@ -208,3 +208,201 @@ objects:
             name: managed-upgrade-operator
             source: managed-upgrade-operator-catalog
             sourceNamespace: openshift-managed-upgrade-operator
+        - apiVersion: apiextensions.k8s.io/v1
+          kind: CustomResourceDefinition
+          metadata:
+            name: upgradeconfigs.upgrade.managed.openshift.io
+          spec:
+            group: upgrade.managed.openshift.io
+            names:
+              kind: UpgradeConfig
+              listKind: UpgradeConfigList
+              plural: upgradeconfigs
+              shortNames:
+                - upgrade
+              singular: upgradeconfig
+            scope: Cluster
+            versions:
+              - additionalPrinterColumns:
+                  - jsonPath: .spec.desired.version
+                    name: desired_version
+                    type: string
+                  - jsonPath: .status.history[0].phase
+                    name: phase
+                    type: string
+                  - jsonPath: .status.history[0].conditions[0].type
+                    name: stage
+                    type: string
+                  - jsonPath: .status.history[0].conditions[0].status
+                    name: status
+                    type: string
+                  - jsonPath: .status.history[0].conditions[0].reason
+                    name: reason
+                    type: string
+                  - jsonPath: .status.history[0].conditions[0].message
+                    name: message
+                    type: string
+                name: v1alpha1
+                schema:
+                  openAPIV3Schema:
+                    description: UpgradeConfig is the Schema for the upgradeconfigs API
+                    properties:
+                      apiVersion:
+                        description:
+                          "APIVersion defines the versioned schema of this representation
+                          of an object. Servers should convert recognized schemas to the latest
+                          internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources"
+                        type: string
+                      kind:
+                        description:
+                          "Kind is a string value representing the REST resource this
+                          object represents. Servers may infer this from the endpoint the client
+                          submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds"
+                        type: string
+                      metadata:
+                        type: object
+                      spec:
+                        description:
+                          UpgradeConfigSpec defines the desired state of UpgradeConfig
+                          and upgrade window and freeze window
+                        properties:
+                          desired:
+                            description: Specify the desired OpenShift release
+                            properties:
+                              channel:
+                                description: Channel we gonna use for upgrades
+                                type: string
+                              force:
+                                default: false
+                                description: Force upgrade, default value is False
+                                type: boolean
+                              version:
+                                description: Version of openshift release
+                                type: string
+                            required:
+                              - channel
+                              - force
+                              - version
+                            type: object
+                          proceed:
+                            default: true
+                            description:
+                              Given all conditions have passed and cluster is ready
+                              to upgrade, proceed governs this decision to continue and commence
+                              the upgrade
+                            type: boolean
+                          type:
+                            description: Type indicates the ClusterUpgrader implementation to use to perform an upgrade of the cluster
+                            enum:
+                              - OSD
+                            type: string
+                          subscriptionUpdates:
+                            description: This defines the 3rd party operator subscriptions upgrade
+                            items:
+                              description:
+                                SubscriptionUpdate describe the 3rd party operator
+                                update config
+                              properties:
+                                channel:
+                                  description: Describe the channel for the Subscription
+                                  type: string
+                                name:
+                                  description: Describe the name of the Subscription
+                                  type: string
+                                namespace:
+                                  description: Describe the namespace of the Subscription
+                                  type: string
+                              required:
+                                - channel
+                                - name
+                                - namespace
+                              type: object
+                            type: array
+                          upgradeAt:
+                            description: Specify the upgrade start time
+                            type: string
+                        required:
+                          - desired
+                          - proceed
+                          - upgradeAt
+                        type: object
+                      status:
+                        description: UpgradeConfigStatus defines the observed state of UpgradeConfig
+                        properties:
+                          history:
+                            description: This record history of every upgrade
+                            items:
+                              description: UpgradeHistory record history of upgrade
+                              properties:
+                                completeTime:
+                                  format: date-time
+                                  type: string
+                                conditions:
+                                  description: Conditions is a set of Condition instances.
+                                  items:
+                                    properties:
+                                      completeTime:
+                                        description: Complete time of this condition.
+                                        format: date-time
+                                        type: string
+                                      lastProbeTime:
+                                        description: Last time the condition was checked.
+                                        format: date-time
+                                        type: string
+                                      lastTransitionTime:
+                                        description:
+                                          Last time the condition transit from one
+                                          status to another.
+                                        format: date-time
+                                        type: string
+                                      message:
+                                        description:
+                                          Human readable message indicating details
+                                          about last transition.
+                                        type: string
+                                      reason:
+                                        description: (brief) reason for the condition's last transition.
+                                        type: string
+                                      startTime:
+                                        description: Start time of this condition.
+                                        format: date-time
+                                        type: string
+                                      status:
+                                        description:
+                                          Status of condition, one of True, False,
+                                          Unknown
+                                        type: string
+                                      type:
+                                        description: Type of upgrade condition
+                                        type: string
+                                    required:
+                                      - status
+                                      - type
+                                    type: object
+                                  type: array
+                                phase:
+                                  default: New
+                                  description: This describe the status of the upgrade process
+                                  enum:
+                                    - New
+                                    - Pending
+                                    - Upgrading
+                                    - Upgraded
+                                    - Failed
+                                  type: string
+                                startTime:
+                                  format: date-time
+                                  type: string
+                                version:
+                                  description: Desired version of this upgrade
+                                  type: string
+                              required:
+                                - phase
+                              type: object
+                            type: array
+                        type: object
+                    type: object
+                served: true
+                storage: true
+                subresources:
+                  status: {}
