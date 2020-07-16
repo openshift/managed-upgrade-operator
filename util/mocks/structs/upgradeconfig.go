@@ -5,6 +5,7 @@ import (
 	api "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"time"
 )
 
 type testUpgradeConfigBuilder struct {
@@ -30,6 +31,9 @@ func NewUpgradeConfigBuilder() *testUpgradeConfigBuilder {
 					Channel: "fakeChannel",
 					Force:   false,
 				},
+				Proceed: true,
+				UpgradeAt: time.Now().Format(time.RFC3339),
+
 			},
 		},
 	}
