@@ -157,5 +157,18 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 
 // TODO readyToUpgrade checks whether it's ready to upgrade based on the scheduling
 func isReadyToUpgrade(upgradeConfig *upgradev1alpha1.UpgradeConfig) bool {
-	return true
+	if !upgradeConfig.Spec.Proceed {
+		log.Info("upgrade cannot be proceed", "proceed", upgradeConfig.Spec.Proceed)
+		return false
+	}
+	upgradeTime, err := time.Parse(time.RFC3339, upgradeConfig.Spec.UpgradeAt)
+	if err != nil {
+		log.Error(err, "failed to parse spec.upgradeAt", upgradeConfig.Spec.UpgradeAt)
+		return false
+	}
+	now := time.Now()
+	if now.After(upgradeTime) && upgradeTime.Add(15*time.Minute).After(now) {
+		return true
+	}
+	return false
 }
