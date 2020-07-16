@@ -2,6 +2,9 @@ package upgradeconfig
 
 import (
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/golang/mock/gomock"
 	"github.com/hashicorp/go-multierror"
 	"github.com/onsi/gomega/gstruct"
@@ -10,12 +13,12 @@ import (
 	machineapi "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
 	machineconfigapi "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
-	"github.com/openshift/managed-upgrade-operator/util/mocks"
-
 	mockUpgrader "github.com/openshift/managed-upgrade-operator/pkg/cluster_upgrader_builder/mocks"
+	"github.com/openshift/managed-upgrade-operator/util/mocks"
 	testStructs "github.com/openshift/managed-upgrade-operator/util/mocks/structs"
 
 	k8serrs "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -228,7 +231,7 @@ var _ = Describe("UpgradeConfigController", func() {
 					var fakeError = fmt.Errorf("a maintenance builder error")
 					It("does not proceed with upgrading the cluster", func() {
 						mockClusterUpgrader.EXPECT().UpgradeCluster(gomock.Any(), gomock.Any()).Times(0)
-						mockClusterUpgraderBuilder.EXPECT().NewClient(gomock.Any(),upgradeConfig.Spec.Type).Return(nil, fakeError)
+						mockClusterUpgraderBuilder.EXPECT().NewClient(gomock.Any(), upgradeConfig.Spec.Type).Return(nil, fakeError)
 						result, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
 						Expect(err).To(Equal(fakeError))
 						Expect(result.Requeue).To(BeFalse())
@@ -311,4 +314,51 @@ func buildScheme() (*runtime.Scheme, error) {
 	schemeErrors = multierror.Append(schemeErrors, machineconfigapi.Install(testScheme))
 	schemeErrors = multierror.Append(schemeErrors, upgradev1alpha1.SchemeBuilder.AddToScheme(testScheme))
 	return testScheme, schemeErrors.ErrorOrNil()
+}
+
+func TestIsReadyToUpgrade(t *testing.T) {
+
+	tests := []struct {
+		name          string
+		upgradeConfig *upgradev1alpha1.UpgradeConfig
+		result        bool
+	}{
+		{
+			name:          "it should be ready to upgrade if upgradeAt is 10 mins before now",
+			upgradeConfig: testUpgradeConfig(true, time.Now().Add(-10*time.Minute).Format(time.RFC3339)),
+			result:        true,
+		},
+		{
+			name:          "it should be not ready to upgrade if upgradeAt is 20 mins before now",
+			upgradeConfig: testUpgradeConfig(true, time.Now().Add(20*time.Minute).Format(time.RFC3339)),
+			result:        false,
+		},
+		{
+			name:          "it should not be ready to upgrade if proceed is set to false",
+			upgradeConfig: testUpgradeConfig(false, time.Now().Format(time.RFC3339)),
+			result:        false,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			result := isReadyToUpgrade(test.upgradeConfig)
+			if result != test.result {
+				t.Fail()
+			}
+
+		})
+	}
+
+}
+
+func testUpgradeConfig(proceed bool, upgradeAt string) *upgradev1alpha1.UpgradeConfig {
+	return &upgradev1alpha1.UpgradeConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "upgradeconfig-example",
+		},
+		Spec: upgradev1alpha1.UpgradeConfigSpec{
+			Proceed:   proceed,
+			UpgradeAt: upgradeAt,
+		},
+	}
 }

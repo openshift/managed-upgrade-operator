@@ -608,7 +608,7 @@ func performValidateUpgradeConfig(c client.Client, upgradeConfig *upgradev1alpha
 	sort.Strings(versions)
 	if versions[0] != current {
 		logger.Info(fmt.Sprintf("validation failed, current version %s is greater than desired %s", current, upgradeConfig.Spec.Desired.Version))
-		return false, fmt.Errorf("desired version %s is greater than current version %s", upgradeConfig.Spec.Desired.Version, current)
+		return false, fmt.Errorf("desired version %s is small than current version %s", upgradeConfig.Spec.Desired.Version, current)
 	}
 
 	// Find the available versions from cincinnati
