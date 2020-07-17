@@ -388,24 +388,6 @@ var _ = Describe("ClusterUpgrader", func() {
 			}
 		})
 
-		Context("When the UpgradeConfig history status is not Upgrading", func() {
-			JustBeforeEach(func() {
-				upgradeConfig.Status.History = []upgradev1alpha1.UpgradeHistory{
-					{
-						Version: upgradeConfig.Spec.Desired.Version,
-						Phase:   upgradev1alpha1.UpgradePhasePending,
-					},
-				}
-			})
-			It("Adds a new Upgrading history to the UpgradeConfig", func() {
-				sw := mocks.NewMockStatusWriter(mockCtrl)
-				mockKubeClient.EXPECT().Status().AnyTimes().Return(sw)
-				sw.EXPECT().Update(gomock.Any(), gomock.Any()).AnyTimes()
-				err := cu.UpgradeCluster(upgradeConfig, logger)
-				Expect(err).NotTo(HaveOccurred())
-			})
-		})
-
 		Context("When a step does not occur in the history", func() {
 			BeforeEach(func() {
 				cu.Steps = map[upgradev1alpha1.UpgradeConditionType]UpgradeStep{
@@ -415,15 +397,19 @@ var _ = Describe("ClusterUpgrader", func() {
 				mockKubeClient.EXPECT().Status().AnyTimes().Return(sw)
 				sw.EXPECT().Update(gomock.Any(), gomock.Any()).AnyTimes()
 			})
-			It("adds the step to the UpgradeConfig's history", func() {
+
+			It("returns an uncompleted condition for the step", func() {
 				// Add a step that will not complete on execution, so we can observe it starting
-				err := cu.UpgradeCluster(upgradeConfig, logger)
-				stepHistoryReason := upgradeConfig.Status.History.GetHistory(upgradeConfig.Spec.Desired.Version).Conditions.GetCondition(step1).Reason
+				phase, condition, err := cu.UpgradeCluster(upgradeConfig, logger)
+				stepHistoryReason := condition.Reason
+				Expect(phase).To(Equal(upgradev1alpha1.UpgradePhaseUpgrading))
+				Expect(condition.Status).To(Equal(corev1.ConditionFalse))
 				Expect(stepHistoryReason).To(Equal(string(step1) + " not done"))
 				Expect(err).NotTo(HaveOccurred())
 			})
+
 			It("runs the step", func() {
-				err := cu.UpgradeCluster(upgradeConfig, logger)
+				_, _, err := cu.UpgradeCluster(upgradeConfig, logger)
 				Expect(stepCounter[step1]).To(Equal(1))
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -438,36 +424,16 @@ var _ = Describe("ClusterUpgrader", func() {
 				mockKubeClient.EXPECT().Status().AnyTimes().Return(sw)
 				sw.EXPECT().Update(gomock.Any(), gomock.Any()).AnyTimes()
 			})
-			It("Indicates the error in the UpgradeConfig step's history", func() {
-				err := cu.UpgradeCluster(upgradeConfig, logger)
-				stepHistoryReason := upgradeConfig.Status.History.GetHistory(upgradeConfig.Spec.Desired.Version).Conditions.GetCondition(step1).Reason
-				stepHistoryMsg := upgradeConfig.Status.History.GetHistory(upgradeConfig.Spec.Desired.Version).Conditions.GetCondition(step1).Message
+			It("Indicates the error in the condition", func() {
+				_, condition, err := cu.UpgradeCluster(upgradeConfig, logger)
+				stepHistoryReason := condition.Reason
+				stepHistoryMsg := condition.Message
 				Expect(stepHistoryReason).To(Equal(string(step1) + " not done"))
 				Expect(stepHistoryMsg).To(Equal("step " + string(step1) + " failed"))
 				Expect(stepCounter[step1]).To(Equal(1))
-				// TODO - this needs eyes in cluster-upgrader - need to doublecheck whether it is expected to return nil here
-				Expect(err).NotTo(HaveOccurred())
+				Expect(err).To(HaveOccurred())
 			})
-		})
 
-		Context("When running a step completes successfully", func() {
-			BeforeEach(func() {
-				sw := mocks.NewMockStatusWriter(mockCtrl)
-				mockKubeClient.EXPECT().Status().AnyTimes().Return(sw)
-				sw.EXPECT().Update(gomock.Any(), gomock.Any()).AnyTimes()
-			})
-			It("flags that in the UpgradeConfig's history", func() {
-				err := cu.UpgradeCluster(upgradeConfig, logger)
-				stepHistoryReason := upgradeConfig.Status.History.GetHistory(upgradeConfig.Spec.Desired.Version).Conditions.GetCondition(step1).Reason
-				stepHistoryMsg := upgradeConfig.Status.History.GetHistory(upgradeConfig.Spec.Desired.Version).Conditions.GetCondition(step1).Message
-				stepHistoryCondition := upgradeConfig.Status.History.GetHistory(upgradeConfig.Spec.Desired.Version).Conditions.GetCondition(step1).Status
-				Expect(stepHistoryReason).To(Equal(string(step1) + " succeed"))
-				Expect(stepHistoryMsg).To(Equal(string(step1) + " succeed"))
-				Expect(stepHistoryCondition).To(Equal(corev1.ConditionTrue))
-				// TODO - need to doublecheck whether it is expected to return nil here
-				Expect(stepCounter[step1]).To(Equal(1))
-				Expect(err).NotTo(HaveOccurred())
-			})
 		})
 
 		Context("When all steps have indicated completion", func() {
@@ -490,10 +456,11 @@ var _ = Describe("ClusterUpgrader", func() {
 				mockKubeClient.EXPECT().Status().AnyTimes().Return(sw)
 				sw.EXPECT().Update(gomock.Any(), gomock.Any()).AnyTimes()
 			})
-			It("flags the upgrade as completed in the UpgradeConfig's history", func() {
-				err := cu.UpgradeCluster(upgradeConfig, logger)
+			It("flags the upgrade as completed", func() {
+				phase, condition, err := cu.UpgradeCluster(upgradeConfig, logger)
+				Expect(phase).To(Equal(upgradev1alpha1.UpgradePhaseUpgraded))
+				Expect(condition.Status).To(Equal(corev1.ConditionTrue))
 				Expect(err).NotTo(HaveOccurred())
-
 			})
 		})
 	})
