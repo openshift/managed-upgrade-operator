@@ -330,7 +330,7 @@ func TestIsReadyToUpgrade(t *testing.T) {
 		},
 		{
 			name:          "it should be not ready to upgrade if upgradeAt is 20 mins before now",
-			upgradeConfig: testUpgradeConfig(true, time.Now().Add(20*time.Minute).Format(time.RFC3339)),
+			upgradeConfig: testUpgradeConfig(true, time.Now().Add(35*time.Minute).Format(time.RFC3339)),
 			result:        false,
 		},
 		{
