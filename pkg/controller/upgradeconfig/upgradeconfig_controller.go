@@ -2,9 +2,11 @@ package upgradeconfig
 
 import (
 	"context"
+	"github.com/go-logr/logr"
 	"time"
 
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -15,7 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
-	"github.com/openshift/managed-upgrade-operator/pkg/cluster_upgrader_builder"
+	cub "github.com/openshift/managed-upgrade-operator/pkg/cluster_upgrader_builder"
 )
 
 var log = logf.Log.WithName("controller_upgradeconfig")
@@ -31,7 +33,7 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 	return &ReconcileUpgradeConfig{
 		client:                 mgr.GetClient(),
 		scheme:                 mgr.GetScheme(),
-		clusterUpgraderBuilder: cluster_upgrader_builder.NewBuilder(),
+		clusterUpgraderBuilder: cub.NewBuilder(),
 	}
 }
 
@@ -61,7 +63,7 @@ type ReconcileUpgradeConfig struct {
 	// that reads objects from the cache and writes to the apiserver
 	client                 client.Client
 	scheme                 *runtime.Scheme
-	clusterUpgraderBuilder cluster_upgrader_builder.ClusterUpgraderBuilder
+	clusterUpgraderBuilder cub.ClusterUpgraderBuilder
 }
 
 // Reconcile reads that state of the cluster for a UpgradeConfig object and makes changes based on the state read
@@ -106,24 +108,31 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 	}
 
 	status := history.Phase
-	reqLogger.Info("current cluster status", "status", status)
+	reqLogger.Info("Current upgrade status", "status", status)
 
 	switch status {
-	case "", upgradev1alpha1.UpgradePhaseNew, upgradev1alpha1.UpgradePhasePending:
+	case upgradev1alpha1.UpgradePhaseNew, upgradev1alpha1.UpgradePhasePending:
 		// TODO verify if it's time to do upgrade, if no, set to "pending", if it's yes, perform upgrade, and set status to "upgrading"
-		reqLogger.Info("checking whether it's ready to do upgrade")
+		reqLogger.Info("Checking whether it's time to do upgrade")
 		ready := isReadyToUpgrade(instance)
 		if ready {
+			now := time.Now()
+			reqLogger.Info("It's ready to start upgrade now", "time", now)
+
 			upgrader, err := r.clusterUpgraderBuilder.NewClient(r.client, instance.Spec.Type)
 			if err != nil {
 				return reconcile.Result{}, err
 			}
-			reqLogger.Info("it's ready to start upgrade now", "time", time.Now())
-			err = upgrader.UpgradeCluster(instance, reqLogger)
+
+			history.Phase = upgradev1alpha1.UpgradePhaseUpgrading
+			history.StartTime = &metav1.Time{Time: now}
+			instance.Status.History.SetHistory(history)
+			err = r.client.Status().Update(context.TODO(), instance)
 			if err != nil {
-				reqLogger.Error(err, "Failed to upgrade cluster")
+				return reconcile.Result{}, err
 			}
 
+			return r.upgradeCluster(upgrader, instance, reqLogger)
 		} else {
 			err := r.updateStatusPending(reqLogger, instance)
 			if err != nil {
@@ -133,29 +142,44 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 			return reconcile.Result{}, nil
 		}
 	case upgradev1alpha1.UpgradePhaseUpgrading:
+		reqLogger.Info("It's upgrading now")
 		upgrader, err := r.clusterUpgraderBuilder.NewClient(r.client, instance.Spec.Type)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
-		reqLogger.Info("it's upgrading now")
-		err = upgrader.UpgradeCluster(instance, reqLogger)
-		if err != nil {
-			reqLogger.Error(err, "Failed to upgrade cluster")
-		}
+
+		return r.upgradeCluster(upgrader, instance, reqLogger)
 	case upgradev1alpha1.UpgradePhaseUpgraded:
-		reqLogger.Info("cluster is already upgraded")
-		return reconcile.Result{}, nil
-	case upgradev1alpha1.UpgradePhaseFailed:
-		reqLogger.Info("the cluster failed the upgrade")
+		reqLogger.Info("Cluster is already upgraded")
 		return reconcile.Result{}, nil
 	default:
-		reqLogger.Info("unknown status")
+		reqLogger.Info("Unknown status")
 	}
 
 	return reconcile.Result{}, nil
 }
 
-// TODO readyToUpgrade checks whether it's ready to upgrade based on the scheduling
+func (r *ReconcileUpgradeConfig) upgradeCluster(upgrader cub.ClusterUpgrader, uc *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (reconcile.Result, error) {
+	phase, condition, ucErr := upgrader.UpgradeCluster(uc, logger)
+
+	history := uc.Status.History.GetHistory(uc.Spec.Desired.Version)
+	history.Conditions = upgradev1alpha1.Conditions{*condition}
+	history.Phase = phase
+	if phase == upgradev1alpha1.UpgradePhaseUpgraded {
+		history.CompleteTime = &metav1.Time{Time: time.Now()}
+	}
+	uc.Status.History.SetHistory(*history)
+	err := r.client.Status().Update(context.TODO(), uc)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	if ucErr != nil {
+		return reconcile.Result{}, ucErr
+	}
+
+	return reconcile.Result{}, nil
+}
+
 func isReadyToUpgrade(upgradeConfig *upgradev1alpha1.UpgradeConfig) bool {
 	if !upgradeConfig.Spec.Proceed {
 		log.Info("upgrade cannot be proceed", "proceed", upgradeConfig.Spec.Proceed)
