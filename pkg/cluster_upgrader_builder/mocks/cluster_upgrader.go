@@ -35,11 +35,13 @@ func (m *MockClusterUpgrader) EXPECT() *MockClusterUpgraderMockRecorder {
 }
 
 // UpgradeCluster mocks base method
-func (m *MockClusterUpgrader) UpgradeCluster(arg0 *v1alpha1.UpgradeConfig, arg1 logr.Logger) error {
+func (m *MockClusterUpgrader) UpgradeCluster(arg0 *v1alpha1.UpgradeConfig, arg1 logr.Logger) (v1alpha1.UpgradePhase, *v1alpha1.UpgradeCondition, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpgradeCluster", arg0, arg1)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(v1alpha1.UpgradePhase)
+	ret1, _ := ret[1].(*v1alpha1.UpgradeCondition)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
 }
 
 // UpgradeCluster indicates an expected call of UpgradeCluster
