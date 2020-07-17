@@ -4,7 +4,10 @@ import (
 	"context"
 	"time"
 
+	"github.com/go-logr/logr"
+	"github.com/hashicorp/go-multierror"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -15,7 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
-	"github.com/openshift/managed-upgrade-operator/pkg/cluster_upgrader_builder"
+	cub "github.com/openshift/managed-upgrade-operator/pkg/cluster_upgrader_builder"
 	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
 	"github.com/openshift/managed-upgrade-operator/pkg/osd_cluster_upgrader"
 	"github.com/openshift/managed-upgrade-operator/pkg/validation"
@@ -37,7 +40,7 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 		client:                 mgr.GetClient(),
 		scheme:                 mgr.GetScheme(),
 		metricsClientBuilder:   metrics.NewBuilder(),
-		clusterUpgraderBuilder: cluster_upgrader_builder.NewBuilder(),
+		clusterUpgraderBuilder: cub.NewBuilder(),
 		validationBuilder:      validation.NewBuilder(),
 	}
 }
@@ -69,7 +72,7 @@ type ReconcileUpgradeConfig struct {
 	client                 client.Client
 	scheme                 *runtime.Scheme
 	metricsClientBuilder   metrics.MetricsBuilder
-	clusterUpgraderBuilder cluster_upgrader_builder.ClusterUpgraderBuilder
+	clusterUpgraderBuilder cub.ClusterUpgraderBuilder
 	validationBuilder      validation.ValidationBuilder
 }
 
@@ -160,17 +163,22 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 		reqLogger.Info("Checking if cluster can commence upgrade.")
 		ready := isReadyToUpgrade(instance, metricsClient)
 		if ready {
-			// Build a ClusterUpgrader
 			upgrader, err := r.clusterUpgraderBuilder.NewClient(r.client, metricsClient, instance.Spec.Type)
 			if err != nil {
 				return reconcile.Result{}, err
 			}
-			reqLogger.Info("Cluster is commencing upgrade.", "time", time.Now())
-			err = upgrader.UpgradeCluster(instance, reqLogger)
+
+			now := time.Now()
+			history.Phase = upgradev1alpha1.UpgradePhaseUpgrading
+			history.StartTime = &metav1.Time{Time: now}
+			instance.Status.History.SetHistory(history)
+			err = r.client.Status().Update(context.TODO(), instance)
 			if err != nil {
-				reqLogger.Error(err, "Failed to upgrade cluster")
+				return reconcile.Result{}, err
 			}
 
+			reqLogger.Info("Cluster is commencing upgrade.", "time", now)
+			return r.upgradeCluster(upgrader, instance, reqLogger)
 		} else {
 			err := r.updateStatusPending(reqLogger, instance)
 			if err != nil {
@@ -180,20 +188,14 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 			return reconcile.Result{}, nil
 		}
 	case upgradev1alpha1.UpgradePhaseUpgrading:
+		reqLogger.Info("Cluster detected as already upgrading.")
 		upgrader, err := r.clusterUpgraderBuilder.NewClient(r.client, metricsClient, instance.Spec.Type)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
-		reqLogger.Info("Cluster detected as already upgrading.")
-		err = upgrader.UpgradeCluster(instance, reqLogger)
-		if err != nil {
-			reqLogger.Error(err, "Failed to upgrade cluster")
-		}
+		return r.upgradeCluster(upgrader, instance, reqLogger)
 	case upgradev1alpha1.UpgradePhaseUpgraded:
 		reqLogger.Info("Cluster is already upgraded")
-		return reconcile.Result{}, nil
-	case upgradev1alpha1.UpgradePhaseFailed:
-		reqLogger.Info("The cluster failed the upgrade")
 		return reconcile.Result{}, nil
 	default:
 		reqLogger.Info("Unknown status")
@@ -202,7 +204,26 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 	return reconcile.Result{}, nil
 }
 
-// TODO readyToUpgrade checks whether it's ready to upgrade based on the scheduling
+func (r *ReconcileUpgradeConfig) upgradeCluster(upgrader cub.ClusterUpgrader, uc *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (reconcile.Result, error) {
+	me := &multierror.Error{}
+
+	phase, condition, err := upgrader.UpgradeCluster(uc, logger)
+	me = multierror.Append(err, me)
+
+	history := uc.Status.History.GetHistory(uc.Spec.Desired.Version)
+	history.Conditions = upgradev1alpha1.Conditions{*condition}
+	history.Phase = phase
+	if phase == upgradev1alpha1.UpgradePhaseUpgraded {
+		history.CompleteTime = &metav1.Time{Time: time.Now()}
+	}
+	uc.Status.History.SetHistory(*history)
+	err = r.client.Status().Update(context.TODO(), uc)
+	me = multierror.Append(err, me)
+
+	return reconcile.Result{}, me.ErrorOrNil()
+}
+
+// checks whether it's time to upgrade based on the spec.upgradeAt timestamp
 func isReadyToUpgrade(upgradeConfig *upgradev1alpha1.UpgradeConfig, metricsClient metrics.Metrics) bool {
 	if !upgradeConfig.Spec.Proceed {
 		log.Info("upgrade cannot be proceed", "proceed", upgradeConfig.Spec.Proceed)

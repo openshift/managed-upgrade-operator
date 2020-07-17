@@ -446,89 +446,30 @@ func ControlPlaneUpgraded(c client.Client, scaler scaler.Scaler, metricsClient m
 }
 
 // This trigger the upgrade process
-func (cu osdClusterUpgrader) UpgradeCluster(upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) error {
-	logger.Info("upgrading cluster")
-	history := upgradeConfig.Status.History.GetHistory(upgradeConfig.Spec.Desired.Version)
-	conditions := history.Conditions
-
-	if history.Phase != upgradev1alpha1.UpgradePhaseUpgrading {
-		history.Phase = upgradev1alpha1.UpgradePhaseUpgrading
-		history.StartTime = &metav1.Time{Time: time.Now()}
-		upgradeConfig.Status.History.SetHistory(*history)
-		err := cu.client.Status().Update(context.TODO(), upgradeConfig)
-		if err != nil {
-			logger.Error(err, "failed to update upgradeconfig")
-		}
-	}
+func (cu osdClusterUpgrader) UpgradeCluster(upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (upgradev1alpha1.UpgradePhase, *upgradev1alpha1.UpgradeCondition, error) {
+	logger.Info("Upgrading cluster")
 
 	for _, key := range cu.Ordering {
 
-		logger.Info(fmt.Sprintf("Perform %s", key))
-
-		condition := conditions.GetCondition(key)
-		if condition == nil {
-			logger.Info(fmt.Sprintf("Adding %s condition", key))
-			condition = newUpgradeCondition(fmt.Sprintf("start %s", key), fmt.Sprintf("start %s", key), key, corev1.ConditionFalse)
-			condition.StartTime = &metav1.Time{Time: time.Now()}
-			conditions.SetCondition(*condition)
-			history.Conditions = conditions
-			upgradeConfig.Status.History.SetHistory(*history)
-			err := cu.client.Status().Update(context.TODO(), upgradeConfig)
-			if err != nil {
-				return err
-			}
-		}
+		logger.Info(fmt.Sprintf("Performing %s", key))
 
 		result, err := cu.Steps[key](cu.client, cu.scaler, cu.metrics, cu.maintenance, upgradeConfig, logger)
 
 		if err != nil {
-			logger.Error(err, fmt.Sprintf("error when %s", key))
-			condition.Reason = fmt.Sprintf("%s not done", key)
-			condition.Message = err.Error()
-			conditions.SetCondition(*condition)
-			history.Conditions = conditions
-			upgradeConfig.Status.History.SetHistory(*history)
-			err = cu.client.Status().Update(context.TODO(), upgradeConfig)
-			if err != nil {
-				return err
-			}
-			return err
+			logger.Error(err, fmt.Sprintf("Error when %s", key))
+			condition := newUpgradeCondition(fmt.Sprintf("%s not done", key), err.Error(), key, corev1.ConditionFalse)
+			return upgradev1alpha1.UpgradePhaseUpgrading, condition, err
 		}
-		if result {
-			condition.CompleteTime = &metav1.Time{Time: time.Now()}
-			condition.Reason = fmt.Sprintf("%s succeed", key)
-			condition.Message = fmt.Sprintf("%s succeed", key)
-			condition.Status = corev1.ConditionTrue
-			conditions.SetCondition(*condition)
-			history.Conditions = conditions
-			upgradeConfig.Status.History.SetHistory(*history)
-			err = cu.client.Status().Update(context.TODO(), upgradeConfig)
-			if err != nil {
-				return err
-			}
-		} else {
+		if !result {
 			logger.Info(fmt.Sprintf("%s not done, skip following steps", key))
-			condition.Reason = fmt.Sprintf("%s not done", key)
-			condition.Message = fmt.Sprintf("%s still in progress", key)
-			conditions.SetCondition(*condition)
-			history.Conditions = conditions
-			upgradeConfig.Status.History.SetHistory(*history)
-			err = cu.client.Status().Update(context.TODO(), upgradeConfig)
-			if err != nil {
-				return err
-			}
-			return nil
+			condition := newUpgradeCondition(fmt.Sprintf("%s not done", key), fmt.Sprintf("%s still in progress", key), key, corev1.ConditionFalse)
+			return upgradev1alpha1.UpgradePhaseUpgrading, condition, nil
 		}
 	}
-	history.Phase = upgradev1alpha1.UpgradePhaseUpgraded
-	history.CompleteTime = &metav1.Time{Time: time.Now()}
-	upgradeConfig.Status.History.SetHistory(*history)
-	err := cu.client.Status().Update(context.TODO(), upgradeConfig)
-	if err != nil {
-		return err
-	}
-	return nil
 
+	key := cu.Ordering[len(cu.Ordering)-1]
+	condition := newUpgradeCondition(fmt.Sprintf("%s done", key), fmt.Sprintf("%s is completed", key), key, corev1.ConditionTrue)
+	return upgradev1alpha1.UpgradePhaseUpgraded, condition, nil
 }
 
 // check several things about the cluster and report problems
