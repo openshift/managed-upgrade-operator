@@ -28,9 +28,13 @@ For the purpose of upgrading a cluster, an `UpgradeConfig` resource _must_ be co
 
 | Item | Definition | Example |
 | ---- | ---------- | ------- |
-| `version` | The desired OCP release to upgrade to | `4.4.6` |
-| `channel` | The [channel](https://github.com/openshift/cincinnati/blob/master/docs/design/openshift.md#Channels) the Cluster Version Operator should be using to validate update versions | `fast-4.4` |
-| `force` | Whether to force an update | `false` |
+| `type` | The cluster upgrader to use when upgrading (valid values: `OSD`)| `OSD` |  
+| `upgradeAt` | Timestamp indicating when the upgrade can commence (ISO-8601)| `2020-05-01T12:00:00Z` |
+| `proceed` | Boolean control flag, `true` indicates the upgrade is permitted to occur | `true` |
+| `PDBForceDrainTimeout` | Duration in minutes that a PDB-blocked node is allowed to drain before a drain is forced | `120` |
+| `desired.version` | The desired OCP release to upgrade to | `4.4.6` |
+| `desired.channel` | The [channel](https://github.com/openshift/cincinnati/blob/master/docs/design/openshift.md#Channels) the Cluster Version Operator should be using to validate update versions | `fast-4.4` |
+| `desired.force` | Whether to force an update | `false` |
 
 A populated `UpgradeConfig` example is presented below:
 
@@ -40,6 +44,10 @@ kind: UpgradeConfig
 metadata:
   name: example-upgrade-config
 spec:
+  type: "OSD"
+  upgradeAt: "2020-06-20T12:00:00Z"
+  proceed: true
+  PDBForceDrainTimeout: 120
   desired:
     channel: "fast-4.4"
     force: false
@@ -131,3 +139,11 @@ This overall process of executing Upgrade Steps is illustrated below.
 To define a new custom procedure for performing a cluster upgrade, a developer should:
 - Create a new implementation of the `ClusterUpgrader` that defines a unique order of `UpgradeStep`s.
 - Implement any missing or new `UpgradeStep`s that need to be performed.  
+
+### Ready to upgrade criteria
+
+The Managed Upgrade Operator will only attempt to perform an upgrade if the following checks are valid:
+
+* The current system time is later than, but within _30 minutes_ of, the `upgradeAt` timestamp specified in the `UpgradeConfig` CR.
+* The version to upgrade to is greater than the currently-installed version (rollbacks are not supported)
+* The [Cluster Version Operator](https://github.com/openshift/cluster-version-operator) reports it as an available version to upgrade to. 

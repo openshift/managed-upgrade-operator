@@ -36,7 +36,8 @@ If you like to contribute to the Managed Upgrade Operator, please read our [Cont
 ### For Developers
 
 * [Design](./docs/design.md) -- Describes the interaction between the operator and the custom resource definition.
-* [Development](./docs/development.md) -- Instructions for developing and deploying the operator. 
+* [Development](./docs/development.md) -- Instructions for developing and deploying the operator.
+* [Metrics](./docs/metrics.md) -- Prometheus metrics produced by the operator. 
 * [Testing](./docs/testing.md) -- Instructions for writing tests.
 
 ## Workflow - UpgradeConfig
@@ -57,6 +58,10 @@ kind: UpgradeConfig
 metadata:
   name: example-upgrade-config
 spec:
+  type: "OSD"
+  upgradeAt: "2020-01-01T00:00:00Z"
+  proceed: true
+  PDBForceDrainTimeout: 120
   desired:
     channel: "fast-4.4"
     force: false
