@@ -266,6 +266,14 @@ objects:
                           UpgradeConfigSpec defines the desired state of UpgradeConfig
                           and upgrade window and freeze window
                         properties:
+                          PDBForceDrainTimeout:
+                            default: 60
+                            description:
+                              The maximum grace period granted to a node whose drain
+                              is blocked by a Pod Disruption Budget, before that drain is forced.
+                              Measured in minutes.
+                            format: int32
+                            type: integer
                           desired:
                             description: Specify the desired OpenShift release
                             properties:
@@ -291,17 +299,10 @@ objects:
                               to upgrade, proceed governs this decision to continue and commence
                               the upgrade
                             type: boolean
-                          type:
-                            description: Type indicates the ClusterUpgrader implementation to use to perform an upgrade of the cluster
-                            enum:
-                              - OSD
-                            type: string
                           subscriptionUpdates:
                             description: This defines the 3rd party operator subscriptions upgrade
                             items:
-                              description:
-                                SubscriptionUpdate describe the 3rd party operator
-                                update config
+                              description: SubscriptionUpdate describe the 3rd party operator update config
                               properties:
                                 channel:
                                   description: Describe the channel for the Subscription
@@ -318,12 +319,19 @@ objects:
                                 - namespace
                               type: object
                             type: array
+                          type:
+                            description: Type indicates the ClusterUpgrader implementation to use to perform an upgrade of the cluster
+                            enum:
+                              - OSD
+                            type: string
                           upgradeAt:
                             description: Specify the upgrade start time
                             type: string
                         required:
+                          - PDBForceDrainTimeout
                           - desired
                           - proceed
+                          - type
                           - upgradeAt
                         type: object
                       status:
@@ -350,14 +358,12 @@ objects:
                                         format: date-time
                                         type: string
                                       lastTransitionTime:
-                                        description:
-                                          Last time the condition transit from one
+                                        description: Last time the condition transit from one
                                           status to another.
                                         format: date-time
                                         type: string
                                       message:
-                                        description:
-                                          Human readable message indicating details
+                                        description: Human readable message indicating details
                                           about last transition.
                                         type: string
                                       reason:
@@ -368,8 +374,7 @@ objects:
                                         format: date-time
                                         type: string
                                       status:
-                                        description:
-                                          Status of condition, one of True, False,
+                                        description: Status of condition, one of True, False,
                                           Unknown
                                         type: string
                                       type:

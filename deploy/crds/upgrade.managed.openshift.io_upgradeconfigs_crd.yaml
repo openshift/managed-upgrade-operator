@@ -53,6 +53,13 @@ spec:
             description: UpgradeConfigSpec defines the desired state of UpgradeConfig
               and upgrade window and freeze window
             properties:
+              PDBForceDrainTimeout:
+                default: 60
+                description: The maximum grace period granted to a node whose drain
+                  is blocked by a Pod Disruption Budget, before that drain is forced.
+                  Measured in minutes.
+                format: int32
+                type: integer
               desired:
                 description: Specify the desired OpenShift release
                 properties:
@@ -77,11 +84,6 @@ spec:
                   to upgrade, proceed governs this decision to continue and commence
                   the upgrade
                 type: boolean
-              type:
-                description: Type indicates the ClusterUpgrader implementation to use to perform an upgrade of the cluster
-                enum:
-                  - OSD
-                type: string
               subscriptionUpdates:
                 description: This defines the 3rd party operator subscriptions upgrade
                 items:
@@ -103,12 +105,20 @@ spec:
                   - namespace
                   type: object
                 type: array
+              type:
+                description: Type indicates the ClusterUpgrader implementation to
+                  use to perform an upgrade of the cluster
+                enum:
+                - OSD
+                type: string
               upgradeAt:
                 description: Specify the upgrade start time
                 type: string
             required:
+            - PDBForceDrainTimeout
             - desired
             - proceed
+            - type
             - upgradeAt
             type: object
           status:

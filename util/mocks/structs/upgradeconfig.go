@@ -33,7 +33,7 @@ func NewUpgradeConfigBuilder() *testUpgradeConfigBuilder {
 				},
 				Proceed: true,
 				UpgradeAt: time.Now().Format(time.RFC3339),
-
+				PDBForceDrainTimeout: 60,
 			},
 		},
 	}
