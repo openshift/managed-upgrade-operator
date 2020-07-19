@@ -142,8 +142,20 @@ To define a new custom procedure for performing a cluster upgrade, a developer s
 
 ### Ready to upgrade criteria
 
-The Managed Upgrade Operator will only attempt to perform an upgrade if the following checks are valid:
+The Managed Upgrade Operator will only attempt to perform an upgrade if the current system time is later than, 
+but within _30 minutes_ of, the `upgradeAt` timestamp specified in the `UpgradeConfig` CR.
 
-* The current system time is later than, but within _30 minutes_ of, the `upgradeAt` timestamp specified in the `UpgradeConfig` CR.
+For example:
+
+| `upgradeAt` time | Current time | Commence Upgrade? |
+| --- | --- | --- |
+| `2020-05-01 12:00:00` | `2020-05-01 11:50:00` | No, it is not yet 12:00 |
+| `2020-05-01 12:00:00` | `2020-05-01 12:32:00` | No, 30 minutes have passed since 12:00 |
+| `2020-05-01 12:00:00` | `2020-05-01 12:15:00` | Yes, it is within the upgrade window |
+
+### Validating upgrade versions
+
+The following checks are made against the desired version in the `UpgradeConfig` to assert that it is a valid version to upgrade to.
+ 
 * The version to upgrade to is greater than the currently-installed version (rollbacks are not supported)
 * The [Cluster Version Operator](https://github.com/openshift/cluster-version-operator) reports it as an available version to upgrade to. 
