@@ -21,11 +21,9 @@ type UpgradeConfigSpec struct {
 	// Specify the upgrade start time
 	UpgradeAt string `json:"upgradeAt"`
 
-	// +kubebuilder:default:=60
 	// The maximum grace period granted to a node whose drain is blocked by a Pod Disruption Budget, before that drain is forced. Measured in minutes.
 	PDBForceDrainTimeout int32 `json:"PDBForceDrainTimeout"`
 
-	// +kubebuilder:default:=true
 	// Given all conditions have passed and cluster is ready to upgrade, proceed governs this decision to continue and commence the upgrade
 	Proceed bool `json:"proceed"`
 
@@ -54,7 +52,6 @@ type UpgradeHistory struct {
 	//Desired version of this upgrade
 	Version string `json:"version,omitempty"`
 	// +kubebuilder:validation:Enum={"New","Pending","Upgrading","Upgraded", "Failed"}
-	// +kubebuilder:default:="New"
 	// This describe the status of the upgrade process
 	Phase UpgradePhase `json:"phase"`
 
@@ -155,7 +152,6 @@ type Update struct {
 	Version string `json:"version"`
 	// Channel we gonna use for upgrades
 	Channel string `json:"channel"`
-	// +kubebuilder:default:=false
 	// Force upgrade, default value is False
 	Force bool `json:"force"`
 }
