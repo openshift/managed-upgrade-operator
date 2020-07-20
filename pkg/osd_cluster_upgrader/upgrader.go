@@ -65,14 +65,8 @@ type UpgradeStep func(client.Client, scaler.Scaler, metrics.Metrics, maintenance
 // Represents the order in which to undertake upgrade steps
 type UpgradeStepOrdering []upgradev1alpha1.UpgradeConditionType
 
-func NewClient(c client.Client) (*osdClusterUpgrader, error) {
+func NewClient(c client.Client, mc metrics.Metrics) (*osdClusterUpgrader, error) {
 	m, err := maintenance.NewBuilder().NewClient(c)
-	if err != nil {
-		return nil, err
-	}
-
-	mb := &metrics.MetricsBuilder{}
-	metricsClient, err := mb.NewClient(c)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +94,7 @@ func NewClient(c client.Client) (*osdClusterUpgrader, error) {
 		Ordering:    osdUpgradeStepOrdering,
 		client:      c,
 		maintenance: m,
-		metrics:     metricsClient,
+		metrics:     mc,
 		scaler:      scaler.NewScaler(),
 	}, nil
 }

@@ -35,15 +35,26 @@ type Metrics interface {
 	UpdateMetricNodeUpgradeEndTime(time.Time, string, string)
 	UpdateMetricClusterVerificationFailed(string)
 	UpdateMetricClusterVerificationSucceeded(string)
+	UpdateMetricUpgradeWindowNotBreached(string)
+	UpdateMetricUpgradeWindowBreached(string)
 	IsMetricUpgradeStartTimeSet(upgradeConfigName string, version string) (bool, error)
 	IsMetricControlPlaneEndTimeSet(upgradeConfigName string, version string) (bool, error)
 	IsMetricNodeUpgradeEndTimeSet(upgradeConfigName string, version string) (bool, error)
 	Query(query string) (*AlertResponse, error)
 }
 
-type MetricsBuilder struct{}
+//go:generate mockgen -destination=mocks/metrics_builder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/metrics MetricsBuilder
+type MetricsBuilder interface{
+	NewClient(c client.Client) (Metrics, error)
+}
 
-func (mb *MetricsBuilder) NewClient(c client.Client) (Metrics, error) {
+func NewBuilder() MetricsBuilder {
+	return &metricsBuilder{}
+}
+
+type metricsBuilder struct{}
+
+func (mb *metricsBuilder) NewClient(c client.Client) (Metrics, error) {
 	promHost, err := getPromHost(c)
 	if err != nil {
 		return nil, err
@@ -117,6 +128,11 @@ var (
 		Name:      "cluster_verification_failed",
 		Help:      "Failed on the cluster upgrade verification step",
 	}, []string{nameLabel})
+	metricUpgradeWindowBreached = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Subsystem: metricsTag,
+		Name:      "upgrade_window_breached",
+		Help:      "Failed to commence upgrade during the upgrade window",
+	}, []string{nameLabel})
 )
 
 func init() {
@@ -127,6 +143,7 @@ func init() {
 	metrics.Registry.MustRegister(metricControlPlaneUpgradeEndTime)
 	metrics.Registry.MustRegister(metricNodeUpgradeEndTime)
 	metrics.Registry.MustRegister(metricClusterVerificationFailed)
+	metrics.Registry.MustRegister(metricUpgradeWindowBreached)
 }
 
 func (c *Counter) UpdateMetricValidationFailed(upgradeConfigName string) {
@@ -235,6 +252,18 @@ func (c *Counter) UpdateMetricClusterVerificationSucceeded(upgradeConfigName str
 	metricClusterVerificationFailed.With(prometheus.Labels{
 		nameLabel: upgradeConfigName}).Set(
 		float64(0))
+}
+
+func (c *Counter) UpdateMetricUpgradeWindowNotBreached(upgradeConfigName string) {
+	metricUpgradeWindowBreached.With(prometheus.Labels{
+		nameLabel: upgradeConfigName}).Set(
+		float64(0))
+}
+
+func (c *Counter) UpdateMetricUpgradeWindowBreached(upgradeConfigName string) {
+	metricUpgradeWindowBreached.With(prometheus.Labels{
+		nameLabel: upgradeConfigName}).Set(
+		float64(1))
 }
 
 func getPromHost(c client.Client) (*string, error) {

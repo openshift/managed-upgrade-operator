@@ -16,9 +16,12 @@ import (
 
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 	"github.com/openshift/managed-upgrade-operator/pkg/cluster_upgrader_builder"
+	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
 )
 
-var log = logf.Log.WithName("controller_upgradeconfig")
+var (
+	log           = logf.Log.WithName("controller_upgradeconfig")
+)
 
 // Add creates a new UpgradeConfig Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -31,6 +34,7 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 	return &ReconcileUpgradeConfig{
 		client:                 mgr.GetClient(),
 		scheme:                 mgr.GetScheme(),
+		metricsClientBuilder:   metrics.NewBuilder(),
 		clusterUpgraderBuilder: cluster_upgrader_builder.NewBuilder(),
 	}
 }
@@ -61,6 +65,7 @@ type ReconcileUpgradeConfig struct {
 	// that reads objects from the cache and writes to the apiserver
 	client                 client.Client
 	scheme                 *runtime.Scheme
+	metricsClientBuilder   metrics.MetricsBuilder
 	clusterUpgraderBuilder cluster_upgrader_builder.ClusterUpgraderBuilder
 }
 
@@ -73,9 +78,15 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling UpgradeConfig")
 
+	// Initialise metrics
+	metricsClient, err := r.metricsClientBuilder.NewClient(r.client)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
 	// Fetch the UpgradeConfig instance
 	instance := &upgradev1alpha1.UpgradeConfig{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
+	err = r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -112,9 +123,9 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 	case "", upgradev1alpha1.UpgradePhaseNew, upgradev1alpha1.UpgradePhasePending:
 		// TODO verify if it's time to do upgrade, if no, set to "pending", if it's yes, perform upgrade, and set status to "upgrading"
 		reqLogger.Info("checking whether it's ready to do upgrade")
-		ready := isReadyToUpgrade(instance)
+		ready := isReadyToUpgrade(instance, metricsClient)
 		if ready {
-			upgrader, err := r.clusterUpgraderBuilder.NewClient(r.client, instance.Spec.Type)
+			upgrader, err := r.clusterUpgraderBuilder.NewClient(r.client, metricsClient, instance.Spec.Type)
 			if err != nil {
 				return reconcile.Result{}, err
 			}
@@ -133,7 +144,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 			return reconcile.Result{}, nil
 		}
 	case upgradev1alpha1.UpgradePhaseUpgrading:
-		upgrader, err := r.clusterUpgraderBuilder.NewClient(r.client, instance.Spec.Type)
+		upgrader, err := r.clusterUpgraderBuilder.NewClient(r.client, metricsClient, instance.Spec.Type)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -156,7 +167,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 }
 
 // TODO readyToUpgrade checks whether it's ready to upgrade based on the scheduling
-func isReadyToUpgrade(upgradeConfig *upgradev1alpha1.UpgradeConfig) bool {
+func isReadyToUpgrade(upgradeConfig *upgradev1alpha1.UpgradeConfig, metricsClient metrics.Metrics) bool {
 	if !upgradeConfig.Spec.Proceed {
 		log.Info("upgrade cannot be proceed", "proceed", upgradeConfig.Spec.Proceed)
 		return false
@@ -167,8 +178,17 @@ func isReadyToUpgrade(upgradeConfig *upgradev1alpha1.UpgradeConfig) bool {
 		return false
 	}
 	now := time.Now()
-	if now.After(upgradeTime) && upgradeTime.Add(60*time.Minute).After(now) {
-		return true
+	if now.After(upgradeTime) {
+		// Is the current time within the allowable upgrade window
+		if upgradeTime.Add(60 * time.Minute).After(now) {
+			return true
+		}
+		// We are past the maximum allowed time to commence upgrading
+		metricsClient.UpdateMetricUpgradeWindowBreached(upgradeConfig.Name)
+	} else {
+		// It hasn't reached the upgrade window yet
+		metricsClient.UpdateMetricUpgradeWindowNotBreached(upgradeConfig.Name)
 	}
+
 	return false
 }

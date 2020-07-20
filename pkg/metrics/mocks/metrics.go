@@ -202,6 +202,30 @@ func (mr *MockMetricsMockRecorder) UpdateMetricUpgradeStartTime(arg0, arg1, arg2
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricUpgradeStartTime", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricUpgradeStartTime), arg0, arg1, arg2)
 }
 
+// UpdateMetricUpgradeWindowBreached mocks base method
+func (m *MockMetrics) UpdateMetricUpgradeWindowBreached(arg0 string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "UpdateMetricUpgradeWindowBreached", arg0)
+}
+
+// UpdateMetricUpgradeWindowBreached indicates an expected call of UpdateMetricUpgradeWindowBreached
+func (mr *MockMetricsMockRecorder) UpdateMetricUpgradeWindowBreached(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricUpgradeWindowBreached", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricUpgradeWindowBreached), arg0)
+}
+
+// UpdateMetricUpgradeWindowNotBreached mocks base method
+func (m *MockMetrics) UpdateMetricUpgradeWindowNotBreached(arg0 string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "UpdateMetricUpgradeWindowNotBreached", arg0)
+}
+
+// UpdateMetricUpgradeWindowNotBreached indicates an expected call of UpdateMetricUpgradeWindowNotBreached
+func (mr *MockMetricsMockRecorder) UpdateMetricUpgradeWindowNotBreached(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricUpgradeWindowNotBreached", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricUpgradeWindowNotBreached), arg0)
+}
+
 // UpdateMetricValidationFailed mocks base method
 func (m *MockMetrics) UpdateMetricValidationFailed(arg0 string) {
 	m.ctrl.T.Helper()
