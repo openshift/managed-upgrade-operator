@@ -2,9 +2,10 @@ package upgradeconfig
 
 import (
 	"fmt"
-	mockMetrics "github.com/openshift/managed-upgrade-operator/pkg/metrics/mocks"
 	"testing"
 	"time"
+
+	mockMetrics "github.com/openshift/managed-upgrade-operator/pkg/metrics/mocks"
 
 	"github.com/golang/mock/gomock"
 	"github.com/hashicorp/go-multierror"

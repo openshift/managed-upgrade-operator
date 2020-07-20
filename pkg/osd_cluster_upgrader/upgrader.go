@@ -3,13 +3,14 @@ package osd_cluster_upgrader
 import (
 	"context"
 	"fmt"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"net/url"
 	"runtime"
 	"sort"
 	"strings"
 	"sync"
 	"time"
+
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/blang/semver"
 	"github.com/go-logr/logr"
@@ -247,6 +248,27 @@ func AllWorkersUpgraded(c client.Client, scaler scaler.Scaler, metricsClient met
 		return false, err
 	}
 
+	silenceActive, err := metricsClient.IsSilenceActive()
+	if err != nil {
+		return false, err
+	}
+
+	var nodeCompleteTime *metav1.Time
+	for _, uc := range upgradeConfig.Status.History {
+		if uc.Version == upgradeConfig.Spec.Desired.Version {
+			for _, ucc := range uc.Conditions {
+				if ucc.Type == "AllWorkerNodesUpgraded" {
+					nodeCompleteTime = ucc.CompleteTime
+				}
+			}
+		}
+	}
+
+	if !silenceActive && nodeCompleteTime == nil {
+		logger.Info("Worker upgrade timeout.")
+		metricsClient.UpdateMetricUpgradeWorkerTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
+	}
+
 	isSet, err := metricsClient.IsMetricNodeUpgradeEndTimeSet(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
 	if err != nil {
 		return false, err
@@ -407,6 +429,25 @@ func ControlPlaneUpgraded(c client.Client, scaler scaler.Scaler, metricsClient m
 			isCompleted = true
 		}
 	}
+
+	var upgradeStartTime, controlPlaneCompleteTime *metav1.Time
+	for _, uc := range upgradeConfig.Status.History {
+		if uc.Version == upgradeConfig.Spec.Desired.Version {
+			upgradeStartTime = uc.StartTime
+			for _, ucc := range uc.Conditions {
+				if ucc.Type == "ControlPlaneUpgraded" {
+					controlPlaneCompleteTime = ucc.CompleteTime
+				}
+			}
+		}
+	}
+
+	upgradeTimeout := 90 * time.Minute
+	if upgradeStartTime.Add(upgradeTimeout).Before(metav1.Now().Time) && controlPlaneCompleteTime == nil {
+		logger.Info("Control plane upgrade timeout")
+		metricsClient.UpdateMetricUpgradeControlPlaneTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
+	}
+
 	if isCompleted {
 		isSet, err := metricsClient.IsMetricControlPlaneEndTimeSet(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
 		if err != nil {

@@ -4,16 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	routev1 "github.com/openshift/api/route/v1"
-	"github.com/prometheus/client_golang/prometheus"
 	"io/ioutil"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"net/http"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/metrics"
 	"strings"
 	"time"
+
+	routev1 "github.com/openshift/api/route/v1"
+	"github.com/prometheus/client_golang/prometheus"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/metrics"
 )
 
 const (
@@ -37,14 +38,17 @@ type Metrics interface {
 	UpdateMetricClusterVerificationSucceeded(string)
 	UpdateMetricUpgradeWindowNotBreached(string)
 	UpdateMetricUpgradeWindowBreached(string)
+	UpdateMetricUpgradeControlPlaneTimeout(string, string)
+	UpdateMetricUpgradeWorkerTimeout(string, string)
 	IsMetricUpgradeStartTimeSet(upgradeConfigName string, version string) (bool, error)
 	IsMetricControlPlaneEndTimeSet(upgradeConfigName string, version string) (bool, error)
 	IsMetricNodeUpgradeEndTimeSet(upgradeConfigName string, version string) (bool, error)
+	IsSilenceActive() (bool, error)
 	Query(query string) (*AlertResponse, error)
 }
 
 //go:generate mockgen -destination=mocks/metrics_builder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/metrics MetricsBuilder
-type MetricsBuilder interface{
+type MetricsBuilder interface {
 	NewClient(c client.Client) (Metrics, error)
 }
 
@@ -133,6 +137,16 @@ var (
 		Name:      "upgrade_window_breached",
 		Help:      "Failed to commence upgrade during the upgrade window",
 	}, []string{nameLabel})
+	metricUpgradeControlPlaneTimeout = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Subsystem: metricsTag,
+		Name:      "controlplane_timeout",
+		Help:      "Control plane upgrade timeout",
+	}, []string{nameLabel, versionLabel})
+	metricUpgradeWorkerTimeout = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Subsystem: metricsTag,
+		Name:      "worker_timeout",
+		Help:      "Worker nodes upgrade timeout",
+	}, []string{nameLabel, versionLabel})
 )
 
 func init() {
@@ -144,6 +158,8 @@ func init() {
 	metrics.Registry.MustRegister(metricNodeUpgradeEndTime)
 	metrics.Registry.MustRegister(metricClusterVerificationFailed)
 	metrics.Registry.MustRegister(metricUpgradeWindowBreached)
+	metrics.Registry.MustRegister(metricUpgradeControlPlaneTimeout)
+	metrics.Registry.MustRegister(metricUpgradeWorkerTimeout)
 }
 
 func (c *Counter) UpdateMetricValidationFailed(upgradeConfigName string) {
@@ -196,6 +212,20 @@ func (c *Counter) UpdateMetricControlPlaneEndTime(time time.Time, upgradeConfigN
 		float64(time.Unix()))
 }
 
+func (c *Counter) UpdateMetricUpgradeControlPlaneTimeout(upgradeConfigName, version string) {
+	metricUpgradeControlPlaneTimeout.With(prometheus.Labels{
+		versionLabel: version,
+		nameLabel:    upgradeConfigName}).Set(
+		float64(1))
+}
+
+func (c *Counter) UpdateMetricUpgradeWorkerTimeout(upgradeConfigName, version string) {
+	metricUpgradeWorkerTimeout.With(prometheus.Labels{
+		versionLabel: version,
+		nameLabel:    upgradeConfigName}).Set(
+		float64(1))
+}
+
 func (c *Counter) IsMetricUpgradeStartTimeSet(upgradeConfigName string, version string) (bool, error) {
 	cpMetrics, err := c.Query(fmt.Sprintf("%s_upgrade_start_timestamp{%s=\"%s\",%s=\"%s\"}", metricsTag, nameLabel, upgradeConfigName, versionLabel, version))
 	if err != nil {
@@ -224,6 +254,19 @@ func (c *Counter) IsMetricControlPlaneEndTimeSet(upgradeConfigName string, versi
 
 func (c *Counter) IsMetricNodeUpgradeEndTimeSet(upgradeConfigName string, version string) (bool, error) {
 	cpMetrics, err := c.Query(fmt.Sprintf("%s_node_upgrade_end_timestamp{%s=\"%s\",%s=\"%s\"}", metricsTag, nameLabel, upgradeConfigName, versionLabel, version))
+	if err != nil {
+		return false, err
+	}
+
+	if len(cpMetrics.Data.Result) > 0 {
+		return true, nil
+	}
+
+	return false, nil
+}
+
+func (c *Counter) IsSilenceActive() (bool, error) {
+	cpMetrics, err := c.Query(fmt.Sprintf("alertmanager_silences{state=\"active\"}"))
 	if err != nil {
 		return false, err
 	}
