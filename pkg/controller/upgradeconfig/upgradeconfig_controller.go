@@ -167,7 +167,7 @@ func isReadyToUpgrade(upgradeConfig *upgradev1alpha1.UpgradeConfig) bool {
 		return false
 	}
 	now := time.Now()
-	if now.After(upgradeTime) && upgradeTime.Add(30*time.Minute).After(now) {
+	if now.After(upgradeTime) && upgradeTime.Add(60*time.Minute).After(now) {
 		return true
 	}
 	return false
