@@ -173,7 +173,10 @@ var _ = Describe("ClusterUpgrader", func() {
 		Context("When the cluster's desired version matches the UpgradeConfig's", func() {
 			It("Indicates the upgrade has commenced", func() {
 				expectUpgradeHasCommenced(mockKubeClient, upgradeConfig, nil)
-				mockKubeClient.EXPECT().Update(gomock.Any(), gomock.Any()).Times(0)
+				gomock.InOrder(
+					mockKubeClient.EXPECT().Update(gomock.Any(), gomock.Any()).Times(0),
+					mockMetricsClient.EXPECT().UpdateMetricUpgradeStarted(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version),
+				)
 				result, err := CommenceUpgrade(mockKubeClient, mockScalerClient, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(BeTrue())
@@ -308,6 +311,9 @@ var _ = Describe("ClusterUpgrader", func() {
 		})
 		It("will not re-perform commencing an upgrade", func() {
 			expectUpgradeHasCommenced(mockKubeClient, upgradeConfig, nil)
+			gomock.InOrder(
+				mockMetricsClient.EXPECT().UpdateMetricUpgradeStarted(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version),
+			)
 			result, err := CommenceUpgrade(mockKubeClient, mockScalerClient, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(BeTrue())
