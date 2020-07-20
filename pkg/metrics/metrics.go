@@ -35,6 +35,7 @@ type Metrics interface {
 	UpdateMetricNodeUpgradeEndTime(time.Time, string, string)
 	UpdateMetricClusterVerificationFailed(string)
 	UpdateMetricClusterVerificationSucceeded(string)
+	UpdateMetricUpgradeWindowNotBreached(string)
 	UpdateMetricUpgradeWindowBreached(string)
 	IsMetricUpgradeStartTimeSet(upgradeConfigName string, version string) (bool, error)
 	IsMetricControlPlaneEndTimeSet(upgradeConfigName string, version string) (bool, error)
@@ -249,6 +250,12 @@ func (c *Counter) UpdateMetricClusterVerificationFailed(upgradeConfigName string
 
 func (c *Counter) UpdateMetricClusterVerificationSucceeded(upgradeConfigName string) {
 	metricClusterVerificationFailed.With(prometheus.Labels{
+		nameLabel: upgradeConfigName}).Set(
+		float64(0))
+}
+
+func (c *Counter) UpdateMetricUpgradeWindowNotBreached(upgradeConfigName string) {
+	metricUpgradeWindowBreached.With(prometheus.Labels{
 		nameLabel: upgradeConfigName}).Set(
 		float64(0))
 }

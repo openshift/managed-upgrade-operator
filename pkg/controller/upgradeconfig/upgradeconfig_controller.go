@@ -186,8 +186,10 @@ func isReadyToUpgrade(upgradeConfig *upgradev1alpha1.UpgradeConfig, metricsClien
 		}
 		// We are past the maximum allowed time to commence upgrading
 		metricsClient.UpdateMetricUpgradeWindowBreached(upgradeConfig.Name)
+	} else {
+		// It hasn't reached the upgrade window yet
+		metricsClient.UpdateMetricUpgradeWindowNotBreached(upgradeConfig.Name)
 	}
 
-	// It hasn't reached the upgrade window yet
 	return false
 }

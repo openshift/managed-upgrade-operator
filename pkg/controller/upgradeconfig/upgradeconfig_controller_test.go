@@ -243,6 +243,7 @@ var _ = Describe("UpgradeConfigController", func() {
 					It("does nothing", func() {
 						gomock.InOrder(
 							mockKubeClient.EXPECT().Get(gomock.Any(), upgradeConfigName, gomock.Any()).SetArg(2, *upgradeConfig).Times(1),
+							mockMetricsClient.EXPECT().UpdateMetricUpgradeWindowNotBreached(upgradeConfig.Name).Times(1),
 						)
 						result, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
 						Expect(err).NotTo(HaveOccurred())
@@ -403,7 +404,9 @@ func TestIsReadyToUpgrade(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			result := isReadyToUpgrade(test.upgradeConfig, metricsClient)
+			test.metricsClient.EXPECT().UpdateMetricUpgradeWindowNotBreached(gomock.Any()).AnyTimes()
+			test.metricsClient.EXPECT().UpdateMetricUpgradeWindowBreached(gomock.Any()).AnyTimes()
+			result := isReadyToUpgrade(test.upgradeConfig, test.metricsClient)
 			if result != test.result {
 				t.Fail()
 			}
