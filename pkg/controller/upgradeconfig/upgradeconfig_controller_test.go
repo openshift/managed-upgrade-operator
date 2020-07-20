@@ -238,7 +238,7 @@ var _ = Describe("UpgradeConfigController", func() {
 
 				Context("When the current time is before the upgrade window", func() {
 					BeforeEach(func() {
-						upgradeConfig.Spec.UpgradeAt = time.Now().Add(60 * time.Minute).Format(time.RFC3339)
+						upgradeConfig.Spec.UpgradeAt = time.Now().Add(80 * time.Minute).Format(time.RFC3339)
 					})
 					It("does nothing", func() {
 						gomock.InOrder(
@@ -253,7 +253,7 @@ var _ = Describe("UpgradeConfigController", func() {
 
 				Context("When the current time is after the upgrade window", func() {
 					BeforeEach(func() {
-						upgradeConfig.Spec.UpgradeAt = time.Now().Add(-60 * time.Minute).Format(time.RFC3339)
+						upgradeConfig.Spec.UpgradeAt = time.Now().Add(-80 * time.Minute).Format(time.RFC3339)
 					})
 					It("raises an appropriate alert", func() {
 						gomock.InOrder(
@@ -389,8 +389,8 @@ func TestIsReadyToUpgrade(t *testing.T) {
 			result:        true,
 		},
 		{
-			name:          "it should be not ready to upgrade if upgradeAt is 20 mins before now",
-			upgradeConfig: testUpgradeConfig(true, time.Now().Add(35*time.Minute).Format(time.RFC3339)),
+			name:          "it should be not ready to upgrade if upgradeAt is 80 mins before now",
+			upgradeConfig: testUpgradeConfig(true, time.Now().Add(80*time.Minute).Format(time.RFC3339)),
 			metricsClient: mockMetrics.NewMockMetrics(gomock.NewController(t)),
 			result:        false,
 		},
