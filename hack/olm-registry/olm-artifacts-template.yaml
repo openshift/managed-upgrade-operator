@@ -267,7 +267,6 @@ objects:
                       and upgrade window and freeze window
                     properties:
                       PDBForceDrainTimeout:
-                        default: 60
                         description:
                           The maximum grace period granted to a node whose drain
                           is blocked by a Pod Disruption Budget, before that drain is forced.
@@ -281,7 +280,6 @@ objects:
                             description: Channel we gonna use for upgrades
                             type: string
                           force:
-                            default: false
                             description: Force upgrade, default value is False
                             type: boolean
                           version:
@@ -293,7 +291,6 @@ objects:
                           - version
                         type: object
                       proceed:
-                        default: true
                         description:
                           Given all conditions have passed and cluster is ready to
                           upgrade, proceed governs this decision to continue and commence the
@@ -391,7 +388,6 @@ objects:
                                 type: object
                               type: array
                             phase:
-                              default: New
                               description: This describe the status of the upgrade process
                               enum:
                                 - New
