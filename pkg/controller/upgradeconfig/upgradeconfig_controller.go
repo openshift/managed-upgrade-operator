@@ -181,7 +181,7 @@ func isReadyToUpgrade(upgradeConfig *upgradev1alpha1.UpgradeConfig, metricsClien
 	now := time.Now()
 	if now.After(upgradeTime) {
 		// Is the current time within the allowable upgrade window
-		if upgradeTime.Add(30 * time.Minute).After(now) {
+		if upgradeTime.Add(60 * time.Minute).After(now) {
 			return true
 		}
 		// We are past the maximum allowed time to commence upgrading
