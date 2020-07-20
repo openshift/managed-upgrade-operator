@@ -142,6 +142,7 @@ func init() {
 	metrics.Registry.MustRegister(metricControlPlaneUpgradeEndTime)
 	metrics.Registry.MustRegister(metricNodeUpgradeEndTime)
 	metrics.Registry.MustRegister(metricClusterVerificationFailed)
+	metrics.Registry.MustRegister(metricUpgradeWindowBreached)
 }
 
 func (c *Counter) UpdateMetricValidationFailed(upgradeConfigName string) {
