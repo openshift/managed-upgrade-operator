@@ -266,7 +266,7 @@ func (c *Counter) IsMetricNodeUpgradeEndTimeSet(upgradeConfigName string, versio
 }
 
 func (c *Counter) IsSilenceActive() (bool, error) {
-	cpMetrics, err := c.Query(fmt.Sprintf("alertmanager_silences{state=\"active\"}"))
+	cpMetrics, err := c.Query("alertmanager_silences{state=\"active\"}")
 	if err != nil {
 		return false, err
 	}
