@@ -443,7 +443,7 @@ func ControlPlaneUpgraded(c client.Client, scaler scaler.Scaler, metricsClient m
 	}
 
 	upgradeTimeout := 90 * time.Minute
-	if upgradeStartTime.Add(upgradeTimeout).Before(metav1.Now().Time) && controlPlaneCompleteTime == nil {
+	if upgradeStartTime != nil && controlPlaneCompleteTime == nil && time.Now().After(upgradeStartTime.Add(upgradeTimeout)) {
 		logger.Info("Control plane upgrade timeout")
 		metricsClient.UpdateMetricUpgradeControlPlaneTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
 	}
