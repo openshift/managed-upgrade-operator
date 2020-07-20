@@ -3,13 +3,14 @@ package osd_cluster_upgrader
 import (
 	"context"
 	"fmt"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"net/url"
 	"runtime"
 	"sort"
 	"strings"
 	"sync"
 	"time"
+
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/blang/semver"
 	"github.com/go-logr/logr"
@@ -173,6 +174,7 @@ func CommenceUpgrade(c client.Client, scaler scaler.Scaler, metricsClient metric
 	desired := upgradeConfig.Spec.Desired
 	if upgradeCommenced {
 		logger.Info(fmt.Sprintf("ClusterVersion is already set to Channel %s Version %s, skipping %s", desired.Channel, desired.Version, upgradev1alpha1.CommenceUpgrade))
+		metricsClient.UpdateMetricUpgradeStarted(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
 		return true, nil
 	}
 
@@ -184,7 +186,7 @@ func CommenceUpgrade(c client.Client, scaler scaler.Scaler, metricsClient metric
 	cv.Spec.DesiredUpdate = &configv1.Update{Version: upgradeConfig.Spec.Desired.Version}
 	cv.Spec.Channel = upgradeConfig.Spec.Desired.Channel
 
-	isSet, err := metricsClient.IsMetricUpgradeStartTimeSet(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
+	isSet, err := metricsClient.IsMetricUpgradeStartedSet(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
 	if err != nil {
 		return false, err
 	}
@@ -194,7 +196,7 @@ func CommenceUpgrade(c client.Client, scaler scaler.Scaler, metricsClient metric
 	}
 	if !isSet {
 		//Record the timestamp when we start the upgrade
-		metricsClient.UpdateMetricUpgradeStartTime(time.Now(), upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
+		metricsClient.UpdateMetricUpgradeStarted(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
 	}
 	return true, nil
 }
@@ -559,6 +561,7 @@ func ValidateUpgradeConfig(c client.Client, scaler scaler.Scaler, metricsClient 
 	if err != nil {
 		return false, err
 	}
+
 	desired := upgradeConfig.Spec.Desired
 	if upgradeCommenced {
 		logger.Info(fmt.Sprintf("ClusterVersion is already set to Channel %s Version %s, skipping %s", desired.Channel, desired.Version, upgradev1alpha1.UpgradeValidated))

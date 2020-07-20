@@ -64,19 +64,19 @@ func (mr *MockMetricsMockRecorder) IsMetricNodeUpgradeEndTimeSet(arg0, arg1 inte
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsMetricNodeUpgradeEndTimeSet", reflect.TypeOf((*MockMetrics)(nil).IsMetricNodeUpgradeEndTimeSet), arg0, arg1)
 }
 
-// IsMetricUpgradeStartTimeSet mocks base method
-func (m *MockMetrics) IsMetricUpgradeStartTimeSet(arg0, arg1 string) (bool, error) {
+// IsMetricUpgradeStartedSet mocks base method
+func (m *MockMetrics) IsMetricUpgradeStartedSet(arg0, arg1 string) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsMetricUpgradeStartTimeSet", arg0, arg1)
+	ret := m.ctrl.Call(m, "IsMetricUpgradeStartedSet", arg0, arg1)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// IsMetricUpgradeStartTimeSet indicates an expected call of IsMetricUpgradeStartTimeSet
-func (mr *MockMetricsMockRecorder) IsMetricUpgradeStartTimeSet(arg0, arg1 interface{}) *gomock.Call {
+// IsMetricUpgradeStartedSet indicates an expected call of IsMetricUpgradeStartedSet
+func (mr *MockMetricsMockRecorder) IsMetricUpgradeStartedSet(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsMetricUpgradeStartTimeSet", reflect.TypeOf((*MockMetrics)(nil).IsMetricUpgradeStartTimeSet), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsMetricUpgradeStartedSet", reflect.TypeOf((*MockMetrics)(nil).IsMetricUpgradeStartedSet), arg0, arg1)
 }
 
 // Query mocks base method
@@ -190,18 +190,6 @@ func (mr *MockMetricsMockRecorder) UpdateMetricScalingSucceeded(arg0 interface{}
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricScalingSucceeded", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricScalingSucceeded), arg0)
 }
 
-// UpdateMetricUpgradeStartTime mocks base method
-func (m *MockMetrics) UpdateMetricUpgradeStartTime(arg0 time.Time, arg1, arg2 string) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "UpdateMetricUpgradeStartTime", arg0, arg1, arg2)
-}
-
-// UpdateMetricUpgradeStartTime indicates an expected call of UpdateMetricUpgradeStartTime
-func (mr *MockMetricsMockRecorder) UpdateMetricUpgradeStartTime(arg0, arg1, arg2 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricUpgradeStartTime", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricUpgradeStartTime), arg0, arg1, arg2)
-}
-
 // UpdateMetricValidationFailed mocks base method
 func (m *MockMetrics) UpdateMetricValidationFailed(arg0 string) {
 	m.ctrl.T.Helper()
@@ -224,4 +212,16 @@ func (m *MockMetrics) UpdateMetricValidationSucceeded(arg0 string) {
 func (mr *MockMetricsMockRecorder) UpdateMetricValidationSucceeded(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricValidationSucceeded", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricValidationSucceeded), arg0)
+}
+
+// UpdateMetricUpgrardeStarted mocks base method
+func (m *MockMetrics) UpdateMetricUpgradeStarted(arg0, arg1 string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "UpdateMetricUpgrardeStarted", arg0, arg1)
+}
+
+// UpdateMetricUpgrardeStarted indicates an expected call of UpdateMetricUpgrardeStarted
+func (mr *MockMetricsMockRecorder) UpdateMetricUpgradeStarted(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricUpgrardeStarted", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricUpgradeStarted), arg0, arg1)
 }

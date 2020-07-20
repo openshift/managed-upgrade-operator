@@ -4,16 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	routev1 "github.com/openshift/api/route/v1"
-	"github.com/prometheus/client_golang/prometheus"
 	"io/ioutil"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"net/http"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/metrics"
 	"strings"
 	"time"
+
+	routev1 "github.com/openshift/api/route/v1"
+	"github.com/prometheus/client_golang/prometheus"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/metrics"
 )
 
 const (
@@ -30,12 +31,12 @@ type Metrics interface {
 	UpdateMetricClusterCheckSucceeded(string)
 	UpdateMetricScalingFailed(string)
 	UpdateMetricScalingSucceeded(string)
-	UpdateMetricUpgradeStartTime(time.Time, string, string)
 	UpdateMetricControlPlaneEndTime(time.Time, string, string)
 	UpdateMetricNodeUpgradeEndTime(time.Time, string, string)
 	UpdateMetricClusterVerificationFailed(string)
 	UpdateMetricClusterVerificationSucceeded(string)
-	IsMetricUpgradeStartTimeSet(upgradeConfigName string, version string) (bool, error)
+	UpdateMetricUpgradeStarted(string, string)
+	IsMetricUpgradeStartedSet(upgradeConfigName string, version string) (bool, error)
 	IsMetricControlPlaneEndTimeSet(upgradeConfigName string, version string) (bool, error)
 	IsMetricNodeUpgradeEndTimeSet(upgradeConfigName string, version string) (bool, error)
 	Query(query string) (*AlertResponse, error)
@@ -97,11 +98,6 @@ var (
 		Name:      "scaling_failed",
 		Help:      "Failed to scale up extra workers",
 	}, []string{nameLabel})
-	metricUpgradeStartTime = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Subsystem: metricsTag,
-		Name:      "upgrade_start_timestamp",
-		Help:      "Timestamp for the real upgrade process is started",
-	}, []string{nameLabel, versionLabel})
 	metricControlPlaneUpgradeEndTime = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Subsystem: metricsTag,
 		Name:      "controlplane_upgrade_end_timestamp",
@@ -117,16 +113,21 @@ var (
 		Name:      "cluster_verification_failed",
 		Help:      "Failed on the cluster upgrade verification step",
 	}, []string{nameLabel})
+	metricUpgradeStarted = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Subsystem: metricsTag,
+		Name:      "cluster_upgrade_started",
+		Help:      "Marker for the cluster upgrade started",
+	}, []string{nameLabel, versionLabel})
 )
 
 func init() {
 	metrics.Registry.MustRegister(metricValidationFailed)
 	metrics.Registry.MustRegister(metricClusterCheckFailed)
 	metrics.Registry.MustRegister(metricScalingFailed)
-	metrics.Registry.MustRegister(metricUpgradeStartTime)
 	metrics.Registry.MustRegister(metricControlPlaneUpgradeEndTime)
 	metrics.Registry.MustRegister(metricNodeUpgradeEndTime)
 	metrics.Registry.MustRegister(metricClusterVerificationFailed)
+	metrics.Registry.MustRegister(metricUpgradeStarted)
 }
 
 func (c *Counter) UpdateMetricValidationFailed(upgradeConfigName string) {
@@ -165,11 +166,11 @@ func (c *Counter) UpdateMetricScalingSucceeded(upgradeConfigName string) {
 		float64(0))
 }
 
-func (c *Counter) UpdateMetricUpgradeStartTime(time time.Time, upgradeConfigName string, version string) {
-	metricUpgradeStartTime.With(prometheus.Labels{
+func (c *Counter) UpdateMetricUpgradeStarted(upgradeConfigName string, version string) {
+	metricUpgradeStarted.With(prometheus.Labels{
 		versionLabel: version,
 		nameLabel:    upgradeConfigName}).Set(
-		float64(time.Unix()))
+		float64(1))
 }
 
 func (c *Counter) UpdateMetricControlPlaneEndTime(time time.Time, upgradeConfigName string, version string) {
@@ -179,8 +180,8 @@ func (c *Counter) UpdateMetricControlPlaneEndTime(time time.Time, upgradeConfigN
 		float64(time.Unix()))
 }
 
-func (c *Counter) IsMetricUpgradeStartTimeSet(upgradeConfigName string, version string) (bool, error) {
-	cpMetrics, err := c.Query(fmt.Sprintf("%s_upgrade_start_timestamp{%s=\"%s\",%s=\"%s\"}", metricsTag, nameLabel, upgradeConfigName, versionLabel, version))
+func (c *Counter) IsMetricUpgradeStartedSet(upgradeConfigName string, version string) (bool, error) {
+	cpMetrics, err := c.Query(fmt.Sprintf("%s_cluster_upgrade_started{%s=\"%s\",%s=\"%s\"}", metricsTag, nameLabel, upgradeConfigName, versionLabel, version))
 	if err != nil {
 		return false, err
 	}
