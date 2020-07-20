@@ -21,7 +21,6 @@ import (
 
 var (
 	log           = logf.Log.WithName("controller_upgradeconfig")
-	metricsClient metrics.Metrics
 )
 
 // Add creates a new UpgradeConfig Controller and adds it to the Manager. The Manager will set fields on the Controller
