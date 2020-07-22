@@ -668,11 +668,6 @@ func newUpgradeCondition(reason, msg string, conditionType upgradev1alpha1.Upgra
 	}
 }
 
-// TODO readyToUpgrade checks whether it's ready to upgrade based on the scheduling
-func IsReadyToUpgrade(upgradeConfig *upgradev1alpha1.UpgradeConfig) bool {
-	return true
-}
-
 func isEqualVersion(cv *configv1.ClusterVersion, uc *upgradev1alpha1.UpgradeConfig) bool {
 	if cv.Spec.DesiredUpdate != nil &&
 		cv.Spec.DesiredUpdate.Version == uc.Spec.Desired.Version &&
