@@ -243,11 +243,6 @@ func CreateWorkerMaintWindow(c client.Client, scaler scaler.Scaler, metricsClien
 
 // This check whether all the worker nodes are ready with new config
 func AllWorkersUpgraded(c client.Client, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
-	silenceActive, err := metricsClient.IsSilenceActive()
-	if err != nil {
-		return false, err
-	}
-
 	var nodeCompleteTime *metav1.Time
 	for _, uc := range upgradeConfig.Status.History {
 		if uc.Version == upgradeConfig.Spec.Desired.Version {
@@ -259,6 +254,10 @@ func AllWorkersUpgraded(c client.Client, scaler scaler.Scaler, metricsClient met
 		}
 	}
 
+	silenceActive, err := metricsClient.IsSilenceActive()
+	if err != nil {
+		return false, err
+	}
 	if !silenceActive && nodeCompleteTime == nil {
 		logger.Info("Worker upgrade timeout.")
 		metricsClient.UpdateMetricUpgradeWorkerTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
@@ -423,17 +422,13 @@ func ControlPlaneUpgraded(c client.Client, scaler scaler.Scaler, metricsClient m
 	if err != nil {
 		return false, err
 	}
+
 	isCompleted := false
+	var upgradeStartTime metav1.Time
 	for _, c := range clusterVersion.Status.History {
 		if c.State == configv1.CompletedUpdate && c.Version == upgradeConfig.Spec.Desired.Version {
 			isCompleted = true
-		}
-	}
-
-	var upgradeStartTime metav1.Time
-	for _, cv := range clusterVersion.Status.History {
-		if cv.Version == upgradeConfig.Spec.Desired.Version {
-			upgradeStartTime = cv.StartedTime
+			upgradeStartTime = c.StartedTime
 		}
 	}
 
@@ -449,7 +444,7 @@ func ControlPlaneUpgraded(c client.Client, scaler scaler.Scaler, metricsClient m
 	}
 
 	upgradeTimeout := 90 * time.Minute
-	if &upgradeStartTime != nil && controlPlaneCompleteTime == nil && time.Now().After(upgradeStartTime.Add(upgradeTimeout)) {
+	if !upgradeStartTime.IsZero() && controlPlaneCompleteTime == nil && time.Now().After(upgradeStartTime.Add(upgradeTimeout)) {
 		logger.Info("Control plane upgrade timeout")
 		metricsClient.UpdateMetricUpgradeControlPlaneTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
 	}

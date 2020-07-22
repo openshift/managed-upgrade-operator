@@ -133,6 +133,9 @@ var _ = Describe("ClusterUpgrader", func() {
 			})
 			It("Flags the control plane as NOT upgraded", func() {
 				expectGetClusterVersion(mockKubeClient, clusterVersionList, nil)
+				gomock.InOrder(
+					mockMetricsClient.EXPECT().UpdateMetricUpgradeControlPlaneTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version).Times(1),
+				)
 				result, err := ControlPlaneUpgraded(mockKubeClient, mockScalerClient, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(BeFalse())
@@ -269,9 +272,9 @@ var _ = Describe("ClusterUpgrader", func() {
 			})
 			It("Indicates that all workers are upgraded", func() {
 				gomock.InOrder(
-					mockKubeClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Name: "worker"}, gomock.Any()).SetArg(2, *configPool).Times(1),
 					mockMetricsClient.EXPECT().IsSilenceActive(),
 					mockMetricsClient.EXPECT().UpdateMetricUpgradeWorkerTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version).Times(1),
+					mockKubeClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Name: "worker"}, gomock.Any()).SetArg(2, *configPool).Times(1),
 					mockMetricsClient.EXPECT().IsMetricNodeUpgradeEndTimeSet(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version).Times(1),
 					mockMetricsClient.EXPECT().UpdateMetricNodeUpgradeEndTime(gomock.Any(), upgradeConfig.Name, upgradeConfig.Spec.Desired.Version).Times(1),
 				)
@@ -288,6 +291,10 @@ var _ = Describe("ClusterUpgrader", func() {
 				mockKubeClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Name: "worker"}, gomock.Any()).SetArg(2, *configPool).Times(1)
 			})
 			It("Indicates that all workers are not upgraded", func() {
+				gomock.InOrder(
+					mockMetricsClient.EXPECT().IsSilenceActive(),
+					mockMetricsClient.EXPECT().UpdateMetricUpgradeWorkerTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version).Times(1),
+				)
 				result, err := AllWorkersUpgraded(mockKubeClient, mockScalerClient, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(BeFalse())
