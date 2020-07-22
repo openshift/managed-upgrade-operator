@@ -243,29 +243,22 @@ func CreateWorkerMaintWindow(c client.Client, scaler scaler.Scaler, metricsClien
 
 // This check whether all the worker nodes are ready with new config
 func AllWorkersUpgraded(c client.Client, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
-	var nodeCompleteTime *metav1.Time
-	for _, uc := range upgradeConfig.Status.History {
-		if uc.Version == upgradeConfig.Spec.Desired.Version {
-			for _, ucc := range uc.Conditions {
-				if ucc.Type == "AllWorkerNodesUpgraded" {
-					nodeCompleteTime = ucc.CompleteTime
-				}
-			}
-		}
+	ok, err := nodesUpgraded(c, "worker", logger)
+	if err != nil {
+		return false, err
 	}
 
 	silenceActive, err := metricsClient.IsSilenceActive()
 	if err != nil {
 		return false, err
 	}
-	if !silenceActive && nodeCompleteTime == nil {
-		logger.Info("Worker upgrade timeout.")
-		metricsClient.UpdateMetricUpgradeWorkerTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
-	}
 
-	ok, err := nodesUpgraded(c, "worker", logger)
-	if err != nil || !ok {
-		return false, err
+	if !ok {
+		if !silenceActive {
+			logger.Info("Worker upgrade timeout.")
+			metricsClient.UpdateMetricUpgradeWorkerTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
+		}
+		return false, nil
 	}
 
 	isSet, err := metricsClient.IsMetricNodeUpgradeEndTimeSet(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
@@ -425,21 +418,12 @@ func ControlPlaneUpgraded(c client.Client, scaler scaler.Scaler, metricsClient m
 
 	isCompleted := false
 	var upgradeStartTime metav1.Time
+	var controlPlaneCompleteTime *metav1.Time
 	for _, c := range clusterVersion.Status.History {
 		if c.State == configv1.CompletedUpdate && c.Version == upgradeConfig.Spec.Desired.Version {
 			isCompleted = true
 			upgradeStartTime = c.StartedTime
-		}
-	}
-
-	var controlPlaneCompleteTime *metav1.Time
-	for _, uc := range upgradeConfig.Status.History {
-		if uc.Version == upgradeConfig.Spec.Desired.Version {
-			for _, ucc := range uc.Conditions {
-				if ucc.Type == "ControlPlaneUpgraded" {
-					controlPlaneCompleteTime = ucc.CompleteTime
-				}
-			}
+			controlPlaneCompleteTime = c.CompletionTime
 		}
 	}
 
