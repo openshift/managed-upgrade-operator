@@ -3,8 +3,9 @@ package scaler
 import (
 	"context"
 	"fmt"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"time"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
@@ -33,7 +34,7 @@ var _ = Describe("Node scaling tests", func() {
 		mockKubeClient = mocks.NewMockClient(mockCtrl)
 
 		scaler = &machineSetScaler{}
-		logger = logf.Log.WithName("cluster upgrader test logger")
+		logger = logf.Log.WithName("Config validation test logger")
 	})
 
 	Context("When the upgrade is scaling out workers", func() {
@@ -161,8 +162,8 @@ var _ = Describe("Node scaling tests", func() {
 					Items: []machineapi.MachineSet{
 						{
 							ObjectMeta: metav1.ObjectMeta{
-								Name:      "test-infra-upgrade",
-								Namespace: "openshift-machine-api",
+								Name:              "test-infra-upgrade",
+								Namespace:         "openshift-machine-api",
 								CreationTimestamp: metav1.Time{Time: time.Now()},
 							},
 							Status: machineapi.MachineSetStatus{

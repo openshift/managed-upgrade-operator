@@ -44,7 +44,7 @@ type UpgradeConfigStatus struct {
 	History UpgradeHistories `json:"history,omitempty"`
 }
 
-// Conditions is a set of Condition instances.
+// UpgradeHistories is a slice of UpgradeHistory
 type UpgradeHistories []UpgradeHistory
 
 // UpgradeHistory record history of upgrade
@@ -55,6 +55,7 @@ type UpgradeHistory struct {
 	// This describe the status of the upgrade process
 	Phase UpgradePhase `json:"phase"`
 
+	// Conditions is a set of Condition instances.
 	Conditions Conditions `json:"conditions,omitempty"`
 	// +kubebuilder:validation:Optional
 	StartTime *metav1.Time `json:"startTime,omitempty"`
@@ -63,7 +64,10 @@ type UpgradeHistory struct {
 	CompleteTime *metav1.Time `json:"completeTime,omitempty"`
 }
 
+// UpgradeConditionType is a Go string type.
 type UpgradeConditionType string
+
+// UpgradeCondition houses fields that describe the state of an Upgrade including metadata.
 type UpgradeCondition struct {
 	// Type of upgrade condition
 	Type UpgradeConditionType `json:"type"`
@@ -106,15 +110,21 @@ const (
 	PostClusterHealthCheck        UpgradeConditionType = "PostClusterHealthCheck"
 )
 
+// UpgradePhase is a Go string type.
 type UpgradePhase string
 
 const (
-	UpgradePhaseNew       UpgradePhase = "New"
-	UpgradePhasePending   UpgradePhase = "Pending"
+	UpgradePhaseNew UpgradePhase = "New"
+	// UpgradePhasePending defines that an upgrade has been scheduled.
+	UpgradePhasePending UpgradePhase = "Pending"
+	// UpgradePhaseUpgrading defines the state of an ongoing upgrade.
 	UpgradePhaseUpgrading UpgradePhase = "Upgrading"
-	UpgradePhaseUpgraded  UpgradePhase = "Upgraded"
-	UpgradePhaseFailed    UpgradePhase = "Failed"
-	UpgradePhaseUnknown   UpgradePhase = "Unknown"
+	// UpgradePhaseUpgraded defines a completed upgrade.
+	UpgradePhaseUpgraded UpgradePhase = "Upgraded"
+	// UpgradePhaseFailed defines a failed upgrade.
+	UpgradePhaseFailed UpgradePhase = "Failed"
+	// UpgradePhaseUnknown defines an unknown upgrade state.
+	UpgradePhaseUnknown UpgradePhase = "Unknown"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -150,7 +160,7 @@ type Update struct {
 	// Version of openshift release
 	// +kubebuilder:validation:Type=string
 	Version string `json:"version"`
-	// Channel we gonna use for upgrades
+	// Channel used for upgrades
 	Channel string `json:"channel"`
 	// Force upgrade, default value is False
 	Force bool `json:"force"`

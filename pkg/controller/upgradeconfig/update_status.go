@@ -6,9 +6,8 @@ import (
 )
 
 //TODO
-func (r *ReconcileUpgradeConfig) updateStatusPending(eqLogger logr.Logger, u *upgradev1alpha1.UpgradeConfig) error {
+func (r *ReconcileUpgradeConfig) updateStatusPending(reqLogger logr.Logger, uC *upgradev1alpha1.UpgradeConfig) error {
 
 	return nil
 
 }
-
