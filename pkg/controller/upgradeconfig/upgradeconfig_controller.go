@@ -141,7 +141,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 		}
 
 		// Build a Validator
-		validator, err := r.validationBuilder.NewClient(r.client)
+		validator, err := r.validationBuilder.NewClient()
 		if err != nil {
 			return reconcile.Result{}, err
 		}

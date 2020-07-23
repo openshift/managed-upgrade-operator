@@ -13,7 +13,6 @@ import (
 	"github.com/openshift/cluster-version-operator/pkg/cincinnati"
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 	"github.com/openshift/managed-upgrade-operator/pkg/osd_cluster_upgrader"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/go-logr/logr"
 )
@@ -128,7 +127,7 @@ func compareVersions(dV semver.Version, cV semver.Version, logger logr.Logger) b
 
 //go:generate mockgen -destination=mockValidationBuilder.go -package=validation github.com/openshift/managed-upgrade-operator/pkg/validation ValidationBuilder
 type ValidationBuilder interface {
-	NewClient(client client.Client) (Validator, error)
+	NewClient() (Validator, error)
 }
 
 // validationBuilder is an empty struct that enables instantiation of this type and its
@@ -136,6 +135,6 @@ type ValidationBuilder interface {
 type validationBuilder struct{}
 
 // NewClient returns a Validator interface or an error if one occurs.
-func (vb *validationBuilder) NewClient(client client.Client) (Validator, error) {
+func (vb *validationBuilder) NewClient() (Validator, error) {
 	return &validator{}, nil
 }

@@ -7,7 +7,6 @@ package validation
 import (
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
-	client "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // MockValidationBuilder is a mock of ValidationBuilder interface
@@ -34,16 +33,16 @@ func (m *MockValidationBuilder) EXPECT() *MockValidationBuilderMockRecorder {
 }
 
 // NewClient mocks base method
-func (m *MockValidationBuilder) NewClient(arg0 client.Client) (Validator, error) {
+func (m *MockValidationBuilder) NewClient() (Validator, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "NewClient", arg0)
+	ret := m.ctrl.Call(m, "NewClient")
 	ret0, _ := ret[0].(Validator)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // NewClient indicates an expected call of NewClient
-func (mr *MockValidationBuilderMockRecorder) NewClient(arg0 interface{}) *gomock.Call {
+func (mr *MockValidationBuilderMockRecorder) NewClient() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewClient", reflect.TypeOf((*MockValidationBuilder)(nil).NewClient), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewClient", reflect.TypeOf((*MockValidationBuilder)(nil).NewClient))
 }

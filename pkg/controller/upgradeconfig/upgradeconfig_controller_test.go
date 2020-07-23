@@ -164,7 +164,7 @@ var _ = Describe("UpgradeConfigController", func() {
 							mockKubeClient.EXPECT().Get(gomock.Any(), upgradeConfigName, gomock.Any()).SetArg(2, *upgradeConfig).Times(1),
 							mockKubeClient.EXPECT().Status().Return(mockUpdater).AnyTimes(),
 							mockUpdater.EXPECT().Update(gomock.Any(), matcher).AnyTimes(),
-							mockValidationBuilder.EXPECT().NewClient(gomock.Any()).Return(mockValidator, nil),
+							mockValidationBuilder.EXPECT().NewClient().Return(mockValidator, nil),
 							mockValidator.EXPECT().IsValidUpgradeConfig(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil),
 							mockMetricsClient.EXPECT().UpdateMetricValidationSucceeded(gomock.Any()),
 							mockClusterUpgraderBuilder.EXPECT().NewClient(gomock.Any(), gomock.Any(), upgradeConfig.Spec.Type).Return(mockClusterUpgrader, nil),
@@ -220,7 +220,7 @@ var _ = Describe("UpgradeConfigController", func() {
 						util.ExpectGetClusterVersion(mockKubeClient, clusterVersionList, nil)
 						gomock.InOrder(
 							mockKubeClient.EXPECT().Get(gomock.Any(), upgradeConfigName, gomock.Any()).SetArg(2, *upgradeConfig).Times(1),
-							mockValidationBuilder.EXPECT().NewClient(gomock.Any()).Return(mockValidator, nil),
+							mockValidationBuilder.EXPECT().NewClient().Return(mockValidator, nil),
 							mockValidator.EXPECT().IsValidUpgradeConfig(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil),
 							mockMetricsClient.EXPECT().UpdateMetricValidationSucceeded(gomock.Any()),
 							mockClusterUpgraderBuilder.EXPECT().NewClient(gomock.Any(), gomock.Any(), upgradeConfig.Spec.Type).Return(mockClusterUpgrader, nil),
@@ -264,7 +264,7 @@ var _ = Describe("UpgradeConfigController", func() {
 								mockKubeClient.EXPECT().Get(gomock.Any(), upgradeConfigName, gomock.Any()).SetArg(2, *upgradeConfig).Times(1),
 								mockClusterUpgraderBuilder.EXPECT().NewClient(gomock.Any(), gomock.Any(), upgradeConfig.Spec.Type).Return(nil, fakeError),
 								mockClusterUpgrader.EXPECT().UpgradeCluster(gomock.Any(), gomock.Any()).Times(0),
-								mockValidationBuilder.EXPECT().NewClient(gomock.Any()).Return(mockValidator, nil),
+								mockValidationBuilder.EXPECT().NewClient().Return(mockValidator, nil),
 								mockValidator.EXPECT().IsValidUpgradeConfig(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil),
 								mockMetricsClient.EXPECT().UpdateMetricValidationSucceeded(gomock.Any()),
 							)
@@ -296,7 +296,7 @@ var _ = Describe("UpgradeConfigController", func() {
 							util.ExpectGetClusterVersion(mockKubeClient, clusterVersionList, nil)
 							gomock.InOrder(
 								mockKubeClient.EXPECT().Get(gomock.Any(), upgradeConfigName, gomock.Any()).SetArg(2, *upgradeConfig).Times(1),
-								mockValidationBuilder.EXPECT().NewClient(gomock.Any()).Return(mockValidator, nil),
+								mockValidationBuilder.EXPECT().NewClient().Return(mockValidator, nil),
 								mockValidator.EXPECT().IsValidUpgradeConfig(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil),
 								mockMetricsClient.EXPECT().UpdateMetricValidationSucceeded(gomock.Any()),
 								mockClusterUpgraderBuilder.EXPECT().NewClient(gomock.Any(), gomock.Any(), upgradeConfig.Spec.Type).Return(mockClusterUpgrader, nil),
@@ -332,7 +332,7 @@ var _ = Describe("UpgradeConfigController", func() {
 							util.ExpectGetClusterVersion(mockKubeClient, clusterVersionList, nil)
 							gomock.InOrder(
 								mockKubeClient.EXPECT().Get(gomock.Any(), upgradeConfigName, gomock.Any()).SetArg(2, *upgradeConfig).Times(1),
-								mockValidationBuilder.EXPECT().NewClient(gomock.Any()).Return(mockValidator, nil),
+								mockValidationBuilder.EXPECT().NewClient().Return(mockValidator, nil),
 								mockValidator.EXPECT().IsValidUpgradeConfig(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil),
 								mockMetricsClient.EXPECT().UpdateMetricValidationSucceeded(gomock.Any()),
 								mockClusterUpgraderBuilder.EXPECT().NewClient(gomock.Any(), gomock.Any(), upgradeConfig.Spec.Type).Return(mockClusterUpgrader, nil),
@@ -368,7 +368,7 @@ var _ = Describe("UpgradeConfigController", func() {
 						util.ExpectGetClusterVersion(mockKubeClient, clusterVersionList, nil)
 						gomock.InOrder(
 							mockKubeClient.EXPECT().Get(gomock.Any(), upgradeConfigName, gomock.Any()).SetArg(2, *upgradeConfig).Times(1),
-							mockValidationBuilder.EXPECT().NewClient(gomock.Any()).Return(mockValidator, nil),
+							mockValidationBuilder.EXPECT().NewClient().Return(mockValidator, nil),
 							mockValidator.EXPECT().IsValidUpgradeConfig(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil),
 							mockMetricsClient.EXPECT().UpdateMetricValidationSucceeded(gomock.Any()),
 							mockMetricsClient.EXPECT().UpdateMetricUpgradeWindowNotBreached(upgradeConfig.Name).Times(1),
@@ -402,7 +402,7 @@ var _ = Describe("UpgradeConfigController", func() {
 						util.ExpectGetClusterVersion(mockKubeClient, clusterVersionList, nil)
 						gomock.InOrder(
 							mockKubeClient.EXPECT().Get(gomock.Any(), upgradeConfigName, gomock.Any()).SetArg(2, *upgradeConfig).Times(1),
-							mockValidationBuilder.EXPECT().NewClient(gomock.Any()).Return(mockValidator, nil),
+							mockValidationBuilder.EXPECT().NewClient().Return(mockValidator, nil),
 							mockValidator.EXPECT().IsValidUpgradeConfig(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil),
 							mockMetricsClient.EXPECT().UpdateMetricValidationSucceeded(gomock.Any()),
 							mockMetricsClient.EXPECT().UpdateMetricUpgradeWindowBreached(upgradeConfig.Name),
