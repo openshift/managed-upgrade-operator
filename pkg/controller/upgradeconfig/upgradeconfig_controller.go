@@ -2,7 +2,6 @@ package upgradeconfig
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -122,11 +121,6 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 	}
 
 	status := history.Phase
-
-	// status should never be an empty string at this stage. Explicity test and return error if it is.
-	if status == "" {
-		return reconcile.Result{}, fmt.Errorf("Status should never be undefined at this stage")
-	}
 
 	reqLogger.Info("Current cluster status", "status", status)
 
