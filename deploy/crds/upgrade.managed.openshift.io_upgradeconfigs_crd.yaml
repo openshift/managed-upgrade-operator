@@ -63,7 +63,7 @@ spec:
               description: Specify the desired OpenShift release
               properties:
                 channel:
-                  description: Channel we gonna use for upgrades
+                  description: Channel used for upgrades
                   type: string
                 force:
                   description: Force upgrade, default value is False
@@ -132,6 +132,8 @@ spec:
                   conditions:
                     description: Conditions is a set of Condition instances.
                     items:
+                      description: UpgradeCondition houses fields that describe the
+                        state of an Upgrade including metadata.
                       properties:
                         completeTime:
                           description: Complete time of this condition.
