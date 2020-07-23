@@ -22,6 +22,7 @@ import (
 	mockMetrics "github.com/openshift/managed-upgrade-operator/pkg/metrics/mocks"
 	"github.com/openshift/managed-upgrade-operator/pkg/scaler"
 	mockScaler "github.com/openshift/managed-upgrade-operator/pkg/scaler/mocks"
+	"github.com/openshift/managed-upgrade-operator/util"
 	"github.com/openshift/managed-upgrade-operator/util/mocks"
 	testStructs "github.com/openshift/managed-upgrade-operator/util/mocks/structs"
 )
@@ -77,7 +78,7 @@ var _ = Describe("ClusterUpgrader", func() {
 		Context("When the clusterversion can't be fetched", func() {
 			It("Indicates an error", func() {
 				fakeError := fmt.Errorf("fake error")
-				expectGetClusterVersion(mockKubeClient, nil, fakeError)
+				util.ExpectGetClusterVersion(mockKubeClient, nil, fakeError)
 				result, err := ControlPlaneUpgraded(mockKubeClient, mockScalerClient, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(Equal(fakeError))
@@ -104,7 +105,7 @@ var _ = Describe("ClusterUpgrader", func() {
 				}
 			})
 			It("Flags the control plane as upgraded", func() {
-				expectGetClusterVersion(mockKubeClient, clusterVersionList, nil)
+				util.ExpectGetClusterVersion(mockKubeClient, clusterVersionList, nil)
 				gomock.InOrder(
 					mockMetricsClient.EXPECT().IsMetricControlPlaneEndTimeSet(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version).Times(1),
 					mockMetricsClient.EXPECT().UpdateMetricControlPlaneEndTime(gomock.Any(), upgradeConfig.Name, upgradeConfig.Spec.Desired.Version).Times(1),
@@ -132,7 +133,7 @@ var _ = Describe("ClusterUpgrader", func() {
 				}
 			})
 			It("Flags the control plane as NOT upgraded", func() {
-				expectGetClusterVersion(mockKubeClient, clusterVersionList, nil)
+				util.ExpectGetClusterVersion(mockKubeClient, clusterVersionList, nil)
 				gomock.InOrder(
 					mockMetricsClient.EXPECT().UpdateMetricUpgradeControlPlaneTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version).Times(1),
 				)
@@ -194,7 +195,7 @@ var _ = Describe("ClusterUpgrader", func() {
 					},
 				}
 				expectUpgradeCommenced(mockKubeClient, clusterVersionList, nil)
-				expectGetClusterVersion(mockKubeClient, clusterVersionList, nil)
+				util.ExpectGetClusterVersion(mockKubeClient, clusterVersionList, nil)
 				gomock.InOrder(
 					mockMetricsClient.EXPECT().IsMetricUpgradeStartTimeSet(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version).Times(1),
 					mockKubeClient.EXPECT().Update(gomock.Any(), gomock.Any()).Times(1).DoAndReturn(
@@ -226,7 +227,7 @@ var _ = Describe("ClusterUpgrader", func() {
 					},
 				}
 				expectUpgradeHasNotCommenced(mockKubeClient, upgradeConfig, nil)
-				expectGetClusterVersion(mockKubeClient, clusterVersionList, nil)
+				util.ExpectGetClusterVersion(mockKubeClient, clusterVersionList, nil)
 				gomock.InOrder(
 					mockMetricsClient.EXPECT().IsMetricUpgradeStartTimeSet(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version).Times(1),
 					mockKubeClient.EXPECT().Update(gomock.Any(), gomock.Any()).Times(1).DoAndReturn(
@@ -247,7 +248,7 @@ var _ = Describe("ClusterUpgrader", func() {
 			It("Indicates an error", func() {
 				fakeError := fmt.Errorf("fake error")
 				expectUpgradeHasNotCommenced(mockKubeClient, upgradeConfig, nil)
-				expectGetClusterVersion(mockKubeClient, preUpgradeCV, nil)
+				util.ExpectGetClusterVersion(mockKubeClient, preUpgradeCV, nil)
 				gomock.InOrder(
 					mockMetricsClient.EXPECT().IsMetricUpgradeStartTimeSet(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version).Times(1),
 					mockKubeClient.EXPECT().Update(gomock.Any(), gomock.Any()).Times(1).Return(fakeError),
@@ -580,7 +581,7 @@ var _ = Describe("ClusterUpgrader", func() {
 							},
 						},
 					}
-					result := getCurrentVersion(clusterVersion)
+					result, _ := GetCurrentVersion(clusterVersion)
 					Expect(result).To(Equal(version))
 				})
 			})
@@ -594,7 +595,7 @@ var _ = Describe("ClusterUpgrader", func() {
 							},
 						},
 					}
-					result := getCurrentVersion(clusterVersion)
+					result, _ := GetCurrentVersion(clusterVersion)
 					Expect(result).To(BeEmpty())
 				})
 			})
@@ -665,16 +666,6 @@ func expectUpgradeHasCommenced(m *mocks.MockClient, u *upgradev1alpha1.UpgradeCo
 
 func expectUpgradeCommenced(m *mocks.MockClient, cv *configv1.ClusterVersionList, withErr error) {
 	cvList := m.EXPECT().List(gomock.Any(), gomock.Any())
-	if cv != nil {
-		cvList.SetArg(1, *cv)
-	}
-	if withErr != nil {
-		cvList.Return(withErr)
-	}
-}
-
-func expectGetClusterVersion(m *mocks.MockClient, cv *configv1.ClusterVersionList, withErr error) {
-	cvList := m.EXPECT().List(gomock.Any(), gomock.Any()).Times(1)
 	if cv != nil {
 		cvList.SetArg(1, *cv)
 	}

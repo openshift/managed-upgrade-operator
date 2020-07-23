@@ -28,7 +28,12 @@ generate:
 	go generate pkg/maintenance/maintenance.go
 	go generate pkg/metrics/metrics.go
 	go generate pkg/scaler/scaler.go
+	go generate pkg/validation/validation.go
 
 .PHONY: run
 run: 
 	operator-sdk run --local --watch-namespace ""
+
+.PHONY: lint
+lint:
+	golangci-lint run

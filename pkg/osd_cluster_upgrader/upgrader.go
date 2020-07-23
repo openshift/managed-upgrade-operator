@@ -40,7 +40,6 @@ var (
 	once                   sync.Once
 	steps                  UpgradeSteps
 	osdUpgradeStepOrdering = []upgradev1alpha1.UpgradeConditionType{
-		upgradev1alpha1.UpgradeValidated,
 		upgradev1alpha1.UpgradePreHealthCheck,
 		upgradev1alpha1.UpgradeScaleUpExtraNodes,
 		upgradev1alpha1.ControlPlaneMaintWindow,
@@ -74,7 +73,6 @@ func NewClient(c client.Client, mc metrics.Metrics) (*osdClusterUpgrader, error)
 
 	once.Do(func() {
 		steps = map[upgradev1alpha1.UpgradeConditionType]UpgradeStep{
-			upgradev1alpha1.UpgradeValidated:              ValidateUpgradeConfig,
 			upgradev1alpha1.UpgradePreHealthCheck:         PreClusterHealthCheck,
 			upgradev1alpha1.UpgradeScaleUpExtraNodes:      EnsureExtraUpgradeWorkers,
 			upgradev1alpha1.ControlPlaneMaintWindow:       CreateControlPlaneMaintWindow,
@@ -171,7 +169,7 @@ func CommenceUpgrade(c client.Client, scaler scaler.Scaler, metricsClient metric
 		return true, nil
 	}
 
-	cv, err := getClusterVersion(c)
+	cv, err := GetClusterVersion(c)
 	if err != nil {
 		return false, err
 	}
@@ -411,7 +409,7 @@ func nodesUpgraded(c client.Client, nodeType string, logger logr.Logger) (bool, 
 
 // This check whether control plane is upgraded or not. The ClusterVersion reports when cvo and master nodes are upgraded.
 func ControlPlaneUpgraded(c client.Client, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
-	clusterVersion, err := getClusterVersion(c)
+	clusterVersion, err := GetClusterVersion(c)
 	if err != nil {
 		return false, err
 	}
@@ -599,7 +597,7 @@ func ValidateUpgradeConfig(c client.Client, scaler scaler.Scaler, metricsClient 
 // performValidateUpgradeConfig will validate the UpgradeConfig, the desired version should be grater than or equal to the current version
 func performValidateUpgradeConfig(c client.Client, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (result bool, err error) {
 
-	logger.Info("validating upgradeconfig")
+	logger.Info("Validating upgradeconfig")
 	clusterVersion := &configv1.ClusterVersion{}
 	err = c.Get(context.TODO(), types.NamespacedName{Name: "version"}, clusterVersion)
 	if err != nil {
@@ -611,7 +609,10 @@ func performValidateUpgradeConfig(c client.Client, upgradeConfig *upgradev1alpha
 	//TODO get available version from ocm api like : ocm get "https://api.openshift.com/api/clusters_mgmt/v1/versions" --parameter search="enabled='t'"
 
 	//Get current version, then compare
-	current := getCurrentVersion(clusterVersion)
+	current, err := GetCurrentVersion(clusterVersion)
+	if err != nil {
+		return false, err
+	}
 	logger.Info(fmt.Sprintf("current version is %s", current))
 	if len(current) == 0 {
 		return false, fmt.Errorf("failed to get current version")
@@ -676,13 +677,19 @@ func performValidateUpgradeConfig(c client.Client, upgradeConfig *upgradev1alpha
 	return true, nil
 }
 
-func getCurrentVersion(clusterVersion *configv1.ClusterVersion) string {
+func GetCurrentVersion(clusterVersion *configv1.ClusterVersion) (string, error) {
+	var gotVersion string
 	for _, history := range clusterVersion.Status.History {
 		if history.State == configv1.CompletedUpdate {
-			return history.Version
+			gotVersion = history.Version
 		}
 	}
-	return ""
+
+	if len(gotVersion) == 0 {
+		return gotVersion, fmt.Errorf("Failed to get current version")
+	}
+
+	return gotVersion, nil
 }
 
 func newUpgradeCondition(reason, msg string, conditionType upgradev1alpha1.UpgradeConditionType, s corev1.ConditionStatus) *upgradev1alpha1.UpgradeCondition {
@@ -704,7 +711,7 @@ func isEqualVersion(cv *configv1.ClusterVersion, uc *upgradev1alpha1.UpgradeConf
 	return false
 }
 
-func getClusterVersion(c client.Client) (*configv1.ClusterVersion, error) {
+func GetClusterVersion(c client.Client) (*configv1.ClusterVersion, error) {
 	cvList := &configv1.ClusterVersionList{}
 	err := c.List(context.TODO(), cvList)
 	if err != nil {
@@ -720,7 +727,7 @@ func getClusterVersion(c client.Client) (*configv1.ClusterVersion, error) {
 }
 
 func hasUpgradeCommenced(c client.Client, uc *upgradev1alpha1.UpgradeConfig) (bool, error) {
-	cv, err := getClusterVersion(c)
+	cv, err := GetClusterVersion(c)
 	if err != nil {
 		return false, err
 	}

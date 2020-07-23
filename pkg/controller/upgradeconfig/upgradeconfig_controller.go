@@ -17,10 +17,12 @@ import (
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 	"github.com/openshift/managed-upgrade-operator/pkg/cluster_upgrader_builder"
 	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
+	"github.com/openshift/managed-upgrade-operator/pkg/osd_cluster_upgrader"
+	"github.com/openshift/managed-upgrade-operator/pkg/validation"
 )
 
 var (
-	log           = logf.Log.WithName("controller_upgradeconfig")
+	log = logf.Log.WithName("controller_upgradeconfig")
 )
 
 // Add creates a new UpgradeConfig Controller and adds it to the Manager. The Manager will set fields on the Controller
@@ -36,6 +38,7 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 		scheme:                 mgr.GetScheme(),
 		metricsClientBuilder:   metrics.NewBuilder(),
 		clusterUpgraderBuilder: cluster_upgrader_builder.NewBuilder(),
+		validationBuilder:      validation.NewBuilder(),
 	}
 }
 
@@ -67,6 +70,7 @@ type ReconcileUpgradeConfig struct {
 	scheme                 *runtime.Scheme
 	metricsClientBuilder   metrics.MetricsBuilder
 	clusterUpgraderBuilder cluster_upgrader_builder.ClusterUpgraderBuilder
+	validationBuilder      validation.ValidationBuilder
 }
 
 // Reconcile reads that state of the cluster for a UpgradeConfig object and makes changes based on the state read
@@ -117,19 +121,51 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 	}
 
 	status := history.Phase
-	reqLogger.Info("current cluster status", "status", status)
+
+	reqLogger.Info("Current cluster status", "status", status)
 
 	switch status {
-	case "", upgradev1alpha1.UpgradePhaseNew, upgradev1alpha1.UpgradePhasePending:
-		// TODO verify if it's time to do upgrade, if no, set to "pending", if it's yes, perform upgrade, and set status to "upgrading"
-		reqLogger.Info("checking whether it's ready to do upgrade")
+	case upgradev1alpha1.UpgradePhaseNew, upgradev1alpha1.UpgradePhasePending:
+		reqLogger.Info("Validating UpgradeConfig")
+
+		// Get current ClusterVersion
+		cv, err := osd_cluster_upgrader.GetClusterVersion(r.client)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+
+		// Build a Validator
+		validator, err := r.validationBuilder.NewClient()
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+
+		// Validate UpgradeConfig instance
+		ok, err := validator.IsValidUpgradeConfig(instance, cv, reqLogger)
+		if err != nil {
+			reqLogger.Info("An error occurred while validating UpgradeConfig")
+			metricsClient.UpdateMetricValidationFailed(instance.Name)
+			return reconcile.Result{}, err
+		}
+		// If ok is false, desired version is <= current version.
+		if !ok {
+			reqLogger.Info("Desired version is <= current version. Not proceeding.")
+			metricsClient.UpdateMetricValidationFailed(instance.Name)
+			return reconcile.Result{}, nil
+		}
+		reqLogger.Info("UpgradeConfig validated.")
+		metricsClient.UpdateMetricValidationSucceeded(instance.Name)
+
+		// Check if its time to proceed with upgrade.
+		reqLogger.Info("Checking if cluster can commence upgrade.")
 		ready := isReadyToUpgrade(instance, metricsClient)
 		if ready {
+			// Build a ClusterUpgrader
 			upgrader, err := r.clusterUpgraderBuilder.NewClient(r.client, metricsClient, instance.Spec.Type)
 			if err != nil {
 				return reconcile.Result{}, err
 			}
-			reqLogger.Info("it's ready to start upgrade now", "time", time.Now())
+			reqLogger.Info("Cluster is commencing upgrade.", "time", time.Now())
 			err = upgrader.UpgradeCluster(instance, reqLogger)
 			if err != nil {
 				reqLogger.Error(err, "Failed to upgrade cluster")
@@ -148,19 +184,19 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 		if err != nil {
 			return reconcile.Result{}, err
 		}
-		reqLogger.Info("it's upgrading now")
+		reqLogger.Info("Cluster detected as already upgrading.")
 		err = upgrader.UpgradeCluster(instance, reqLogger)
 		if err != nil {
 			reqLogger.Error(err, "Failed to upgrade cluster")
 		}
 	case upgradev1alpha1.UpgradePhaseUpgraded:
-		reqLogger.Info("cluster is already upgraded")
+		reqLogger.Info("Cluster is already upgraded")
 		return reconcile.Result{}, nil
 	case upgradev1alpha1.UpgradePhaseFailed:
-		reqLogger.Info("the cluster failed the upgrade")
+		reqLogger.Info("The cluster failed the upgrade")
 		return reconcile.Result{}, nil
 	default:
-		reqLogger.Info("unknown status")
+		reqLogger.Info("Unknown status")
 	}
 
 	return reconcile.Result{}, nil
