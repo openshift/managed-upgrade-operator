@@ -190,6 +190,18 @@ func (mr *MockMetricsMockRecorder) UpdateMetricScalingSucceeded(arg0 interface{}
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricScalingSucceeded", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricScalingSucceeded), arg0)
 }
 
+// UpdateMetricUpgradeControlPlaneTimeout mocks base method
+func (m *MockMetrics) UpdateMetricUpgradeControlPlaneTimeout(arg0, arg1 string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "UpdateMetricUpgradeControlPlaneTimeout", arg0, arg1)
+}
+
+// UpdateMetricUpgradeControlPlaneTimeout indicates an expected call of UpdateMetricUpgradeControlPlaneTimeout
+func (mr *MockMetricsMockRecorder) UpdateMetricUpgradeControlPlaneTimeout(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricUpgradeControlPlaneTimeout", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricUpgradeControlPlaneTimeout), arg0, arg1)
+}
+
 // UpdateMetricUpgradeStartTime mocks base method
 func (m *MockMetrics) UpdateMetricUpgradeStartTime(arg0 time.Time, arg1, arg2 string) {
 	m.ctrl.T.Helper()
@@ -224,6 +236,18 @@ func (m *MockMetrics) UpdateMetricUpgradeWindowNotBreached(arg0 string) {
 func (mr *MockMetricsMockRecorder) UpdateMetricUpgradeWindowNotBreached(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricUpgradeWindowNotBreached", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricUpgradeWindowNotBreached), arg0)
+}
+
+// UpdateMetricUpgradeWorkerTimeout mocks base method
+func (m *MockMetrics) UpdateMetricUpgradeWorkerTimeout(arg0, arg1 string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "UpdateMetricUpgradeWorkerTimeout", arg0, arg1)
+}
+
+// UpdateMetricUpgradeWorkerTimeout indicates an expected call of UpdateMetricUpgradeWorkerTimeout
+func (mr *MockMetricsMockRecorder) UpdateMetricUpgradeWorkerTimeout(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricUpgradeWorkerTimeout", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricUpgradeWorkerTimeout), arg0, arg1)
 }
 
 // UpdateMetricValidationFailed mocks base method
