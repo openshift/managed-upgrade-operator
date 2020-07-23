@@ -33,3 +33,7 @@ generate:
 .PHONY: run
 run: 
 	operator-sdk run --local --watch-namespace ""
+
+.PHONY: lint
+lint:
+	golangci-lint run
