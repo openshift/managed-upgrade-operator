@@ -118,8 +118,11 @@ func compareVersions(dV semver.Version, cV semver.Version, logger logr.Logger) b
 		return false
 	case 1:
 		logger.Info(fmt.Sprintf("%s is greater then %s", dV, cV))
+		return true
+	default:
+		logger.Info(fmt.Sprintf("Semver comparison failed for unknown reason"))
+		return false
 	}
-	return true
 
 }
 
