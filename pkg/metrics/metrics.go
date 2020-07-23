@@ -43,7 +43,6 @@ type Metrics interface {
 	IsMetricUpgradeStartTimeSet(upgradeConfigName string, version string) (bool, error)
 	IsMetricControlPlaneEndTimeSet(upgradeConfigName string, version string) (bool, error)
 	IsMetricNodeUpgradeEndTimeSet(upgradeConfigName string, version string) (bool, error)
-	IsSilenceActive() (bool, error)
 	Query(query string) (*AlertResponse, error)
 }
 
@@ -254,19 +253,6 @@ func (c *Counter) IsMetricControlPlaneEndTimeSet(upgradeConfigName string, versi
 
 func (c *Counter) IsMetricNodeUpgradeEndTimeSet(upgradeConfigName string, version string) (bool, error) {
 	cpMetrics, err := c.Query(fmt.Sprintf("%s_node_upgrade_end_timestamp{%s=\"%s\",%s=\"%s\"}", metricsTag, nameLabel, upgradeConfigName, versionLabel, version))
-	if err != nil {
-		return false, err
-	}
-
-	if len(cpMetrics.Data.Result) > 0 {
-		return true, nil
-	}
-
-	return false, nil
-}
-
-func (c *Counter) IsSilenceActive() (bool, error) {
-	cpMetrics, err := c.Query("alertmanager_silences{state=\"active\"}")
 	if err != nil {
 		return false, err
 	}

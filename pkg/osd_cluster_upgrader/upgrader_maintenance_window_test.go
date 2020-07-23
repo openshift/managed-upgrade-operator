@@ -2,6 +2,7 @@ package osd_cluster_upgrader
 
 import (
 	"fmt"
+
 	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"

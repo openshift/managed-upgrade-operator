@@ -199,3 +199,17 @@ func silenceExists(mList *amSilence.GetSilencesOK, comment string) bool {
 
 	return false
 }
+
+func (amm *alertManagerMaintenance) IsActive() (bool, error) {
+	silences, err := amm.client.List([]string{})
+	if err != nil {
+		return false, err
+	}
+
+	for _, s := range silences.Payload {
+		if *s.CreatedBy == config.OperatorName && *s.Status.State == amv2Models.AlertStatusStateActive {
+			return true, nil
+		}
+	}
+	return false, nil
+}

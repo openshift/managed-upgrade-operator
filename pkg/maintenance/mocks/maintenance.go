@@ -47,6 +47,21 @@ func (mr *MockMaintenanceMockRecorder) End() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "End", reflect.TypeOf((*MockMaintenance)(nil).End))
 }
 
+// IsActive mocks base method
+func (m *MockMaintenance) IsActive() (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsActive")
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IsActive indicates an expected call of IsActive
+func (mr *MockMaintenanceMockRecorder) IsActive() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsActive", reflect.TypeOf((*MockMaintenance)(nil).IsActive))
+}
+
 // StartControlPlane mocks base method
 func (m *MockMaintenance) StartControlPlane(arg0 time.Time, arg1 string) error {
 	m.ctrl.T.Helper()

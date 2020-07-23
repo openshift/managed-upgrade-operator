@@ -248,7 +248,7 @@ func AllWorkersUpgraded(c client.Client, scaler scaler.Scaler, metricsClient met
 		return false, err
 	}
 
-	silenceActive, err := metricsClient.IsSilenceActive()
+	silenceActive, err := m.IsActive()
 	if err != nil {
 		return false, err
 	}
