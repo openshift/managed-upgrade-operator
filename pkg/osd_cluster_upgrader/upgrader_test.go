@@ -321,12 +321,6 @@ var _ = Describe("ClusterUpgrader", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(BeTrue())
 		})
-		It("will not re-perform UpgradeConfig validation", func() {
-			expectUpgradeHasCommenced(mockKubeClient, upgradeConfig, nil)
-			result, err := ValidateUpgradeConfig(mockKubeClient, mockScalerClient, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(BeTrue())
-		})
 	})
 
 	Context("When the upgrader can't tell if the cluster's upgrade has commenced", func() {
@@ -348,13 +342,6 @@ var _ = Describe("ClusterUpgrader", func() {
 		It("will abort the commencing of an upgrade", func() {
 			expectUpgradeHasCommenced(mockKubeClient, upgradeConfig, fakeError)
 			result, err := CommenceUpgrade(mockKubeClient, mockScalerClient, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
-			Expect(err).To(HaveOccurred())
-			Expect(err).To(Equal(fakeError))
-			Expect(result).To(BeFalse())
-		})
-		It("will abort the UpgradeConfig validation", func() {
-			expectUpgradeHasCommenced(mockKubeClient, upgradeConfig, fakeError)
-			result, err := ValidateUpgradeConfig(mockKubeClient, mockScalerClient, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(Equal(fakeError))
 			Expect(result).To(BeFalse())

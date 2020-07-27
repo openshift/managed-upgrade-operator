@@ -3,20 +3,14 @@ package osd_cluster_upgrader
 import (
 	"context"
 	"fmt"
-	"net/url"
-	"runtime"
-	"sort"
 	"strings"
 	"sync"
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	"github.com/blang/semver"
 	"github.com/go-logr/logr"
-	"github.com/google/uuid"
 	configv1 "github.com/openshift/api/config/v1"
-	"github.com/openshift/cluster-version-operator/pkg/cincinnati"
 	machineconfigapi "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	operatorv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -569,112 +563,6 @@ func performClusterHealthCheck(c client.Client, metricsClient metrics.Metrics, l
 	}
 	return true, nil
 
-}
-
-// ValidateUpgradeConfig will run the validation steps which defined in performValidateUpgradeConfig
-func ValidateUpgradeConfig(c client.Client, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
-	upgradeCommenced, err := hasUpgradeCommenced(c, upgradeConfig)
-	if err != nil {
-		return false, err
-	}
-	desired := upgradeConfig.Spec.Desired
-	if upgradeCommenced {
-		logger.Info(fmt.Sprintf("ClusterVersion is already set to Channel %s Version %s, skipping %s", desired.Channel, desired.Version, upgradev1alpha1.UpgradeValidated))
-		return true, nil
-	}
-
-	ok, err := performValidateUpgradeConfig(c, upgradeConfig, logger)
-	if err != nil || !ok {
-		metricsClient.UpdateMetricValidationFailed(upgradeConfig.Name)
-		return false, err
-	}
-
-	metricsClient.UpdateMetricValidationSucceeded(upgradeConfig.Name)
-	return true, nil
-}
-
-// TODO move to https://github.com/openshift/managed-cluster-validating-webhooks
-// performValidateUpgradeConfig will validate the UpgradeConfig, the desired version should be grater than or equal to the current version
-func performValidateUpgradeConfig(c client.Client, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (result bool, err error) {
-
-	logger.Info("Validating upgradeconfig")
-	clusterVersion := &configv1.ClusterVersion{}
-	err = c.Get(context.TODO(), types.NamespacedName{Name: "version"}, clusterVersion)
-	if err != nil {
-		logger.Info("failed to get clusterversion")
-		logger.Error(err, "failed to get clusterversion")
-		return false, err
-	}
-
-	//TODO get available version from ocm api like : ocm get "https://api.openshift.com/api/clusters_mgmt/v1/versions" --parameter search="enabled='t'"
-
-	//Get current version, then compare
-	current, err := GetCurrentVersion(clusterVersion)
-	if err != nil {
-		return false, err
-	}
-	logger.Info(fmt.Sprintf("current version is %s", current))
-	if len(current) == 0 {
-		return false, fmt.Errorf("failed to get current version")
-	}
-	// If the version match, it means it's already upgraded or at least control plane is upgraded.
-	if current == upgradeConfig.Spec.Desired.Version {
-		logger.Info("the expected version match current version")
-		return false, fmt.Errorf("cluster is already on version %s", current)
-	}
-
-	// Compare the versions, if the current version is greater than desired, failed the validation, we don't support version rollback
-	versions := []string{current, upgradeConfig.Spec.Desired.Version}
-	logger.Info("compare two versions")
-	sort.Strings(versions)
-	if versions[0] != current {
-		logger.Info(fmt.Sprintf("validation failed, desired version %s is older than current version %s", upgradeConfig.Spec.Desired.Version, current))
-		return false, fmt.Errorf("desired version %s is older than current version %s", upgradeConfig.Spec.Desired.Version, current)
-	}
-
-	// Find the available versions from cincinnati
-	clusterId, err := uuid.Parse(string(clusterVersion.Spec.ClusterID))
-	if err != nil {
-		return false, err
-	}
-	upstreamURI, err := url.Parse(string(clusterVersion.Spec.Upstream))
-	if err != nil {
-		return false, err
-	}
-	currentVersion, err := semver.Parse(current)
-	if err != nil {
-		return false, err
-	}
-
-	updates, err := cincinnati.NewClient(clusterId, nil, nil).GetUpdates(upstreamURI, runtime.GOARCH, upgradeConfig.Spec.Desired.Channel, currentVersion)
-	if err != nil {
-		return false, err
-	}
-
-	var cvoUpdates []configv1.Update
-	for _, update := range updates {
-		cvoUpdates = append(cvoUpdates, configv1.Update{
-			Version: update.Version.String(),
-			Image:   update.Image,
-		})
-	}
-	// Check whether the desired version exists in availableUpdates
-
-	found := false
-	for _, v := range cvoUpdates {
-		if v.Version == upgradeConfig.Spec.Desired.Version && !v.Force {
-			found = true
-		}
-	}
-
-	if !found {
-		logger.Info(fmt.Sprintf("failed to find the desired version %s in channel %s", upgradeConfig.Spec.Desired.Version, upgradeConfig.Spec.Desired.Channel))
-		//We need update the condition
-		errMsg := fmt.Sprintf("cannot find version %s in available updates", upgradeConfig.Spec.Desired.Version)
-		return false, fmt.Errorf(errMsg)
-	}
-
-	return true, nil
 }
 
 func GetCurrentVersion(clusterVersion *configv1.ClusterVersion) (string, error) {
