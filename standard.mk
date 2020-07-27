@@ -89,3 +89,7 @@ env: isclean
 	echo OPERATOR_NAMESPACE=$(OPERATOR_NAMESPACE)
 	echo OPERATOR_VERSION=$(OPERATOR_VERSION)
 	echo OPERATOR_IMAGE_URI=$(OPERATOR_IMAGE_URI)
+
+.PHONY: manifests
+manifests:
+	./hack/generate-local-operator-bundle.sh
