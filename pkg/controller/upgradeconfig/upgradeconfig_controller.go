@@ -236,7 +236,7 @@ func isReadyToUpgrade(upgradeConfig *upgradev1alpha1.UpgradeConfig, metricsClien
 	}
 	upgradeTime, err := time.Parse(time.RFC3339, upgradeConfig.Spec.UpgradeAt)
 	if err != nil {
-		log.Error(err, "Failed to parse spec.upgradeAt", upgradeConfig.Spec.UpgradeAt)
+		log.Error(err, "failed to parse spec.upgradeAt", upgradeConfig.Spec.UpgradeAt)
 		return false
 	}
 	now := time.Now()
@@ -247,7 +247,7 @@ func isReadyToUpgrade(upgradeConfig *upgradev1alpha1.UpgradeConfig, metricsClien
 		}
 		// We are past the maximum allowed time to commence upgrading
 		// TODO Need prior validation of UpgradeConfig at API level to avoid infinite error loop
-		log.Error(nil, "Field spec.upgradeAt cannot have backdated time")
+		log.Error(nil, "field spec.upgradeAt cannot have backdated time")
 		metricsClient.UpdateMetricUpgradeWindowBreached(upgradeConfig.Name)
 	} else {
 		// It hasn't reached the upgrade window yet
