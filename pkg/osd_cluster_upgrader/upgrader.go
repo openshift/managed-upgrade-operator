@@ -102,7 +102,7 @@ type osdClusterUpgrader struct {
 	scaler      scaler.Scaler
 }
 
-// ClusterHealthCheck performs cluster healthy check
+// PreClusterHealthCheck performs cluster healthy check
 func PreClusterHealthCheck(c client.Client, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
 	upgradeCommenced, err := hasUpgradeCommenced(c, upgradeConfig)
 	if err != nil {
@@ -124,7 +124,7 @@ func PreClusterHealthCheck(c client.Client, scaler scaler.Scaler, metricsClient 
 	return true, nil
 }
 
-// This will scale up new workers to ensure customer capacity while upgrading.
+// EnsureExtraUpgradeWorkers will scale up new workers to ensure customer capacity while upgrading.
 func EnsureExtraUpgradeWorkers(c client.Client, s scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
 	upgradeCommenced, err := hasUpgradeCommenced(c, upgradeConfig)
 	if err != nil {
@@ -186,7 +186,7 @@ func CommenceUpgrade(c client.Client, scaler scaler.Scaler, metricsClient metric
 	return true, nil
 }
 
-// Create the maintenance window for control plane
+// CreateControlPlaneMaintWindow creates the maintenance window for control plane
 func CreateControlPlaneMaintWindow(c client.Client, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
 	endTime := time.Now().Add(90 * time.Minute)
 	err := m.StartControlPlane(endTime, upgradeConfig.Spec.Desired.Version)
@@ -197,7 +197,7 @@ func CreateControlPlaneMaintWindow(c client.Client, scaler scaler.Scaler, metric
 	return true, nil
 }
 
-// Remove the maintenance window for control plane
+// RemoveControlPlaneMaintWindow removes the maintenance window for control plane
 func RemoveControlPlaneMaintWindow(c client.Client, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
 	err := m.End()
 	if err != nil {
@@ -207,7 +207,7 @@ func RemoveControlPlaneMaintWindow(c client.Client, scaler scaler.Scaler, metric
 	return true, nil
 }
 
-// Create the maintenance window for workers
+// CreateWorkerMaintWindow creates the maintenance window for workers
 func CreateWorkerMaintWindow(c client.Client, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
 	configPool := &machineconfigapi.MachineConfigPool{}
 	err := c.Get(context.TODO(), types.NamespacedName{Name: "worker"}, configPool)
@@ -233,7 +233,7 @@ func CreateWorkerMaintWindow(c client.Client, scaler scaler.Scaler, metricsClien
 	return true, nil
 }
 
-// This check whether all the worker nodes are ready with new config
+// AllWorkersUpgraded checks whether all the worker nodes are ready with new config
 func AllWorkersUpgraded(c client.Client, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
 	okDrain, errDrain := nodeDrained(c, upgradeConfig, logger)
 	if errDrain != nil {
@@ -275,7 +275,7 @@ func AllWorkersUpgraded(c client.Client, scaler scaler.Scaler, metricsClient met
 	return true, nil
 }
 
-// This will scale down the extra workers added pre upgrade.
+// RemoveExtraScaledNodes will scale down the extra workers added pre upgrade.
 func RemoveExtraScaledNodes(c client.Client, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
 	isScaled, err := scaler.EnsureScaleDownNodes(c, logger)
 	if err != nil {
@@ -286,7 +286,7 @@ func RemoveExtraScaledNodes(c client.Client, scaler scaler.Scaler, metricsClient
 	return isScaled, nil
 }
 
-// This will update the 3rd subscriptions
+// UpgradeSubscriptions will update the subscriptions for the 3rd party components, like logging
 func UpdateSubscriptions(c client.Client, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
 	for _, item := range upgradeConfig.Spec.SubscriptionUpdates {
 		sub := &operatorv1alpha1.Subscription{}
@@ -323,7 +323,7 @@ func PostUpgradeVerification(c client.Client, scaler scaler.Scaler, metricsClien
 	return true, nil
 }
 
-// performPostUpgradeVerification verify all replicasets are at expected counts and all daemonsets are at expected counts
+// performPostUpgradeVerification verifies all replicasets are at expected counts and all daemonsets are at expected counts
 func performUpgradeVerification(c client.Client, logger logr.Logger) (bool, error) {
 	replicaSetList := &appsv1.ReplicaSetList{}
 	err := c.List(context.TODO(), replicaSetList)
@@ -374,7 +374,7 @@ func performUpgradeVerification(c client.Client, logger logr.Logger) (bool, erro
 	return true, nil
 }
 
-// Remove maintenance
+// RemoveMaintWindows removes all the maintenance windows we created during the upgrade
 func RemoveMaintWindow(c client.Client, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
 	err := m.End()
 	if err != nil {
@@ -384,7 +384,7 @@ func RemoveMaintWindow(c client.Client, scaler scaler.Scaler, metricsClient metr
 	return true, nil
 }
 
-// This perform cluster health check after upgrade
+// PostClusterHealthCheck performs cluster health check after upgrade
 func PostClusterHealthCheck(c client.Client, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
 	ok, err := performClusterHealthCheck(c, metricsClient, logger)
 	if err != nil || !ok {
@@ -396,7 +396,7 @@ func PostClusterHealthCheck(c client.Client, scaler scaler.Scaler, metricsClient
 	return true, nil
 }
 
-// Check whether nodes are upgraded or not
+// nodesUpgraded checks whether nodes are upgraded
 func nodesUpgraded(c client.Client, nodeType string, logger logr.Logger) (bool, error) {
 	configPool := &machineconfigapi.MachineConfigPool{}
 	err := c.Get(context.TODO(), types.NamespacedName{Name: nodeType}, configPool)
@@ -413,7 +413,7 @@ func nodesUpgraded(c client.Client, nodeType string, logger logr.Logger) (bool, 
 	return true, nil
 }
 
-// This check whether control plane is upgraded or not. The ClusterVersion reports when cvo and master nodes are upgraded.
+// ControlPlaneUpgraded checks whether control plane is upgraded. The ClusterVersion reports when cvo and master nodes are upgraded.
 func ControlPlaneUpgraded(c client.Client, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
 	clusterVersion, err := GetClusterVersion(c)
 	if err != nil {
@@ -553,6 +553,7 @@ func isEqualVersion(cv *configv1.ClusterVersion, uc *upgradev1alpha1.UpgradeConf
 	return false
 }
 
+// GetClusterVersion gets the existing cluster versions from the CR clusterversion
 func GetClusterVersion(c client.Client) (*configv1.ClusterVersion, error) {
 	cvList := &configv1.ClusterVersionList{}
 	err := c.List(context.TODO(), cvList)
@@ -568,6 +569,7 @@ func GetClusterVersion(c client.Client) (*configv1.ClusterVersion, error) {
 	return nil, errors.NewNotFound(schema.GroupResource{Group: configv1.GroupName, Resource: "ClusterVersion"}, "ClusterVersion")
 }
 
+// hasUpgradeCommenced checks if the upgrade has commenced
 func hasUpgradeCommenced(c client.Client, uc *upgradev1alpha1.UpgradeConfig) (bool, error) {
 	cv, err := GetClusterVersion(c)
 	if err != nil {
@@ -581,6 +583,7 @@ func hasUpgradeCommenced(c client.Client, uc *upgradev1alpha1.UpgradeConfig) (bo
 	return true, nil
 }
 
+// nodeDrained checks if the nodes are being drained successfully during the upgrade
 func nodeDrained(c client.Client, uc *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
 	nodeList := &corev1.NodeList{}
 	errNode := c.List(context.TODO(), nodeList)
@@ -596,7 +599,7 @@ func nodeDrained(c client.Client, uc *upgradev1alpha1.UpgradeConfig, logger logr
 				if n.Effect == "NoSchedule" {
 					drainStarted = *n.TimeAdded
 					if drainStarted.Add(drainTimeout).Before(metav1.Now().Time) {
-						logger.Info("Drain node failed")
+						logger.Info(fmt.Sprintf("The node cannot be drained within %d minutes.", int64(drainTimeout/time.Minute)))
 						return false, nil
 					}
 				}
