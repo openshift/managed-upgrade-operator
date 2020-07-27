@@ -36,4 +36,5 @@ run:
 
 .PHONY: lint
 lint:
+	golangci-lint cache clean
 	golangci-lint run
