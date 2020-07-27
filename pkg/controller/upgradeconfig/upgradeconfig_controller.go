@@ -28,6 +28,11 @@ var (
 	log = logf.Log.WithName("controller_upgradeconfig")
 )
 
+const (
+	// UpgradeGraceWindow is the number of minutes after UpgradeAt time when an upgrade is allowed to commence
+	UpgradeGraceWindow = 60
+)
+
 // Add creates a new UpgradeConfig Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager) error {
@@ -226,7 +231,7 @@ func (r *ReconcileUpgradeConfig) upgradeCluster(upgrader cub.ClusterUpgrader, uc
 // checks whether it's time to upgrade based on the spec.upgradeAt timestamp
 func isReadyToUpgrade(upgradeConfig *upgradev1alpha1.UpgradeConfig, metricsClient metrics.Metrics) bool {
 	if !upgradeConfig.Spec.Proceed {
-		log.Info("upgrade cannot be proceed", "proceed", upgradeConfig.Spec.Proceed)
+		log.Info("Upgrade cannot proceed", "proceed", upgradeConfig.Spec.Proceed)
 		return false
 	}
 	upgradeTime, err := time.Parse(time.RFC3339, upgradeConfig.Spec.UpgradeAt)
@@ -237,14 +242,18 @@ func isReadyToUpgrade(upgradeConfig *upgradev1alpha1.UpgradeConfig, metricsClien
 	now := time.Now()
 	if now.After(upgradeTime) {
 		// Is the current time within the allowable upgrade window
-		if upgradeTime.Add(60 * time.Minute).After(now) {
+		if upgradeTime.Add(UpgradeGraceWindow * time.Minute).After(now) {
 			return true
 		}
 		// We are past the maximum allowed time to commence upgrading
+		// TODO Need prior validation of UpgradeConfig at API level to avoid infinite error loop
+		log.Error(nil, "field spec.upgradeAt cannot have backdated time")
 		metricsClient.UpdateMetricUpgradeWindowBreached(upgradeConfig.Name)
 	} else {
 		// It hasn't reached the upgrade window yet
 		metricsClient.UpdateMetricUpgradeWindowNotBreached(upgradeConfig.Name)
+		pendingTime := upgradeTime.Sub(now)
+		log.Info("Upgrade is scheduled after", "hours", int(pendingTime.Hours()))
 	}
 
 	return false
