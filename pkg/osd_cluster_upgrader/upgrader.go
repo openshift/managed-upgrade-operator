@@ -235,17 +235,28 @@ func CreateWorkerMaintWindow(c client.Client, scaler scaler.Scaler, metricsClien
 
 // This check whether all the worker nodes are ready with new config
 func AllWorkersUpgraded(c client.Client, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
-	ok, err := nodesUpgraded(c, "worker", logger)
-	if err != nil {
-		return false, err
+	okDrain, errDrain := nodeDrained(c, upgradeConfig, logger)
+	if errDrain != nil {
+		return false, errDrain
 	}
 
-	silenceActive, err := m.IsActive()
-	if err != nil {
-		return false, err
+	if !okDrain {
+		logger.Info("Node drain timeout.")
+		metricsClient.UpdateMetricNodeDrainFailed(upgradeConfig.Name)
+		return false, nil
 	}
 
-	if !ok {
+	okUpgrade, errUpgrade := nodesUpgraded(c, "worker", logger)
+	if errUpgrade != nil {
+		return false, errUpgrade
+	}
+
+	silenceActive, errSilence := m.IsActive()
+	if errSilence != nil {
+		return false, errSilence
+	}
+
+	if !okUpgrade {
 		if !silenceActive {
 			logger.Info("Worker upgrade timeout.")
 			metricsClient.UpdateMetricUpgradeWorkerTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
@@ -567,5 +578,30 @@ func hasUpgradeCommenced(c client.Client, uc *upgradev1alpha1.UpgradeConfig) (bo
 		return false, nil
 	}
 
+	return true, nil
+}
+
+func nodeDrained(c client.Client, uc *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
+	nodeList := &corev1.NodeList{}
+	errNode := c.List(context.TODO(), nodeList)
+	if errNode != nil {
+		return false, errNode
+	}
+
+	drainTimeout := time.Duration(uc.Spec.PDBForceDrainTimeout) * time.Minute
+	var drainStarted metav1.Time
+	for _, node := range nodeList.Items {
+		if node.Spec.Unschedulable && len(node.Spec.Taints) > 0 {
+			for _, n := range node.Spec.Taints {
+				if n.Effect == "NoSchedule" {
+					drainStarted = *n.TimeAdded
+					if drainStarted.Add(drainTimeout).Before(metav1.Now().Time) {
+						logger.Info("Drain node failed")
+						return false, nil
+					}
+				}
+			}
+		}
+	}
 	return true, nil
 }
