@@ -81,4 +81,6 @@ tags
 # Output of the go coverage tool
 *.out
 
+# Local manifest creation
 manifests
+LocalRegistryDockerfile
