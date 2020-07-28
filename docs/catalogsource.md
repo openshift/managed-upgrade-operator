@@ -22,8 +22,8 @@ EOF
 ### Build and push Dockerfile
 
 ```bash
-docker build -f ./LocalRegistryDockerfile --tag quay.io/<your_repo>/managed-upgrade-operator-registry:<tag> .
-skopeo copy docker-daemon:quay.io/<your_repo>/managed-upgrade-operator-registry:<tag> docker://quay.io/<your_repo>/managed-upgrade-operator-registry:<tag>
+buildah build-using-dockerfile -f ./LocalRegistryDockerfile --tag quay.io/USER/managed-upgrade-operator-registry:latest .
+podman push IMAGE_ID docker://quay.io/USER/managed-upgrade-operator-registry:latest
 ```
 
 ## Create CatalogSource
