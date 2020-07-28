@@ -256,11 +256,9 @@ func AllWorkersUpgraded(c client.Client, scaler scaler.Scaler, metricsClient met
 		return false, errSilence
 	}
 
-	if !okUpgrade {
-		if !silenceActive {
-			logger.Info("Worker upgrade timeout.")
-			metricsClient.UpdateMetricUpgradeWorkerTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
-		}
+	if !okUpgrade && !silenceActive {
+		logger.Info("Worker upgrade timeout.")
+		metricsClient.UpdateMetricUpgradeWorkerTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
 		return false, nil
 	}
 
