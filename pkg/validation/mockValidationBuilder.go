@@ -6,6 +6,7 @@ package validation
 
 import (
 	gomock "github.com/golang/mock/gomock"
+	validation "github.com/openshift/managed-upgrade-operator/pkg/validation"
 	reflect "reflect"
 )
 
@@ -33,10 +34,10 @@ func (m *MockValidationBuilder) EXPECT() *MockValidationBuilderMockRecorder {
 }
 
 // NewClient mocks base method
-func (m *MockValidationBuilder) NewClient() (Validator, error) {
+func (m *MockValidationBuilder) NewClient() (validation.Validator, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "NewClient")
-	ret0, _ := ret[0].(Validator)
+	ret0, _ := ret[0].(validation.Validator)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
