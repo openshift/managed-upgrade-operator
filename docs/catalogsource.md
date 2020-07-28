@@ -22,8 +22,8 @@ EOF
 ### Build and push Dockerfile
 
 ```bash
-buildah build-using-dockerfile -f ./LocalRegistryDockerfile --tag quay.io/dofinn/managed-upgrade-operator-registry:001test .
-podman push IMAGE_ID docker://quay.io/dofinn/managed-upgrade-operator-registry:001latest
+buildah build-using-dockerfile -f ./LocalRegistryDockerfile --tag quay.io/USER/managed-upgrade-operator-registry:latest .
+podman push IMAGE_ID docker://quay.io/USER/managed-upgrade-operator-registry:latest
 ```
 
 ## Create CatalogSource
