@@ -256,9 +256,11 @@ func AllWorkersUpgraded(c client.Client, scaler scaler.Scaler, metricsClient met
 		return false, errSilence
 	}
 
-	if !okUpgrade && !silenceActive {
-		logger.Info("Worker upgrade timeout.")
-		metricsClient.UpdateMetricUpgradeWorkerTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
+	if !okUpgrade {
+		if !silenceActive {
+			logger.Info("Worker upgrade timeout.")
+			metricsClient.UpdateMetricUpgradeWorkerTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
+		}
 		return false, nil
 	}
 
@@ -589,7 +591,7 @@ func nodeDrained(c client.Client, uc *upgradev1alpha1.UpgradeConfig, logger logr
 		return false, errNode
 	}
 
-	pdbAlertName := "PodDisruptioinBudgetAtTime"
+	pdbAlertName := "PodDisruptionBudgetAtLimit"
 	pdbAlerts, errMetric := metrics.Query(fmt.Sprintf("ALERTS{alertname=\"%s\"}", pdbAlertName))
 	if errMetric != nil {
 		return false, errMetric
