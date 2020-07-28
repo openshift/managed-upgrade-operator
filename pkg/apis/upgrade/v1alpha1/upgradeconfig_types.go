@@ -131,7 +131,7 @@ const (
 
 // UpgradeConfig is the Schema for the upgradeconfigs API
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:path=upgradeconfigs,scope=Cluster,shortName=upgrade
+// +kubebuilder:resource:path=upgradeconfigs,scope=Namespaced,shortName=upgrade
 // +kubebuilder:printcolumn:name="desired_version",type="string",JSONPath=".spec.desired.version"
 // +kubebuilder:printcolumn:name="phase",type="string",JSONPath=".status.history[0].phase"
 // +kubebuilder:printcolumn:name="stage",type="string",JSONPath=".status.history[0].conditions[0].type"
