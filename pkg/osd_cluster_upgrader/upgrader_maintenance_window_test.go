@@ -13,9 +13,11 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
+	mockMachinery "github.com/openshift/managed-upgrade-operator/internal/machinery/mocks"
 	mockMaintenance "github.com/openshift/managed-upgrade-operator/pkg/maintenance/mocks"
 	mockMetrics "github.com/openshift/managed-upgrade-operator/pkg/metrics/mocks"
 	mockScaler "github.com/openshift/managed-upgrade-operator/pkg/scaler/mocks"
+
 	"github.com/openshift/managed-upgrade-operator/util/mocks"
 )
 
@@ -29,6 +31,7 @@ var _ = Describe("ClusterUpgrader maintenance window tests", func() {
 		mockMaintClient   *mockMaintenance.MockMaintenance
 		mockScaler        *mockScaler.MockScaler
 		mockMetricsClient *mockMetrics.MockMetrics
+		mockMachinery     *mockMachinery.MockMachinery
 		config            *osdUpgradeConfig
 	)
 
@@ -62,13 +65,13 @@ var _ = Describe("ClusterUpgrader maintenance window tests", func() {
 	Context("When removing a control plane maintenance window", func() {
 		It("Asks the maintenance client to do so", func() {
 			mockMaintClient.EXPECT().End()
-			result, err := RemoveControlPlaneMaintWindow(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
+			result, err := RemoveControlPlaneMaintWindow(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, mockMachinery, logger)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(BeTrue())
 		})
 		It("Indicates when creating the maintenance window has failed", func() {
 			mockMaintClient.EXPECT().End().Return(fmt.Errorf("fake error"))
-			result, err := RemoveControlPlaneMaintWindow(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
+			result, err := RemoveControlPlaneMaintWindow(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, mockMachinery, logger)
 			Expect(err).To(HaveOccurred())
 			Expect(result).To(BeFalse())
 		})
@@ -77,13 +80,13 @@ var _ = Describe("ClusterUpgrader maintenance window tests", func() {
 	Context("When creating a control plane maintenance window", func() {
 		It("Asks the maintenance client to do so", func() {
 			mockMaintClient.EXPECT().StartControlPlane(gomock.Any(), upgradeConfig.Spec.Desired.Version)
-			result, err := CreateControlPlaneMaintWindow(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
+			result, err := CreateControlPlaneMaintWindow(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, mockMachinery, logger)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(BeTrue())
 		})
 		It("Indicates when creating the maintenance window has failed", func() {
 			mockMaintClient.EXPECT().StartControlPlane(gomock.Any(), upgradeConfig.Spec.Desired.Version).Return(fmt.Errorf("fake error"))
-			result, err := CreateControlPlaneMaintWindow(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
+			result, err := CreateControlPlaneMaintWindow(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, mockMachinery, logger)
 			Expect(err).To(HaveOccurred())
 			Expect(result).To(BeFalse())
 		})
@@ -100,7 +103,7 @@ var _ = Describe("ClusterUpgrader maintenance window tests", func() {
 			configPool.Status.UpdatedMachineCount = 1
 			mockKubeClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Name: "worker"}, gomock.Any()).SetArg(2, *configPool)
 			mockMaintClient.EXPECT().StartWorker(gomock.Any(), upgradeConfig.Spec.Desired.Version)
-			result, err := CreateWorkerMaintWindow(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
+			result, err := CreateWorkerMaintWindow(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, mockMachinery, logger)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(BeTrue())
 		})
@@ -111,14 +114,14 @@ var _ = Describe("ClusterUpgrader maintenance window tests", func() {
 			fakeError := fmt.Errorf("fake error")
 			mockKubeClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Name: "worker"}, gomock.Any()).SetArg(2, *configPool)
 			mockMaintClient.EXPECT().StartWorker(gomock.Any(), upgradeConfig.Spec.Desired.Version).Return(fakeError)
-			result, err := CreateWorkerMaintWindow(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
+			result, err := CreateWorkerMaintWindow(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, mockMachinery, logger)
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(Equal(fakeError))
 			Expect(result).To(BeFalse())
 		})
 		It("Does not proceed if workers can't be fetched", func() {
 			mockKubeClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Name: "worker"}, gomock.Any()).Return(fmt.Errorf("fake error"))
-			result, err := CreateWorkerMaintWindow(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
+			result, err := CreateWorkerMaintWindow(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, mockMachinery, logger)
 			Expect(err).To(HaveOccurred())
 			Expect(result).To(BeFalse())
 		})
@@ -127,7 +130,7 @@ var _ = Describe("ClusterUpgrader maintenance window tests", func() {
 			configPool.Status.MachineCount = 3
 			configPool.Status.UpdatedMachineCount = 3
 			mockKubeClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Name: "worker"}, gomock.Any())
-			result, err := CreateWorkerMaintWindow(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
+			result, err := CreateWorkerMaintWindow(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, mockMachinery, logger)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(BeTrue())
 		})
@@ -136,13 +139,13 @@ var _ = Describe("ClusterUpgrader maintenance window tests", func() {
 	Context("When removing a worker maintenance window", func() {
 		It("Asks the maintenance client to do so", func() {
 			mockMaintClient.EXPECT().End()
-			result, err := RemoveMaintWindow(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
+			result, err := RemoveMaintWindow(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, mockMachinery, logger)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(BeTrue())
 		})
 		It("Indicates when creating the maintenance window has failed", func() {
 			mockMaintClient.EXPECT().End().Return(fmt.Errorf("fake error"))
-			result, err := RemoveMaintWindow(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
+			result, err := RemoveMaintWindow(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, mockMachinery, logger)
 			Expect(err).To(HaveOccurred())
 			Expect(result).To(BeFalse())
 		})

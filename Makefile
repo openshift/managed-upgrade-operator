@@ -31,6 +31,7 @@ generate:
 	go generate pkg/validation/validation.go
 	go generate pkg/configmanager/config.go
 	go generate pkg/scheduler/scheduler.go
+	go generate internal/machinery/machinery.go
 
 .PHONY: run
 run: 
