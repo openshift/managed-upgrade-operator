@@ -7,8 +7,7 @@ OUTPUT_DIR=./manifests/$OPERATOR_NAME
 VERSION=0.1.$GIT_NUM_COMMITS-$GIT_HASH
 
 mkdir -p $OUTPUT_DIR
-./hack/generate-operator-bundle.py $OUTPUT_DIR "" $GIT_NUM_COMMITS $GIT_HASH local
-sed -i -e 's/replace this/quay.io\/app-sre\/$OPERATOR_NAME:latest/g' $OUTPUT_DIR/$VERSION/$OPERATOR_NAME.v$VERSION.clusterserviceversion.yaml
+./hack/generate-operator-bundle.py $OUTPUT_DIR "" $GIT_NUM_COMMITS $GIT_HASH quay.io/app-sre/$OPERATOR_NAME:latest
 
 # create package yaml
 cat <<EOF > $OUTPUT_DIR/$OPERATOR_NAME.package.yaml
