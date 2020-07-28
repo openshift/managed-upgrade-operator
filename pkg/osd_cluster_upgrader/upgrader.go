@@ -235,7 +235,7 @@ func CreateWorkerMaintWindow(c client.Client, scaler scaler.Scaler, metricsClien
 
 // AllWorkersUpgraded checks whether all the worker nodes are ready with new config
 func AllWorkersUpgraded(c client.Client, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
-	okDrain, errDrain := nodeDrained(c, upgradeConfig, logger)
+	okDrain, errDrain := nodeDrained(c, upgradeConfig, logger, metricsClient)
 	if errDrain != nil {
 		return false, errDrain
 	}
@@ -584,22 +584,28 @@ func hasUpgradeCommenced(c client.Client, uc *upgradev1alpha1.UpgradeConfig) (bo
 }
 
 // nodeDrained checks if the nodes are being drained successfully during the upgrade
-func nodeDrained(c client.Client, uc *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
+func nodeDrained(c client.Client, uc *upgradev1alpha1.UpgradeConfig, logger logr.Logger, metrics metrics.Metrics) (bool, error) {
 	nodeList := &corev1.NodeList{}
 	errNode := c.List(context.TODO(), nodeList)
 	if errNode != nil {
 		return false, errNode
 	}
 
-	drainTimeout := time.Duration(uc.Spec.PDBForceDrainTimeout) * time.Minute
+	pdbAlertName := "PodDisruptioinBudgetAtTime"
+	pdbAlerts, errMetric := metrics.Query(fmt.Sprintf("ALERTS{alertname=\"%s\"}", pdbAlertName))
+	if errMetric != nil {
+		return false, errMetric
+	}
+
 	var drainStarted metav1.Time
+	sreNodeDrainTimeout := 45
 	for _, node := range nodeList.Items {
 		if node.Spec.Unschedulable && len(node.Spec.Taints) > 0 {
 			for _, n := range node.Spec.Taints {
-				if n.Effect == "NoSchedule" {
+				if n.Effect == corev1.TaintEffectNoSchedule {
 					drainStarted = *n.TimeAdded
-					if drainStarted.Add(drainTimeout).Before(metav1.Now().Time) {
-						logger.Info(fmt.Sprintf("The node cannot be drained within %d minutes.", int64(drainTimeout/time.Minute)))
+					if drainStarted.Add(time.Duration(sreNodeDrainTimeout)*time.Minute).Before(metav1.Now().Time) && len(pdbAlerts.Data.Result) < 1 {
+						logger.Info(fmt.Sprintf("The node cannot be drained within %d minutes.", int64(sreNodeDrainTimeout)))
 						return false, nil
 					}
 				}
