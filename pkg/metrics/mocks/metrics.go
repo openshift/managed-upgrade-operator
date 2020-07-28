@@ -94,6 +94,30 @@ func (mr *MockMetricsMockRecorder) Query(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Query", reflect.TypeOf((*MockMetrics)(nil).Query), arg0)
 }
 
+// ResetMetricUpgradeControlPlaneTimeout mocks base method
+func (m *MockMetrics) ResetMetricUpgradeControlPlaneTimeout(arg0, arg1 string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "ResetMetricUpgradeControlPlaneTimeout", arg0, arg1)
+}
+
+// ResetMetricUpgradeControlPlaneTimeout indicates an expected call of ResetMetricUpgradeControlPlaneTimeout
+func (mr *MockMetricsMockRecorder) ResetMetricUpgradeControlPlaneTimeout(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResetMetricUpgradeControlPlaneTimeout", reflect.TypeOf((*MockMetrics)(nil).ResetMetricUpgradeControlPlaneTimeout), arg0, arg1)
+}
+
+// ResetMetricUpgradeWorkerTimeout mocks base method
+func (m *MockMetrics) ResetMetricUpgradeWorkerTimeout(arg0, arg1 string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "ResetMetricUpgradeWorkerTimeout", arg0, arg1)
+}
+
+// ResetMetricUpgradeWorkerTimeout indicates an expected call of ResetMetricUpgradeWorkerTimeout
+func (mr *MockMetricsMockRecorder) ResetMetricUpgradeWorkerTimeout(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResetMetricUpgradeWorkerTimeout", reflect.TypeOf((*MockMetrics)(nil).ResetMetricUpgradeWorkerTimeout), arg0, arg1)
+}
+
 // UpdateMetricClusterCheckFailed mocks base method
 func (m *MockMetrics) UpdateMetricClusterCheckFailed(arg0 string) {
 	m.ctrl.T.Helper()
