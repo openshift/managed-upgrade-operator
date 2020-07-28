@@ -23,7 +23,7 @@ func NewBuilder() ValidationBuilder {
 }
 
 // Validator knows how to validate UpgradeConfig CRs.
-//go:generate mockgen -destination=mockValidation.go -package=validation github.com/openshift/managed-upgrade-operator/pkg/validation Validator
+//go:generate mockgen -destination=mocks/mockValidation.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/validation Validator
 type Validator interface {
 	IsValidUpgradeConfig(uC *upgradev1alpha1.UpgradeConfig, cV *configv1.ClusterVersion, logger logr.Logger) (bool, error)
 }
@@ -125,7 +125,7 @@ func compareVersions(dV semver.Version, cV semver.Version, logger logr.Logger) b
 
 }
 
-//go:generate mockgen -destination=mockValidationBuilder.go -package=validation github.com/openshift/managed-upgrade-operator/pkg/validation ValidationBuilder
+//go:generate mockgen -destination=mocks/mockValidationBuilder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/validation ValidationBuilder
 type ValidationBuilder interface {
 	NewClient() (Validator, error)
 }
