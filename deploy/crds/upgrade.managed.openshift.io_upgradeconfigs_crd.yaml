@@ -30,7 +30,7 @@ spec:
     shortNames:
     - upgrade
     singular: upgradeconfig
-  scope: Cluster
+  scope: Namespaced
   subresources:
     status: {}
   validation:
