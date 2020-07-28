@@ -16,7 +16,7 @@ import (
 	machineconfigapi "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 	mockUpgrader "github.com/openshift/managed-upgrade-operator/pkg/cluster_upgrader_builder/mocks"
-	"github.com/openshift/managed-upgrade-operator/pkg/validation"
+	validationMocks "github.com/openshift/managed-upgrade-operator/pkg/validation/mocks"
 	"github.com/openshift/managed-upgrade-operator/util"
 	"github.com/openshift/managed-upgrade-operator/util/mocks"
 	testStructs "github.com/openshift/managed-upgrade-operator/util/mocks/structs"
@@ -44,8 +44,8 @@ var _ = Describe("UpgradeConfigController", func() {
 		mockClusterUpgraderBuilder *mockUpgrader.MockClusterUpgraderBuilder
 		mockClusterUpgrader        *mockUpgrader.MockClusterUpgrader
 		mockCtrl                   *gomock.Controller
-		mockValidationBuilder      *validation.MockValidationBuilder
-		mockValidator              *validation.MockValidator
+		mockValidationBuilder      *validationMocks.MockValidationBuilder
+		mockValidator              *validationMocks.MockValidator
 		testScheme                 *runtime.Scheme
 	)
 
@@ -61,8 +61,8 @@ var _ = Describe("UpgradeConfigController", func() {
 		mockMetricsBuilder = mockMetrics.NewMockMetricsBuilder(mockCtrl)
 		mockClusterUpgraderBuilder = mockUpgrader.NewMockClusterUpgraderBuilder(mockCtrl)
 		mockClusterUpgrader = mockUpgrader.NewMockClusterUpgrader(mockCtrl)
-		mockValidationBuilder = validation.NewMockValidationBuilder(mockCtrl)
-		mockValidator = validation.NewMockValidator(mockCtrl)
+		mockValidationBuilder = validationMocks.NewMockValidationBuilder(mockCtrl)
+		mockValidator = validationMocks.NewMockValidator(mockCtrl)
 		upgradeConfigName = types.NamespacedName{
 			Name:      "test-upgradeconfig",
 			Namespace: "test-namespace",
