@@ -260,6 +260,7 @@ func AllWorkersUpgraded(c client.Client, scaler scaler.Scaler, metricsClient met
 	if !isSet {
 		metricsClient.UpdateMetricNodeUpgradeEndTime(time.Now(), upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
 	}
+	metricsClient.ResetMetricUpgradeWorkerTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
 	return true, nil
 }
 
@@ -433,6 +434,7 @@ func ControlPlaneUpgraded(c client.Client, scaler scaler.Scaler, metricsClient m
 		if !isSet {
 			metricsClient.UpdateMetricControlPlaneEndTime(time.Now(), upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
 		}
+		metricsClient.ResetMetricUpgradeControlPlaneTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
 		return true, nil
 	}
 

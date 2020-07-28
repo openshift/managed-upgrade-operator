@@ -39,7 +39,9 @@ type Metrics interface {
 	UpdateMetricUpgradeWindowNotBreached(string)
 	UpdateMetricUpgradeWindowBreached(string)
 	UpdateMetricUpgradeControlPlaneTimeout(string, string)
+	ResetMetricUpgradeControlPlaneTimeout(string, string)
 	UpdateMetricUpgradeWorkerTimeout(string, string)
+	ResetMetricUpgradeWorkerTimeout(string, string)
 	IsMetricUpgradeStartTimeSet(upgradeConfigName string, version string) (bool, error)
 	IsMetricControlPlaneEndTimeSet(upgradeConfigName string, version string) (bool, error)
 	IsMetricNodeUpgradeEndTimeSet(upgradeConfigName string, version string) (bool, error)
@@ -218,11 +220,25 @@ func (c *Counter) UpdateMetricUpgradeControlPlaneTimeout(upgradeConfigName, vers
 		float64(1))
 }
 
+func (c *Counter) ResetMetricUpgradeControlPlaneTimeout(upgradeConfigName, version string) {
+	metricUpgradeControlPlaneTimeout.With(prometheus.Labels{
+		versionLabel: version,
+		nameLabel:    upgradeConfigName}).Set(
+		float64(0))
+}
+
 func (c *Counter) UpdateMetricUpgradeWorkerTimeout(upgradeConfigName, version string) {
 	metricUpgradeWorkerTimeout.With(prometheus.Labels{
 		versionLabel: version,
 		nameLabel:    upgradeConfigName}).Set(
 		float64(1))
+}
+
+func (c *Counter) ResetMetricUpgradeWorkerTimeout(upgradeConfigName, version string) {
+	metricUpgradeWorkerTimeout.With(prometheus.Labels{
+		versionLabel: version,
+		nameLabel:    upgradeConfigName}).Set(
+		float64(0))
 }
 
 func (c *Counter) IsMetricUpgradeStartTimeSet(upgradeConfigName string, version string) (bool, error) {

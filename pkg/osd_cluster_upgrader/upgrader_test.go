@@ -109,6 +109,7 @@ var _ = Describe("ClusterUpgrader", func() {
 				gomock.InOrder(
 					mockMetricsClient.EXPECT().IsMetricControlPlaneEndTimeSet(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version).Times(1),
 					mockMetricsClient.EXPECT().UpdateMetricControlPlaneEndTime(gomock.Any(), upgradeConfig.Name, upgradeConfig.Spec.Desired.Version).Times(1),
+					mockMetricsClient.EXPECT().ResetMetricUpgradeControlPlaneTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version).Times(1),
 				)
 				result, err := ControlPlaneUpgraded(mockKubeClient, mockScalerClient, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
 				Expect(err).NotTo(HaveOccurred())
@@ -277,6 +278,7 @@ var _ = Describe("ClusterUpgrader", func() {
 					mockMaintClient.EXPECT().IsActive(),
 					mockMetricsClient.EXPECT().IsMetricNodeUpgradeEndTimeSet(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version).Times(1),
 					mockMetricsClient.EXPECT().UpdateMetricNodeUpgradeEndTime(gomock.Any(), upgradeConfig.Name, upgradeConfig.Spec.Desired.Version).Times(1),
+					mockMetricsClient.EXPECT().ResetMetricUpgradeWorkerTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version).Times(1),
 				)
 				result, err := AllWorkersUpgraded(mockKubeClient, mockScalerClient, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
 				Expect(err).NotTo(HaveOccurred())
