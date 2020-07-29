@@ -19,6 +19,7 @@ import (
 
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 	cub "github.com/openshift/managed-upgrade-operator/pkg/cluster_upgrader_builder"
+	"github.com/openshift/managed-upgrade-operator/pkg/configmanager"
 	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
 	"github.com/openshift/managed-upgrade-operator/pkg/osd_cluster_upgrader"
 	"github.com/openshift/managed-upgrade-operator/pkg/validation"
@@ -26,11 +27,6 @@ import (
 
 var (
 	log = logf.Log.WithName("controller_upgradeconfig")
-)
-
-const (
-	// UpgradeGraceWindow is the number of minutes after UpgradeAt time when an upgrade is allowed to commence
-	UpgradeGraceWindow = 60
 )
 
 // Add creates a new UpgradeConfig Controller and adds it to the Manager. The Manager will set fields on the Controller
@@ -47,6 +43,7 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 		metricsClientBuilder:   metrics.NewBuilder(),
 		clusterUpgraderBuilder: cub.NewBuilder(),
 		validationBuilder:      validation.NewBuilder(),
+		configManagerBuilder:   configmanager.NewBuilder(),
 	}
 }
 
@@ -79,6 +76,7 @@ type ReconcileUpgradeConfig struct {
 	metricsClientBuilder   metrics.MetricsBuilder
 	clusterUpgraderBuilder cub.ClusterUpgraderBuilder
 	validationBuilder      validation.ValidationBuilder
+	configManagerBuilder   configmanager.ConfigManagerBuilder
 }
 
 // Reconcile reads that state of the cluster for a UpgradeConfig object and makes changes based on the state read
@@ -164,11 +162,17 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 		reqLogger.Info("UpgradeConfig validated.")
 		metricsClient.UpdateMetricValidationSucceeded(instance.Name)
 
-		// Check if its time to proceed with upgrade.
+		cfm := r.configManagerBuilder.New(r.client, request.Namespace)
+		cfg := &config{}
+		err = cfm.Into(cfg)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+
 		reqLogger.Info("Checking if cluster can commence upgrade.")
-		ready := isReadyToUpgrade(instance, metricsClient)
+		ready := isReadyToUpgrade(instance, metricsClient, cfg.UpgradeWindow.TimeOut)
 		if ready {
-			upgrader, err := r.clusterUpgraderBuilder.NewClient(r.client, metricsClient, instance.Spec.Type)
+			upgrader, err := r.clusterUpgraderBuilder.NewClient(r.client, cfm, metricsClient, instance.Spec.Type)
 			if err != nil {
 				return reconcile.Result{}, err
 			}
@@ -194,7 +198,8 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 		}
 	case upgradev1alpha1.UpgradePhaseUpgrading:
 		reqLogger.Info("Cluster detected as already upgrading.")
-		upgrader, err := r.clusterUpgraderBuilder.NewClient(r.client, metricsClient, instance.Spec.Type)
+		cfm := r.configManagerBuilder.New(r.client, request.Namespace)
+		upgrader, err := r.clusterUpgraderBuilder.NewClient(r.client, cfm, metricsClient, instance.Spec.Type)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -229,7 +234,7 @@ func (r *ReconcileUpgradeConfig) upgradeCluster(upgrader cub.ClusterUpgrader, uc
 }
 
 // checks whether it's time to upgrade based on the spec.upgradeAt timestamp
-func isReadyToUpgrade(upgradeConfig *upgradev1alpha1.UpgradeConfig, metricsClient metrics.Metrics) bool {
+func isReadyToUpgrade(upgradeConfig *upgradev1alpha1.UpgradeConfig, metricsClient metrics.Metrics, timeOut time.Duration) bool {
 	if !upgradeConfig.Spec.Proceed {
 		log.Info("Upgrade cannot proceed", "proceed", upgradeConfig.Spec.Proceed)
 		return false
@@ -242,7 +247,7 @@ func isReadyToUpgrade(upgradeConfig *upgradev1alpha1.UpgradeConfig, metricsClien
 	now := time.Now()
 	if now.After(upgradeTime) {
 		// Is the current time within the allowable upgrade window
-		if upgradeTime.Add(UpgradeGraceWindow * time.Minute).After(now) {
+		if upgradeTime.Add(timeOut * time.Minute).After(now) {
 			return true
 		}
 		// We are past the maximum allowed time to commence upgrading
