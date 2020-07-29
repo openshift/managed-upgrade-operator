@@ -229,6 +229,20 @@ var _ = Describe("UpgradeConfigController", func() {
 							},
 						}
 					})
+					It("The configuration configmap must exist", func() {
+						util.ExpectGetClusterVersion(mockKubeClient, clusterVersionList, nil)
+						mockKubeClient.EXPECT().Get(gomock.Any(), upgradeConfigName, gomock.Any()).SetArg(2, *upgradeConfig).Times(1)
+						mockKubeClient.EXPECT().Status().Return(mockUpdater).Times(3)
+						mockUpdater.EXPECT().Update(gomock.Any(), gomock.Any()).Times(3)
+						mockValidationBuilder.EXPECT().NewClient().Return(mockValidator, nil)
+						mockValidator.EXPECT().IsValidUpgradeConfig(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+						mockMetricsClient.EXPECT().UpdateMetricValidationSucceeded(gomock.Any())
+						mockConfigManagerBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockConfigManager)
+						mockConfigManager.EXPECT().Into(gomock.Any()).Return(fmt.Errorf("config error"))
+						_, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(Equal("config error"))
+					})
 					It("Adds a new Upgrade history to the UpgradeConfig", func() {
 						util.ExpectGetClusterVersion(mockKubeClient, clusterVersionList, nil)
 						mockKubeClient.EXPECT().Get(gomock.Any(), upgradeConfigName, gomock.Any()).SetArg(2, *upgradeConfig).Times(1)
