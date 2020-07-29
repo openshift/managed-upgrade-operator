@@ -15,6 +15,7 @@ import (
 	operatorv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -235,7 +236,7 @@ func CreateWorkerMaintWindow(c client.Client, scaler scaler.Scaler, metricsClien
 
 // AllWorkersUpgraded checks whether all the worker nodes are ready with new config
 func AllWorkersUpgraded(c client.Client, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
-	okDrain, errDrain := nodeDrained(c, upgradeConfig, logger, metricsClient)
+	okDrain, errDrain := nodeDrained(c, upgradeConfig, logger)
 	if errDrain != nil {
 		return false, errDrain
 	}
@@ -584,28 +585,34 @@ func hasUpgradeCommenced(c client.Client, uc *upgradev1alpha1.UpgradeConfig) (bo
 }
 
 // nodeDrained checks if the nodes are being drained successfully during the upgrade
-func nodeDrained(c client.Client, uc *upgradev1alpha1.UpgradeConfig, logger logr.Logger, metrics metrics.Metrics) (bool, error) {
+func nodeDrained(c client.Client, uc *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
+
+	podDisruptionBudgetAtLimit := false
+	pdbList := &policyv1beta1.PodDisruptionBudgetList{}
+	errPDB := c.List(context.TODO(), pdbList)
+	if errPDB != nil {
+		return false, errPDB
+	}
+	for _, pdb := range pdbList.Items {
+		if pdb.Status.DesiredHealthy == pdb.Status.ExpectedPods {
+			podDisruptionBudgetAtLimit = true
+		}
+	}
+
+	var drainStarted metav1.Time
+	sreNodeDrainTimeoutMinute := 45
 	nodeList := &corev1.NodeList{}
 	errNode := c.List(context.TODO(), nodeList)
 	if errNode != nil {
 		return false, errNode
 	}
-
-	pdbAlertName := "PodDisruptionBudgetAtLimit"
-	pdbAlerts, errMetric := metrics.Query(fmt.Sprintf("ALERTS{alertname=\"%s\"}", pdbAlertName))
-	if errMetric != nil {
-		return false, errMetric
-	}
-
-	var drainStarted metav1.Time
-	sreNodeDrainTimeout := 45
 	for _, node := range nodeList.Items {
 		if node.Spec.Unschedulable && len(node.Spec.Taints) > 0 {
 			for _, n := range node.Spec.Taints {
 				if n.Effect == corev1.TaintEffectNoSchedule {
 					drainStarted = *n.TimeAdded
-					if drainStarted.Add(time.Duration(sreNodeDrainTimeout)*time.Minute).Before(metav1.Now().Time) && len(pdbAlerts.Data.Result) < 1 {
-						logger.Info(fmt.Sprintf("The node cannot be drained within %d minutes.", int64(sreNodeDrainTimeout)))
+					if drainStarted.Add(time.Duration(sreNodeDrainTimeoutMinute)*time.Minute).Before(metav1.Now().Time) && !podDisruptionBudgetAtLimit {
+						logger.Info(fmt.Sprintf("The node cannot be drained within %d minutes.", int64(sreNodeDrainTimeoutMinute)))
 						return false, nil
 					}
 				}

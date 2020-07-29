@@ -248,6 +248,7 @@ func (c *Counter) ResetMetricUpgradeWorkerTimeout(upgradeConfigName, version str
 		versionLabel: version,
 		nameLabel:    upgradeConfigName}).Set(
 		float64(0))
+}
 
 func (c *Counter) UpdateMetricNodeDrainFailed(upgradeConfigName string) {
 	metricNodeDrainFailed.With(prometheus.Labels{

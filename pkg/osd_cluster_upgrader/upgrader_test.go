@@ -274,8 +274,7 @@ var _ = Describe("ClusterUpgrader", func() {
 			})
 			It("Indicates that all workers are upgraded", func() {
 				gomock.InOrder(
-					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()),
-					mockMetricsClient.EXPECT().Query(gomock.Any()),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).Times(2),
 					mockKubeClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Name: "worker"}, gomock.Any()).SetArg(2, *configPool).Times(1),
 					mockMaintClient.EXPECT().IsActive(),
 					mockMetricsClient.EXPECT().IsMetricNodeUpgradeEndTimeSet(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version).Times(1),
@@ -296,8 +295,7 @@ var _ = Describe("ClusterUpgrader", func() {
 			})
 			It("Indicates that all workers are not upgraded", func() {
 				gomock.InOrder(
-					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()),
-					mockMetricsClient.EXPECT().Query(gomock.Any()),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).Times(2),
 					mockMaintClient.EXPECT().IsActive(),
 					mockMetricsClient.EXPECT().UpdateMetricUpgradeWorkerTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version).Times(1),
 				)
