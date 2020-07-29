@@ -178,6 +178,18 @@ func (mr *MockMetricsMockRecorder) UpdateMetricControlPlaneEndTime(arg0, arg1, a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricControlPlaneEndTime", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricControlPlaneEndTime), arg0, arg1, arg2)
 }
 
+// UpdateMetricNodeDrainFailed mocks base method
+func (m *MockMetrics) UpdateMetricNodeDrainFailed(arg0 string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "UpdateMetricNodeDrainFailed", arg0)
+}
+
+// UpdateMetricNodeDrainFailed indicates an expected call of UpdateMetricNodeDrainFailed
+func (mr *MockMetricsMockRecorder) UpdateMetricNodeDrainFailed(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricNodeDrainFailed", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricNodeDrainFailed), arg0)
+}
+
 // UpdateMetricNodeUpgradeEndTime mocks base method
 func (m *MockMetrics) UpdateMetricNodeUpgradeEndTime(arg0 time.Time, arg1, arg2 string) {
 	m.ctrl.T.Helper()

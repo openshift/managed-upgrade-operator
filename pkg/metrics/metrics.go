@@ -42,6 +42,7 @@ type Metrics interface {
 	ResetMetricUpgradeControlPlaneTimeout(string, string)
 	UpdateMetricUpgradeWorkerTimeout(string, string)
 	ResetMetricUpgradeWorkerTimeout(string, string)
+	UpdateMetricNodeDrainFailed(string)
 	IsMetricUpgradeStartTimeSet(upgradeConfigName string, version string) (bool, error)
 	IsMetricControlPlaneEndTimeSet(upgradeConfigName string, version string) (bool, error)
 	IsMetricNodeUpgradeEndTimeSet(upgradeConfigName string, version string) (bool, error)
@@ -148,19 +149,27 @@ var (
 		Name:      "worker_timeout",
 		Help:      "Worker nodes upgrade timeout",
 	}, []string{nameLabel, versionLabel})
+	metricNodeDrainFailed = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Subsystem: metricsTag,
+		Name:      "node_drain_timeout",
+		Help:      "Node cannot be drained successfully in time.",
+	}, []string{nameLabel})
 )
 
 func init() {
-	metrics.Registry.MustRegister(metricValidationFailed)
-	metrics.Registry.MustRegister(metricClusterCheckFailed)
-	metrics.Registry.MustRegister(metricScalingFailed)
-	metrics.Registry.MustRegister(metricUpgradeStartTime)
-	metrics.Registry.MustRegister(metricControlPlaneUpgradeEndTime)
-	metrics.Registry.MustRegister(metricNodeUpgradeEndTime)
-	metrics.Registry.MustRegister(metricClusterVerificationFailed)
-	metrics.Registry.MustRegister(metricUpgradeWindowBreached)
-	metrics.Registry.MustRegister(metricUpgradeControlPlaneTimeout)
-	metrics.Registry.MustRegister(metricUpgradeWorkerTimeout)
+	metrics.Registry.MustRegister(
+		metricValidationFailed,
+		metricClusterCheckFailed,
+		metricScalingFailed,
+		metricUpgradeStartTime,
+		metricControlPlaneUpgradeEndTime,
+		metricNodeUpgradeEndTime,
+		metricClusterVerificationFailed,
+		metricUpgradeWindowBreached,
+		metricUpgradeControlPlaneTimeout,
+		metricUpgradeWorkerTimeout,
+		metricNodeDrainFailed,
+	)
 }
 
 func (c *Counter) UpdateMetricValidationFailed(upgradeConfigName string) {
@@ -239,6 +248,12 @@ func (c *Counter) ResetMetricUpgradeWorkerTimeout(upgradeConfigName, version str
 		versionLabel: version,
 		nameLabel:    upgradeConfigName}).Set(
 		float64(0))
+}
+
+func (c *Counter) UpdateMetricNodeDrainFailed(upgradeConfigName string) {
+	metricNodeDrainFailed.With(prometheus.Labels{
+		nameLabel: upgradeConfigName}).Set(
+		float64(1))
 }
 
 func (c *Counter) IsMetricUpgradeStartTimeSet(upgradeConfigName string, version string) (bool, error) {
