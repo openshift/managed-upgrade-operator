@@ -29,6 +29,7 @@ generate:
 	go generate pkg/metrics/metrics.go
 	go generate pkg/scaler/scaler.go
 	go generate pkg/validation/validation.go
+	go generate pkg/configmanager/config.go
 
 .PHONY: run
 run: 
