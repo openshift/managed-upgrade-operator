@@ -234,5 +234,5 @@ func (r *ReconcileUpgradeConfig) upgradeCluster(upgrader cub.ClusterUpgrader, uc
 	err = r.client.Status().Update(context.TODO(), uc)
 	me = multierror.Append(err, me)
 
-	return reconcile.Result{}, me.ErrorOrNil()
+	return reconcile.Result{RequeueAfter: 1 * time.Minute}, me.ErrorOrNil()
 }
