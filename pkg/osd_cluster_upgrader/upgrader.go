@@ -231,6 +231,7 @@ func CreateWorkerMaintWindow(c client.Client, cfg *osdUpgradeConfig, scaler scal
 	maintenanceDurationPerNode := cfg.Maintenance.WorkerNodeTime * time.Minute
 	workerMaintenanceExpectedDuration := time.Duration(pendingWorkerCount) * maintenanceDurationPerNode
 	endTime := time.Now().Add(workerMaintenanceExpectedDuration)
+	logger.Info(fmt.Sprintf("Creating worker node maintenace for %d remaining nodes", pendingWorkerCount))
 	err = m.StartWorker(endTime, upgradeConfig.Spec.Desired.Version)
 	if err != nil {
 		return false, err
