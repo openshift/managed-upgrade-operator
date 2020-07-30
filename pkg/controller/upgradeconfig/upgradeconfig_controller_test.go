@@ -50,6 +50,7 @@ var _ = Describe("UpgradeConfigController", func() {
 		mockScheduler              *schedulerMocks.MockScheduler
 		testScheme                 *runtime.Scheme
 		cfg                        config
+		upgradingReconcileTime     time.Duration
 	)
 
 	BeforeEach(func() {
@@ -79,6 +80,7 @@ var _ = Describe("UpgradeConfigController", func() {
 				TimeOut: 60,
 			},
 		}
+		upgradingReconcileTime = 1 * time.Minute
 	})
 
 	JustBeforeEach(func() {
@@ -293,7 +295,7 @@ var _ = Describe("UpgradeConfigController", func() {
 						result, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
 						Expect(err).NotTo(HaveOccurred())
 						Expect(result.Requeue).To(BeFalse())
-						Expect(result.RequeueAfter).To(BeZero())
+						Expect(result.RequeueAfter).To(Equal(upgradingReconcileTime))
 						Expect(upgradeConfig.Status.History.GetHistory("a version")).To(Not(BeNil()))
 					})
 					It("Invokes the upgrader", func() {
@@ -313,7 +315,7 @@ var _ = Describe("UpgradeConfigController", func() {
 						result, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
 						Expect(err).NotTo(HaveOccurred())
 						Expect(result.Requeue).To(BeFalse())
-						Expect(result.RequeueAfter).To(BeZero())
+						Expect(result.RequeueAfter).To(Equal(upgradingReconcileTime))
 						Expect(upgradeConfig.Status.History.GetHistory("a version").Phase == upgradev1alpha1.UpgradePhaseUpgraded).To(BeTrue())
 						Expect(upgradeConfig.Status.History.GetHistory("a version").Conditions[0].Message == "test passed").To(BeTrue())
 					})
@@ -400,7 +402,7 @@ var _ = Describe("UpgradeConfigController", func() {
 							result, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
 							Expect(err).NotTo(HaveOccurred())
 							Expect(result.Requeue).To(BeFalse())
-							Expect(result.RequeueAfter).To(BeZero())
+							Expect(result.RequeueAfter).To(Equal(upgradingReconcileTime))
 						})
 					})
 
@@ -442,7 +444,7 @@ var _ = Describe("UpgradeConfigController", func() {
 							result, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
 							Expect(err).To(HaveOccurred())
 							Expect(result.Requeue).To(BeFalse())
-							Expect(result.RequeueAfter).To(BeZero())
+							Expect(result.RequeueAfter).To(Equal(upgradingReconcileTime))
 						})
 					})
 				})
@@ -550,7 +552,7 @@ var _ = Describe("UpgradeConfigController", func() {
 						result, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
 						Expect(err).NotTo(HaveOccurred())
 						Expect(result.Requeue).To(BeFalse())
-						Expect(result.RequeueAfter).To(BeZero())
+						Expect(result.RequeueAfter).To(Equal(upgradingReconcileTime))
 					})
 				})
 
@@ -568,7 +570,7 @@ var _ = Describe("UpgradeConfigController", func() {
 						result, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
 						Expect(err).To(HaveOccurred())
 						Expect(result.Requeue).To(BeFalse())
-						Expect(result.RequeueAfter).To(BeZero())
+						Expect(result.RequeueAfter).To(Equal(upgradingReconcileTime))
 					})
 				})
 			})
