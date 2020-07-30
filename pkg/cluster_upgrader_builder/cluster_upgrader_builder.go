@@ -2,6 +2,7 @@ package cluster_upgrader_builder
 
 import (
 	"github.com/go-logr/logr"
+	"github.com/openshift/managed-upgrade-operator/pkg/configmanager"
 	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -17,7 +18,7 @@ type ClusterUpgrader interface {
 
 //go:generate mockgen -destination=mocks/cluster_upgrader_builder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/cluster_upgrader_builder ClusterUpgraderBuilder
 type ClusterUpgraderBuilder interface {
-	NewClient(client.Client, metrics.Metrics, upgradev1alpha1.UpgradeType) (ClusterUpgrader, error)
+	NewClient(client.Client, configmanager.ConfigManager, metrics.Metrics, upgradev1alpha1.UpgradeType) (ClusterUpgrader, error)
 }
 
 func NewBuilder() ClusterUpgraderBuilder {
@@ -26,16 +27,16 @@ func NewBuilder() ClusterUpgraderBuilder {
 
 type clusterUpgraderBuilder struct{}
 
-func (cub *clusterUpgraderBuilder) NewClient(c client.Client, mc metrics.Metrics, upgradeType upgradev1alpha1.UpgradeType) (ClusterUpgrader, error) {
+func (cub *clusterUpgraderBuilder) NewClient(c client.Client, cfm configmanager.ConfigManager, mc metrics.Metrics, upgradeType upgradev1alpha1.UpgradeType) (ClusterUpgrader, error) {
 	switch upgradeType {
 	case upgradev1alpha1.OSD:
-		cu, err := osd_cluster_upgrader.NewClient(c, mc)
+		cu, err := osd_cluster_upgrader.NewClient(c, cfm, mc)
 		if err != nil {
 			return nil, err
 		}
 		return cu, nil
 	default:
-		cu, err := osd_cluster_upgrader.NewClient(c, mc)
+		cu, err := osd_cluster_upgrader.NewClient(c, cfm, mc)
 		if err != nil {
 			return nil, err
 		}

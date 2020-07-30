@@ -87,12 +87,13 @@ $ operator-sdk build quay.io/myuser/managed-upgrade-operator:latest
 podman push quay.io/myuser/managed-upgrade-operator:latest
 ```
 
-* Deploy the service account, clusterrole and clusterrolebinding configurations on your target cluster.
+* Deploy the service account, clusterrole, clusterrolebinding and ConfigMap on your target cluster.
 
 ```bash
 oc create -f deploy/cluster_role.yaml
 oc create -f deploy/role_binding.yaml
 oc create -f deploy/service_account.yaml
+oc create -f deploy/managed-upgrade-operator-config.yaml
 ```
 
 * Edit the `deploy/operator.yaml` file to represent the path to your image, and deploy it:
