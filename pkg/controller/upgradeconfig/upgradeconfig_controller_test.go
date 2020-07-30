@@ -181,6 +181,7 @@ var _ = Describe("UpgradeConfigController", func() {
 						mockMetricsClient.EXPECT().UpdateMetricValidationSucceeded(gomock.Any())
 						mockConfigManager.EXPECT().Into(gomock.Any()).SetArg(0, cfg)
 						mockConfigManagerBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockConfigManager)
+						mockMetricsClient.EXPECT().UpdateMetricUpgradeWindowNotBreached(upgradeConfig.Name).Times(1)
 						mockClusterUpgraderBuilder.EXPECT().NewClient(gomock.Any(), gomock.Any(), gomock.Any(), upgradeConfig.Spec.Type).Return(mockClusterUpgrader, nil)
 						mockClusterUpgrader.EXPECT().UpgradeCluster(gomock.Any(), gomock.Any()).Times(1).Return(upgradev1alpha1.UpgradePhaseUpgrading, &upgradev1alpha1.UpgradeCondition{}, nil)
 						_, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
@@ -253,6 +254,7 @@ var _ = Describe("UpgradeConfigController", func() {
 						mockMetricsClient.EXPECT().UpdateMetricValidationSucceeded(gomock.Any())
 						mockConfigManager.EXPECT().Into(gomock.Any()).SetArg(0, cfg)
 						mockConfigManagerBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockConfigManager)
+						mockMetricsClient.EXPECT().UpdateMetricUpgradeWindowNotBreached(upgradeConfig.Name).Times(1)
 						mockClusterUpgraderBuilder.EXPECT().NewClient(gomock.Any(), gomock.Any(), gomock.Any(), upgradeConfig.Spec.Type).Return(mockClusterUpgrader, nil)
 						mockClusterUpgrader.EXPECT().UpgradeCluster(gomock.Any(), gomock.Any()).Times(1).Return(upgradev1alpha1.UpgradePhaseUpgrading, &upgradev1alpha1.UpgradeCondition{Message: "test passed"}, nil)
 						result, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
@@ -268,6 +270,7 @@ var _ = Describe("UpgradeConfigController", func() {
 						mockUpdater.EXPECT().Update(gomock.Any(), gomock.Any()).Times(3)
 						mockValidationBuilder.EXPECT().NewClient().Return(mockValidator, nil)
 						mockValidator.EXPECT().IsValidUpgradeConfig(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+						mockMetricsClient.EXPECT().UpdateMetricUpgradeWindowNotBreached(upgradeConfig.Name).Times(1)
 						mockMetricsClient.EXPECT().UpdateMetricValidationSucceeded(gomock.Any())
 						mockConfigManager.EXPECT().Into(gomock.Any()).SetArg(0, cfg)
 						mockConfigManagerBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockConfigManager)
@@ -313,6 +316,7 @@ var _ = Describe("UpgradeConfigController", func() {
 								mockKubeClient.EXPECT().Get(gomock.Any(), upgradeConfigName, gomock.Any()).SetArg(2, *upgradeConfig).Times(1),
 								mockConfigManagerBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockConfigManager),
 								mockConfigManager.EXPECT().Into(gomock.Any()).SetArg(0, cfg),
+								mockMetricsClient.EXPECT().UpdateMetricUpgradeWindowNotBreached(upgradeConfig.Name).Times(1),
 								mockClusterUpgraderBuilder.EXPECT().NewClient(gomock.Any(), gomock.Any(), gomock.Any(), upgradeConfig.Spec.Type).Return(nil, fakeError),
 								mockClusterUpgrader.EXPECT().UpgradeCluster(gomock.Any(), gomock.Any()).Times(0),
 								mockValidationBuilder.EXPECT().NewClient().Return(mockValidator, nil),
@@ -349,6 +353,7 @@ var _ = Describe("UpgradeConfigController", func() {
 							mockKubeClient.EXPECT().Status().Return(mockUpdater).Times(3)
 							mockUpdater.EXPECT().Update(gomock.Any(), gomock.Any()).Times(3)
 							mockValidationBuilder.EXPECT().NewClient().Return(mockValidator, nil)
+							mockMetricsClient.EXPECT().UpdateMetricUpgradeWindowNotBreached(upgradeConfig.Name).Times(1)
 							mockValidator.EXPECT().IsValidUpgradeConfig(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
 							mockMetricsClient.EXPECT().UpdateMetricValidationSucceeded(gomock.Any())
 							mockConfigManagerBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockConfigManager)
@@ -389,6 +394,7 @@ var _ = Describe("UpgradeConfigController", func() {
 							mockKubeClient.EXPECT().Status().Return(mockUpdater).Times(3)
 							mockUpdater.EXPECT().Update(gomock.Any(), gomock.Any()).Times(3)
 							mockValidationBuilder.EXPECT().NewClient().Return(mockValidator, nil)
+							mockMetricsClient.EXPECT().UpdateMetricUpgradeWindowNotBreached(upgradeConfig.Name).Times(1)
 							mockValidator.EXPECT().IsValidUpgradeConfig(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
 							mockMetricsClient.EXPECT().UpdateMetricValidationSucceeded(gomock.Any())
 							mockConfigManagerBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockConfigManager)
