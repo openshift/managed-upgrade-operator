@@ -98,4 +98,11 @@ rules:
   - servicemonitors
   verbs:
   - '*'
-
+- apiGroups:
+  - policy
+  resources:
+  - poddisruptionbudgets
+  verbs:
+  - get
+  - list
+  - watch
