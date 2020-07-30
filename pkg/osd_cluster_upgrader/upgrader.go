@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"sync"
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -29,7 +28,6 @@ import (
 )
 
 var (
-	once                   sync.Once
 	steps                  UpgradeSteps
 	osdUpgradeStepOrdering = []upgradev1alpha1.UpgradeConditionType{
 		upgradev1alpha1.UpgradePreHealthCheck,
@@ -69,23 +67,22 @@ func NewClient(c client.Client, cfm configmanager.ConfigManager, mc metrics.Metr
 		return nil, err
 	}
 
-	once.Do(func() {
-		steps = map[upgradev1alpha1.UpgradeConditionType]UpgradeStep{
-			upgradev1alpha1.UpgradePreHealthCheck:         PreClusterHealthCheck,
-			upgradev1alpha1.UpgradeScaleUpExtraNodes:      EnsureExtraUpgradeWorkers,
-			upgradev1alpha1.ControlPlaneMaintWindow:       CreateControlPlaneMaintWindow,
-			upgradev1alpha1.CommenceUpgrade:               CommenceUpgrade,
-			upgradev1alpha1.ControlPlaneUpgraded:          ControlPlaneUpgraded,
-			upgradev1alpha1.RemoveControlPlaneMaintWindow: RemoveControlPlaneMaintWindow,
-			upgradev1alpha1.WorkersMaintWindow:            CreateWorkerMaintWindow,
-			upgradev1alpha1.AllWorkerNodesUpgraded:        AllWorkersUpgraded,
-			upgradev1alpha1.RemoveExtraScaledNodes:        RemoveExtraScaledNodes,
-			upgradev1alpha1.UpdateSubscriptions:           UpdateSubscriptions,
-			upgradev1alpha1.PostUpgradeVerification:       PostUpgradeVerification,
-			upgradev1alpha1.RemoveMaintWindow:             RemoveMaintWindow,
-			upgradev1alpha1.PostClusterHealthCheck:        PostClusterHealthCheck,
-		}
-	})
+	steps = map[upgradev1alpha1.UpgradeConditionType]UpgradeStep{
+		upgradev1alpha1.UpgradePreHealthCheck:         PreClusterHealthCheck,
+		upgradev1alpha1.UpgradeScaleUpExtraNodes:      EnsureExtraUpgradeWorkers,
+		upgradev1alpha1.ControlPlaneMaintWindow:       CreateControlPlaneMaintWindow,
+		upgradev1alpha1.CommenceUpgrade:               CommenceUpgrade,
+		upgradev1alpha1.ControlPlaneUpgraded:          ControlPlaneUpgraded,
+		upgradev1alpha1.RemoveControlPlaneMaintWindow: RemoveControlPlaneMaintWindow,
+		upgradev1alpha1.WorkersMaintWindow:            CreateWorkerMaintWindow,
+		upgradev1alpha1.AllWorkerNodesUpgraded:        AllWorkersUpgraded,
+		upgradev1alpha1.RemoveExtraScaledNodes:        RemoveExtraScaledNodes,
+		upgradev1alpha1.UpdateSubscriptions:           UpdateSubscriptions,
+		upgradev1alpha1.PostUpgradeVerification:       PostUpgradeVerification,
+		upgradev1alpha1.RemoveMaintWindow:             RemoveMaintWindow,
+		upgradev1alpha1.PostClusterHealthCheck:        PostClusterHealthCheck,
+	}
+
 	return &osdClusterUpgrader{
 		Steps:       steps,
 		Ordering:    osdUpgradeStepOrdering,
