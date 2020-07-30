@@ -431,10 +431,12 @@ func ControlPlaneUpgraded(c client.Client, cfg *osdUpgradeConfig, scaler scaler.
 	var upgradeStartTime metav1.Time
 	var controlPlaneCompleteTime *metav1.Time
 	for _, c := range clusterVersion.Status.History {
-		if c.State == configv1.CompletedUpdate && c.Version == upgradeConfig.Spec.Desired.Version {
-			isCompleted = true
+		if c.Version == upgradeConfig.Spec.Desired.Version {
 			upgradeStartTime = c.StartedTime
-			controlPlaneCompleteTime = c.CompletionTime
+			if c.State == configv1.CompletedUpdate {
+				isCompleted = true
+				controlPlaneCompleteTime = c.CompletionTime
+			}
 		}
 	}
 

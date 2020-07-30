@@ -3,6 +3,8 @@ package osd_cluster_upgrader
 import (
 	"context"
 	"fmt"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
@@ -106,7 +108,7 @@ var _ = Describe("ClusterUpgrader", func() {
 							Status: configv1.ClusterVersionStatus{
 								History: []configv1.UpdateHistory{
 									{State: configv1.CompletedUpdate, Version: "something"},
-									{State: configv1.CompletedUpdate, Version: upgradeConfig.Spec.Desired.Version},
+									{State: configv1.CompletedUpdate, Version: upgradeConfig.Spec.Desired.Version, StartedTime: metav1.Time{Time: time.Now()}},
 									{State: configv1.CompletedUpdate, Version: "something else"},
 								},
 							},
@@ -144,6 +146,33 @@ var _ = Describe("ClusterUpgrader", func() {
 				}
 			})
 			It("Flags the control plane as NOT upgraded", func() {
+				util.ExpectGetClusterVersion(mockKubeClient, clusterVersionList, nil)
+				gomock.InOrder(
+					mockMetricsClient.EXPECT().UpdateMetricUpgradeControlPlaneTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version).Times(1),
+				)
+				result, err := ControlPlaneUpgraded(mockKubeClient, config, mockScalerClient, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(BeFalse())
+			})
+		})
+
+		Context("When the control plane hasn't upgraded within the window", func() {
+			var clusterVersionList *configv1.ClusterVersionList
+			upgradeStartTime := time.Now().Add(-300 * time.Minute)
+			BeforeEach(func() {
+				clusterVersionList = &configv1.ClusterVersionList{
+					Items: []configv1.ClusterVersion{
+						{
+							Status: configv1.ClusterVersionStatus{
+								History: []configv1.UpdateHistory{
+									{State: configv1.PartialUpdate, Version: upgradeConfig.Spec.Desired.Version, StartedTime: metav1.Time{Time: upgradeStartTime}},
+								},
+							},
+						},
+					},
+				}
+			})
+			It("Sets the appropriate metric", func() {
 				util.ExpectGetClusterVersion(mockKubeClient, clusterVersionList, nil)
 				gomock.InOrder(
 					mockMetricsClient.EXPECT().UpdateMetricUpgradeControlPlaneTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version).Times(1),
