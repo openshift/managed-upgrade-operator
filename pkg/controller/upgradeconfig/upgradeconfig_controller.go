@@ -22,6 +22,7 @@ import (
 	"github.com/openshift/managed-upgrade-operator/pkg/configmanager"
 	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
 	"github.com/openshift/managed-upgrade-operator/pkg/osd_cluster_upgrader"
+	"github.com/openshift/managed-upgrade-operator/pkg/scheduler"
 	"github.com/openshift/managed-upgrade-operator/pkg/validation"
 )
 
@@ -44,6 +45,7 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 		clusterUpgraderBuilder: cub.NewBuilder(),
 		validationBuilder:      validation.NewBuilder(),
 		configManagerBuilder:   configmanager.NewBuilder(),
+		scheduler:              scheduler.NewScheduler(),
 	}
 }
 
@@ -77,6 +79,7 @@ type ReconcileUpgradeConfig struct {
 	clusterUpgraderBuilder cub.ClusterUpgraderBuilder
 	validationBuilder      validation.ValidationBuilder
 	configManagerBuilder   configmanager.ConfigManagerBuilder
+	scheduler              scheduler.Scheduler
 }
 
 // Reconcile reads that state of the cluster for a UpgradeConfig object and makes changes based on the state read
@@ -170,7 +173,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 		}
 
 		reqLogger.Info("Checking if cluster can commence upgrade.")
-		ready := isReadyToUpgrade(instance, metricsClient, cfg.UpgradeWindow.TimeOut)
+		ready := r.scheduler.IsReadyToUpgrade(instance, metricsClient, cfg.UpgradeWindow.TimeOut)
 		if ready {
 			upgrader, err := r.clusterUpgraderBuilder.NewClient(r.client, cfm, metricsClient, instance.Spec.Type)
 			if err != nil {
@@ -189,10 +192,11 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 			reqLogger.Info("Cluster is commencing upgrade.", "time", now)
 			return r.upgradeCluster(upgrader, instance, reqLogger)
 		} else {
-			err := r.updateStatusPending(reqLogger, instance)
+			history.Phase = upgradev1alpha1.UpgradePhasePending
+			instance.Status.History.SetHistory(history)
+			err = r.client.Status().Update(context.TODO(), instance)
 			if err != nil {
-				// TODO updateStatusPending implements nothing so far so below logged message to be changed when implemented
-				reqLogger.Info("Failed to set pending status for upgrade!")
+				return reconcile.Result{}, err
 			}
 			return reconcile.Result{}, nil
 		}
@@ -231,36 +235,4 @@ func (r *ReconcileUpgradeConfig) upgradeCluster(upgrader cub.ClusterUpgrader, uc
 	me = multierror.Append(err, me)
 
 	return reconcile.Result{}, me.ErrorOrNil()
-}
-
-// checks whether it's time to upgrade based on the spec.upgradeAt timestamp
-func isReadyToUpgrade(upgradeConfig *upgradev1alpha1.UpgradeConfig, metricsClient metrics.Metrics, timeOut time.Duration) bool {
-	if !upgradeConfig.Spec.Proceed {
-		log.Info("Upgrade cannot proceed", "proceed", upgradeConfig.Spec.Proceed)
-		return false
-	}
-	upgradeTime, err := time.Parse(time.RFC3339, upgradeConfig.Spec.UpgradeAt)
-	if err != nil {
-		log.Error(err, "failed to parse spec.upgradeAt", upgradeConfig.Spec.UpgradeAt)
-		return false
-	}
-	now := time.Now()
-	if now.After(upgradeTime) {
-		// Is the current time within the allowable upgrade window
-		if upgradeTime.Add(timeOut * time.Minute).After(now) {
-			metricsClient.UpdateMetricUpgradeWindowNotBreached(upgradeConfig.Name)
-			return true
-		}
-		// We are past the maximum allowed time to commence upgrading
-		// TODO Need prior validation of UpgradeConfig at API level to avoid infinite error loop
-		log.Error(nil, "field spec.upgradeAt cannot have backdated time")
-		metricsClient.UpdateMetricUpgradeWindowBreached(upgradeConfig.Name)
-	} else {
-		// It hasn't reached the upgrade window yet
-		metricsClient.UpdateMetricUpgradeWindowNotBreached(upgradeConfig.Name)
-		pendingTime := upgradeTime.Sub(now)
-		log.Info("Upgrade is scheduled after", "hours", int(pendingTime.Hours()))
-	}
-
-	return false
 }

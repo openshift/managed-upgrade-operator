@@ -30,6 +30,7 @@ generate:
 	go generate pkg/scaler/scaler.go
 	go generate pkg/validation/validation.go
 	go generate pkg/configmanager/config.go
+	go generate pkg/scheduler/scheduler.go
 
 .PHONY: run
 run: 

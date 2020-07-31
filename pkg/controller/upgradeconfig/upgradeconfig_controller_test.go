@@ -2,10 +2,7 @@ package upgradeconfig
 
 import (
 	"fmt"
-	"testing"
 	"time"
-
-	mockMetrics "github.com/openshift/managed-upgrade-operator/pkg/metrics/mocks"
 
 	"github.com/golang/mock/gomock"
 	"github.com/hashicorp/go-multierror"
@@ -14,20 +11,21 @@ import (
 	routev1 "github.com/openshift/api/route/v1"
 	machineapi "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
 	machineconfigapi "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
-	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
-	mockUpgrader "github.com/openshift/managed-upgrade-operator/pkg/cluster_upgrader_builder/mocks"
-	configMocks "github.com/openshift/managed-upgrade-operator/pkg/configmanager/mocks"
-	validationMocks "github.com/openshift/managed-upgrade-operator/pkg/validation/mocks"
-	"github.com/openshift/managed-upgrade-operator/util"
-	"github.com/openshift/managed-upgrade-operator/util/mocks"
-	testStructs "github.com/openshift/managed-upgrade-operator/util/mocks/structs"
-
-	k8serrs "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
+	mockUpgrader "github.com/openshift/managed-upgrade-operator/pkg/cluster_upgrader_builder/mocks"
+	configMocks "github.com/openshift/managed-upgrade-operator/pkg/configmanager/mocks"
+	mockMetrics "github.com/openshift/managed-upgrade-operator/pkg/metrics/mocks"
+	schedulerMocks "github.com/openshift/managed-upgrade-operator/pkg/scheduler/mocks"
+	validationMocks "github.com/openshift/managed-upgrade-operator/pkg/validation/mocks"
+	"github.com/openshift/managed-upgrade-operator/util"
+	"github.com/openshift/managed-upgrade-operator/util/mocks"
+	testStructs "github.com/openshift/managed-upgrade-operator/util/mocks/structs"
+	k8serrs "k8s.io/apimachinery/pkg/api/errors"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -49,6 +47,7 @@ var _ = Describe("UpgradeConfigController", func() {
 		mockValidator              *validationMocks.MockValidator
 		mockConfigManagerBuilder   *configMocks.MockConfigManagerBuilder
 		mockConfigManager          *configMocks.MockConfigManager
+		mockScheduler              *schedulerMocks.MockScheduler
 		testScheme                 *runtime.Scheme
 		cfg                        config
 	)
@@ -69,6 +68,7 @@ var _ = Describe("UpgradeConfigController", func() {
 		mockConfigManagerBuilder = configMocks.NewMockConfigManagerBuilder(mockCtrl)
 		mockConfigManager = configMocks.NewMockConfigManager(mockCtrl)
 		mockValidator = validationMocks.NewMockValidator(mockCtrl)
+		mockScheduler = schedulerMocks.NewMockScheduler(mockCtrl)
 		upgradeConfigName = types.NamespacedName{
 			Name:      "test-upgradeconfig",
 			Namespace: "test-namespace",
@@ -89,6 +89,7 @@ var _ = Describe("UpgradeConfigController", func() {
 			mockClusterUpgraderBuilder,
 			mockValidationBuilder,
 			mockConfigManagerBuilder,
+			mockScheduler,
 		}
 	})
 
@@ -179,6 +180,7 @@ var _ = Describe("UpgradeConfigController", func() {
 						mockValidationBuilder.EXPECT().NewClient().Return(mockValidator, nil)
 						mockValidator.EXPECT().IsValidUpgradeConfig(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
 						mockMetricsClient.EXPECT().UpdateMetricValidationSucceeded(gomock.Any())
+						mockScheduler.EXPECT().IsReadyToUpgrade(gomock.Any(), gomock.Any(), gomock.Any()).Return(true)
 						mockConfigManager.EXPECT().Into(gomock.Any()).SetArg(0, cfg)
 						mockConfigManagerBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockConfigManager)
 						mockMetricsClient.EXPECT().UpdateMetricUpgradeWindowNotBreached(upgradeConfig.Name).Times(1)
@@ -205,12 +207,42 @@ var _ = Describe("UpgradeConfigController", func() {
 			})
 
 			Context("When the upgrade phase is New", func() {
+				var clusterVersionList *configv1.ClusterVersionList
 				BeforeEach(func() {
 					upgradeConfig.Status.History[0].Phase = upgradev1alpha1.UpgradePhaseNew
+					clusterVersionList = &configv1.ClusterVersionList{
+						Items: []configv1.ClusterVersion{
+							{
+								Status: configv1.ClusterVersionStatus{
+									History: []configv1.UpdateHistory{
+										{State: configv1.CompletedUpdate, Version: "something"},
+										{State: configv1.CompletedUpdate, Version: upgradeConfig.Spec.Desired.Version},
+										{State: configv1.CompletedUpdate, Version: "something else"},
+									},
+								},
+							},
+						},
+					}
 				})
 
 				Context("When the cluster is not ready to upgrade", func() {
-					// TODO: This is never true at the moment - no readiness check implemented
+					It("should set status to pending", func() {
+						matcher := testStructs.NewUpgradeConfigMatcher()
+						util.ExpectGetClusterVersion(mockKubeClient, clusterVersionList, nil)
+
+						mockKubeClient.EXPECT().Get(gomock.Any(), upgradeConfigName, gomock.Any()).SetArg(2, *upgradeConfig).Times(1)
+						mockKubeClient.EXPECT().Status().Return(mockUpdater).Times(3)
+						mockUpdater.EXPECT().Update(gomock.Any(), matcher).Times(3)
+						mockValidationBuilder.EXPECT().NewClient().Return(mockValidator, nil)
+						mockValidator.EXPECT().IsValidUpgradeConfig(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+						mockMetricsClient.EXPECT().UpdateMetricValidationSucceeded(gomock.Any())
+						mockScheduler.EXPECT().IsReadyToUpgrade(gomock.Any(), gomock.Any(), gomock.Any()).Return(false)
+						mockConfigManager.EXPECT().Into(gomock.Any()).SetArg(0, cfg)
+						mockConfigManagerBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockConfigManager)
+						_, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
+						Expect(err).NotTo(HaveOccurred())
+						Expect(upgradeConfig.Status.History.GetHistory("a version").Phase == upgradev1alpha1.UpgradePhasePending).To(BeTrue())
+					})
 				})
 
 				Context("When the cluster is ready to upgrade", func() {
@@ -252,6 +284,7 @@ var _ = Describe("UpgradeConfigController", func() {
 						mockValidationBuilder.EXPECT().NewClient().Return(mockValidator, nil)
 						mockValidator.EXPECT().IsValidUpgradeConfig(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
 						mockMetricsClient.EXPECT().UpdateMetricValidationSucceeded(gomock.Any())
+						mockScheduler.EXPECT().IsReadyToUpgrade(gomock.Any(), gomock.Any(), gomock.Any()).Return(true)
 						mockConfigManager.EXPECT().Into(gomock.Any()).SetArg(0, cfg)
 						mockConfigManagerBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockConfigManager)
 						mockMetricsClient.EXPECT().UpdateMetricUpgradeWindowNotBreached(upgradeConfig.Name).Times(1)
@@ -272,6 +305,7 @@ var _ = Describe("UpgradeConfigController", func() {
 						mockValidator.EXPECT().IsValidUpgradeConfig(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
 						mockMetricsClient.EXPECT().UpdateMetricUpgradeWindowNotBreached(upgradeConfig.Name).Times(1)
 						mockMetricsClient.EXPECT().UpdateMetricValidationSucceeded(gomock.Any())
+						mockScheduler.EXPECT().IsReadyToUpgrade(gomock.Any(), gomock.Any(), gomock.Any()).Return(true)
 						mockConfigManager.EXPECT().Into(gomock.Any()).SetArg(0, cfg)
 						mockConfigManagerBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockConfigManager)
 						mockClusterUpgraderBuilder.EXPECT().NewClient(gomock.Any(), gomock.Any(), gomock.Any(), upgradeConfig.Spec.Type).Return(mockClusterUpgrader, nil)
@@ -309,19 +343,19 @@ var _ = Describe("UpgradeConfigController", func() {
 								},
 							}
 						})
-						var fakeError = fmt.Errorf("a maintenance builder error")
+						var fakeError = fmt.Errorf("an upgrader builder error")
 						It("does not proceed with upgrading the cluster", func() {
 							util.ExpectGetClusterVersion(mockKubeClient, clusterVersionList, nil)
 							gomock.InOrder(
 								mockKubeClient.EXPECT().Get(gomock.Any(), upgradeConfigName, gomock.Any()).SetArg(2, *upgradeConfig).Times(1),
 								mockConfigManagerBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockConfigManager),
 								mockConfigManager.EXPECT().Into(gomock.Any()).SetArg(0, cfg),
-								mockMetricsClient.EXPECT().UpdateMetricUpgradeWindowNotBreached(upgradeConfig.Name).Times(1),
 								mockClusterUpgraderBuilder.EXPECT().NewClient(gomock.Any(), gomock.Any(), gomock.Any(), upgradeConfig.Spec.Type).Return(nil, fakeError),
 								mockClusterUpgrader.EXPECT().UpgradeCluster(gomock.Any(), gomock.Any()).Times(0),
 								mockValidationBuilder.EXPECT().NewClient().Return(mockValidator, nil),
 								mockValidator.EXPECT().IsValidUpgradeConfig(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil),
 								mockMetricsClient.EXPECT().UpdateMetricValidationSucceeded(gomock.Any()),
+								mockScheduler.EXPECT().IsReadyToUpgrade(gomock.Any(), gomock.Any(), gomock.Any()).Return(true),
 							)
 							result, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
 							Expect(err).To(Equal(fakeError))
@@ -356,6 +390,7 @@ var _ = Describe("UpgradeConfigController", func() {
 							mockMetricsClient.EXPECT().UpdateMetricUpgradeWindowNotBreached(upgradeConfig.Name).Times(1)
 							mockValidator.EXPECT().IsValidUpgradeConfig(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
 							mockMetricsClient.EXPECT().UpdateMetricValidationSucceeded(gomock.Any())
+							mockScheduler.EXPECT().IsReadyToUpgrade(gomock.Any(), gomock.Any(), gomock.Any()).Return(true)
 							mockConfigManagerBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockConfigManager)
 							mockConfigManager.EXPECT().Into(gomock.Any()).SetArg(0, cfg)
 							mockClusterUpgraderBuilder.EXPECT().NewClient(gomock.Any(), gomock.Any(), gomock.Any(), upgradeConfig.Spec.Type).Return(mockClusterUpgrader, nil)
@@ -397,6 +432,7 @@ var _ = Describe("UpgradeConfigController", func() {
 							mockMetricsClient.EXPECT().UpdateMetricUpgradeWindowNotBreached(upgradeConfig.Name).Times(1)
 							mockValidator.EXPECT().IsValidUpgradeConfig(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
 							mockMetricsClient.EXPECT().UpdateMetricValidationSucceeded(gomock.Any())
+							mockScheduler.EXPECT().IsReadyToUpgrade(gomock.Any(), gomock.Any(), gomock.Any()).Return(true)
 							mockConfigManagerBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockConfigManager)
 							mockConfigManager.EXPECT().Into(gomock.Any()).SetArg(0, cfg)
 							mockClusterUpgraderBuilder.EXPECT().NewClient(gomock.Any(), gomock.Any(), gomock.Any(), upgradeConfig.Spec.Type).Return(mockClusterUpgrader, nil)
@@ -410,77 +446,73 @@ var _ = Describe("UpgradeConfigController", func() {
 						})
 					})
 				})
+			})
 
-				Context("When the current time is before the upgrade window", func() {
-					var clusterVersionList *configv1.ClusterVersionList
-					BeforeEach(func() {
-						upgradeConfig.Spec.UpgradeAt = time.Now().Add(80 * time.Minute).Format(time.RFC3339)
-						clusterVersionList = &configv1.ClusterVersionList{
-							Items: []configv1.ClusterVersion{
-								{
-									Status: configv1.ClusterVersionStatus{
-										History: []configv1.UpdateHistory{
-											{State: configv1.CompletedUpdate, Version: "something"},
-											{State: configv1.CompletedUpdate, Version: upgradeConfig.Spec.Desired.Version},
-											{State: configv1.CompletedUpdate, Version: "something else"},
-										},
+			Context("When the current time is before the upgrade window", func() {
+				var clusterVersionList *configv1.ClusterVersionList
+				BeforeEach(func() {
+					upgradeConfig.Spec.UpgradeAt = time.Now().Add(80 * time.Minute).Format(time.RFC3339)
+					clusterVersionList = &configv1.ClusterVersionList{
+						Items: []configv1.ClusterVersion{
+							{
+								Status: configv1.ClusterVersionStatus{
+									History: []configv1.UpdateHistory{
+										{State: configv1.CompletedUpdate, Version: "something"},
+										{State: configv1.CompletedUpdate, Version: upgradeConfig.Spec.Desired.Version},
+										{State: configv1.CompletedUpdate, Version: "something else"},
 									},
 								},
 							},
-						}
-					})
-					It("does nothing", func() {
-						util.ExpectGetClusterVersion(mockKubeClient, clusterVersionList, nil)
-						gomock.InOrder(
-							mockKubeClient.EXPECT().Get(gomock.Any(), upgradeConfigName, gomock.Any()).SetArg(2, *upgradeConfig).Times(1),
-							mockValidationBuilder.EXPECT().NewClient().Return(mockValidator, nil),
-							mockValidator.EXPECT().IsValidUpgradeConfig(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil),
-							mockMetricsClient.EXPECT().UpdateMetricValidationSucceeded(gomock.Any()),
-							mockConfigManagerBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockConfigManager),
-							mockConfigManager.EXPECT().Into(gomock.Any()).SetArg(0, cfg),
-							mockMetricsClient.EXPECT().UpdateMetricUpgradeWindowNotBreached(upgradeConfig.Name).Times(1),
-						)
-						result, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
-						Expect(err).NotTo(HaveOccurred())
-						Expect(result.Requeue).To(BeFalse())
-						Expect(result.RequeueAfter).To(BeZero())
-					})
+						},
+					}
 				})
+				It("does nothing", func() {
+					util.ExpectGetClusterVersion(mockKubeClient, clusterVersionList, nil)
+					gomock.InOrder(
+						mockKubeClient.EXPECT().Get(gomock.Any(), upgradeConfigName, gomock.Any()).SetArg(2, *upgradeConfig).Times(1),
+						mockValidationBuilder.EXPECT().NewClient().Return(mockValidator, nil),
+						mockValidator.EXPECT().IsValidUpgradeConfig(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil),
+						mockMetricsClient.EXPECT().UpdateMetricValidationSucceeded(gomock.Any()),
+						mockMetricsClient.EXPECT().UpdateMetricUpgradeWindowNotBreached(upgradeConfig.Name).Times(1),
+					)
+					result, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
+					Expect(err).NotTo(HaveOccurred())
+					Expect(result.Requeue).To(BeFalse())
+					Expect(result.RequeueAfter).To(BeZero())
+				})
+			})
 
-				Context("When the current time is after the upgrade window", func() {
-					var clusterVersionList *configv1.ClusterVersionList
-					BeforeEach(func() {
-						upgradeConfig.Spec.UpgradeAt = time.Now().Add(-80 * time.Minute).Format(time.RFC3339)
-						clusterVersionList = &configv1.ClusterVersionList{
-							Items: []configv1.ClusterVersion{
-								{
-									Status: configv1.ClusterVersionStatus{
-										History: []configv1.UpdateHistory{
-											{State: configv1.CompletedUpdate, Version: "something"},
-											{State: configv1.CompletedUpdate, Version: upgradeConfig.Spec.Desired.Version},
-											{State: configv1.CompletedUpdate, Version: "something else"},
-										},
+			Context("When the current time is after the upgrade window", func() {
+				var clusterVersionList *configv1.ClusterVersionList
+				BeforeEach(func() {
+					upgradeConfig.Spec.UpgradeAt = time.Now().Add(-80 * time.Minute).Format(time.RFC3339)
+					clusterVersionList = &configv1.ClusterVersionList{
+						Items: []configv1.ClusterVersion{
+							{
+								Status: configv1.ClusterVersionStatus{
+									History: []configv1.UpdateHistory{
+										{State: configv1.CompletedUpdate, Version: "something"},
+										{State: configv1.CompletedUpdate, Version: upgradeConfig.Spec.Desired.Version},
+										{State: configv1.CompletedUpdate, Version: "something else"},
 									},
 								},
 							},
-						}
-					})
-					It("raises an appropriate alert", func() {
-						util.ExpectGetClusterVersion(mockKubeClient, clusterVersionList, nil)
-						gomock.InOrder(
-							mockKubeClient.EXPECT().Get(gomock.Any(), upgradeConfigName, gomock.Any()).SetArg(2, *upgradeConfig).Times(1),
-							mockValidationBuilder.EXPECT().NewClient().Return(mockValidator, nil),
-							mockValidator.EXPECT().IsValidUpgradeConfig(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil),
-							mockMetricsClient.EXPECT().UpdateMetricValidationSucceeded(gomock.Any()),
-							mockConfigManagerBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockConfigManager),
-							mockConfigManager.EXPECT().Into(gomock.Any()).SetArg(0, cfg),
-							mockMetricsClient.EXPECT().UpdateMetricUpgradeWindowBreached(upgradeConfig.Name),
-						)
-						result, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
-						Expect(err).NotTo(HaveOccurred())
-						Expect(result.Requeue).To(BeFalse())
-						Expect(result.RequeueAfter).To(BeZero())
-					})
+						},
+					}
+				})
+				It("raises an appropriate alert", func() {
+					util.ExpectGetClusterVersion(mockKubeClient, clusterVersionList, nil)
+					gomock.InOrder(
+						mockKubeClient.EXPECT().Get(gomock.Any(), upgradeConfigName, gomock.Any()).SetArg(2, *upgradeConfig).Times(1),
+						mockValidationBuilder.EXPECT().NewClient().Return(mockValidator, nil),
+						mockValidator.EXPECT().IsValidUpgradeConfig(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil),
+						mockMetricsClient.EXPECT().UpdateMetricValidationSucceeded(gomock.Any()),
+						mockMetricsClient.EXPECT().UpdateMetricUpgradeWindowBreached(upgradeConfig.Name),
+					)
+					result, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
+					Expect(err).NotTo(HaveOccurred())
+					Expect(result.Requeue).To(BeFalse())
+					Expect(result.RequeueAfter).To(BeZero())
 				})
 			})
 
@@ -595,57 +627,4 @@ func buildScheme() (*runtime.Scheme, error) {
 	schemeErrors = multierror.Append(schemeErrors, machineconfigapi.Install(testScheme))
 	schemeErrors = multierror.Append(schemeErrors, upgradev1alpha1.SchemeBuilder.AddToScheme(testScheme))
 	return testScheme, schemeErrors.ErrorOrNil()
-}
-
-func TestIsReadyToUpgrade(t *testing.T) {
-
-	tests := []struct {
-		name          string
-		upgradeConfig *upgradev1alpha1.UpgradeConfig
-		metricsClient *mockMetrics.MockMetrics
-		result        bool
-	}{
-		{
-			name:          "it should be ready to upgrade if upgradeAt is 10 mins before now",
-			upgradeConfig: testUpgradeConfig(true, time.Now().Add(-10*time.Minute).Format(time.RFC3339)),
-			metricsClient: mockMetrics.NewMockMetrics(gomock.NewController(t)),
-			result:        true,
-		},
-		{
-			name:          "it should be not ready to upgrade if upgradeAt is 80 mins before now",
-			upgradeConfig: testUpgradeConfig(true, time.Now().Add(80*time.Minute).Format(time.RFC3339)),
-			metricsClient: mockMetrics.NewMockMetrics(gomock.NewController(t)),
-			result:        false,
-		},
-		{
-			name:          "it should not be ready to upgrade if proceed is set to false",
-			upgradeConfig: testUpgradeConfig(false, time.Now().Format(time.RFC3339)),
-			metricsClient: mockMetrics.NewMockMetrics(gomock.NewController(t)),
-			result:        false,
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			test.metricsClient.EXPECT().UpdateMetricUpgradeWindowNotBreached(gomock.Any()).AnyTimes()
-			test.metricsClient.EXPECT().UpdateMetricUpgradeWindowBreached(gomock.Any()).AnyTimes()
-			result := isReadyToUpgrade(test.upgradeConfig, test.metricsClient, 60*time.Minute)
-			if result != test.result {
-				t.Fail()
-			}
-
-		})
-	}
-
-}
-
-func testUpgradeConfig(proceed bool, upgradeAt string) *upgradev1alpha1.UpgradeConfig {
-	return &upgradev1alpha1.UpgradeConfig{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "upgradeconfig-example",
-		},
-		Spec: upgradev1alpha1.UpgradeConfigSpec{
-			Proceed:   proceed,
-			UpgradeAt: upgradeAt,
-		},
-	}
 }

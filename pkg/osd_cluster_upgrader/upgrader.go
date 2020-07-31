@@ -142,7 +142,7 @@ func EnsureExtraUpgradeWorkers(c client.Client, cfg *osdUpgradeConfig, s scaler.
 		return true, nil
 	}
 
-	isScaled, err := s.EnsureScaleUpNodes(c, cfg.Scale.TimeOut, logger)
+	isScaled, err := s.EnsureScaleUpNodes(c, cfg.Scale.TimeOut*time.Minute, logger)
 	if err != nil {
 		if scaler.IsScaleTimeOutError(err) {
 			metricsClient.UpdateMetricScalingFailed(upgradeConfig.Name)
@@ -242,7 +242,7 @@ func CreateWorkerMaintWindow(c client.Client, cfg *osdUpgradeConfig, scaler scal
 
 // AllWorkersUpgraded checks whether all the worker nodes are ready with new config
 func AllWorkersUpgraded(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
-	okDrain, errDrain := nodeDrained(c, cfg.NodeDrain.TimeOut, upgradeConfig, logger)
+	okDrain, errDrain := nodeDrained(c, cfg.NodeDrain.TimeOut*time.Minute, upgradeConfig, logger)
 	if errDrain != nil {
 		return false, errDrain
 	}
@@ -618,7 +618,7 @@ func nodeDrained(c client.Client, drainTimeOut time.Duration, uc *upgradev1alpha
 			for _, n := range node.Spec.Taints {
 				if n.Effect == corev1.TaintEffectNoSchedule {
 					drainStarted = *n.TimeAdded
-					if drainStarted.Add(time.Duration(drainTimeOut)*time.Minute).Before(metav1.Now().Time) && !podDisruptionBudgetAtLimit {
+					if drainStarted.Add(drainTimeOut).Before(metav1.Now().Time) && !podDisruptionBudgetAtLimit {
 						logger.Info(fmt.Sprintf("The node cannot be drained within %d minutes.", int64(drainTimeOut)))
 						return false, nil
 					}
