@@ -492,7 +492,7 @@ func (cu osdClusterUpgrader) UpgradeCluster(upgradeConfig *upgradev1alpha1.Upgra
 // * critical alerts
 // * degraded operators (if there are critical alerts only)
 func performClusterHealthCheck(c client.Client, metricsClient metrics.Metrics, logger logr.Logger) (bool, error) {
-	alerts, err := metricsClient.Query("ALERTS{alertstate=\"firing\",severity=\"critical\",namespace=~\"^openshift.*|^kube.*|^default$\",namespace!=\"openshift-customer-monitoring\",alertname!=\"ClusterUpgradingSRE\",alertname!=\"DNSErrors05MinSRE\",alertname!=\"MetricsClientSendFailingSRE\"}")
+	alerts, err := metricsClient.Query("ALERTS{alertstate=\"firing\",severity=\"critical\",namespace=~\"^openshift.*|^kube.*|^default$\",namespace!=\"openshift-customer-monitoring\",alertname!=\"ClusterUpgradingSRE\",alertname!=\"DNSErrors05MinSRE\",alertname!=\"MetricsClientSendFailingSRE\",alertname!=\"UpgradeNodeScalingFailedSRE\"}")
 	if err != nil {
 		return false, fmt.Errorf("Unable to query critical alerts: %s", err)
 	}
