@@ -32,7 +32,7 @@ func (s *scheduler) IsReadyToUpgrade(upgradeConfig *upgradev1alpha1.UpgradeConfi
 	now := time.Now()
 	if now.After(upgradeTime) {
 		// Is the current time within the allowable upgrade window
-		if upgradeTime.Add(timeOut * time.Minute).After(now) {
+		if upgradeTime.Add(timeOut).After(now) {
 			return true
 		}
 		// We are past the maximum allowed time to commence upgrading
