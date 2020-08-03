@@ -42,7 +42,7 @@ func (s *scheduler) IsReadyToUpgrade(upgradeConfig *upgradev1alpha1.UpgradeConfi
 		// It hasn't reached the upgrade window yet
 		metricsClient.UpdateMetricUpgradeWindowNotBreached(upgradeConfig.Name)
 		pendingTime := upgradeTime.Sub(now)
-		log.Info("Upgrade is scheduled after", "hours", int(pendingTime.Hours()))
+		log.Infof("Upgrade is scheduled in %d hours %d mins", int(pendingTime.Hours()), int(pendingTime.Minutes()))
 	}
 
 	return false
