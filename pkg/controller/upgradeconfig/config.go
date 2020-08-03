@@ -10,7 +10,7 @@ type config struct {
 }
 
 type upgradeWindow struct {
-	TimeOut time.Duration `yaml:"timeOut"`
+	TimeOut int `yaml:"timeOut"`
 }
 
 func (cfg *config) IsValid() error {
@@ -19,4 +19,8 @@ func (cfg *config) IsValid() error {
 	}
 
 	return nil
+}
+
+func (cfg *config) GetUpgradeWindowTimeOutDuration() time.Duration {
+	return time.Duration(cfg.UpgradeWindow.TimeOut) * time.Minute
 }

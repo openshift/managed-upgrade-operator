@@ -173,7 +173,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 		}
 
 		reqLogger.Info("Checking if cluster can commence upgrade.")
-		ready := r.scheduler.IsReadyToUpgrade(instance, metricsClient, cfg.UpgradeWindow.TimeOut)
+		ready := r.scheduler.IsReadyToUpgrade(instance, metricsClient, cfg.GetUpgradeWindowTimeOutDuration())
 		if ready {
 			upgrader, err := r.clusterUpgraderBuilder.NewClient(r.client, cfm, metricsClient, instance.Spec.Type)
 			if err != nil {

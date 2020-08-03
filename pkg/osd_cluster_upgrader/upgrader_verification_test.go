@@ -9,6 +9,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"strings"
 
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 	mockMaintenance "github.com/openshift/managed-upgrade-operator/pkg/maintenance/mocks"
@@ -188,6 +189,22 @@ var _ = Describe("ClusterUpgrader verification and health tests", func() {
 			JustBeforeEach(func() {
 				alertsResponse = &metrics.AlertResponse{}
 				operatorList = &configv1.ClusterOperatorList{}
+			})
+			It("will have ignored some critical alerts", func() {
+				expectUpgradeHasNotCommenced(mockKubeClient, upgradeConfig, nil)
+				mockMetricsClient.EXPECT().Query(gomock.Any()).Times(1).DoAndReturn(
+					func(query string) (*metrics.AlertResponse, error) {
+						Expect(strings.Contains(query, "alertname!=\"ClusterUpgradingSRE\"")).To(BeTrue())
+						Expect(strings.Contains(query, "alertname!=\"DNSErrors05MinSRE\"")).To(BeTrue())
+						Expect(strings.Contains(query, "alertname!=\"MetricsClientSendFailingSRE\"")).To(BeTrue())
+						Expect(strings.Contains(query, "alertname!=\"UpgradeNodeScalingFailedSRE\"")).To(BeTrue())
+						return &metrics.AlertResponse{}, nil
+					})
+				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, *operatorList).Times(1)
+				mockMetricsClient.EXPECT().UpdateMetricClusterCheckSucceeded(upgradeConfig.Name).Times(1)
+				result, err := PreClusterHealthCheck(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(result).To(BeTrue())
 			})
 			It("will satisfy a pre-Upgrade health check", func() {
 				expectUpgradeHasNotCommenced(mockKubeClient, upgradeConfig, nil)

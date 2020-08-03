@@ -12,16 +12,16 @@ type osdUpgradeConfig struct {
 }
 
 type maintenanceConfig struct {
-	ControlPlaneTime time.Duration `yaml:"controlPlaneTime"`
-	WorkerNodeTime   time.Duration `yaml:"workerNodeTime"`
+	ControlPlaneTime int `yaml:"controlPlaneTime"`
+	WorkerNodeTime   int `yaml:"workerNodeTime"`
 }
 
 type scaleConfig struct {
-	TimeOut time.Duration `yaml:"timeOut"`
+	TimeOut int `yaml:"timeOut"`
 }
 
 type nodeDrain struct {
-	TimeOut time.Duration `yaml:"timeOut"`
+	TimeOut int `yaml:"timeOut"`
 }
 
 func (cfg *osdUpgradeConfig) IsValid() error {
@@ -39,4 +39,20 @@ func (cfg *osdUpgradeConfig) IsValid() error {
 	}
 
 	return nil
+}
+
+func (cfg *osdUpgradeConfig) GetControlPlaneDuration() time.Duration {
+	return time.Duration(cfg.Maintenance.ControlPlaneTime) * time.Minute
+}
+
+func (cfg *osdUpgradeConfig) GetWorkerNodeDuration() time.Duration {
+	return time.Duration(cfg.Maintenance.WorkerNodeTime) * time.Minute
+}
+
+func (cfg *osdUpgradeConfig) GetScaleDuration() time.Duration {
+	return time.Duration(cfg.Scale.TimeOut) * time.Minute
+}
+
+func (cfg *osdUpgradeConfig) GetNodeDrainDuration() time.Duration {
+	return time.Duration(cfg.NodeDrain.TimeOut) * time.Minute
 }

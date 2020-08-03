@@ -142,7 +142,7 @@ func EnsureExtraUpgradeWorkers(c client.Client, cfg *osdUpgradeConfig, s scaler.
 		return true, nil
 	}
 
-	isScaled, err := s.EnsureScaleUpNodes(c, cfg.Scale.TimeOut*time.Minute, logger)
+	isScaled, err := s.EnsureScaleUpNodes(c, cfg.GetScaleDuration(), logger)
 	if err != nil {
 		if scaler.IsScaleTimeOutError(err) {
 			metricsClient.UpdateMetricScalingFailed(upgradeConfig.Name)
@@ -194,7 +194,7 @@ func CommenceUpgrade(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scale
 
 // CreateControlPlaneMaintWindow creates the maintenance window for control plane
 func CreateControlPlaneMaintWindow(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
-	endTime := time.Now().Add(cfg.Maintenance.ControlPlaneTime * time.Minute)
+	endTime := time.Now().Add(cfg.GetControlPlaneDuration())
 	err := m.StartControlPlane(endTime, upgradeConfig.Spec.Desired.Version)
 	if err != nil {
 		return false, err
@@ -228,7 +228,7 @@ func CreateWorkerMaintWindow(c client.Client, cfg *osdUpgradeConfig, scaler scal
 		return true, nil
 	}
 
-	maintenanceDurationPerNode := cfg.Maintenance.WorkerNodeTime * time.Minute
+	maintenanceDurationPerNode := cfg.GetWorkerNodeDuration()
 	workerMaintenanceExpectedDuration := time.Duration(pendingWorkerCount) * maintenanceDurationPerNode
 	endTime := time.Now().Add(workerMaintenanceExpectedDuration)
 	logger.Info(fmt.Sprintf("Creating worker node maintenace for %d remaining nodes", pendingWorkerCount))
@@ -242,7 +242,7 @@ func CreateWorkerMaintWindow(c client.Client, cfg *osdUpgradeConfig, scaler scal
 
 // AllWorkersUpgraded checks whether all the worker nodes are ready with new config
 func AllWorkersUpgraded(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
-	okDrain, errDrain := nodeDrained(c, cfg.NodeDrain.TimeOut*time.Minute, upgradeConfig, logger)
+	okDrain, errDrain := nodeDrained(c, cfg.GetNodeDrainDuration(), upgradeConfig, logger)
 	if errDrain != nil {
 		return false, errDrain
 	}
@@ -440,7 +440,7 @@ func ControlPlaneUpgraded(c client.Client, cfg *osdUpgradeConfig, scaler scaler.
 		}
 	}
 
-	upgradeTimeout := cfg.Maintenance.ControlPlaneTime * time.Minute
+	upgradeTimeout := cfg.GetControlPlaneDuration()
 	if !upgradeStartTime.IsZero() && controlPlaneCompleteTime == nil && time.Now().After(upgradeStartTime.Add(upgradeTimeout)) {
 		logger.Info("Control plane upgrade timeout")
 		metricsClient.UpdateMetricUpgradeControlPlaneTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
@@ -492,7 +492,7 @@ func (cu osdClusterUpgrader) UpgradeCluster(upgradeConfig *upgradev1alpha1.Upgra
 // * critical alerts
 // * degraded operators (if there are critical alerts only)
 func performClusterHealthCheck(c client.Client, metricsClient metrics.Metrics, logger logr.Logger) (bool, error) {
-	alerts, err := metricsClient.Query("ALERTS{alertstate=\"firing\",severity=\"critical\",namespace=~\"^openshift.*|^kube.*|^default$\",namespace!=\"openshift-customer-monitoring\",alertname!=\"ClusterUpgradingSRE\",alertname!=\"DNSErrors05MinSRE\",alertname!=\"MetricsClientSendFailingSRE\"}")
+	alerts, err := metricsClient.Query("ALERTS{alertstate=\"firing\",severity=\"critical\",namespace=~\"^openshift.*|^kube.*|^default$\",namespace!=\"openshift-customer-monitoring\",alertname!=\"ClusterUpgradingSRE\",alertname!=\"DNSErrors05MinSRE\",alertname!=\"MetricsClientSendFailingSRE\",alertname!=\"UpgradeNodeScalingFailedSRE\"}")
 	if err != nil {
 		return false, fmt.Errorf("Unable to query critical alerts: %s", err)
 	}
