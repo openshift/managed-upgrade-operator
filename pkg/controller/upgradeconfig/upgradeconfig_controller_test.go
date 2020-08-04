@@ -83,6 +83,10 @@ var _ = Describe("UpgradeConfigController", func() {
 		upgradingReconcileTime = 1 * time.Minute
 	})
 
+	AfterEach(func() {
+		mockCtrl.Finish()
+	})
+
 	JustBeforeEach(func() {
 		reconciler = &ReconcileUpgradeConfig{
 			mockKubeClient,
