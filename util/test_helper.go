@@ -7,7 +7,7 @@ import (
 )
 
 func ExpectGetClusterVersion(m *mocks.MockClient, cv *configv1.ClusterVersionList, withErr error) {
-	cvList := m.EXPECT().List(gomock.Any(), gomock.Any()).Times(1)
+	cvList := m.EXPECT().List(gomock.Any(), gomock.Any())
 	if cv != nil {
 		cvList.SetArg(1, *cv)
 	}

@@ -52,6 +52,10 @@ var _ = Describe("Alert Manager Maintenance Client", func() {
 		mockKubeClient = mocks.NewMockClient(mockCtrl)
 	})
 
+	AfterEach(func() {
+		mockCtrl.Finish()
+	})
+
 	// Starting a Control Plane Silence
 	Context("Creating a Control Plane silence", func() {
 		It("Should not error on successfull maintenance start", func() {

@@ -215,7 +215,7 @@ func CreateWorkerMaintWindow(c client.Client, cfg *osdUpgradeConfig, scaler scal
 	configPool := &machineconfigapi.MachineConfigPool{}
 	err := c.Get(context.TODO(), types.NamespacedName{Name: "worker"}, configPool)
 	if err != nil {
-		return false, nil
+		return false, err
 	}
 
 	// Depending on how long the Control Plane takes all workers may be already upgraded.

@@ -36,6 +36,10 @@ var _ = Describe("Node scaling tests", func() {
 		logger = logf.Log.WithName("cluster upgrader test logger")
 	})
 
+	AfterEach(func() {
+		mockCtrl.Finish()
+	})
+
 	Context("When the upgrade is scaling out workers", func() {
 		var upgradeMachinesets *machineapi.MachineSetList
 		var originalMachineSets *machineapi.MachineSetList
@@ -45,7 +49,7 @@ var _ = Describe("Node scaling tests", func() {
 				fakeError := fmt.Errorf("fake error")
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
 					client.InNamespace("openshift-machine-api"), client.MatchingLabels{LABEL_UPGRADE: "true"},
-				}).Times(1).Return(fakeError)
+				}).Return(fakeError)
 				result, err := scaler.EnsureScaleUpNodes(mockKubeClient, testDuration, logger)
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(Equal(fakeError))
@@ -58,10 +62,10 @@ var _ = Describe("Node scaling tests", func() {
 				gomock.InOrder(
 					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
 						client.InNamespace("openshift-machine-api"), client.MatchingLabels{LABEL_UPGRADE: "true"},
-					}).Times(1),
+					}),
 					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
 						client.InNamespace("openshift-machine-api"), client.MatchingLabels{"hive.openshift.io/machine-pool": "worker"},
-					}).Times(1).Return(fakeError),
+					}).Return(fakeError),
 				)
 				result, err := scaler.EnsureScaleUpNodes(mockKubeClient, testDuration, logger)
 				Expect(err).To(HaveOccurred())
@@ -75,10 +79,10 @@ var _ = Describe("Node scaling tests", func() {
 				gomock.InOrder(
 					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
 						client.InNamespace("openshift-machine-api"), client.MatchingLabels{LABEL_UPGRADE: "true"},
-					}).Times(1),
+					}),
 					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
 						client.InNamespace("openshift-machine-api"), client.MatchingLabels{"hive.openshift.io/machine-pool": "worker"},
-					}).SetArg(1, *originalMachineSets).Times(1),
+					}).SetArg(1, *originalMachineSets),
 				)
 				result, err := scaler.EnsureScaleUpNodes(mockKubeClient, testDuration, logger)
 				Expect(err).To(HaveOccurred())
@@ -117,12 +121,12 @@ var _ = Describe("Node scaling tests", func() {
 				gomock.InOrder(
 					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
 						client.InNamespace("openshift-machine-api"), client.MatchingLabels{LABEL_UPGRADE: "true"},
-					}).SetArg(1, *upgradeMachinesets).Times(1),
+					}).SetArg(1, *upgradeMachinesets),
 					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
 						client.InNamespace("openshift-machine-api"), client.MatchingLabels{"hive.openshift.io/machine-pool": "worker"},
-					}).SetArg(1, *originalMachineSets).Times(1),
+					}).SetArg(1, *originalMachineSets),
 				)
-				mockKubeClient.EXPECT().Create(gomock.Any(), gomock.Any()).Times(1).DoAndReturn(
+				mockKubeClient.EXPECT().Create(gomock.Any(), gomock.Any()).DoAndReturn(
 					func(ctx context.Context, ms *machineapi.MachineSet) error {
 						Expect(ms.Name).To(Equal(originalMachineSets.Items[0].Name + "-upgrade"))
 						Expect(ms.Namespace).To(Equal(originalMachineSets.Items[0].Namespace))
@@ -141,12 +145,12 @@ var _ = Describe("Node scaling tests", func() {
 				gomock.InOrder(
 					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
 						client.InNamespace("openshift-machine-api"), client.MatchingLabels{LABEL_UPGRADE: "true"},
-					}).SetArg(1, *upgradeMachinesets).Times(1),
+					}).SetArg(1, *upgradeMachinesets),
 					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
 						client.InNamespace("openshift-machine-api"), client.MatchingLabels{"hive.openshift.io/machine-pool": "worker"},
-					}).SetArg(1, *originalMachineSets).Times(1),
+					}).SetArg(1, *originalMachineSets),
 				)
-				mockKubeClient.EXPECT().Create(gomock.Any(), gomock.Any()).Times(1).Return(fakeError)
+				mockKubeClient.EXPECT().Create(gomock.Any(), gomock.Any()).Return(fakeError)
 				result, err := scaler.EnsureScaleUpNodes(mockKubeClient, testDuration, logger)
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(Equal(fakeError))
@@ -161,8 +165,8 @@ var _ = Describe("Node scaling tests", func() {
 					Items: []machineapi.MachineSet{
 						{
 							ObjectMeta: metav1.ObjectMeta{
-								Name:      "test-infra-upgrade",
-								Namespace: "openshift-machine-api",
+								Name:              "test-infra-upgrade",
+								Namespace:         "openshift-machine-api",
 								CreationTimestamp: metav1.Time{Time: time.Now()},
 							},
 							Status: machineapi.MachineSetStatus{
@@ -185,12 +189,12 @@ var _ = Describe("Node scaling tests", func() {
 				gomock.InOrder(
 					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
 						client.InNamespace("openshift-machine-api"), client.MatchingLabels{LABEL_UPGRADE: "true"},
-					}).SetArg(1, *upgradeMachinesets).Times(1),
+					}).SetArg(1, *upgradeMachinesets),
 					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
 						client.InNamespace("openshift-machine-api"), client.MatchingLabels{"hive.openshift.io/machine-pool": "worker"},
-					}).SetArg(1, *originalMachineSets).Times(1),
+					}).SetArg(1, *originalMachineSets),
 				)
-				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).Times(1)
+				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any())
 				result, err := scaler.EnsureScaleUpNodes(mockKubeClient, testDuration, logger)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(BeFalse())
@@ -268,14 +272,14 @@ var _ = Describe("Node scaling tests", func() {
 					gomock.InOrder(
 						mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
 							client.InNamespace("openshift-machine-api"), client.MatchingLabels{LABEL_UPGRADE: "true"},
-						}).SetArg(1, *upgradeMachinesets).Times(1),
+						}).SetArg(1, *upgradeMachinesets),
 						mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
 							client.InNamespace("openshift-machine-api"), client.MatchingLabels{"hive.openshift.io/machine-pool": "worker"},
-						}).SetArg(1, *originalMachineSets).Times(1),
-						mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, *nodes).Times(1),
+						}).SetArg(1, *originalMachineSets),
+						mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, *nodes),
 						mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
 							client.InNamespace("openshift-machine-api"), client.MatchingLabels{LABEL_UPGRADE: "true"},
-						}).SetArg(1, *upgradeMachines).Times(1),
+						}).SetArg(1, *upgradeMachines),
 					)
 					result, err := scaler.EnsureScaleUpNodes(mockKubeClient, testDuration, logger)
 					Expect(err).To(HaveOccurred())
@@ -288,14 +292,14 @@ var _ = Describe("Node scaling tests", func() {
 					gomock.InOrder(
 						mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
 							client.InNamespace("openshift-machine-api"), client.MatchingLabels{LABEL_UPGRADE: "true"},
-						}).SetArg(1, *upgradeMachinesets).Times(1),
+						}).SetArg(1, *upgradeMachinesets),
 						mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
 							client.InNamespace("openshift-machine-api"), client.MatchingLabels{"hive.openshift.io/machine-pool": "worker"},
-						}).SetArg(1, *originalMachineSets).Times(1),
-						mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, *nodes).Times(1),
+						}).SetArg(1, *originalMachineSets),
+						mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, *nodes),
 						mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
 							client.InNamespace("openshift-machine-api"), client.MatchingLabels{LABEL_UPGRADE: "true"},
-						}).SetArg(1, *upgradeMachines).Times(1),
+						}).SetArg(1, *upgradeMachines),
 					)
 					result, err := scaler.EnsureScaleUpNodes(mockKubeClient, testDuration, logger)
 					Expect(err).NotTo(HaveOccurred())
@@ -364,14 +368,14 @@ var _ = Describe("Node scaling tests", func() {
 				gomock.InOrder(
 					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
 						client.InNamespace("openshift-machine-api"), client.MatchingLabels{LABEL_UPGRADE: "true"},
-					}).SetArg(1, *upgradeMachinesets).Times(1),
+					}).SetArg(1, *upgradeMachinesets),
 					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
 						client.InNamespace("openshift-machine-api"), client.MatchingLabels{"hive.openshift.io/machine-pool": "worker"},
-					}).SetArg(1, *originalMachineSets).Times(1),
-					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, *nodes).Times(1),
+					}).SetArg(1, *originalMachineSets),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, *nodes),
 					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
 						client.InNamespace("openshift-machine-api"), client.MatchingLabels{LABEL_UPGRADE: "true"},
-					}).SetArg(1, *upgradeMachines).Times(1),
+					}).SetArg(1, *upgradeMachines),
 				)
 				result, err := scaler.EnsureScaleUpNodes(mockKubeClient, testDuration, logger)
 				Expect(err).NotTo(HaveOccurred())
@@ -397,7 +401,7 @@ var _ = Describe("Node scaling tests", func() {
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
 					client.InNamespace("openshift-machine-api"),
 					client.MatchingLabels{LABEL_UPGRADE: "true"},
-				}).SetArg(1, *upgradeMachinesets).Times(1).Return(fakeError)
+				}).SetArg(1, *upgradeMachinesets).Return(fakeError)
 				result, err := scaler.EnsureScaleDownNodes(mockKubeClient, logger)
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(Equal(fakeError))
@@ -410,9 +414,9 @@ var _ = Describe("Node scaling tests", func() {
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
 					client.InNamespace("openshift-machine-api"),
 					client.MatchingLabels{LABEL_UPGRADE: "true"},
-				}).SetArg(1, *upgradeMachinesets).Times(1)
+				}).SetArg(1, *upgradeMachinesets)
 				// The first delete will cause the whole thing to bail out
-				mockKubeClient.EXPECT().Delete(gomock.Any(), gomock.Any()).Times(1).Return(fakeError)
+				mockKubeClient.EXPECT().Delete(gomock.Any(), gomock.Any()).Return(fakeError)
 				result, err := scaler.EnsureScaleDownNodes(mockKubeClient, logger)
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(Equal(fakeError))
@@ -452,7 +456,7 @@ var _ = Describe("Node scaling tests", func() {
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
 					client.InNamespace("openshift-machine-api"),
 					client.MatchingLabels{LABEL_UPGRADE: "true"},
-				}).SetArg(1, *upgradeMachinesets).Times(1),
+				}).SetArg(1, *upgradeMachinesets),
 				// Verify that every specific machine returned to scale down actually does get deleted
 				mockKubeClient.EXPECT().Delete(gomock.Any(), gomock.Any()).DoAndReturn(
 					func(ctx context.Context, set *machineapi.MachineSet) error {
@@ -468,10 +472,10 @@ var _ = Describe("Node scaling tests", func() {
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
 					client.InNamespace("openshift-machine-api"),
 					NotMatchingLabels{LABEL_UPGRADE: "true"},
-				}).SetArg(1, *originalMachineSets).Times(1),
+				}).SetArg(1, *originalMachineSets),
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
 					NotMatchingLabels{"node-role.kubernetes.io/master": ""},
-				}).SetArg(1, *nodes).Times(1),
+				}).SetArg(1, *nodes),
 			)
 			result, err := scaler.EnsureScaleDownNodes(mockKubeClient, logger)
 			Expect(err).NotTo(HaveOccurred())
