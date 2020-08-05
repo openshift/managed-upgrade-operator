@@ -68,19 +68,19 @@ var _ = Describe("Validation of UpgradeConfig CR", func() {
 				// Set UpgradeAt as non RFC3339 format
 				testUpgradeConfig.Spec.UpgradeAt = "sometime tomorrow morning would be great thanks"
 
-				ok, err := testValidator.IsValidUpgradeConfig(testUpgradeConfig, testClusterVersion, testLogger)
-				Expect(err).ShouldNot(BeNil())
-				Expect(ok).Should(BeFalse())
+				result, err := testValidator.IsValidUpgradeConfig(testUpgradeConfig, testClusterVersion, testLogger)
+				Expect(err).Should(BeNil())
+				Expect(result.IsValid).Should(BeFalse())
 			})
 		})
 		Context("Validating UpgradeConfig desired version", func() {
 			Context("When getting the current cluster version fails", func() {
-				It("Validation is false and error is returned as NOT nil", func() {
+				It("Validation is false and error is returned", func() {
 					// Set version as empty string
 					testClusterVersion.Status.History[0].Version = ""
-					ok, err := testValidator.IsValidUpgradeConfig(testUpgradeConfig, testClusterVersion, testLogger)
+					result, err := testValidator.IsValidUpgradeConfig(testUpgradeConfig, testClusterVersion, testLogger)
 					Expect(err).ShouldNot(BeNil())
-					Expect(ok).Should(BeFalse())
+					Expect(result.IsValid).Should(BeFalse())
 				})
 			})
 		})
@@ -89,9 +89,9 @@ var _ = Describe("Validation of UpgradeConfig CR", func() {
 				It("Validation is false and error is returned as NOT nil", func() {
 					// Set version as non semver
 					testUpgradeConfig.Spec.Desired.Version = "not a correct semver"
-					ok, err := testValidator.IsValidUpgradeConfig(testUpgradeConfig, testClusterVersion, testLogger)
-					Expect(err).ShouldNot(BeNil())
-					Expect(ok).Should(BeFalse())
+					result, err := testValidator.IsValidUpgradeConfig(testUpgradeConfig, testClusterVersion, testLogger)
+					Expect(err).Should(BeNil())
+					Expect(result.IsValid).Should(BeFalse())
 				})
 			})
 			Context("When the ClusterVersion version is NOT valid", func() {
@@ -99,9 +99,9 @@ var _ = Describe("Validation of UpgradeConfig CR", func() {
 					// Set version as non semver
 					testUpgradeConfig.Spec.Desired.Version = "4.4.4"
 					testClusterVersion.Status.History[0].Version = "not a correct semver"
-					ok, err := testValidator.IsValidUpgradeConfig(testUpgradeConfig, testClusterVersion, testLogger)
-					Expect(err).ShouldNot(BeNil())
-					Expect(ok).Should(BeFalse())
+					result, err := testValidator.IsValidUpgradeConfig(testUpgradeConfig, testClusterVersion, testLogger)
+					Expect(err).Should(BeNil())
+					Expect(result.IsValid).Should(BeFalse())
 				})
 			})
 		})
