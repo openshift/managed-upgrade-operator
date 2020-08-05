@@ -86,6 +86,10 @@ var _ = Describe("ClusterUpgrader", func() {
 		}
 	})
 
+	AfterEach(func() {
+		mockCtrl.Finish()
+	})
+
 	Context("When assessing if the control plane is upgraded to a version", func() {
 		Context("When the clusterversion can't be fetched", func() {
 			It("Indicates an error", func() {
@@ -95,7 +99,6 @@ var _ = Describe("ClusterUpgrader", func() {
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(Equal(fakeError))
 				Expect(result).To(BeFalse())
-
 			})
 		})
 
@@ -119,40 +122,13 @@ var _ = Describe("ClusterUpgrader", func() {
 			It("Flags the control plane as upgraded", func() {
 				util.ExpectGetClusterVersion(mockKubeClient, clusterVersionList, nil)
 				gomock.InOrder(
-					mockMetricsClient.EXPECT().IsMetricControlPlaneEndTimeSet(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version).Times(1),
-					mockMetricsClient.EXPECT().UpdateMetricControlPlaneEndTime(gomock.Any(), upgradeConfig.Name, upgradeConfig.Spec.Desired.Version).Times(1),
-					mockMetricsClient.EXPECT().ResetMetricUpgradeControlPlaneTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version).Times(1),
+					mockMetricsClient.EXPECT().IsMetricControlPlaneEndTimeSet(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version),
+					mockMetricsClient.EXPECT().UpdateMetricControlPlaneEndTime(gomock.Any(), upgradeConfig.Name, upgradeConfig.Spec.Desired.Version),
+					mockMetricsClient.EXPECT().ResetMetricUpgradeControlPlaneTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version),
 				)
 				result, err := ControlPlaneUpgraded(mockKubeClient, config, mockScalerClient, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(BeTrue())
-			})
-		})
-
-		Context("When that version is NOT recorded in clusterversion's history", func() {
-			var clusterVersionList *configv1.ClusterVersionList
-			BeforeEach(func() {
-				clusterVersionList = &configv1.ClusterVersionList{
-					Items: []configv1.ClusterVersion{
-						{
-							Status: configv1.ClusterVersionStatus{
-								History: []configv1.UpdateHistory{
-									{State: configv1.CompletedUpdate, Version: "nothing"},
-									{State: configv1.CompletedUpdate, Version: "something else"},
-								},
-							},
-						},
-					},
-				}
-			})
-			It("Flags the control plane as NOT upgraded", func() {
-				util.ExpectGetClusterVersion(mockKubeClient, clusterVersionList, nil)
-				gomock.InOrder(
-					mockMetricsClient.EXPECT().UpdateMetricUpgradeControlPlaneTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version).Times(1),
-				)
-				result, err := ControlPlaneUpgraded(mockKubeClient, config, mockScalerClient, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(result).To(BeFalse())
 			})
 		})
 
@@ -175,7 +151,7 @@ var _ = Describe("ClusterUpgrader", func() {
 			It("Sets the appropriate metric", func() {
 				util.ExpectGetClusterVersion(mockKubeClient, clusterVersionList, nil)
 				gomock.InOrder(
-					mockMetricsClient.EXPECT().UpdateMetricUpgradeControlPlaneTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version).Times(1),
+					mockMetricsClient.EXPECT().UpdateMetricUpgradeControlPlaneTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version),
 				)
 				result, err := ControlPlaneUpgraded(mockKubeClient, config, mockScalerClient, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
 				Expect(err).NotTo(HaveOccurred())
@@ -237,14 +213,14 @@ var _ = Describe("ClusterUpgrader", func() {
 				expectUpgradeCommenced(mockKubeClient, clusterVersionList, nil)
 				util.ExpectGetClusterVersion(mockKubeClient, clusterVersionList, nil)
 				gomock.InOrder(
-					mockMetricsClient.EXPECT().IsMetricUpgradeStartTimeSet(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version).Times(1),
-					mockKubeClient.EXPECT().Update(gomock.Any(), gomock.Any()).Times(1).DoAndReturn(
+					mockMetricsClient.EXPECT().IsMetricUpgradeStartTimeSet(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version),
+					mockKubeClient.EXPECT().Update(gomock.Any(), gomock.Any()).DoAndReturn(
 						func(ctx context.Context, cv *configv1.ClusterVersion) error {
 							Expect(cv.Spec.DesiredUpdate.Version).To(Equal(upgradeConfig.Spec.Desired.Version))
 							Expect(cv.Spec.Channel).To(Equal(upgradeConfig.Spec.Desired.Channel))
 							return nil
-						}).Times(1),
-					mockMetricsClient.EXPECT().UpdateMetricUpgradeStartTime(gomock.Any(), upgradeConfig.Name, upgradeConfig.Spec.Desired.Version).Times(1),
+						}),
+					mockMetricsClient.EXPECT().UpdateMetricUpgradeStartTime(gomock.Any(), upgradeConfig.Name, upgradeConfig.Spec.Desired.Version),
 				)
 				result, err := CommenceUpgrade(mockKubeClient, config, mockScalerClient, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
 				Expect(err).NotTo(HaveOccurred())
@@ -269,14 +245,14 @@ var _ = Describe("ClusterUpgrader", func() {
 				expectUpgradeHasNotCommenced(mockKubeClient, upgradeConfig, nil)
 				util.ExpectGetClusterVersion(mockKubeClient, clusterVersionList, nil)
 				gomock.InOrder(
-					mockMetricsClient.EXPECT().IsMetricUpgradeStartTimeSet(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version).Times(1),
-					mockKubeClient.EXPECT().Update(gomock.Any(), gomock.Any()).Times(1).DoAndReturn(
+					mockMetricsClient.EXPECT().IsMetricUpgradeStartTimeSet(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version),
+					mockKubeClient.EXPECT().Update(gomock.Any(), gomock.Any()).DoAndReturn(
 						func(ctx context.Context, cv *configv1.ClusterVersion) error {
 							Expect(cv.Spec.DesiredUpdate.Version).To(Equal(upgradeConfig.Spec.Desired.Version))
 							Expect(cv.Spec.Channel).To(Equal(upgradeConfig.Spec.Desired.Channel))
 							return nil
-						}).Times(1),
-					mockMetricsClient.EXPECT().UpdateMetricUpgradeStartTime(gomock.Any(), upgradeConfig.Name, upgradeConfig.Spec.Desired.Version).Times(1),
+						}),
+					mockMetricsClient.EXPECT().UpdateMetricUpgradeStartTime(gomock.Any(), upgradeConfig.Name, upgradeConfig.Spec.Desired.Version),
 				)
 				result, err := CommenceUpgrade(mockKubeClient, config, mockScalerClient, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
 				Expect(err).NotTo(HaveOccurred())
@@ -290,9 +266,8 @@ var _ = Describe("ClusterUpgrader", func() {
 				expectUpgradeHasNotCommenced(mockKubeClient, upgradeConfig, nil)
 				util.ExpectGetClusterVersion(mockKubeClient, preUpgradeCV, nil)
 				gomock.InOrder(
-					mockMetricsClient.EXPECT().IsMetricUpgradeStartTimeSet(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version).Times(1),
-					mockKubeClient.EXPECT().Update(gomock.Any(), gomock.Any()).Times(1).Return(fakeError),
-					mockMetricsClient.EXPECT().UpdateMetricUpgradeStartTime(gomock.Any(), upgradeConfig.Name, upgradeConfig.Spec.Desired.Version).Times(1),
+					mockMetricsClient.EXPECT().IsMetricUpgradeStartTimeSet(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version),
+					mockKubeClient.EXPECT().Update(gomock.Any(), gomock.Any()).Return(fakeError),
 				)
 				result, err := CommenceUpgrade(mockKubeClient, config, mockScalerClient, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
 				Expect(err).To(HaveOccurred())
@@ -314,11 +289,11 @@ var _ = Describe("ClusterUpgrader", func() {
 			It("Indicates that all workers are upgraded", func() {
 				gomock.InOrder(
 					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).Times(2),
-					mockKubeClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Name: "worker"}, gomock.Any()).SetArg(2, *configPool).Times(1),
+					mockKubeClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Name: "worker"}, gomock.Any()).SetArg(2, *configPool),
 					mockMaintClient.EXPECT().IsActive(),
-					mockMetricsClient.EXPECT().IsMetricNodeUpgradeEndTimeSet(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version).Times(1),
-					mockMetricsClient.EXPECT().UpdateMetricNodeUpgradeEndTime(gomock.Any(), upgradeConfig.Name, upgradeConfig.Spec.Desired.Version).Times(1),
-					mockMetricsClient.EXPECT().ResetMetricUpgradeWorkerTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version).Times(1),
+					mockMetricsClient.EXPECT().IsMetricNodeUpgradeEndTimeSet(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version),
+					mockMetricsClient.EXPECT().UpdateMetricNodeUpgradeEndTime(gomock.Any(), upgradeConfig.Name, upgradeConfig.Spec.Desired.Version),
+					mockMetricsClient.EXPECT().ResetMetricUpgradeWorkerTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version),
 				)
 				result, err := AllWorkersUpgraded(mockKubeClient, config, mockScalerClient, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
 				Expect(err).NotTo(HaveOccurred())
@@ -330,13 +305,13 @@ var _ = Describe("ClusterUpgrader", func() {
 				configPool = &machineconfigapi.MachineConfigPool{
 					Status: machineconfigapi.MachineConfigPoolStatus{MachineCount: 3, UpdatedMachineCount: 2},
 				}
-				mockKubeClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Name: "worker"}, gomock.Any()).SetArg(2, *configPool).Times(1)
+				mockKubeClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Name: "worker"}, gomock.Any()).SetArg(2, *configPool)
 			})
 			It("Indicates that all workers are not upgraded", func() {
 				gomock.InOrder(
 					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).Times(2),
 					mockMaintClient.EXPECT().IsActive(),
-					mockMetricsClient.EXPECT().UpdateMetricUpgradeWorkerTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version).Times(1),
+					mockMetricsClient.EXPECT().UpdateMetricUpgradeWorkerTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version),
 				)
 				result, err := AllWorkersUpgraded(mockKubeClient, config, mockScalerClient, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
 				Expect(err).NotTo(HaveOccurred())
@@ -423,9 +398,6 @@ var _ = Describe("ClusterUpgrader", func() {
 				cu.Steps = map[upgradev1alpha1.UpgradeConditionType]UpgradeStep{
 					step1: makeMockUnsucceededStep(step1),
 				}
-				sw := mocks.NewMockStatusWriter(mockCtrl)
-				mockKubeClient.EXPECT().Status().AnyTimes().Return(sw)
-				sw.EXPECT().Update(gomock.Any(), gomock.Any()).AnyTimes()
 			})
 
 			It("returns an uncompleted condition for the step", func() {
@@ -450,9 +422,6 @@ var _ = Describe("ClusterUpgrader", func() {
 				cu.Steps = map[upgradev1alpha1.UpgradeConditionType]UpgradeStep{
 					step1: makeMockFailedStep(step1),
 				}
-				sw := mocks.NewMockStatusWriter(mockCtrl)
-				mockKubeClient.EXPECT().Status().AnyTimes().Return(sw)
-				sw.EXPECT().Update(gomock.Any(), gomock.Any()).AnyTimes()
 			})
 			It("Indicates the error in the condition", func() {
 				_, condition, err := cu.UpgradeCluster(upgradeConfig, logger)
@@ -482,9 +451,6 @@ var _ = Describe("ClusterUpgrader", func() {
 						},
 					},
 				}
-				sw := mocks.NewMockStatusWriter(mockCtrl)
-				mockKubeClient.EXPECT().Status().AnyTimes().Return(sw)
-				sw.EXPECT().Update(gomock.Any(), gomock.Any()).AnyTimes()
 			})
 			It("flags the upgrade as completed", func() {
 				phase, condition, err := cu.UpgradeCluster(upgradeConfig, logger)
@@ -517,7 +483,7 @@ var _ = Describe("ClusterUpgrader", func() {
 
 			Context("When getting the machine config pool fails", func() {
 				It("Indicates that all machines aren't upgraded", func() {
-					mockKubeClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Name: nodeType}, gomock.Any()).Times(1).Return(fmt.Errorf("Fake error"))
+					mockKubeClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Name: nodeType}, gomock.Any()).Return(fmt.Errorf("Fake error"))
 					result, err := nodesUpgraded(mockKubeClient, nodeType, logger)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(result).To(BeFalse())
@@ -531,7 +497,7 @@ var _ = Describe("ClusterUpgrader", func() {
 					}
 				})
 				It("Reports that all nodes are upgraded", func() {
-					mockKubeClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Name: nodeType}, gomock.Any()).SetArg(2, *configPool).Times(1)
+					mockKubeClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Name: nodeType}, gomock.Any()).SetArg(2, *configPool)
 					result, err := nodesUpgraded(mockKubeClient, nodeType, logger)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(result).To(BeTrue())
@@ -544,7 +510,7 @@ var _ = Describe("ClusterUpgrader", func() {
 					}
 				})
 				It("Reports that all nodes are not upgraded", func() {
-					mockKubeClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Name: nodeType}, gomock.Any()).SetArg(2, *configPool).Times(1)
+					mockKubeClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Name: nodeType}, gomock.Any()).SetArg(2, *configPool)
 					result, err := nodesUpgraded(mockKubeClient, nodeType, logger)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(result).To(BeFalse())
@@ -558,7 +524,7 @@ var _ = Describe("ClusterUpgrader", func() {
 				})
 				// TODO: Assess - does this make sense?
 				It("Reports that all nodes are not upgraded", func() {
-					mockKubeClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Name: nodeType}, gomock.Any()).SetArg(2, *configPool).Times(1)
+					mockKubeClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Name: nodeType}, gomock.Any()).SetArg(2, *configPool)
 					result, err := nodesUpgraded(mockKubeClient, nodeType, logger)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(result).To(BeFalse())

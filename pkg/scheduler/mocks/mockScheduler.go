@@ -7,7 +7,7 @@ package mocks
 import (
 	gomock "github.com/golang/mock/gomock"
 	v1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
-	metrics "github.com/openshift/managed-upgrade-operator/pkg/metrics"
+	scheduler "github.com/openshift/managed-upgrade-operator/pkg/scheduler"
 	reflect "reflect"
 	time "time"
 )
@@ -36,15 +36,15 @@ func (m *MockScheduler) EXPECT() *MockSchedulerMockRecorder {
 }
 
 // IsReadyToUpgrade mocks base method
-func (m *MockScheduler) IsReadyToUpgrade(arg0 *v1alpha1.UpgradeConfig, arg1 metrics.Metrics, arg2 time.Duration) bool {
+func (m *MockScheduler) IsReadyToUpgrade(arg0 *v1alpha1.UpgradeConfig, arg1 time.Duration) scheduler.SchedulerResult {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsReadyToUpgrade", arg0, arg1, arg2)
-	ret0, _ := ret[0].(bool)
+	ret := m.ctrl.Call(m, "IsReadyToUpgrade", arg0, arg1)
+	ret0, _ := ret[0].(scheduler.SchedulerResult)
 	return ret0
 }
 
 // IsReadyToUpgrade indicates an expected call of IsReadyToUpgrade
-func (mr *MockSchedulerMockRecorder) IsReadyToUpgrade(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockSchedulerMockRecorder) IsReadyToUpgrade(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsReadyToUpgrade", reflect.TypeOf((*MockScheduler)(nil).IsReadyToUpgrade), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsReadyToUpgrade", reflect.TypeOf((*MockScheduler)(nil).IsReadyToUpgrade), arg0, arg1)
 }
