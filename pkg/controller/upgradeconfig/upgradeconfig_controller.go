@@ -173,8 +173,8 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 		}
 
 		reqLogger.Info("Checking if cluster can commence upgrade.")
-		ready := r.scheduler.IsReadyToUpgrade(instance, metricsClient, cfg.GetUpgradeWindowTimeOutDuration())
-		if ready {
+		result := r.scheduler.IsReadyToUpgrade(instance, cfg.GetUpgradeWindowTimeOutDuration())
+		if result.IsReady {
 			upgrader, err := r.clusterUpgraderBuilder.NewClient(r.client, cfm, metricsClient, instance.Spec.Type)
 			if err != nil {
 				return reconcile.Result{}, err
@@ -190,8 +190,15 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 			}
 
 			reqLogger.Info("Cluster is commencing upgrade.", "time", now)
+			metricsClient.UpdateMetricUpgradeWindowNotBreached(instance.Name)
 			return r.upgradeCluster(upgrader, instance, reqLogger)
 		} else {
+			if result.IsBreached {
+				// We are past the maximum allowed time to commence upgrading
+				log.Error(nil, "field spec.upgradeAt cannot have backdated time")
+				metricsClient.UpdateMetricUpgradeWindowBreached(instance.Name)
+			}
+
 			history.Phase = upgradev1alpha1.UpgradePhasePending
 			instance.Status.History.SetHistory(history)
 			err = r.client.Status().Update(context.TODO(), instance)
