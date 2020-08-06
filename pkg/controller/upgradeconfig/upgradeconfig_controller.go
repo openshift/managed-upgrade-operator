@@ -150,15 +150,13 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 		}
 
 		// Validate UpgradeConfig instance
-		ok, err := validator.IsValidUpgradeConfig(instance, cv, reqLogger)
+		validatorResult, err := validator.IsValidUpgradeConfig(instance, cv, reqLogger)
 		if err != nil {
 			reqLogger.Info("An error occurred while validating UpgradeConfig")
-			metricsClient.UpdateMetricValidationFailed(instance.Name)
 			return reconcile.Result{}, err
 		}
-		// If ok is false, desired version is <= current version.
-		if !ok {
-			reqLogger.Info("Desired version is <= current version. Not proceeding.")
+		if !validatorResult.IsValid {
+			reqLogger.Info(validatorResult.Message)
 			metricsClient.UpdateMetricValidationFailed(instance.Name)
 			return reconcile.Result{}, nil
 		}
@@ -173,8 +171,8 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 		}
 
 		reqLogger.Info("Checking if cluster can commence upgrade.")
-		result := r.scheduler.IsReadyToUpgrade(instance, cfg.GetUpgradeWindowTimeOutDuration())
-		if result.IsReady {
+		schedulerResult := r.scheduler.IsReadyToUpgrade(instance, cfg.GetUpgradeWindowTimeOutDuration())
+		if schedulerResult.IsReady {
 			upgrader, err := r.clusterUpgraderBuilder.NewClient(r.client, cfm, metricsClient, instance.Spec.Type)
 			if err != nil {
 				return reconcile.Result{}, err
@@ -193,7 +191,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 			metricsClient.UpdateMetricUpgradeWindowNotBreached(instance.Name)
 			return r.upgradeCluster(upgrader, instance, reqLogger)
 		} else {
-			if result.IsBreached {
+			if schedulerResult.IsBreached {
 				// We are past the maximum allowed time to commence upgrading
 				log.Error(nil, "field spec.upgradeAt cannot have backdated time")
 				metricsClient.UpdateMetricUpgradeWindowBreached(instance.Name)

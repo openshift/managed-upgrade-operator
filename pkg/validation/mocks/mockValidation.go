@@ -9,6 +9,7 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	v1 "github.com/openshift/api/config/v1"
 	v1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
+	validation "github.com/openshift/managed-upgrade-operator/pkg/validation"
 	reflect "reflect"
 )
 
@@ -36,10 +37,10 @@ func (m *MockValidator) EXPECT() *MockValidatorMockRecorder {
 }
 
 // IsValidUpgradeConfig mocks base method
-func (m *MockValidator) IsValidUpgradeConfig(arg0 *v1alpha1.UpgradeConfig, arg1 *v1.ClusterVersion, arg2 logr.Logger) (bool, error) {
+func (m *MockValidator) IsValidUpgradeConfig(arg0 *v1alpha1.UpgradeConfig, arg1 *v1.ClusterVersion, arg2 logr.Logger) (validation.ValidatorResult, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IsValidUpgradeConfig", arg0, arg1, arg2)
-	ret0, _ := ret[0].(bool)
+	ret0, _ := ret[0].(validation.ValidatorResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
