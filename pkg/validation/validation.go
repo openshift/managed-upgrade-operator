@@ -31,9 +31,8 @@ type Validator interface {
 type validator struct{}
 
 type ValidatorResult struct {
-	IsRollBack bool
-	IsValid    bool
-	Message    string
+	IsValid bool
+	Message string
 }
 
 func (v *validator) IsValidUpgradeConfig(uC *upgradev1alpha1.UpgradeConfig, cV *configv1.ClusterVersion, logger logr.Logger) (ValidatorResult, error) {
@@ -41,9 +40,8 @@ func (v *validator) IsValidUpgradeConfig(uC *upgradev1alpha1.UpgradeConfig, cV *
 	_, err := time.Parse(time.RFC3339, uC.Spec.UpgradeAt)
 	if err != nil {
 		return ValidatorResult{
-			IsValid:    false,
-			IsRollBack: false,
-			Message:    fmt.Sprintf("Failed to parse upgradeAt:%s during validation", uC.Spec.UpgradeAt),
+			IsValid: false,
+			Message: fmt.Sprintf("Failed to parse upgradeAt:%s during validation", uC.Spec.UpgradeAt),
 		}, nil
 	}
 
@@ -52,9 +50,8 @@ func (v *validator) IsValidUpgradeConfig(uC *upgradev1alpha1.UpgradeConfig, cV *
 	cv, err := osd_cluster_upgrader.GetCurrentVersion(cV)
 	if err != nil {
 		return ValidatorResult{
-			IsValid:    false,
-			IsRollBack: false,
-			Message:    "Failed to get current cluster version during validation",
+			IsValid: false,
+			Message: "Failed to get current cluster version during validation",
 		}, err
 	}
 
@@ -62,17 +59,15 @@ func (v *validator) IsValidUpgradeConfig(uC *upgradev1alpha1.UpgradeConfig, cV *
 	desiredVersion, err := semver.Parse(dv)
 	if err != nil {
 		return ValidatorResult{
-			IsValid:    false,
-			IsRollBack: false,
-			Message:    fmt.Sprintf("Failed to parse desired version %s as semver", dv),
+			IsValid: false,
+			Message: fmt.Sprintf("Failed to parse desired version %s as semver", dv),
 		}, nil
 	}
 	currentVersion, err := semver.Parse(cv)
 	if err != nil {
 		return ValidatorResult{
-			IsValid:    false,
-			IsRollBack: false,
-			Message:    fmt.Sprintf("Failed to parse desired version %s as semver", cv),
+			IsValid: false,
+			Message: fmt.Sprintf("Failed to parse desired version %s as semver", cv),
 		}, nil
 	}
 
@@ -80,9 +75,8 @@ func (v *validator) IsValidUpgradeConfig(uC *upgradev1alpha1.UpgradeConfig, cV *
 	proceed := compareVersions(desiredVersion, currentVersion, logger)
 	if !proceed {
 		return ValidatorResult{
-			IsValid:    false,
-			IsRollBack: true,
-			Message:    fmt.Sprintf("Desired version %s validated as greater then current version", desiredVersion),
+			IsValid: false,
+			Message: fmt.Sprintf("Desired version %s validated as greater then current version", desiredVersion),
 		}, nil
 	}
 	logger.Info(fmt.Sprintf("Desired version %s validated as greater then current version %s", desiredVersion, currentVersion))
@@ -92,26 +86,23 @@ func (v *validator) IsValidUpgradeConfig(uC *upgradev1alpha1.UpgradeConfig, cV *
 	clusterId, err := uuid.Parse(string(cV.Spec.ClusterID))
 	if err != nil {
 		return ValidatorResult{
-			IsValid:    false,
-			IsRollBack: false,
-			Message:    "",
+			IsValid: false,
+			Message: "",
 		}, nil
 	}
 	upstreamURI, err := url.Parse(string(cV.Spec.Upstream))
 	if err != nil {
 		return ValidatorResult{
-			IsValid:    false,
-			IsRollBack: false,
-			Message:    "",
+			IsValid: false,
+			Message: "",
 		}, nil
 	}
 
 	updates, err := cincinnati.NewClient(clusterId, nil, nil).GetUpdates(upstreamURI, runtime.GOARCH, desiredChannel, currentVersion)
 	if err != nil {
 		return ValidatorResult{
-			IsValid:    false,
-			IsRollBack: false,
-			Message:    "",
+			IsValid: false,
+			Message: "",
 		}, err
 	}
 
@@ -134,15 +125,13 @@ func (v *validator) IsValidUpgradeConfig(uC *upgradev1alpha1.UpgradeConfig, cV *
 	if !found {
 		logger.Info(fmt.Sprintf("Failed to find the desired version %s in channel %s", desiredVersion, desiredChannel))
 		return ValidatorResult{
-			IsValid:    false,
-			IsRollBack: false,
-			Message:    fmt.Sprintf("cannot find version %s in available updates", desiredVersion),
+			IsValid: false,
+			Message: fmt.Sprintf("cannot find version %s in available updates", desiredVersion),
 		}, nil
 	}
 	return ValidatorResult{
-		IsValid:    true,
-		IsRollBack: false,
-		Message:    "UpgradeConfig is valid",
+		IsValid: true,
+		Message: "UpgradeConfig is valid",
 	}, nil
 }
 

@@ -239,7 +239,7 @@ var _ = Describe("UpgradeConfigController", func() {
 					}
 				})
 				Context("When the upgradeconfig validation fails", func() {
-					It("should set set the validation alert metric", func() {
+					It("should set the validation alert metric", func() {
 						util.ExpectGetClusterVersion(mockKubeClient, clusterVersionList, nil)
 
 						gomock.InOrder(
