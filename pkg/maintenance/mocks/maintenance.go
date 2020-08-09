@@ -76,16 +76,16 @@ func (mr *MockMaintenanceMockRecorder) StartControlPlane(arg0, arg1 interface{})
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartControlPlane", reflect.TypeOf((*MockMaintenance)(nil).StartControlPlane), arg0, arg1)
 }
 
-// StartWorker mocks base method
-func (m *MockMaintenance) StartWorker(arg0 time.Time, arg1 string) error {
+// SetWorker mocks base method
+func (m *MockMaintenance) SetWorker(arg0 time.Time, arg1 string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StartWorker", arg0, arg1)
+	ret := m.ctrl.Call(m, "SetWorker", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// StartWorker indicates an expected call of StartWorker
-func (mr *MockMaintenanceMockRecorder) StartWorker(arg0, arg1 interface{}) *gomock.Call {
+// SetWorker indicates an expected call of SetWorker
+func (mr *MockMaintenanceMockRecorder) StartOrUpdateWorker(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartWorker", reflect.TypeOf((*MockMaintenance)(nil).StartWorker), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetWorker", reflect.TypeOf((*MockMaintenance)(nil).SetWorker), arg0, arg1)
 }
