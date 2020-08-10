@@ -117,7 +117,7 @@ func PreClusterHealthCheck(c client.Client, cfg *osdUpgradeConfig, scaler scaler
 		return true, nil
 	}
 
-	ok, err := performClusterHealthCheck(c, metricsClient, logger)
+	ok, err := performClusterHealthCheck(c, metricsClient, cfg, logger)
 	if err != nil || !ok {
 		metricsClient.UpdateMetricClusterCheckFailed(upgradeConfig.Name)
 		return false, err
@@ -423,7 +423,7 @@ func RemoveMaintWindow(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Sca
 
 // PostClusterHealthCheck performs cluster health check after upgrade
 func PostClusterHealthCheck(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
-	ok, err := performClusterHealthCheck(c, metricsClient, logger)
+	ok, err := performClusterHealthCheck(c, metricsClient, cfg, logger)
 	if err != nil || !ok {
 		metricsClient.UpdateMetricClusterCheckFailed(upgradeConfig.Name)
 		return false, err
@@ -521,8 +521,14 @@ func (cu osdClusterUpgrader) UpgradeCluster(upgradeConfig *upgradev1alpha1.Upgra
 // check several things about the cluster and report problems
 // * critical alerts
 // * degraded operators (if there are critical alerts only)
-func performClusterHealthCheck(c client.Client, metricsClient metrics.Metrics, logger logr.Logger) (bool, error) {
-	alerts, err := metricsClient.Query("ALERTS{alertstate=\"firing\",severity=\"critical\",namespace=~\"^openshift.*|^kube.*|^default$\",namespace!=\"openshift-customer-monitoring\",alertname!=\"ClusterUpgradingSRE\",alertname!=\"DNSErrors05MinSRE\",alertname!=\"MetricsClientSendFailingSRE\",alertname!=\"UpgradeNodeScalingFailedSRE\"}")
+func performClusterHealthCheck(c client.Client, metricsClient metrics.Metrics, cfg *osdUpgradeConfig, logger logr.Logger) (bool, error) {
+	ic := cfg.HealthCheck.IgnoredCriticals
+	icQuery := ""
+	if len(ic) > 0 {
+		icQuery = `,alertname!="` + strings.Join(ic, `",alertname!="`) + `"`
+	}
+	healthCheckQuery := `ALERTS{alertstate="firing",severity="critical",namespace=~"^openshift.*|^kube.*|^default$",namespace!="openshift-customer-monitoring"` + icQuery + "}"
+	alerts, err := metricsClient.Query(healthCheckQuery)
 	if err != nil {
 		return false, fmt.Errorf("Unable to query critical alerts: %s", err)
 	}

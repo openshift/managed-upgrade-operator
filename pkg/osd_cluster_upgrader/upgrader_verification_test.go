@@ -58,6 +58,9 @@ var _ = Describe("ClusterUpgrader verification and health tests", func() {
 			Scale: scaleConfig{
 				TimeOut: 30,
 			},
+			HealthCheck: healthCheck{
+				IgnoredCriticals: []string{"alert1", "alert2"},
+			},
 		}
 	})
 
@@ -196,10 +199,8 @@ var _ = Describe("ClusterUpgrader verification and health tests", func() {
 				expectUpgradeHasNotCommenced(mockKubeClient, upgradeConfig, nil)
 				mockMetricsClient.EXPECT().Query(gomock.Any()).DoAndReturn(
 					func(query string) (*metrics.AlertResponse, error) {
-						Expect(strings.Contains(query, "alertname!=\"ClusterUpgradingSRE\"")).To(BeTrue())
-						Expect(strings.Contains(query, "alertname!=\"DNSErrors05MinSRE\"")).To(BeTrue())
-						Expect(strings.Contains(query, "alertname!=\"MetricsClientSendFailingSRE\"")).To(BeTrue())
-						Expect(strings.Contains(query, "alertname!=\"UpgradeNodeScalingFailedSRE\"")).To(BeTrue())
+						Expect(strings.Contains(query, `alertname!="`+config.HealthCheck.IgnoredCriticals[0]+`"`)).To(BeTrue())
+						Expect(strings.Contains(query, `alertname!="`+config.HealthCheck.IgnoredCriticals[1]+`"`)).To(BeTrue())
 						return &metrics.AlertResponse{}, nil
 					})
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, *operatorList)
@@ -383,7 +384,7 @@ var _ = Describe("ClusterUpgrader verification and health tests", func() {
 			mockMetricsClient.EXPECT().Query(gomock.Any()).Return(nil, fakeError)
 		})
 		It("will abort a cluster health check with the error", func() {
-			result, err := performClusterHealthCheck(mockKubeClient, mockMetricsClient, logger)
+			result, err := performClusterHealthCheck(mockKubeClient, mockMetricsClient, config, logger)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("Unable to query critical alerts"))
 			Expect(result).To(BeFalse())
