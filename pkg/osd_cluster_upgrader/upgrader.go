@@ -560,9 +560,13 @@ func performClusterHealthCheck(c client.Client, metricsClient metrics.Metrics, l
 
 func GetCurrentVersion(clusterVersion *configv1.ClusterVersion) (string, error) {
 	var gotVersion string
+	var latestCompletionTime *metav1.Time = nil
 	for _, history := range clusterVersion.Status.History {
 		if history.State == configv1.CompletedUpdate {
-			gotVersion = history.Version
+			if latestCompletionTime == nil || history.CompletionTime.After(latestCompletionTime.Time) {
+				gotVersion = history.Version
+				latestCompletionTime = history.CompletionTime
+			}
 		}
 	}
 
