@@ -170,10 +170,36 @@ func CommenceUpgrade(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scale
 	if err != nil {
 		return false, err
 	}
+
+	// Move the cluster to the same channel first
+	if cv.Spec.Channel != desired.Channel {
+		logger.Info(fmt.Sprintf("Moving cluster from Channel %s to Channel %s", cv.Spec.Channel, desired.Channel))
+		cv.Spec.Channel = upgradeConfig.Spec.Desired.Channel
+		err = c.Update(context.TODO(), cv)
+		if err != nil {
+			return false, err
+		}
+		// Refresh getting the cluster version
+		cv, err = GetClusterVersion(c)
+		if err != nil {
+			return false, err
+		}
+	}
+
+	// The CVO may need time sync the version before launching the upgrade
+	updateAvailable := false
+	for _, update := range cv.Status.AvailableUpdates {
+		if update.Version == desired.Version && update.Image != "" {
+			updateAvailable = true
+		}
+	}
+	if !updateAvailable {
+		logger.Info(fmt.Sprintf("Waiting for CVO to sync Channel %s Version %s", desired.Channel, desired.Version))
+		return false, nil
+	}
+
 	cv.Spec.Overrides = []configv1.ComponentOverride{}
 	cv.Spec.DesiredUpdate = &configv1.Update{Version: upgradeConfig.Spec.Desired.Version}
-	cv.Spec.Channel = upgradeConfig.Spec.Desired.Channel
-
 	isSet, err := metricsClient.IsMetricUpgradeStartTimeSet(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
 	if err != nil {
 		return false, err

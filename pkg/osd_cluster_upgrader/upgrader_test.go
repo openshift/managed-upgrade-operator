@@ -57,13 +57,20 @@ var _ = Describe("ClusterUpgrader", func() {
 			Items: []configv1.ClusterVersion{{
 				Spec: configv1.ClusterVersionSpec{
 					DesiredUpdate: &configv1.Update{Version: upgradeConfig.Spec.Desired.Version + "different"},
-					Channel:       upgradeConfig.Spec.Desired.Channel + "different",
+					Channel:       upgradeConfig.Spec.Desired.Channel,
 				},
 				Status: configv1.ClusterVersionStatus{
 					Conditions: []configv1.ClusterOperatorStatusCondition{
 						{
 							Type:   configv1.OperatorAvailable,
 							Status: configv1.ConditionTrue,
+						},
+					},
+					AvailableUpdates: []configv1.Update{
+						{
+							Version: upgradeConfig.Spec.Desired.Version,
+							Image:   "quay.io/this-doesnt-exist",
+							Force:   false,
 						},
 					},
 				},
@@ -190,6 +197,32 @@ var _ = Describe("ClusterUpgrader", func() {
 				Expect(result).To(BeFalse())
 			})
 		})
+
+		Context("When the cluster is not on the same channel as the UpgradeConfig", func() {
+			It("Updates the cluster's update channel", func() {
+				clusterVersionList := &configv1.ClusterVersionList{
+					Items: []configv1.ClusterVersion{
+						{
+							Spec: configv1.ClusterVersionSpec{
+								Channel: upgradeConfig.Spec.Desired.Channel + "not-the-same",
+								DesiredUpdate: nil,
+							},
+						},
+					},
+				}
+				expectUpgradeCommenced(mockKubeClient, clusterVersionList, nil)
+				util.ExpectGetClusterVersion(mockKubeClient, clusterVersionList, nil)
+				gomock.InOrder(
+					mockKubeClient.EXPECT().Update(gomock.Any(), gomock.Any()),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, *clusterVersionList),
+				)
+				result, err := CommenceUpgrade(mockKubeClient, config, mockScalerClient, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(BeFalse())
+
+			})
+		})
+
 		Context("When the cluster's desired version matches the UpgradeConfig's", func() {
 			It("Indicates the upgrade has commenced", func() {
 				expectUpgradeHasCommenced(mockKubeClient, upgradeConfig, nil)
@@ -205,7 +238,17 @@ var _ = Describe("ClusterUpgrader", func() {
 					Items: []configv1.ClusterVersion{
 						{
 							Spec: configv1.ClusterVersionSpec{
+								Channel: upgradeConfig.Spec.Desired.Channel,
 								DesiredUpdate: nil,
+							},
+							Status: configv1.ClusterVersionStatus{
+								AvailableUpdates: []configv1.Update{
+									{
+										Version: upgradeConfig.Spec.Desired.Version,
+										Image:   "quay.io/this-doesnt-exist",
+										Force:   false,
+									},
+								},
 							},
 						},
 					},
@@ -234,10 +277,19 @@ var _ = Describe("ClusterUpgrader", func() {
 					Items: []configv1.ClusterVersion{
 						{
 							Spec: configv1.ClusterVersionSpec{
+								Channel: upgradeConfig.Spec.Desired.Channel,
 								DesiredUpdate: &configv1.Update{
 									Version: "something different",
 								},
-								Channel: "something different",
+							},
+							Status: configv1.ClusterVersionStatus{
+								AvailableUpdates: []configv1.Update{
+									{
+										Version: upgradeConfig.Spec.Desired.Version,
+										Image:   "quay.io/this-doesnt-exist",
+										Force:   false,
+									},
+								},
 							},
 						},
 					},
@@ -603,6 +655,13 @@ func expectUpgradeHasNotCommenced(m *mocks.MockClient, u *upgradev1alpha1.Upgrad
 						Status: configv1.ConditionTrue,
 					},
 				},
+				AvailableUpdates: []configv1.Update{
+					{
+						Version: u.Spec.Desired.Version,
+						Image:   "quay.io/this-doesnt-exist",
+						Force:   false,
+					},
+				},
 			},
 		}}}
 	expectUpgradeCommenced(m, cvList, withErr)
@@ -620,6 +679,13 @@ func expectUpgradeHasCommenced(m *mocks.MockClient, u *upgradev1alpha1.UpgradeCo
 					{
 						Type:   configv1.OperatorProgressing,
 						Status: configv1.ConditionTrue,
+					},
+				},
+				AvailableUpdates: []configv1.Update{
+					{
+						Version: u.Spec.Desired.Version,
+						Image:   "quay.io/this-doesnt-exist",
+						Force:   false,
 					},
 				},
 			},
