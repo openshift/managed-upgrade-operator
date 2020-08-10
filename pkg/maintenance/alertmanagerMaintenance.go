@@ -141,7 +141,15 @@ func (amm *alertManagerMaintenance) SetWorker(endsAt time.Time, version string) 
 
 	end := strfmt.DateTime(endsAt.UTC())
 	if exists {
-		err = amm.client.Update(*silence.ID, end)
+		// Create a new silence and remove the old one
+		err = amm.client.Create(createDefaultMatchers(), *silence.StartsAt, end, config.OperatorName, comment)
+		if err != nil {
+			return err
+		}
+		err = amm.client.Delete(*silence.ID)
+		if err != nil {
+			return err
+		}
 	} else {
 		now := strfmt.DateTime(time.Now().UTC())
 		err = amm.client.Create(createDefaultMatchers(), now, end, config.OperatorName, comment)
