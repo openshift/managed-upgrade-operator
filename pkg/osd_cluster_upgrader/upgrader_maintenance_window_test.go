@@ -99,7 +99,7 @@ var _ = Describe("ClusterUpgrader maintenance window tests", func() {
 			configPool.Status.MachineCount = 3
 			configPool.Status.UpdatedMachineCount = 1
 			mockKubeClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Name: "worker"}, gomock.Any()).SetArg(2, *configPool)
-			mockMaintClient.EXPECT().StartWorker(gomock.Any(), upgradeConfig.Spec.Desired.Version)
+			mockMaintClient.EXPECT().StartOrUpdateWorker(gomock.Any(), upgradeConfig.Spec.Desired.Version)
 			result, err := CreateWorkerMaintWindow(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(BeTrue())
@@ -110,7 +110,7 @@ var _ = Describe("ClusterUpgrader maintenance window tests", func() {
 			configPool.Status.UpdatedMachineCount = 1
 			fakeError := fmt.Errorf("fake error")
 			mockKubeClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Name: "worker"}, gomock.Any()).SetArg(2, *configPool)
-			mockMaintClient.EXPECT().StartWorker(gomock.Any(), upgradeConfig.Spec.Desired.Version).Return(fakeError)
+			mockMaintClient.EXPECT().StartOrUpdateWorker(gomock.Any(), upgradeConfig.Spec.Desired.Version).Return(fakeError)
 			result, err := CreateWorkerMaintWindow(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(Equal(fakeError))

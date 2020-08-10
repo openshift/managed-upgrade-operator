@@ -251,11 +251,24 @@ func CreateWorkerMaintWindow(c client.Client, cfg *osdUpgradeConfig, scaler scal
 		return true, nil
 	}
 
+	// We use the maximum of the PDB drain timeout and node drain timeout to compute a 'worst case' wait time
+	pdbForceDrainTimeout := time.Duration(upgradeConfig.Spec.PDBForceDrainTimeout) * time.Minute
+	nodeDrainTimeout := time.Duration(cfg.NodeDrain.TimeOut) * time.Minute
+	waitTimePeriod := time.Duration(pendingWorkerCount) * pdbForceDrainTimeout
+	if pdbForceDrainTimeout < nodeDrainTimeout {
+		waitTimePeriod = time.Duration(pendingWorkerCount) * nodeDrainTimeout
+	}
+
+	// Action time is the expected time taken to upgrade a worker node
 	maintenanceDurationPerNode := cfg.GetWorkerNodeDuration()
-	workerMaintenanceExpectedDuration := time.Duration(pendingWorkerCount) * maintenanceDurationPerNode
-	endTime := time.Now().Add(workerMaintenanceExpectedDuration)
+	actionTimePeriod := time.Duration(pendingWorkerCount) * maintenanceDurationPerNode
+
+	// Our worker maintenance window is a combination of 'wait time' and 'action time'
+	totalWorkerMaintenanceDuration := waitTimePeriod + actionTimePeriod
+
+	endTime := time.Now().Add(totalWorkerMaintenanceDuration)
 	logger.Info(fmt.Sprintf("Creating worker node maintenace for %d remaining nodes", pendingWorkerCount))
-	err = m.StartWorker(endTime, upgradeConfig.Spec.Desired.Version)
+	err = m.SetWorker(endTime, upgradeConfig.Spec.Desired.Version)
 	if err != nil {
 		return false, err
 	}
