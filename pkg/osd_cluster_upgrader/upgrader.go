@@ -191,8 +191,8 @@ func CommenceUpgrade(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scale
 
 // CreateControlPlaneMaintWindow creates the maintenance window for control plane
 func CreateControlPlaneMaintWindow(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
-	endTime := time.Now().Add(cfg.GetControlPlaneDuration())
-	err := m.StartControlPlane(endTime, upgradeConfig.Spec.Desired.Version)
+	endTime := time.Now().Add(cfg.Maintenance.GetControlPlaneDuration())
+	err := m.StartControlPlane(endTime, upgradeConfig.Spec.Desired.Version, cfg.Maintenance.IgnoredAlerts.ControlPlaneCriticals)
 	if err != nil {
 		return false, err
 	}
@@ -227,14 +227,14 @@ func CreateWorkerMaintWindow(c client.Client, cfg *osdUpgradeConfig, scaler scal
 
 	// We use the maximum of the PDB drain timeout and node drain timeout to compute a 'worst case' wait time
 	pdbForceDrainTimeout := time.Duration(upgradeConfig.Spec.PDBForceDrainTimeout) * time.Minute
-	nodeDrainTimeout := time.Duration(cfg.NodeDrain.TimeOut) * time.Minute
+	nodeDrainTimeout := cfg.GetNodeDrainDuration()
 	waitTimePeriod := time.Duration(pendingWorkerCount) * pdbForceDrainTimeout
 	if pdbForceDrainTimeout < nodeDrainTimeout {
 		waitTimePeriod = time.Duration(pendingWorkerCount) * nodeDrainTimeout
 	}
 
 	// Action time is the expected time taken to upgrade a worker node
-	maintenanceDurationPerNode := cfg.GetWorkerNodeDuration()
+	maintenanceDurationPerNode := cfg.Maintenance.GetWorkerNodeDuration()
 	actionTimePeriod := time.Duration(pendingWorkerCount) * maintenanceDurationPerNode
 
 	// Our worker maintenance window is a combination of 'wait time' and 'action time'
@@ -450,7 +450,7 @@ func ControlPlaneUpgraded(c client.Client, cfg *osdUpgradeConfig, scaler scaler.
 		}
 	}
 
-	upgradeTimeout := cfg.GetControlPlaneDuration()
+	upgradeTimeout := cfg.Maintenance.GetControlPlaneDuration()
 	if !upgradeStartTime.IsZero() && controlPlaneCompleteTime == nil && time.Now().After(upgradeStartTime.Add(upgradeTimeout)) {
 		logger.Info("Control plane upgrade timeout")
 		metricsClient.UpdateMetricUpgradeControlPlaneTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)

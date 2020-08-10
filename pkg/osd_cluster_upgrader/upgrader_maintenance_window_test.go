@@ -48,6 +48,9 @@ var _ = Describe("ClusterUpgrader maintenance window tests", func() {
 			Maintenance: maintenanceConfig{
 				WorkerNodeTime:   8,
 				ControlPlaneTime: 90,
+				IgnoredAlerts:ignoredAlerts{
+					ControlPlaneCriticals: []string{"ignoreAlert1SRE","ignoreAlert2SRE"},
+				},
 			},
 			Scale: scaleConfig{
 				TimeOut: 30,
@@ -76,13 +79,13 @@ var _ = Describe("ClusterUpgrader maintenance window tests", func() {
 
 	Context("When creating a control plane maintenance window", func() {
 		It("Asks the maintenance client to do so", func() {
-			mockMaintClient.EXPECT().StartControlPlane(gomock.Any(), upgradeConfig.Spec.Desired.Version)
+			mockMaintClient.EXPECT().StartControlPlane(gomock.Any(), upgradeConfig.Spec.Desired.Version, config.Maintenance.IgnoredAlerts.ControlPlaneCriticals)
 			result, err := CreateControlPlaneMaintWindow(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(BeTrue())
 		})
 		It("Indicates when creating the maintenance window has failed", func() {
-			mockMaintClient.EXPECT().StartControlPlane(gomock.Any(), upgradeConfig.Spec.Desired.Version).Return(fmt.Errorf("fake error"))
+			mockMaintClient.EXPECT().StartControlPlane(gomock.Any(), upgradeConfig.Spec.Desired.Version, config.Maintenance.IgnoredAlerts.ControlPlaneCriticals).Return(fmt.Errorf("fake error"))
 			result, err := CreateControlPlaneMaintWindow(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
 			Expect(err).To(HaveOccurred())
 			Expect(result).To(BeFalse())
@@ -99,7 +102,7 @@ var _ = Describe("ClusterUpgrader maintenance window tests", func() {
 			configPool.Status.MachineCount = 3
 			configPool.Status.UpdatedMachineCount = 1
 			mockKubeClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Name: "worker"}, gomock.Any()).SetArg(2, *configPool)
-			mockMaintClient.EXPECT().StartOrUpdateWorker(gomock.Any(), upgradeConfig.Spec.Desired.Version)
+			mockMaintClient.EXPECT().SetWorker(gomock.Any(), upgradeConfig.Spec.Desired.Version)
 			result, err := CreateWorkerMaintWindow(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(BeTrue())
@@ -110,7 +113,7 @@ var _ = Describe("ClusterUpgrader maintenance window tests", func() {
 			configPool.Status.UpdatedMachineCount = 1
 			fakeError := fmt.Errorf("fake error")
 			mockKubeClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Name: "worker"}, gomock.Any()).SetArg(2, *configPool)
-			mockMaintClient.EXPECT().StartOrUpdateWorker(gomock.Any(), upgradeConfig.Spec.Desired.Version).Return(fakeError)
+			mockMaintClient.EXPECT().SetWorker(gomock.Any(), upgradeConfig.Spec.Desired.Version).Return(fakeError)
 			result, err := CreateWorkerMaintWindow(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(Equal(fakeError))

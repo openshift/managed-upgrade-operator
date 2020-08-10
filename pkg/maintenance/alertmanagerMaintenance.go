@@ -24,11 +24,6 @@ var (
 	alertManagerRouteName          = "alertmanager-main"
 	alertManagerServiceAccountName = "prometheus-k8s"
 	alertManagerBasePath           = "/api/v2/"
-
-	// Generally upgrades should not fire critical alerts but there are some critical alerts that will fire.
-	// e.g. 'etcdMembersDown' happens as the masters drain/reboot and a master is offline but this is expected and will resolve.
-	// This is a regex of critical alerts that can be ignored while upgrading of controlplane occurs
-	controlPlaneIgnoredCriticalAlerts = "(etcdMembersDown)"
 )
 
 type alertManagerMaintenanceBuilder struct{}
@@ -97,14 +92,14 @@ func getAuthentication(c client.Client) (runtime.ClientAuthInfoWriter, error) {
 
 // Start a control plane maintenance in Alertmanager for version
 // Time is converted to UTC
-func (amm *alertManagerMaintenance) StartControlPlane(endsAt time.Time, version string) error {
+func (amm *alertManagerMaintenance) StartControlPlane(endsAt time.Time, version string, ignoredCriticalAlerts []string) error {
 	defaultComment := fmt.Sprintf("Silence for OSD control plane upgrade to version %s", version)
 	criticalAlertComment := fmt.Sprintf("Silence for critical alerts during OSD control plane upgrade to version %s", version)
 	mList, err := amm.client.List([]string{})
 	if err != nil {
 		return err
 	}
-	defaultExists, _:= silenceExists(mList, defaultComment)
+	defaultExists, _ := silenceExists(mList, defaultComment)
 	criticalExists, _ := silenceExists(mList, criticalAlertComment)
 
 	if defaultExists && criticalExists {
@@ -121,10 +116,13 @@ func (amm *alertManagerMaintenance) StartControlPlane(endsAt time.Time, version 
 	}
 
 	if !criticalExists {
-		matchers := []*amv2Models.Matcher{createMatcher("alertname", controlPlaneIgnoredCriticalAlerts, true)}
-		err = amm.client.Create(matchers, now, end, config.OperatorName, criticalAlertComment)
-		if err != nil {
-			return err
+		if len(ignoredCriticalAlerts) > 0 {
+			icRegex := "(" + strings.Join(ignoredCriticalAlerts, "|") + ")"
+			matchers := []*amv2Models.Matcher{createMatcher("alertname", icRegex, true)}
+			err = amm.client.Create(matchers, now, end, config.OperatorName, criticalAlertComment)
+			if err != nil {
+				return err
+			}
 		}
 	}
 

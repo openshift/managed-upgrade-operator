@@ -59,6 +59,7 @@ var _ = Describe("Alert Manager Maintenance Client", func() {
 				},
 			},
 		}
+		ignoredControlPlaneCriticals = []string{"ignoredAlertSRE"}
 	)
 
 	BeforeEach(func() {
@@ -78,7 +79,7 @@ var _ = Describe("Alert Manager Maintenance Client", func() {
 			silenceClient.EXPECT().List(gomock.Any()).Return(&testNoActiveSilences, nil)
 			end := time.Now().Add(90 * time.Minute)
 			amm := alertManagerMaintenance{client: silenceClient}
-			err := amm.StartControlPlane(end, testVersion)
+			err := amm.StartControlPlane(end, testVersion, ignoredControlPlaneCriticals)
 			Expect(err).Should(Not(HaveOccurred()))
 		})
 		It("Should error on failing to start maintenance", func() {
@@ -86,7 +87,7 @@ var _ = Describe("Alert Manager Maintenance Client", func() {
 			silenceClient.EXPECT().List(gomock.Any()).Return(&testNoActiveSilences, nil)
 			end := time.Now().Add(90 * time.Minute)
 			amm := alertManagerMaintenance{client: silenceClient}
-			err := amm.StartControlPlane(end, testVersion)
+			err := amm.StartControlPlane(end, testVersion, ignoredControlPlaneCriticals)
 			Expect(err).Should(HaveOccurred())
 		})
 	})
