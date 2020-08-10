@@ -62,20 +62,6 @@ func (mr *MockMaintenanceMockRecorder) IsActive() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsActive", reflect.TypeOf((*MockMaintenance)(nil).IsActive))
 }
 
-// StartControlPlane mocks base method
-func (m *MockMaintenance) StartControlPlane(arg0 time.Time, arg1 string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StartControlPlane", arg0, arg1)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// StartControlPlane indicates an expected call of StartControlPlane
-func (mr *MockMaintenanceMockRecorder) StartControlPlane(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartControlPlane", reflect.TypeOf((*MockMaintenance)(nil).StartControlPlane), arg0, arg1)
-}
-
 // SetWorker mocks base method
 func (m *MockMaintenance) SetWorker(arg0 time.Time, arg1 string) error {
 	m.ctrl.T.Helper()
@@ -85,7 +71,21 @@ func (m *MockMaintenance) SetWorker(arg0 time.Time, arg1 string) error {
 }
 
 // SetWorker indicates an expected call of SetWorker
-func (mr *MockMaintenanceMockRecorder) StartOrUpdateWorker(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockMaintenanceMockRecorder) SetWorker(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetWorker", reflect.TypeOf((*MockMaintenance)(nil).SetWorker), arg0, arg1)
+}
+
+// StartControlPlane mocks base method
+func (m *MockMaintenance) StartControlPlane(arg0 time.Time, arg1 string, arg2 []string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StartControlPlane", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// StartControlPlane indicates an expected call of StartControlPlane
+func (mr *MockMaintenanceMockRecorder) StartControlPlane(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartControlPlane", reflect.TypeOf((*MockMaintenance)(nil).StartControlPlane), arg0, arg1, arg2)
 }
