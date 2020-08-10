@@ -213,8 +213,11 @@ var _ = Describe("ClusterUpgrader", func() {
 				expectUpgradeCommenced(mockKubeClient, clusterVersionList, nil)
 				util.ExpectGetClusterVersion(mockKubeClient, clusterVersionList, nil)
 				gomock.InOrder(
-					mockKubeClient.EXPECT().Update(gomock.Any(), gomock.Any()),
-					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, *clusterVersionList),
+					mockKubeClient.EXPECT().Update(gomock.Any(), gomock.Any()).DoAndReturn(
+						func(ctx context.Context, cv *configv1.ClusterVersion) error {
+							Expect(cv.Spec.Channel).To(Equal(upgradeConfig.Spec.Desired.Channel))
+							return nil
+						}),
 				)
 				result, err := CommenceUpgrade(mockKubeClient, config, mockScalerClient, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
 				Expect(err).NotTo(HaveOccurred())
@@ -245,7 +248,7 @@ var _ = Describe("ClusterUpgrader", func() {
 								AvailableUpdates: []configv1.Update{
 									{
 										Version: upgradeConfig.Spec.Desired.Version,
-										Image:   "quay.io/this-doesnt-exist",
+										Image:   "quay.io/dummy-image-for-test",
 										Force:   false,
 									},
 								},
@@ -286,7 +289,7 @@ var _ = Describe("ClusterUpgrader", func() {
 								AvailableUpdates: []configv1.Update{
 									{
 										Version: upgradeConfig.Spec.Desired.Version,
-										Image:   "quay.io/this-doesnt-exist",
+										Image:   "quay.io/dummy-image-for-test",
 										Force:   false,
 									},
 								},
@@ -658,7 +661,7 @@ func expectUpgradeHasNotCommenced(m *mocks.MockClient, u *upgradev1alpha1.Upgrad
 				AvailableUpdates: []configv1.Update{
 					{
 						Version: u.Spec.Desired.Version,
-						Image:   "quay.io/this-doesnt-exist",
+						Image:   "quay.io/dummy-image-for-test",
 						Force:   false,
 					},
 				},
@@ -684,7 +687,7 @@ func expectUpgradeHasCommenced(m *mocks.MockClient, u *upgradev1alpha1.UpgradeCo
 				AvailableUpdates: []configv1.Update{
 					{
 						Version: u.Spec.Desired.Version,
-						Image:   "quay.io/this-doesnt-exist",
+						Image:   "quay.io/dummy-image-for-test",
 						Force:   false,
 					},
 				},
