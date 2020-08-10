@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/go-multierror"
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/openshift/managed-upgrade-operator/config"
-	amSilence "github.com/prometheus/alertmanager/api/v2/client/silence"
 	amv2Models "github.com/prometheus/alertmanager/api/v2/models"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -96,13 +95,18 @@ func getAuthentication(c client.Client) (runtime.ClientAuthInfoWriter, error) {
 // Time is converted to UTC
 func (amm *alertManagerMaintenance) StartControlPlane(endsAt time.Time, version string, ignoredCriticalAlerts []string) error {
 	defaultComment := fmt.Sprintf("Silence for %s upgrade to version %s", controlPlaneSilenceCommentId, version)
-	criticalAlertComment := fmt.Sprintf("Silence for critical alerts during %s upgrade to version %s", controlPlaneSilenceCommentId, version)
-	mList, err := amm.client.List([]string{})
+	defaultSilence, err := amm.client.Filter(equalsComment(defaultComment))
 	if err != nil {
 		return err
 	}
-	defaultExists, _ := silenceExists(mList, defaultComment)
-	criticalExists, _ := silenceExists(mList, criticalAlertComment)
+	defaultExists := len(*defaultSilence) > 0
+
+	criticalAlertComment := fmt.Sprintf("Silence for critical alerts during %s upgrade to version %s", controlPlaneSilenceCommentId, version)
+	criticalSilence, err := amm.client.Filter(equalsComment(criticalAlertComment))
+	if err != nil {
+		return err
+	}
+	criticalExists := len(*criticalSilence) > 0
 
 	if defaultExists && criticalExists {
 		return nil
@@ -135,15 +139,17 @@ func (amm *alertManagerMaintenance) StartControlPlane(endsAt time.Time, version 
 // Time is converted to UTC
 func (amm *alertManagerMaintenance) SetWorker(endsAt time.Time, version string) error {
 	comment := fmt.Sprintf("Silence for %s upgrade to version %s", workerSilenceCommentId, version)
-	mList, err := amm.client.List([]string{})
+	silenceList, err := amm.client.Filter(equalsComment(comment))
 	if err != nil {
 		return err
 	}
-	exists, silence := silenceExists(mList, comment)
+	exists := len(*silenceList) > 0
 
 	end := strfmt.DateTime(endsAt.UTC())
 	if exists {
 		// Update the silence end time
+		sl := *silenceList
+		silence := sl[0]
 		err = amm.client.Update(*silence.ID, end)
 		if err != nil {
 			return err
@@ -172,19 +178,16 @@ func (amm *alertManagerMaintenance) EndWorker() error {
 // End all active control plane maintenances created by managed-upgrade-operator in Alertmanager
 // that have a comment field containing the supplied value
 func (amm *alertManagerMaintenance) EndSilences(comment string) error {
-	silences, err := amm.client.List([]string{})
+	silences, err := amm.client.Filter(createdByOperator, activeSilences, containsComment(comment))
 	if err != nil {
 		return err
 	}
 
 	var deleteErrors *multierror.Error
-	for _, s := range silences.Payload {
-		if *s.CreatedBy == config.OperatorName &&
-			*s.Status.State == amv2Models.SilenceStatusStateActive && strings.Contains(*s.Comment, comment) {
-			err := amm.client.Delete(*s.ID)
-			if err != nil {
-				deleteErrors = multierror.Append(deleteErrors, err)
-			}
+	for _, s := range *silences {
+		err := amm.client.Delete(*s.ID)
+		if err != nil {
+			deleteErrors = multierror.Append(deleteErrors, err)
 		}
 	}
 	return deleteErrors.ErrorOrNil()
@@ -206,27 +209,31 @@ func createDefaultMatchers() []*amv2Models.Matcher {
 	return amv2Models.Matchers{nonCriticalAlertMatcher, inNamespaceAlertMatcher}
 }
 
-// Check if a silence with comment exists and return it if it does
-func silenceExists(mList *amSilence.GetSilencesOK, comment string) (bool, *amv2Models.GettableSilence) {
-	for _, m := range mList.Payload {
-		if *m.Comment == comment {
-			return true, m
-		}
-	}
-
-	return false, nil
-}
-
 func (amm *alertManagerMaintenance) IsActive() (bool, error) {
-	silences, err := amm.client.List([]string{})
+	silences, err := amm.client.Filter(activeSilences, createdByOperator)
 	if err != nil {
 		return false, err
 	}
 
-	for _, s := range silences.Payload {
-		if *s.CreatedBy == config.OperatorName && *s.Status.State == amv2Models.AlertStatusStateActive {
-			return true, nil
-		}
+	return len(*silences) > 0, nil
+}
+
+var activeSilences = func(s *amv2Models.GettableSilence) bool {
+	return *s.Status.State == amv2Models.AlertStatusStateActive
+}
+
+var createdByOperator = func(s *amv2Models.GettableSilence) bool {
+	return *s.CreatedBy == config.OperatorName
+}
+
+var equalsComment = func(comment string) func(s *amv2Models.GettableSilence) bool {
+	return func(s *amv2Models.GettableSilence) bool {
+		return *s.Comment == comment
 	}
-	return false, nil
+}
+
+var containsComment = func(comment string) func(s *amv2Models.GettableSilence) bool {
+	return func(s *amv2Models.GettableSilence) bool {
+		return strings.Contains(*s.Comment, comment)
+	}
 }

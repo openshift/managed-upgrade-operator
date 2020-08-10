@@ -16,6 +16,7 @@ type AlertManagerSilencer interface {
 	List(filter []string) (*amSilence.GetSilencesOK, error)
 	Delete(id string) error
 	Update(id string, endsAt strfmt.DateTime) error
+	Filter(predicates ...silencePredicate) (*[]amv2Models.GettableSilence, error)
 }
 
 type alertManagerSilenceClient struct {
@@ -109,4 +110,30 @@ func (ams *alertManagerSilenceClient) Update(id string, endsAt strfmt.DateTime) 
 	}
 
 	return nil
+}
+
+type silencePredicate func(*amv2Models.GettableSilence) bool
+
+// Filter silences in Alertmanager based on the predicates
+func (ams *alertManagerSilenceClient) Filter(predicates ...silencePredicate) (*[]amv2Models.GettableSilence, error) {
+	silences, err := ams.List([]string{})
+	if err != nil {
+		return nil, err
+	}
+
+	filteredSilences := []amv2Models.GettableSilence{}
+	for _, s := range silences.Payload {
+		var match = true
+		for _, p := range predicates {
+			if !p(s) {
+				match = false
+				break
+			}
+		}
+		if match {
+			filteredSilences = append(filteredSilences, *s)
+		}
+	}
+
+	return &filteredSilences, nil
 }
