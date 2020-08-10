@@ -104,8 +104,8 @@ func (amm *alertManagerMaintenance) StartControlPlane(endsAt time.Time, version 
 	if err != nil {
 		return err
 	}
-	defaultExists := silenceExists(mList, defaultComment)
-	criticalExists := silenceExists(mList, criticalAlertComment)
+	defaultExists, _:= silenceExists(mList, defaultComment)
+	criticalExists, _ := silenceExists(mList, criticalAlertComment)
 
 	if defaultExists && criticalExists {
 		return nil
@@ -133,20 +133,21 @@ func (amm *alertManagerMaintenance) StartControlPlane(endsAt time.Time, version 
 
 // Start a worker node maintenance in Alertmanager for version
 // Time is converted to UTC
-func (amm *alertManagerMaintenance) StartWorker(endsAt time.Time, version string) error {
+func (amm *alertManagerMaintenance) SetWorker(endsAt time.Time, version string) error {
 	comment := fmt.Sprintf("Silence for OSD worker node upgrade to version %s", version)
 	mList, err := amm.client.List([]string{})
 	if err != nil {
 		return err
 	}
-	exists := silenceExists(mList, comment)
-	if exists {
-		return nil
-	}
+	exists, silence := silenceExists(mList, comment)
 
-	now := strfmt.DateTime(time.Now().UTC())
 	end := strfmt.DateTime(endsAt.UTC())
-	err = amm.client.Create(createDefaultMatchers(), now, end, config.OperatorName, comment)
+	if exists {
+		err = amm.client.Update(*silence.ID, end)
+	} else {
+		now := strfmt.DateTime(time.Now().UTC())
+		err = amm.client.Create(createDefaultMatchers(), now, end, config.OperatorName, comment)
+	}
 	if err != nil {
 		return err
 	}
@@ -183,21 +184,21 @@ func createMatcher(alertMatchKey string, alertValue string, isRegex bool) *amv2M
 
 func createDefaultMatchers() []*amv2Models.Matcher {
 	// Upgrades can impact some availability which may trigger info/warning alerts. ignore those.
-	nonCriticalAlertMatcher := createMatcher("severity", "(warning|info|none)", true)
+	nonCriticalAlertMatcher := createMatcher("severity", "(warning|info)", true)
 
 	inNamespaceAlertMatcher := createMatcher("namespace", "(^openshift.*|^kube.*|^redhat.*|^default$)", true)
 	return amv2Models.Matchers{nonCriticalAlertMatcher, inNamespaceAlertMatcher}
 }
 
-// Check if a silence with comment exists
-func silenceExists(mList *amSilence.GetSilencesOK, comment string) bool {
+// Check if a silence with comment exists and return it if it does
+func silenceExists(mList *amSilence.GetSilencesOK, comment string) (bool, *amv2Models.GettableSilence) {
 	for _, m := range mList.Payload {
 		if *m.Comment == comment {
-			return true
+			return true, m
 		}
 	}
 
-	return false
+	return false, nil
 }
 
 func (amm *alertManagerMaintenance) IsActive() (bool, error) {

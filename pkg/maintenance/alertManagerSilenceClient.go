@@ -14,6 +14,7 @@ type AlertManagerSilencer interface {
 	Create(matchers amv2Models.Matchers, startsAt strfmt.DateTime, endsAt strfmt.DateTime, creator string, comment string) error
 	List(filter []string) (*amSilence.GetSilencesOK, error)
 	Delete(id string) error
+	Update(id string, endsAt strfmt.DateTime) error
 }
 
 type alertManagerSilenceClient struct {
@@ -72,6 +73,42 @@ func (ams *alertManagerSilenceClient) Delete(id string) error {
 
 	silenceClient := amSilence.New(ams.transport, strfmt.Default)
 	_, err := silenceClient.DeleteSilence(dParams)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Update silence end time in AlertManager instance defined in transport
+func (ams *alertManagerSilenceClient) Update(id string, endsAt strfmt.DateTime) error {
+	silenceClient := amSilence.New(ams.transport, strfmt.Default)
+	gParams := &amSilence.GetSilenceParams{
+		SilenceID:  strfmt.UUID(id),
+		Context:    context.TODO(),
+		HTTPClient: &http.Client{},
+	}
+	result, err := silenceClient.GetSilence(gParams)
+	if err != nil {
+		return err
+	}
+
+	pParams := &amSilence.PostSilencesParams{
+		Silence: &amv2Models.PostableSilence{
+			ID: id,
+			Silence: amv2Models.Silence{
+				CreatedBy: result.Payload.CreatedBy,
+				Comment:   result.Payload.Comment,
+				EndsAt:    &endsAt,
+				StartsAt:  result.Payload.StartsAt,
+				Matchers:  result.Payload.Matchers,
+			},
+		},
+		Context:    context.TODO(),
+		HTTPClient: &http.Client{},
+	}
+
+	_, err = silenceClient.PostSilences(pParams)
 	if err != nil {
 		return err
 	}

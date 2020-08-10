@@ -77,3 +77,17 @@ func (mr *MockAlertManagerSilencerMockRecorder) List(arg0 interface{}) *gomock.C
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockAlertManagerSilencer)(nil).List), arg0)
 }
+
+// Update mocks base method
+func (m *MockAlertManagerSilencer) Update(arg0 string, arg1 strfmt.DateTime) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Update", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Update indicates an expected call of Update
+func (mr *MockAlertManagerSilencerMockRecorder) Update(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockAlertManagerSilencer)(nil).Update), arg0, arg1)
+}
