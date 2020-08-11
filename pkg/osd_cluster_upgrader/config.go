@@ -9,6 +9,7 @@ type osdUpgradeConfig struct {
 	Maintenance maintenanceConfig `yaml:"maintenance"`
 	Scale       scaleConfig       `yaml:"scale"`
 	NodeDrain   nodeDrain         `yaml:"nodeDrain"`
+	HealthCheck healthCheck       `yaml:"healthCheck"`
 }
 
 type maintenanceConfig struct {
@@ -49,6 +50,10 @@ type scaleConfig struct {
 
 type nodeDrain struct {
 	TimeOut int `yaml:"timeOut"`
+}
+
+type healthCheck struct {
+	IgnoredCriticals []string `yaml:"ignoredCriticals"`
 }
 
 func (cfg *osdUpgradeConfig) IsValid() error {
