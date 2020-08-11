@@ -222,7 +222,7 @@ func CreateControlPlaneMaintWindow(c client.Client, cfg *osdUpgradeConfig, scale
 
 // RemoveControlPlaneMaintWindow removes the maintenance window for control plane
 func RemoveControlPlaneMaintWindow(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
-	err := m.End()
+	err := m.EndControlPlane()
 	if err != nil {
 		return false, err
 	}
@@ -261,7 +261,7 @@ func CreateWorkerMaintWindow(c client.Client, cfg *osdUpgradeConfig, scaler scal
 	totalWorkerMaintenanceDuration := waitTimePeriod + actionTimePeriod
 
 	endTime := time.Now().Add(totalWorkerMaintenanceDuration)
-	logger.Info(fmt.Sprintf("Creating worker node maintenace for %d remaining nodes", pendingWorkerCount))
+	logger.Info(fmt.Sprintf( "Creating worker node maintenace for %d remaining nodes, ending at %v", pendingWorkerCount, endTime))
 	err = m.SetWorker(endTime, upgradeConfig.Spec.Desired.Version)
 	if err != nil {
 		return false, err
@@ -297,6 +297,8 @@ func AllWorkersUpgraded(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Sc
 		if !silenceActive {
 			logger.Info("Worker upgrade timeout.")
 			metricsClient.UpdateMetricUpgradeWorkerTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
+		} else {
+			metricsClient.ResetMetricUpgradeWorkerTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
 		}
 		return false, nil
 	}
@@ -413,7 +415,7 @@ func performUpgradeVerification(c client.Client, logger logr.Logger) (bool, erro
 
 // RemoveMaintWindows removes all the maintenance windows we created during the upgrade
 func RemoveMaintWindow(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
-	err := m.End()
+	err := m.EndWorkers()
 	if err != nil {
 		return false, err
 	}

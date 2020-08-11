@@ -64,13 +64,13 @@ var _ = Describe("ClusterUpgrader maintenance window tests", func() {
 
 	Context("When removing a control plane maintenance window", func() {
 		It("Asks the maintenance client to do so", func() {
-			mockMaintClient.EXPECT().End()
+			mockMaintClient.EXPECT().EndControlPlane()
 			result, err := RemoveControlPlaneMaintWindow(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(BeTrue())
 		})
 		It("Indicates when creating the maintenance window has failed", func() {
-			mockMaintClient.EXPECT().End().Return(fmt.Errorf("fake error"))
+			mockMaintClient.EXPECT().EndControlPlane().Return(fmt.Errorf("fake error"))
 			result, err := RemoveControlPlaneMaintWindow(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
 			Expect(err).To(HaveOccurred())
 			Expect(result).To(BeFalse())
@@ -138,13 +138,13 @@ var _ = Describe("ClusterUpgrader maintenance window tests", func() {
 
 	Context("When removing a worker maintenance window", func() {
 		It("Asks the maintenance client to do so", func() {
-			mockMaintClient.EXPECT().End()
+			mockMaintClient.EXPECT().EndWorkers()
 			result, err := RemoveMaintWindow(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(BeTrue())
 		})
 		It("Indicates when creating the maintenance window has failed", func() {
-			mockMaintClient.EXPECT().End().Return(fmt.Errorf("fake error"))
+			mockMaintClient.EXPECT().EndWorkers().Return(fmt.Errorf("fake error"))
 			result, err := RemoveMaintWindow(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
 			Expect(err).To(HaveOccurred())
 			Expect(result).To(BeFalse())

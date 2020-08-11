@@ -42,7 +42,6 @@ func (ams *alertManagerSilenceClient) Create(matchers amv2Models.Matchers, start
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 

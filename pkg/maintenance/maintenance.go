@@ -10,7 +10,9 @@ import (
 type Maintenance interface {
 	StartControlPlane(endsAt time.Time, version string, ignoredAlerts []string) error
 	SetWorker(endsAt time.Time, version string) error
-	End() error
+	EndControlPlane() error
+	EndWorkers() error
+	EndSilences(comment string) error
 	IsActive() (bool, error)
 }
 

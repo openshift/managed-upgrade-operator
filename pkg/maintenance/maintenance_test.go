@@ -120,8 +120,7 @@ var _ = Describe("Alert Manager Maintenance Client", func() {
 	Context("Updating a worker silence", func() {
 		It("Should update a silence if one already exists", func() {
 			silenceClient.EXPECT().List(gomock.Any()).Return(&testActiveSilences, nil)
-			silenceClient.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-			silenceClient.EXPECT().Delete(gomock.Any())
+			silenceClient.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
 			end := time.Now().Add(90 * time.Minute)
 			amm := alertManagerMaintenance{client: silenceClient}
 			err := amm.SetWorker(end, testVersion)
@@ -161,7 +160,7 @@ var _ = Describe("Alert Manager Maintenance Client", func() {
 
 			silenceClient.EXPECT().List(gomock.Any()).Return(&activeSilences, nil)
 			amm := alertManagerMaintenance{client: silenceClient}
-			err := amm.End()
+			err := amm.EndSilences("")
 			Expect(err).Should(Not(HaveOccurred()))
 		})
 		It("Should find maintenances created by the operator and not return an error", func() {
@@ -186,7 +185,7 @@ var _ = Describe("Alert Manager Maintenance Client", func() {
 			silenceClient.EXPECT().List(gomock.Any()).Return(&activeSilences, nil)
 			silenceClient.EXPECT().Delete(testId).Return(nil)
 			amm := alertManagerMaintenance{client: silenceClient}
-			err := amm.End()
+			err := amm.EndSilences("")
 			Expect(err).Should(Not(HaveOccurred()))
 		})
 	})

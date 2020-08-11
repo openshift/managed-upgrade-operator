@@ -33,18 +33,46 @@ func (m *MockMaintenance) EXPECT() *MockMaintenanceMockRecorder {
 	return m.recorder
 }
 
-// End mocks base method
-func (m *MockMaintenance) End() error {
+// EndControlPlane mocks base method
+func (m *MockMaintenance) EndControlPlane() error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "End")
+	ret := m.ctrl.Call(m, "EndControlPlane")
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// End indicates an expected call of End
-func (mr *MockMaintenanceMockRecorder) End() *gomock.Call {
+// EndControlPlane indicates an expected call of EndControlPlane
+func (mr *MockMaintenanceMockRecorder) EndControlPlane() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "End", reflect.TypeOf((*MockMaintenance)(nil).End))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EndControlPlane", reflect.TypeOf((*MockMaintenance)(nil).EndControlPlane))
+}
+
+// EndSilences mocks base method
+func (m *MockMaintenance) EndSilences(arg0 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EndSilences", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// EndSilences indicates an expected call of EndSilences
+func (mr *MockMaintenanceMockRecorder) EndSilences(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EndSilences", reflect.TypeOf((*MockMaintenance)(nil).EndSilences), arg0)
+}
+
+// EndWorkers mocks base method
+func (m *MockMaintenance) EndWorkers() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EndWorkers")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// EndWorkers indicates an expected call of EndWorkers
+func (mr *MockMaintenanceMockRecorder) EndWorkers() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EndWorkers", reflect.TypeOf((*MockMaintenance)(nil).EndWorkers))
 }
 
 // IsActive mocks base method
