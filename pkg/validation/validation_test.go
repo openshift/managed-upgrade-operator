@@ -5,6 +5,8 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"time"
 
 	configv1 "github.com/openshift/api/config/v1"
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
@@ -54,8 +56,26 @@ var _ = Describe("Validation of UpgradeConfig CR", func() {
 				},
 				History: []configv1.UpdateHistory{
 					{
-						State:   testCompletedUpdate,
-						Version: testUpgradeConfig.Spec.Desired.Version,
+						State:          testCompletedUpdate,
+						StartedTime:    v1.Time{
+							Time: time.Now().UTC().Add(-60 * time.Minute),
+						},
+						CompletionTime: &v1.Time{
+							Time: time.Now().UTC().Add(-60 * time.Minute),
+						},
+						Version:        "some bad version",
+						Verified:       false,
+					},
+					{
+						State:          testCompletedUpdate,
+						StartedTime:    v1.Time{
+							Time: time.Now().UTC(),
+						},
+						CompletionTime: &v1.Time{
+							Time: time.Now().UTC(),
+						},
+						Version:        testUpgradeConfig.Spec.Desired.Version,
+						Verified:       false,
 					},
 				},
 			},
@@ -77,7 +97,8 @@ var _ = Describe("Validation of UpgradeConfig CR", func() {
 			Context("When getting the current cluster version fails", func() {
 				It("Validation is false and error is returned", func() {
 					// Set version as empty string
-					testClusterVersion.Status.History[0].Version = ""
+					// It shouldn't pick the first element, as it's older
+					testClusterVersion.Status.History[1].Version = ""
 					result, err := testValidator.IsValidUpgradeConfig(testUpgradeConfig, testClusterVersion, testLogger)
 					Expect(err).ShouldNot(BeNil())
 					Expect(result.IsValid).Should(BeFalse())
