@@ -24,10 +24,6 @@ type SchedulerResult struct {
 }
 
 func (s *scheduler) IsReadyToUpgrade(upgradeConfig *upgradev1alpha1.UpgradeConfig, timeOut time.Duration) SchedulerResult {
-	if !upgradeConfig.Spec.Proceed {
-		log.Info("Upgrade cannot proceed", "proceed", upgradeConfig.Spec.Proceed)
-		return SchedulerResult{IsReady: false, IsBreached: false}
-	}
 	upgradeTime, err := time.Parse(time.RFC3339, upgradeConfig.Spec.UpgradeAt)
 	if err != nil {
 		log.Error(err, "failed to parse spec.upgradeAt", upgradeConfig.Spec.UpgradeAt)

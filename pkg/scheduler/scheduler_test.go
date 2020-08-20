@@ -27,12 +27,6 @@ var _ = Describe("Scheduler", func() {
 		result := s.IsReadyToUpgrade(upgradeConfig, 60*time.Minute)
 		Expect(result.IsReady).To(BeFalse())
 	})
-	It("it should not be ready to upgrade if proceed is set to false", func() {
-		s := &scheduler{}
-		upgradeConfig = testUpgradeConfig(false, time.Now().Format(time.RFC3339))
-		result := s.IsReadyToUpgrade(upgradeConfig, 60*time.Minute)
-		Expect(result.IsReady).To(BeFalse())
-	})
 	It("it should not be ready to upgrade and indicate breach if upgradeAt is after timeout", func() {
 		s := &scheduler{}
 		upgradeConfig = testUpgradeConfig(true, time.Now().Add(-10*time.Minute).Format(time.RFC3339))
@@ -48,7 +42,6 @@ func testUpgradeConfig(proceed bool, upgradeAt string) *upgradev1alpha1.UpgradeC
 			Name: "upgradeconfig-example",
 		},
 		Spec: upgradev1alpha1.UpgradeConfigSpec{
-			Proceed:   proceed,
 			UpgradeAt: upgradeAt,
 		},
 	}
