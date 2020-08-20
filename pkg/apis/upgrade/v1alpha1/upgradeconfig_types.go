@@ -24,8 +24,6 @@ type UpgradeConfigSpec struct {
 	// The maximum grace period granted to a node whose drain is blocked by a Pod Disruption Budget, before that drain is forced. Measured in minutes.
 	PDBForceDrainTimeout int32 `json:"PDBForceDrainTimeout"`
 
-	// Given all conditions have passed and cluster is ready to upgrade, proceed governs this decision to continue and commence the upgrade
-	Proceed bool `json:"proceed"`
 
 	// +kubebuilder:validation:Enum={"OSD"}
 	// Type indicates the ClusterUpgrader implementation to use to perform an upgrade of the cluster
@@ -162,8 +160,6 @@ type Update struct {
 	Version string `json:"version"`
 	// Channel used for upgrades
 	Channel string `json:"channel"`
-	// Force upgrade, default value is False
-	Force bool `json:"force"`
 }
 
 // SubscriptionUpdate describe the 3rd party operator update config

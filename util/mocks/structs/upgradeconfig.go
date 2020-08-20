@@ -29,9 +29,7 @@ func NewUpgradeConfigBuilder() *testUpgradeConfigBuilder {
 				Desired:             api.Update{
 					Version: "fakeVersion",
 					Channel: "fakeChannel",
-					Force:   false,
 				},
-				Proceed: true,
 				UpgradeAt: time.Now().Format(time.RFC3339),
 				PDBForceDrainTimeout: 60,
 			},

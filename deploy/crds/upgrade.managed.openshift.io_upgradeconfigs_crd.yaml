@@ -65,22 +65,13 @@ spec:
                 channel:
                   description: Channel used for upgrades
                   type: string
-                force:
-                  description: Force upgrade, default value is False
-                  type: boolean
                 version:
                   description: Version of openshift release
                   type: string
               required:
               - channel
-              - force
               - version
               type: object
-            proceed:
-              description: Given all conditions have passed and cluster is ready to
-                upgrade, proceed governs this decision to continue and commence the
-                upgrade
-              type: boolean
             subscriptionUpdates:
               description: This defines the 3rd party operator subscriptions upgrade
               items:
@@ -114,7 +105,6 @@ spec:
           required:
           - PDBForceDrainTimeout
           - desired
-          - proceed
           - type
           - upgradeAt
           type: object
