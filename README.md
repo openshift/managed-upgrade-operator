@@ -60,10 +60,8 @@ metadata:
 spec:
   type: "OSD"
   upgradeAt: "2020-01-01T00:00:00Z"
-  proceed: true
   PDBForceDrainTimeout: 60
   desired:
     channel: "fast-4.4"
-    force: false
     version: "4.4.6"
 ```
