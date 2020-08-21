@@ -24,6 +24,8 @@ var (
 	alertManagerRouteName          = "alertmanager-main"
 	alertManagerServiceAccountName = "prometheus-k8s"
 	alertManagerBasePath           = "/api/v2/"
+	controlPlaneSilenceCommentId   = "OSD control plane"
+	workerSilenceCommentId         = "OSD worker node"
 )
 
 type alertManagerMaintenanceBuilder struct{}
@@ -93,8 +95,8 @@ func getAuthentication(c client.Client) (runtime.ClientAuthInfoWriter, error) {
 // Start a control plane maintenance in Alertmanager for version
 // Time is converted to UTC
 func (amm *alertManagerMaintenance) StartControlPlane(endsAt time.Time, version string, ignoredCriticalAlerts []string) error {
-	defaultComment := fmt.Sprintf("Silence for OSD control plane upgrade to version %s", version)
-	criticalAlertComment := fmt.Sprintf("Silence for critical alerts during OSD control plane upgrade to version %s", version)
+	defaultComment := fmt.Sprintf("Silence for %s upgrade to version %s", controlPlaneSilenceCommentId, version)
+	criticalAlertComment := fmt.Sprintf("Silence for critical alerts during %s upgrade to version %s", controlPlaneSilenceCommentId, version)
 	mList, err := amm.client.List([]string{})
 	if err != nil {
 		return err
@@ -132,7 +134,7 @@ func (amm *alertManagerMaintenance) StartControlPlane(endsAt time.Time, version 
 // Start a worker node maintenance in Alertmanager for version
 // Time is converted to UTC
 func (amm *alertManagerMaintenance) SetWorker(endsAt time.Time, version string) error {
-	comment := fmt.Sprintf("Silence for OSD worker node upgrade to version %s", version)
+	comment := fmt.Sprintf("Silence for %s upgrade to version %s", workerSilenceCommentId, version)
 	mList, err := amm.client.List([]string{})
 	if err != nil {
 		return err
@@ -141,7 +143,11 @@ func (amm *alertManagerMaintenance) SetWorker(endsAt time.Time, version string) 
 
 	end := strfmt.DateTime(endsAt.UTC())
 	if exists {
+		// Update the silence end time
 		err = amm.client.Update(*silence.ID, end)
+		if err != nil {
+			return err
+		}
 	} else {
 		now := strfmt.DateTime(time.Now().UTC())
 		err = amm.client.Create(createDefaultMatchers(), now, end, config.OperatorName, comment)
@@ -153,8 +159,19 @@ func (amm *alertManagerMaintenance) SetWorker(endsAt time.Time, version string) 
 	return nil
 }
 
-// End all active maintenances created by managed-upgrade-operator in Alertmanager
-func (amm *alertManagerMaintenance) End() error {
+// End all active control plane maintenances created by managed-upgrade-operator in Alertmanager
+func (amm *alertManagerMaintenance) EndControlPlane() error {
+	return amm.EndSilences(controlPlaneSilenceCommentId)
+}
+
+// End all active worker maintenances created by managed-upgrade-operator in Alertmanager
+func (amm *alertManagerMaintenance) EndWorker() error {
+	return amm.EndSilences(workerSilenceCommentId)
+}
+
+// End all active control plane maintenances created by managed-upgrade-operator in Alertmanager
+// that have a comment field containing the supplied value
+func (amm *alertManagerMaintenance) EndSilences(comment string) error {
 	silences, err := amm.client.List([]string{})
 	if err != nil {
 		return err
@@ -162,7 +179,8 @@ func (amm *alertManagerMaintenance) End() error {
 
 	var deleteErrors *multierror.Error
 	for _, s := range silences.Payload {
-		if *s.CreatedBy == config.OperatorName && *s.Status.State == amv2Models.SilenceStatusStateActive {
+		if *s.CreatedBy == config.OperatorName &&
+			*s.Status.State == amv2Models.SilenceStatusStateActive && strings.Contains(*s.Comment, comment) {
 			err := amm.client.Delete(*s.ID)
 			if err != nil {
 				deleteErrors = multierror.Append(deleteErrors, err)
