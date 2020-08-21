@@ -22,6 +22,7 @@ var _ = Describe("Alert Manager Maintenance Client", func() {
 		mockCtrl              *gomock.Controller
 		mockKubeClient        *mocks.MockClient
 		silenceClient         *MockAlertManagerSilencer
+		maintenance           alertManagerMaintenance
 		testComment           = "test comment"
 		testOperatorName      = "managed-upgrade-operator"
 		testCreatedByOperator = testOperatorName
@@ -63,6 +64,7 @@ var _ = Describe("Alert Manager Maintenance Client", func() {
 	BeforeEach(func() {
 		mockCtrl = gomock.NewController(GinkgoT())
 		silenceClient = NewMockAlertManagerSilencer(mockCtrl)
+		maintenance = alertManagerMaintenance{client: silenceClient}
 		mockKubeClient = mocks.NewMockClient(mockCtrl)
 	})
 
@@ -73,19 +75,21 @@ var _ = Describe("Alert Manager Maintenance Client", func() {
 	// Starting a Control Plane Silence
 	Context("Creating a Control Plane silence", func() {
 		It("Should not error on successfull maintenance start", func() {
-			silenceClient.EXPECT().Filter(gomock.Any()).Return(&testNoActiveSilences, nil).Times(2)
-			silenceClient.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2)
+			gomock.InOrder(
+				silenceClient.EXPECT().Filter(gomock.Any()).Return(&testNoActiveSilences, nil).Times(2),
+				silenceClient.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2),
+			)
 			end := time.Now().Add(90 * time.Minute)
-			amm := alertManagerMaintenance{client: silenceClient}
-			err := amm.StartControlPlane(end, testVersion, ignoredControlPlaneCriticals)
+			err := maintenance.StartControlPlane(end, testVersion, ignoredControlPlaneCriticals)
 			Expect(err).Should(Not(HaveOccurred()))
 		})
 		It("Should error on failing to start maintenance", func() {
-			silenceClient.EXPECT().Filter(gomock.Any()).Return(&testNoActiveSilences, nil).Times(2)
-			silenceClient.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("fake error"))
+			gomock.InOrder(
+				silenceClient.EXPECT().Filter(gomock.Any()).Return(&testNoActiveSilences, nil).Times(2),
+				silenceClient.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("fake error")),
+			)
 			end := time.Now().Add(90 * time.Minute)
-			amm := alertManagerMaintenance{client: silenceClient}
-			err := amm.StartControlPlane(end, testVersion, ignoredControlPlaneCriticals)
+			err := maintenance.StartControlPlane(end, testVersion, ignoredControlPlaneCriticals)
 			Expect(err).Should(HaveOccurred())
 		})
 	})
@@ -93,19 +97,21 @@ var _ = Describe("Alert Manager Maintenance Client", func() {
 	// Starting a worker silence
 	Context("Creating a worker silence", func() {
 		It("Should not error on successfull maintenance start", func() {
-			silenceClient.EXPECT().Filter(gomock.Any()).Return(&testNoActiveSilences, nil)
-			silenceClient.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+			gomock.InOrder(
+				silenceClient.EXPECT().Filter(gomock.Any()).Return(&testNoActiveSilences, nil),
+				silenceClient.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil),
+			)
 			end := time.Now().Add(90 * time.Minute)
-			amm := alertManagerMaintenance{client: silenceClient}
-			err := amm.SetWorker(end, testVersion)
+			err := maintenance.SetWorker(end, testVersion)
 			Expect(err).Should(Not(HaveOccurred()))
 		})
 		It("Should error on failing to start maintenance", func() {
-			silenceClient.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("fake error"))
-			silenceClient.EXPECT().Filter(gomock.Any()).Return(&testNoActiveSilences, nil)
+			gomock.InOrder(
+				silenceClient.EXPECT().Filter(gomock.Any()).Return(&testNoActiveSilences, nil),
+				silenceClient.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("fake error")),
+			)
 			end := time.Now().Add(90 * time.Minute)
-			amm := alertManagerMaintenance{client: silenceClient}
-			err := amm.SetWorker(end, testVersion)
+			err := maintenance.SetWorker(end, testVersion)
 			Expect(err).Should(HaveOccurred())
 		})
 	})
@@ -113,11 +119,12 @@ var _ = Describe("Alert Manager Maintenance Client", func() {
 	// Updating an existing worker silence
 	Context("Updating a worker silence", func() {
 		It("Should update a silence if one already exists", func() {
-			silenceClient.EXPECT().Filter(gomock.Any()).Return(&testActiveSilences, nil)
-			silenceClient.EXPECT().Update(gomock.Any(), gomock.Any())
+			gomock.InOrder(
+				silenceClient.EXPECT().Filter(gomock.Any()).Return(&testActiveSilences, nil),
+				silenceClient.EXPECT().Update(gomock.Any(), gomock.Any()),
+			)
 			end := time.Now().Add(90 * time.Minute)
-			amm := alertManagerMaintenance{client: silenceClient}
-			err := amm.SetWorker(end, testVersion)
+			err := maintenance.SetWorker(end, testVersion)
 			Expect(err).ShouldNot(HaveOccurred())
 		})
 	})
@@ -137,8 +144,7 @@ var _ = Describe("Alert Manager Maintenance Client", func() {
 			testSilenceNotOwned.CreatedBy = &testCreatedByTest
 
 			silenceClient.EXPECT().Filter(gomock.Any()).Return(&[]amv2Models.GettableSilence{}, nil)
-			amm := alertManagerMaintenance{client: silenceClient}
-			err := amm.EndSilences("")
+			err := maintenance.EndSilences("")
 			Expect(err).Should(Not(HaveOccurred()))
 		})
 		It("Should find maintenances created by the operator and not return an error", func() {
@@ -156,10 +162,11 @@ var _ = Describe("Alert Manager Maintenance Client", func() {
 			var activeSilences []amv2Models.GettableSilence
 			activeSilences = append(activeSilences, gettableSilence)
 
-			silenceClient.EXPECT().Filter(gomock.Any()).Return(&activeSilences, nil)
-			silenceClient.EXPECT().Delete(testId).Return(nil)
-			amm := alertManagerMaintenance{client: silenceClient}
-			err := amm.EndSilences("")
+			gomock.InOrder(
+				silenceClient.EXPECT().Filter(gomock.Any()).Return(&activeSilences, nil),
+				silenceClient.EXPECT().Delete(testId).Return(nil),
+			)
+			err := maintenance.EndSilences("")
 			Expect(err).Should(Not(HaveOccurred()))
 		})
 	})
