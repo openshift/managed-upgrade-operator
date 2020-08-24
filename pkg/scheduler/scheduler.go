@@ -40,7 +40,7 @@ func (s *scheduler) IsReadyToUpgrade(upgradeConfig *upgradev1alpha1.UpgradeConfi
 	} else {
 		// It hasn't reached the upgrade window yet
 		pendingTime := upgradeTime.Sub(now)
-		log.Infof("Upgrade is scheduled in %d hours %d mins", int(pendingTime.Hours()), int(pendingTime.Minutes()))
+		log.Infof("Upgrade is scheduled in %d hours %d mins", int(pendingTime.Hours()), int(pendingTime.Minutes())-(int(pendingTime.Hours())*60))
 	}
 
 	return SchedulerResult{IsReady: false, IsBreached: false}
