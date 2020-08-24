@@ -12,6 +12,8 @@ data:
         - etcdMembersDown
         - KubeDeploymentReplicasMismatch
         - ClusterOperatorDown
+        - MachineWithNoRunningPhase
+        - ClusterOperatorDegraded
     scale:
       timeOut: 30
     upgradeWindow:
