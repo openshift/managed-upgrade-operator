@@ -31,17 +31,31 @@ type Validator interface {
 type validator struct{}
 
 type ValidatorResult struct {
+	// Indicates that the UpgradeConfig is semantically and syntactically valid
 	IsValid bool
+	// Indicates that the UpgradeConfig should be actioned to conduct an upgrade
+	IsAvailableUpdate bool
+	// A message associated with the validation result
 	Message string
 }
+
+type VersionComparison int
+
+const (
+	VersionUnknown VersionComparison = iota - 2
+	VersionDowngrade
+	VersionEqual
+	VersionUpgrade
+)
 
 func (v *validator) IsValidUpgradeConfig(uC *upgradev1alpha1.UpgradeConfig, cV *configv1.ClusterVersion, logger logr.Logger) (ValidatorResult, error) {
 	// Validate upgradeAt as RFC3339
 	_, err := time.Parse(time.RFC3339, uC.Spec.UpgradeAt)
 	if err != nil {
 		return ValidatorResult{
-			IsValid: false,
-			Message: fmt.Sprintf("Failed to parse upgradeAt:%s during validation", uC.Spec.UpgradeAt),
+			IsValid:           false,
+			IsAvailableUpdate: false,
+			Message:           fmt.Sprintf("Failed to parse upgradeAt:%s during validation", uC.Spec.UpgradeAt),
 		}, nil
 	}
 
@@ -50,8 +64,9 @@ func (v *validator) IsValidUpgradeConfig(uC *upgradev1alpha1.UpgradeConfig, cV *
 	cv, err := osd_cluster_upgrader.GetCurrentVersion(cV)
 	if err != nil {
 		return ValidatorResult{
-			IsValid: false,
-			Message: "Failed to get current cluster version during validation",
+			IsValid:           false,
+			IsAvailableUpdate: false,
+			Message:           "Failed to get current cluster version during validation",
 		}, err
 	}
 
@@ -59,50 +74,78 @@ func (v *validator) IsValidUpgradeConfig(uC *upgradev1alpha1.UpgradeConfig, cV *
 	desiredVersion, err := semver.Parse(dv)
 	if err != nil {
 		return ValidatorResult{
-			IsValid: false,
-			Message: fmt.Sprintf("Failed to parse desired version %s as semver", dv),
+			IsValid:           false,
+			IsAvailableUpdate: false,
+			Message:           fmt.Sprintf("Failed to parse desired version %s as semver", dv),
 		}, nil
 	}
 	currentVersion, err := semver.Parse(cv)
 	if err != nil {
 		return ValidatorResult{
-			IsValid: false,
-			Message: fmt.Sprintf("Failed to parse desired version %s as semver", cv),
+			IsValid:           false,
+			IsAvailableUpdate: false,
+			Message:           fmt.Sprintf("Failed to parse desired version %s as semver", cv),
 		}, nil
 	}
 
 	// Compare versions to ascertain if upgrade should proceed.
-	proceed := compareVersions(desiredVersion, currentVersion, logger)
-	if !proceed {
+	versionComparison, err := compareVersions(desiredVersion, currentVersion, logger)
+	if err != nil {
 		return ValidatorResult{
-			IsValid: false,
-			Message: fmt.Sprintf("Desired version %s validated as greater then current version", desiredVersion),
+			IsValid:           true,
+			IsAvailableUpdate: false,
+			Message:           err.Error(),
 		}, nil
 	}
-	logger.Info(fmt.Sprintf("Desired version %s validated as greater then current version %s", desiredVersion, currentVersion))
+
+	switch versionComparison {
+	case VersionUnknown:
+		return ValidatorResult{
+			IsValid:           false,
+			IsAvailableUpdate: false,
+			Message:           fmt.Sprintf("Desired version %s and current version %s could not be compared.", desiredVersion, currentVersion),
+		}, nil
+	case VersionDowngrade:
+		return ValidatorResult{
+			IsValid:           true,
+			IsAvailableUpdate: false,
+			Message:           fmt.Sprintf("Downgrades to desired version %s from %s are unsupported", desiredVersion, currentVersion),
+		}, nil
+	case VersionEqual:
+		return ValidatorResult{
+			IsValid:           true,
+			IsAvailableUpdate: false,
+			Message:           fmt.Sprintf("Desired version %s matches the current version %s", desiredVersion, currentVersion),
+		}, nil
+	case VersionUpgrade:
+		logger.Info(fmt.Sprintf("Desired version %s validated as greater then current version %s", desiredVersion, currentVersion))
+	}
 
 	// Validate available version is in Cincinnati.
 	desiredChannel := uC.Spec.Desired.Channel
 	clusterId, err := uuid.Parse(string(cV.Spec.ClusterID))
 	if err != nil {
 		return ValidatorResult{
-			IsValid: false,
-			Message: "",
+			IsValid:           false,
+			IsAvailableUpdate: false,
+			Message:           "",
 		}, nil
 	}
 	upstreamURI, err := url.Parse(string(cV.Spec.Upstream))
 	if err != nil {
 		return ValidatorResult{
-			IsValid: false,
-			Message: "",
+			IsValid:           false,
+			IsAvailableUpdate: false,
+			Message:           "",
 		}, nil
 	}
 
 	updates, err := cincinnati.NewClient(clusterId, nil, nil).GetUpdates(upstreamURI, runtime.GOARCH, desiredChannel, currentVersion)
 	if err != nil {
 		return ValidatorResult{
-			IsValid: false,
-			Message: "",
+			IsValid:           false,
+			IsAvailableUpdate: false,
+			Message:           "",
 		}, err
 	}
 
@@ -125,35 +168,35 @@ func (v *validator) IsValidUpgradeConfig(uC *upgradev1alpha1.UpgradeConfig, cV *
 	if !found {
 		logger.Info(fmt.Sprintf("Failed to find the desired version %s in channel %s", desiredVersion, desiredChannel))
 		return ValidatorResult{
-			IsValid: false,
-			Message: fmt.Sprintf("cannot find version %s in available updates", desiredVersion),
+			IsValid:           false,
+			IsAvailableUpdate: false,
+			Message:           fmt.Sprintf("cannot find version %s in available updates", desiredVersion),
 		}, nil
 	}
 	return ValidatorResult{
-		IsValid: true,
-		Message: "UpgradeConfig is valid",
+		IsValid:           true,
+		IsAvailableUpdate: true,
+		Message:           "UpgradeConfig is valid",
 	}, nil
 }
 
 // compareVersions accepts desiredVersion and currentVersion strings as versions, converts
-// them to semver and then compares them. Returning true only if desiredVersion > currentVersion.
-func compareVersions(dV semver.Version, cV semver.Version, logger logr.Logger) bool {
+// them to semver and then compares them. Returns an indication of whether the desired
+// version constitutes a downgrade, no-op or upgrade, or an error if no valid comparison can occur
+func compareVersions(dV semver.Version, cV semver.Version, logger logr.Logger) (VersionComparison, error) {
 	result := dV.Compare(cV)
 	switch result {
 	case -1:
 		logger.Info(fmt.Sprintf("%s is less then %s", dV, cV))
-		logger.Info(fmt.Sprintf("Downgrading cluster is not supported. Not Proceeding to %s", dV))
-		return false
+		return VersionDowngrade, nil
 	case 0:
 		logger.Info(fmt.Sprintf("%s is equal to %s", dV, cV))
-		logger.Info(fmt.Sprintf("Cluster is already on version %s", cV))
-		return false
+		return VersionEqual, nil
 	case 1:
 		logger.Info(fmt.Sprintf("%s is greater then %s", dV, cV))
-		return true
+		return VersionUpgrade, nil
 	default:
-		logger.Info(fmt.Sprintf("Semver comparison failed for unknown reason. Versions %s & %s", dV, cV))
-		return false
+		return VersionUnknown, fmt.Errorf("Semver comparison failed for unknown reason. Versions %s & %s", dV, cV)
 	}
 
 }

@@ -160,8 +160,12 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 			metricsClient.UpdateMetricValidationFailed(instance.Name)
 			return reconcile.Result{}, nil
 		}
-		reqLogger.Info("UpgradeConfig validated.")
 		metricsClient.UpdateMetricValidationSucceeded(instance.Name)
+		if !validatorResult.IsAvailableUpdate {
+			reqLogger.Info(validatorResult.Message)
+			return reconcile.Result{}, nil
+		}
+		reqLogger.Info("UpgradeConfig validated and confirmed for upgrade.")
 
 		cfm := r.configManagerBuilder.New(r.client, request.Namespace)
 		cfg := &config{}
