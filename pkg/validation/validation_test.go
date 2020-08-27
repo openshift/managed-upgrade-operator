@@ -128,12 +128,13 @@ var _ = Describe("Validation of UpgradeConfig CR", func() {
 		})
 		Context("Comparing versions", func() {
 			Context("When desired version is less then current version", func() {
-				It("Returns proceed as false", func() {
+				It("Indicates a downgrade", func() {
 					// Set desired < current
 					desiredVersion, _ := semver.Parse("4.4.4")
 					currentVersion, _ := semver.Parse("4.4.5")
-					proceed := compareVersions(desiredVersion, currentVersion, testLogger)
-					Expect(proceed).Should(BeFalse())
+					versionCompare, err := compareVersions(desiredVersion, currentVersion, testLogger)
+					Expect(versionCompare).Should(Equal(VersionDowngrade))
+					Expect(err).Should(BeNil())
 				})
 			})
 			Context("When desired version is equal to current version", func() {
@@ -141,8 +142,9 @@ var _ = Describe("Validation of UpgradeConfig CR", func() {
 					// Set desired == current
 					desiredVersion, _ := semver.Parse("4.4.4")
 					currentVersion, _ := semver.Parse("4.4.4")
-					proceed := compareVersions(desiredVersion, currentVersion, testLogger)
-					Expect(proceed).Should(BeFalse())
+					versionCompare, err := compareVersions(desiredVersion, currentVersion, testLogger)
+					Expect(versionCompare).Should(Equal(VersionEqual))
+					Expect(err).Should(BeNil())
 				})
 			})
 			Context("When desired version is greater then current version", func() {
@@ -150,8 +152,9 @@ var _ = Describe("Validation of UpgradeConfig CR", func() {
 					// Set desired == current
 					desiredVersion, _ := semver.Parse("4.4.5")
 					currentVersion, _ := semver.Parse("4.4.4")
-					proceed := compareVersions(desiredVersion, currentVersion, testLogger)
-					Expect(proceed).Should(BeTrue())
+					versionCompare, err := compareVersions(desiredVersion, currentVersion, testLogger)
+					Expect(versionCompare).Should(Equal(VersionUpgrade))
+					Expect(err).Should(BeNil())
 				})
 			})
 
