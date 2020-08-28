@@ -46,6 +46,7 @@ type Metrics interface {
 	IsMetricUpgradeStartTimeSet(upgradeConfigName string, version string) (bool, error)
 	IsMetricControlPlaneEndTimeSet(upgradeConfigName string, version string) (bool, error)
 	IsMetricNodeUpgradeEndTimeSet(upgradeConfigName string, version string) (bool, error)
+	IsAlertFiring(alert string, namespaces []string) (bool, error)
 	Query(query string) (*AlertResponse, error)
 }
 
@@ -324,6 +325,19 @@ func (c *Counter) UpdateMetricUpgradeWindowBreached(upgradeConfigName string) {
 	metricUpgradeWindowBreached.With(prometheus.Labels{
 		nameLabel: upgradeConfigName}).Set(
 		float64(1))
+}
+
+func (c *Counter) IsAlertFiring(alert string, namespaces []string) (bool, error) {
+	cpMetrics, err := c.Query(fmt.Sprintf(`ALERTS{alertstate="firing",alertname="%s",namespace=~"^$|%s"}`,
+		alert, strings.Join(namespaces, "|")))
+	if err != nil {
+		return false, err
+	}
+
+	if len(cpMetrics.Data.Result) > 0 {
+		return true, nil
+	}
+	return false, nil
 }
 
 func getPromHost(c client.Client) (*string, error) {

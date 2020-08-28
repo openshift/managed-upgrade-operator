@@ -2,6 +2,7 @@ package maintenance
 
 import (
 	"context"
+	"fmt"
 	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"
 	amSilence "github.com/prometheus/alertmanager/api/v2/client/silence"
@@ -93,24 +94,18 @@ func (ams *alertManagerSilenceClient) Update(id string, endsAt strfmt.DateTime) 
 		return err
 	}
 
-	pParams := &amSilence.PostSilencesParams{
-		Silence: &amv2Models.PostableSilence{
-			ID: id,
-			Silence: amv2Models.Silence{
-				CreatedBy: result.Payload.CreatedBy,
-				Comment:   result.Payload.Comment,
-				EndsAt:    &endsAt,
-				StartsAt:  result.Payload.StartsAt,
-				Matchers:  result.Payload.Matchers,
-			},
-		},
-		Context:    context.TODO(),
-		HTTPClient: &http.Client{},
+	// Create a new silence first
+	err = ams.Create(result.Payload.Matchers, *result.Payload.StartsAt, endsAt, *result.Payload.CreatedBy, *result.Payload.Comment)
+	if err != nil {
+		return fmt.Errorf("unable to create replacement silence: %v", err)
 	}
 
-	_, err = silenceClient.PostSilences(pParams)
-	if err != nil {
-		return err
+	// Remove the old silence if it's still active
+	if *result.Payload.Status.State == amv2Models.SilenceStatusStateActive {
+		err = ams.Delete(*result.Payload.ID)
+		if err != nil {
+			return fmt.Errorf("unable to remove replaced silence: %v", err)
+		}
 	}
 
 	return nil

@@ -352,7 +352,7 @@ func UpdateSubscriptions(c client.Client, cfg *osdUpgradeConfig, scaler scaler.S
 
 // PostUpgradeVerification run the verification steps which defined in performUpgradeVerification
 func PostUpgradeVerification(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
-	ok, err := performUpgradeVerification(c, logger)
+	ok, err := performUpgradeVerification(c, metricsClient, logger)
 	if err != nil || !ok {
 		metricsClient.UpdateMetricClusterVerificationFailed(upgradeConfig.Name)
 		return false, err
@@ -363,7 +363,11 @@ func PostUpgradeVerification(c client.Client, cfg *osdUpgradeConfig, scaler scal
 }
 
 // performPostUpgradeVerification verifies all replicasets are at expected counts and all daemonsets are at expected counts
-func performUpgradeVerification(c client.Client, logger logr.Logger) (bool, error) {
+func performUpgradeVerification(c client.Client, metricsClient metrics.Metrics, logger logr.Logger) (bool, error) {
+
+	namespacePrefixesToCheck := []string{"default","kube","openshift"}
+
+	// Verify all ReplicaSets in the default, kube* and openshfit* namespaces are satisfied
 	replicaSetList := &appsv1.ReplicaSetList{}
 	err := c.List(context.TODO(), replicaSetList)
 	if err != nil {
@@ -372,22 +376,21 @@ func performUpgradeVerification(c client.Client, logger logr.Logger) (bool, erro
 	readyRs := 0
 	totalRs := 0
 	for _, replica := range replicaSetList.Items {
-		if strings.HasPrefix(replica.Namespace, "default") ||
-			strings.HasPrefix(replica.Namespace, "kube") ||
-			strings.HasPrefix(replica.Namespace, "openshift") {
-			totalRs = totalRs + 1
-			if replica.Status.ReadyReplicas == replica.Status.Replicas {
-				readyRs = readyRs + 1
+		for _, namespacePrefix := range namespacePrefixesToCheck {
+			if strings.HasPrefix(replica.Namespace, namespacePrefix) {
+				totalRs = totalRs + 1
+				if replica.Status.ReadyReplicas == replica.Status.Replicas {
+					readyRs = readyRs + 1
+				}
 			}
-
 		}
 	}
-
 	if totalRs != readyRs {
 		logger.Info(fmt.Sprintf("not all replicaset are ready:expected number :%v , ready number %v", len(replicaSetList.Items), readyRs))
 		return false, nil
 	}
 
+	// Verify all Daemonsets in the default, kube* and openshift* namespaces are satisfied
 	dsList := &appsv1.DaemonSetList{}
 	err = c.List(context.TODO(), dsList)
 	if err != nil {
@@ -396,17 +399,31 @@ func performUpgradeVerification(c client.Client, logger logr.Logger) (bool, erro
 	readyDS := 0
 	totalDS := 0
 	for _, ds := range dsList.Items {
-		if strings.HasPrefix(ds.Namespace, "default") ||
-			strings.HasPrefix(ds.Namespace, "kube") ||
-			strings.HasPrefix(ds.Namespace, "openshift") {
-			totalDS = totalDS + 1
-			if ds.Status.DesiredNumberScheduled == ds.Status.NumberReady {
-				readyDS = readyDS + 1
+		for _, namespacePrefix := range namespacePrefixesToCheck {
+			if strings.HasPrefix(ds.Namespace, namespacePrefix) {
+				totalDS = totalDS + 1
+				if ds.Status.DesiredNumberScheduled == ds.Status.NumberReady {
+					readyDS = readyDS + 1
+				}
 			}
 		}
 	}
 	if totalDS != readyDS {
 		logger.Info(fmt.Sprintf("not all daemonset are ready:expected number :%v , ready number %v", len(dsList.Items), readyDS))
+		return false, nil
+	}
+
+	// If daemonsets and replicasets are satisfied, any active TargetDown alerts will eventually go away.
+	// Wait for that to occur before declaring the verification complete.
+	namespacePrefixesAsRegex := make([]string, 0)
+	for _, namespacePrefix := range namespacePrefixesToCheck {
+		namespacePrefixesAsRegex = append(namespacePrefixesAsRegex, fmt.Sprintf("^%s-.*", namespacePrefix))
+	}
+	isTargetDownFiring, err := metricsClient.IsAlertFiring("TargetDown", namespacePrefixesAsRegex)
+	if err != nil {
+		return false, fmt.Errorf("can't query for alerts: %v", err)
+	}
+	if isTargetDownFiring {
 		return false, nil
 	}
 
