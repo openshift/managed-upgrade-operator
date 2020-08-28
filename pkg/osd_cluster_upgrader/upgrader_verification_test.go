@@ -132,6 +132,7 @@ var _ = Describe("ClusterUpgrader verification and health tests", func() {
 				gomock.InOrder(
 					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, *replicaSetList),
 					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, *dsList),
+					mockMetricsClient.EXPECT().IsAlertFiring(gomock.Any(), gomock.Any()),
 					mockMetricsClient.EXPECT().UpdateMetricClusterVerificationSucceeded(upgradeConfig.Name),
 				)
 				result, err := PostUpgradeVerification(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
@@ -151,6 +152,7 @@ var _ = Describe("ClusterUpgrader verification and health tests", func() {
 				gomock.InOrder(
 					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, *replicaSetList),
 					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, *dsList),
+					mockMetricsClient.EXPECT().IsAlertFiring(gomock.Any(), gomock.Any()),
 					mockMetricsClient.EXPECT().UpdateMetricClusterVerificationSucceeded(upgradeConfig.Name),
 				)
 				result, err := PostUpgradeVerification(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
@@ -177,6 +179,7 @@ var _ = Describe("ClusterUpgrader verification and health tests", func() {
 				gomock.InOrder(
 					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, *replicaSetList),
 					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, *dsList),
+					mockMetricsClient.EXPECT().IsAlertFiring(gomock.Any(), gomock.Any()),
 					mockMetricsClient.EXPECT().UpdateMetricClusterVerificationSucceeded(upgradeConfig.Name),
 				)
 				result, err := PostUpgradeVerification(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
@@ -184,6 +187,34 @@ var _ = Describe("ClusterUpgrader verification and health tests", func() {
 				Expect(result).To(BeTrue())
 			})
 		})
+		Context("When post-verification alerts are still firing", func() {
+			It("Does not pass cluster verification", func() {
+				replicaSetList = &appsv1.ReplicaSetList{
+					Items: []appsv1.ReplicaSet{
+						{
+							ObjectMeta: v1.ObjectMeta{Namespace: "kube-api-server"},
+							Status:     appsv1.ReplicaSetStatus{Replicas: 3, ReadyReplicas: 3},
+						},
+					},
+				}
+				dsList = &appsv1.DaemonSetList{Items: []appsv1.DaemonSet{
+					{
+						ObjectMeta: v1.ObjectMeta{Namespace: "default"},
+						Status:     appsv1.DaemonSetStatus{DesiredNumberScheduled: 3, NumberReady: 3},
+					},
+				}}
+				gomock.InOrder(
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, *replicaSetList),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, *dsList),
+					mockMetricsClient.EXPECT().IsAlertFiring(gomock.Any(), gomock.Any()).Return(true, nil),
+					mockMetricsClient.EXPECT().UpdateMetricClusterVerificationFailed(upgradeConfig.Name),
+				)
+				result, err := PostUpgradeVerification(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(BeFalse())
+			})
+		})
+
 	})
 
 	Context("When the cluster healthy", func() {
