@@ -375,11 +375,11 @@ func performUpgradeVerification(c client.Client, metricsClient metrics.Metrics, 
 	}
 	readyRs := 0
 	totalRs := 0
-	for _, replica := range replicaSetList.Items {
+	for _, replicaSet := range replicaSetList.Items {
 		for _, namespacePrefix := range namespacePrefixesToCheck {
-			if strings.HasPrefix(replica.Namespace, namespacePrefix) {
+			if strings.HasPrefix(replicaSet.Namespace, namespacePrefix) {
 				totalRs = totalRs + 1
-				if replica.Status.ReadyReplicas == replica.Status.Replicas {
+				if replicaSet.Status.ReadyReplicas == replicaSet.Status.Replicas {
 					readyRs = readyRs + 1
 				}
 			}
@@ -391,25 +391,25 @@ func performUpgradeVerification(c client.Client, metricsClient metrics.Metrics, 
 	}
 
 	// Verify all Daemonsets in the default, kube* and openshift* namespaces are satisfied
-	dsList := &appsv1.DaemonSetList{}
-	err = c.List(context.TODO(), dsList)
+	daemonSetList := &appsv1.DaemonSetList{}
+	err = c.List(context.TODO(), daemonSetList)
 	if err != nil {
 		return false, err
 	}
 	readyDS := 0
 	totalDS := 0
-	for _, ds := range dsList.Items {
+	for _, daemonSet := range daemonSetList.Items {
 		for _, namespacePrefix := range namespacePrefixesToCheck {
-			if strings.HasPrefix(ds.Namespace, namespacePrefix) {
+			if strings.HasPrefix(daemonSet.Namespace, namespacePrefix) {
 				totalDS = totalDS + 1
-				if ds.Status.DesiredNumberScheduled == ds.Status.NumberReady {
+				if daemonSet.Status.DesiredNumberScheduled == daemonSet.Status.NumberReady {
 					readyDS = readyDS + 1
 				}
 			}
 		}
 	}
 	if totalDS != readyDS {
-		logger.Info(fmt.Sprintf("not all daemonset are ready:expected number :%v , ready number %v", len(dsList.Items), readyDS))
+		logger.Info(fmt.Sprintf("not all daemonset are ready:expected number :%v , ready number %v", len(daemonSetList.Items), readyDS))
 		return false, nil
 	}
 
