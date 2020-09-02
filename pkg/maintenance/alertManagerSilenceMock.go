@@ -63,6 +63,25 @@ func (mr *MockAlertManagerSilencerMockRecorder) Delete(arg0 interface{}) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockAlertManagerSilencer)(nil).Delete), arg0)
 }
 
+// Filter mocks base method
+func (m *MockAlertManagerSilencer) Filter(arg0 ...silencePredicate) (*[]models.GettableSilence, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{}
+	for _, a := range arg0 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Filter", varargs...)
+	ret0, _ := ret[0].(*[]models.GettableSilence)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Filter indicates an expected call of Filter
+func (mr *MockAlertManagerSilencerMockRecorder) Filter(arg0 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Filter", reflect.TypeOf((*MockAlertManagerSilencer)(nil).Filter), arg0...)
+}
+
 // List mocks base method
 func (m *MockAlertManagerSilencer) List(arg0 []string) (*silence.GetSilencesOK, error) {
 	m.ctrl.T.Helper()

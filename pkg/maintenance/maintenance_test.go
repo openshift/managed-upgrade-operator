@@ -11,7 +11,6 @@ import (
 	. "github.com/onsi/gomega"
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/openshift/managed-upgrade-operator/util/mocks"
-	amSilence "github.com/prometheus/alertmanager/api/v2/client/silence"
 	amv2Models "github.com/prometheus/alertmanager/api/v2/models"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -23,6 +22,7 @@ var _ = Describe("Alert Manager Maintenance Client", func() {
 		mockCtrl              *gomock.Controller
 		mockKubeClient        *mocks.MockClient
 		silenceClient         *MockAlertManagerSilencer
+		maintenance           alertManagerMaintenance
 		testComment           = "test comment"
 		testOperatorName      = "managed-upgrade-operator"
 		testCreatedByOperator = testOperatorName
@@ -30,7 +30,6 @@ var _ = Describe("Alert Manager Maintenance Client", func() {
 		testNow               = strfmt.DateTime(time.Now().UTC())
 		testEnd               = strfmt.DateTime(time.Now().UTC().Add(90 * time.Minute))
 		testVersion           = "V-1.million.25"
-		testGettableSilences  amv2Models.GettableSilences
 
 		// Create test silence created by the operator
 		testSilence = amv2Models.Silence{
@@ -41,25 +40,21 @@ var _ = Describe("Alert Manager Maintenance Client", func() {
 			StartsAt:  &testNow,
 		}
 
-		testNoActiveSilences = amSilence.GetSilencesOK{
-			Payload: testGettableSilences,
-		}
+		testNoActiveSilences = []amv2Models.GettableSilence{}
 
 		activeSilenceId      = "test-id"
 		activeSilenceStatus  = amv2Models.SilenceStatusStateActive
 		activeSilenceComment = "Silence for OSD worker node upgrade to version " + testVersion
-		testActiveSilences   = amSilence.GetSilencesOK{
-			Payload: []*amv2Models.GettableSilence{
-				&amv2Models.GettableSilence{
-					ID:        &activeSilenceId,
-					Status:    &amv2Models.SilenceStatus{State:&activeSilenceStatus},
-					Silence:   amv2Models.Silence{
-						Comment:   &activeSilenceComment,
-						CreatedBy: &testCreatedByOperator,
-						EndsAt:    &testEnd,
-						Matchers:  createDefaultMatchers(),
-						StartsAt:  &testNow,
-					},
+		testActiveSilences   = []amv2Models.GettableSilence{
+			{
+				ID:     &activeSilenceId,
+				Status: &amv2Models.SilenceStatus{State: &activeSilenceStatus},
+				Silence: amv2Models.Silence{
+					Comment:   &activeSilenceComment,
+					CreatedBy: &testCreatedByOperator,
+					EndsAt:    &testEnd,
+					Matchers:  createDefaultMatchers(),
+					StartsAt:  &testNow,
 				},
 			},
 		}
@@ -69,6 +64,7 @@ var _ = Describe("Alert Manager Maintenance Client", func() {
 	BeforeEach(func() {
 		mockCtrl = gomock.NewController(GinkgoT())
 		silenceClient = NewMockAlertManagerSilencer(mockCtrl)
+		maintenance = alertManagerMaintenance{client: silenceClient}
 		mockKubeClient = mocks.NewMockClient(mockCtrl)
 	})
 
@@ -79,19 +75,21 @@ var _ = Describe("Alert Manager Maintenance Client", func() {
 	// Starting a Control Plane Silence
 	Context("Creating a Control Plane silence", func() {
 		It("Should not error on successfull maintenance start", func() {
-			silenceClient.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2)
-			silenceClient.EXPECT().List(gomock.Any()).Return(&testNoActiveSilences, nil)
+			gomock.InOrder(
+				silenceClient.EXPECT().Filter(gomock.Any()).Return(&testNoActiveSilences, nil).Times(2),
+				silenceClient.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2),
+			)
 			end := time.Now().Add(90 * time.Minute)
-			amm := alertManagerMaintenance{client: silenceClient}
-			err := amm.StartControlPlane(end, testVersion, ignoredControlPlaneCriticals)
+			err := maintenance.StartControlPlane(end, testVersion, ignoredControlPlaneCriticals)
 			Expect(err).Should(Not(HaveOccurred()))
 		})
 		It("Should error on failing to start maintenance", func() {
-			silenceClient.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("fake error"))
-			silenceClient.EXPECT().List(gomock.Any()).Return(&testNoActiveSilences, nil)
+			gomock.InOrder(
+				silenceClient.EXPECT().Filter(gomock.Any()).Return(&testNoActiveSilences, nil).Times(2),
+				silenceClient.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("fake error")),
+			)
 			end := time.Now().Add(90 * time.Minute)
-			amm := alertManagerMaintenance{client: silenceClient}
-			err := amm.StartControlPlane(end, testVersion, ignoredControlPlaneCriticals)
+			err := maintenance.StartControlPlane(end, testVersion, ignoredControlPlaneCriticals)
 			Expect(err).Should(HaveOccurred())
 		})
 	})
@@ -99,19 +97,21 @@ var _ = Describe("Alert Manager Maintenance Client", func() {
 	// Starting a worker silence
 	Context("Creating a worker silence", func() {
 		It("Should not error on successfull maintenance start", func() {
-			silenceClient.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-			silenceClient.EXPECT().List(gomock.Any()).Return(&testNoActiveSilences, nil)
+			gomock.InOrder(
+				silenceClient.EXPECT().Filter(gomock.Any()).Return(&testNoActiveSilences, nil),
+				silenceClient.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil),
+			)
 			end := time.Now().Add(90 * time.Minute)
-			amm := alertManagerMaintenance{client: silenceClient}
-			err := amm.SetWorker(end, testVersion)
+			err := maintenance.SetWorker(end, testVersion)
 			Expect(err).Should(Not(HaveOccurred()))
 		})
 		It("Should error on failing to start maintenance", func() {
-			silenceClient.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("fake error"))
-			silenceClient.EXPECT().List(gomock.Any()).Return(&testNoActiveSilences, nil)
+			gomock.InOrder(
+				silenceClient.EXPECT().Filter(gomock.Any()).Return(&testNoActiveSilences, nil),
+				silenceClient.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("fake error")),
+			)
 			end := time.Now().Add(90 * time.Minute)
-			amm := alertManagerMaintenance{client: silenceClient}
-			err := amm.SetWorker(end, testVersion)
+			err := maintenance.SetWorker(end, testVersion)
 			Expect(err).Should(HaveOccurred())
 		})
 	})
@@ -119,11 +119,12 @@ var _ = Describe("Alert Manager Maintenance Client", func() {
 	// Updating an existing worker silence
 	Context("Updating a worker silence", func() {
 		It("Should update a silence if one already exists", func() {
-			silenceClient.EXPECT().List(gomock.Any()).Return(&testActiveSilences, nil)
-			silenceClient.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
+			gomock.InOrder(
+				silenceClient.EXPECT().Filter(gomock.Any()).Return(&testActiveSilences, nil),
+				silenceClient.EXPECT().Update(gomock.Any(), gomock.Any()),
+			)
 			end := time.Now().Add(90 * time.Minute)
-			amm := alertManagerMaintenance{client: silenceClient}
-			err := amm.SetWorker(end, testVersion)
+			err := maintenance.SetWorker(end, testVersion)
 			Expect(err).ShouldNot(HaveOccurred())
 		})
 	})
@@ -138,29 +139,12 @@ var _ = Describe("Alert Manager Maintenance Client", func() {
 			State: &testState,
 		}
 
-		It("Should find maintenances NOT created by the operator and not return an error", func() {
+		It("Should not error if no maintenances are found", func() {
 			testSilenceNotOwned := testSilence
 			testSilenceNotOwned.CreatedBy = &testCreatedByTest
 
-			// Create mock GettableSilence object to return
-			gettableSilence := amv2Models.GettableSilence{
-				ID:        &testId,
-				Status:    &testStatus,
-				UpdatedAt: &testUpdatedAt,
-				Silence:   testSilenceNotOwned,
-			}
-
-			// Append GettableSilence to GettableSilences
-			var gettableSilences amv2Models.GettableSilences
-			gettableSilences = append(gettableSilences, &gettableSilence)
-
-			activeSilences := amSilence.GetSilencesOK{
-				Payload: gettableSilences,
-			}
-
-			silenceClient.EXPECT().List(gomock.Any()).Return(&activeSilences, nil)
-			amm := alertManagerMaintenance{client: silenceClient}
-			err := amm.EndSilences("")
+			silenceClient.EXPECT().Filter(gomock.Any()).Return(&[]amv2Models.GettableSilence{}, nil)
+			err := maintenance.EndSilences("")
 			Expect(err).Should(Not(HaveOccurred()))
 		})
 		It("Should find maintenances created by the operator and not return an error", func() {
@@ -175,17 +159,14 @@ var _ = Describe("Alert Manager Maintenance Client", func() {
 			}
 
 			// Append GettableSilence to GettableSilences
-			var gettableSilences amv2Models.GettableSilences
-			gettableSilences = append(gettableSilences, &gettableSilence)
+			var activeSilences []amv2Models.GettableSilence
+			activeSilences = append(activeSilences, gettableSilence)
 
-			activeSilences := amSilence.GetSilencesOK{
-				Payload: gettableSilences,
-			}
-
-			silenceClient.EXPECT().List(gomock.Any()).Return(&activeSilences, nil)
-			silenceClient.EXPECT().Delete(testId).Return(nil)
-			amm := alertManagerMaintenance{client: silenceClient}
-			err := amm.EndSilences("")
+			gomock.InOrder(
+				silenceClient.EXPECT().Filter(gomock.Any()).Return(&activeSilences, nil),
+				silenceClient.EXPECT().Delete(testId).Return(nil),
+			)
+			err := maintenance.EndSilences("")
 			Expect(err).Should(Not(HaveOccurred()))
 		})
 	})
