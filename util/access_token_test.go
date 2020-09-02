@@ -32,7 +32,7 @@ var _ = Describe("Access token tests", func() {
 	Context("when fetching the cluster pull secret fails", func() {
 		It("returns an error", func() {
 			mockKubeClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Namespace: "openshift-config", Name: "pull-secret"}, gomock.Any()).Return(fmt.Errorf("fake error"))
-			_, err := get_access_token(mockKubeClient)
+			_, err := GetAccessToken(mockKubeClient)
 			Expect(err).ToNot(BeNil())
 		})
 	})
@@ -43,7 +43,7 @@ var _ = Describe("Access token tests", func() {
 				"thiswontwork": []byte("test"),
 			}}
 			mockKubeClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Namespace: "openshift-config", Name: "pull-secret"}, gomock.Any()).SetArg(2, *pullSecret).Return(nil)
-			_, err := get_access_token(mockKubeClient)
+			_, err := GetAccessToken(mockKubeClient)
 			Expect(err).ToNot(BeNil())
 			Expect(err.Error()).To(ContainSubstring("missing required key"))
 		})
@@ -55,7 +55,7 @@ var _ = Describe("Access token tests", func() {
 				".dockerconfigjson": []byte("notvalidbase64"),
 			}}
 			mockKubeClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Namespace: "openshift-config", Name: "pull-secret"}, gomock.Any()).SetArg(2, *pullSecret).Return(nil)
-			_, err := get_access_token(mockKubeClient)
+			_, err := GetAccessToken(mockKubeClient)
 			Expect(err).ToNot(BeNil())
 			Expect(err.Error()).To(ContainSubstring("unable to decode"))
 		})
@@ -67,7 +67,7 @@ var _ = Describe("Access token tests", func() {
 				".dockerconfigjson": []byte("dGhpc2lzbm90anNvbg=="),
 			}}
 			mockKubeClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Namespace: "openshift-config", Name: "pull-secret"}, gomock.Any()).SetArg(2, *pullSecret).Return(nil)
-			_, err := get_access_token(mockKubeClient)
+			_, err := GetAccessToken(mockKubeClient)
 			Expect(err).ToNot(BeNil())
 			Expect(err.Error()).To(ContainSubstring("unable to interpret decoded pull secret as json"))
 		})
@@ -79,7 +79,7 @@ var _ = Describe("Access token tests", func() {
 				".dockerconfigjson": []byte("eyJ0aGlzIjogeyAiaXMiOiBbInZhbGlkIiwgImpzb24iXSB9fQ=="),
 			}}
 			mockKubeClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Namespace: "openshift-config", Name: "pull-secret"}, gomock.Any()).SetArg(2, *pullSecret).Return(nil)
-			_, err := get_access_token(mockKubeClient)
+			_, err := GetAccessToken(mockKubeClient)
 			Expect(err).ToNot(BeNil())
 			Expect(err.Error()).To(ContainSubstring("unable to find auths section"))
 		})
@@ -91,7 +91,7 @@ var _ = Describe("Access token tests", func() {
 				".dockerconfigjson": []byte("eyJhdXRocyI6IHsgImNsb3VkLm9wZW5zaGlmdC5jb20iOiB7ImF1dGgiOiAidGhpc2lzdGhldG9rZW4ifX19"),
 			}}
 			mockKubeClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Namespace: "openshift-config", Name: "pull-secret"}, gomock.Any()).SetArg(2, *pullSecret).Return(nil)
-			tok, err := get_access_token(mockKubeClient)
+			tok, err := GetAccessToken(mockKubeClient)
 			Expect(err).To(BeNil())
 			Expect(*tok).To(Equal("thisisthetoken"))
 		})

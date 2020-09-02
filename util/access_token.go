@@ -18,7 +18,7 @@ const (
 )
 
 // Fetches the access token for authentication to the Cluster Service API via the cluster pull secret
-func get_access_token(c client.Client) (*string, error) {
+func GetAccessToken(c client.Client) (*string, error) {
 
 	secret := &corev1.Secret{}
 	err := c.Get(context.TODO(), types.NamespacedName{Namespace: "openshift-config", Name: "pull-secret"}, secret)

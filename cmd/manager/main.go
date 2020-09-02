@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/openshift/managed-upgrade-operator/pkg/upgrade_config_manager"
 	"os"
 	"runtime"
 	"strings"
@@ -31,6 +32,7 @@ import (
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -39,9 +41,10 @@ import (
 
 // Change below variables to serve metrics on different host or port.
 var (
-	metricsHost               = "0.0.0.0"
-	metricsPort         int32 = 8383
-	operatorMetricsPort int32 = 8686
+	metricsHost                    = "0.0.0.0"
+	metricsPort              int32 = 8383
+	operatorMetricsPort      int32 = 8686
+	upgradeConfigMgrInterval       = time.Duration(5) * time.Minute
 )
 var log = logf.Log.WithName("cmd")
 
@@ -135,7 +138,6 @@ func main() {
 		os.Exit(1)
 	}
 
-
 	if err = routev1.Install(mgr.GetScheme()); err != nil {
 		log.Error(err, "")
 		os.Exit(1)
@@ -159,10 +161,22 @@ func main() {
 	// Add the Metrics Service
 	addMetrics(ctx, cfg)
 
+	// Define stopCh which we'll use to notify the upgradeConfigManager (and any other routine)
+	// to stop work. This channel can also be used to signal routines to complete any cleanup
+	// work
+	stopCh := signals.SetupSignalHandler()
+
+	upgradeConfigManagerClient, err := client.New(cfg, client.Options{})
+	if err != nil {
+		log.Error(err, "")
+	}
+	upgrade_config_manager.Initialize(upgradeConfigManagerClient, upgradeConfigMgrInterval)
+	go upgrade_config_manager.UpgradeConfigManager.Start(log, stopCh)
+
 	log.Info("Starting the Cmd.")
 
 	// Start the Cmd
-	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
+	if err := mgr.Start(stopCh); err != nil {
 		log.Error(err, "Manager exited non-zero")
 		os.Exit(1)
 	}
