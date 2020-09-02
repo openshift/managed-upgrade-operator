@@ -109,6 +109,18 @@ func (mr *MockMetricsMockRecorder) Query(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Query", reflect.TypeOf((*MockMetrics)(nil).Query), arg0)
 }
 
+// ResetMetricNodeDrainFailed mocks base method
+func (m *MockMetrics) ResetMetricNodeDrainFailed(arg0 string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "ResetMetricNodeDrainFailed", arg0)
+}
+
+// ResetMetricNodeDrainFailed indicates an expected call of ResetMetricNodeDrainFailed
+func (mr *MockMetricsMockRecorder) ResetMetricNodeDrainFailed(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResetMetricNodeDrainFailed", reflect.TypeOf((*MockMetrics)(nil).ResetMetricNodeDrainFailed), arg0)
+}
+
 // ResetMetricUpgradeControlPlaneTimeout mocks base method
 func (m *MockMetrics) ResetMetricUpgradeControlPlaneTimeout(arg0, arg1 string) {
 	m.ctrl.T.Helper()

@@ -43,6 +43,7 @@ type Metrics interface {
 	UpdateMetricUpgradeWorkerTimeout(string, string)
 	ResetMetricUpgradeWorkerTimeout(string, string)
 	UpdateMetricNodeDrainFailed(string)
+	ResetMetricNodeDrainFailed(string)
 	IsMetricUpgradeStartTimeSet(upgradeConfigName string, version string) (bool, error)
 	IsMetricControlPlaneEndTimeSet(upgradeConfigName string, version string) (bool, error)
 	IsMetricNodeUpgradeEndTimeSet(upgradeConfigName string, version string) (bool, error)
@@ -255,6 +256,12 @@ func (c *Counter) UpdateMetricNodeDrainFailed(upgradeConfigName string) {
 	metricNodeDrainFailed.With(prometheus.Labels{
 		nameLabel: upgradeConfigName}).Set(
 		float64(1))
+}
+
+func (c *Counter) ResetMetricNodeDrainFailed(upgradeConfigName string) {
+	metricNodeDrainFailed.With(prometheus.Labels{
+		nameLabel: upgradeConfigName}).Set(
+		float64(0))
 }
 
 func (c *Counter) IsMetricUpgradeStartTimeSet(upgradeConfigName string, version string) (bool, error) {
