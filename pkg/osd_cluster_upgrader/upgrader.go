@@ -282,6 +282,7 @@ func AllWorkersUpgraded(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Sc
 		metricsClient.UpdateMetricNodeDrainFailed(upgradeConfig.Name)
 		return false, nil
 	}
+	metricsClient.ResetMetricNodeDrainFailed(upgradeConfig.Name)
 
 	okUpgrade, errUpgrade := nodesUpgraded(c, "worker", logger)
 	if errUpgrade != nil {
@@ -386,7 +387,7 @@ func performUpgradeVerification(c client.Client, metricsClient metrics.Metrics, 
 		}
 	}
 	if totalRs != readyRs {
-		logger.Info(fmt.Sprintf("not all replicaset are ready:expected number :%v , ready number %v", len(replicaSetList.Items), readyRs))
+		logger.Info(fmt.Sprintf("not all replicaset are ready:expected number :%v , ready number %v", totalRs, readyRs))
 		return false, nil
 	}
 
@@ -409,7 +410,7 @@ func performUpgradeVerification(c client.Client, metricsClient metrics.Metrics, 
 		}
 	}
 	if totalDS != readyDS {
-		logger.Info(fmt.Sprintf("not all daemonset are ready:expected number :%v , ready number %v", len(daemonSetList.Items), readyDS))
+		logger.Info(fmt.Sprintf("not all daemonset are ready:expected number :%v , ready number %v", totalDS, readyDS))
 		return false, nil
 	}
 
@@ -424,6 +425,7 @@ func performUpgradeVerification(c client.Client, metricsClient metrics.Metrics, 
 		return false, fmt.Errorf("can't query for alerts: %v", err)
 	}
 	if isTargetDownFiring {
+		logger.Info(fmt.Sprintf("TargetDown alerts are still firing in namespaces %v", namespacePrefixesAsRegex))
 		return false, nil
 	}
 
