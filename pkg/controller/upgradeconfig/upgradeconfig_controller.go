@@ -19,9 +19,9 @@ import (
 
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 	cub "github.com/openshift/managed-upgrade-operator/pkg/cluster_upgrader_builder"
+	cv "github.com/openshift/managed-upgrade-operator/pkg/clusterversion"
 	"github.com/openshift/managed-upgrade-operator/pkg/configmanager"
 	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
-	"github.com/openshift/managed-upgrade-operator/pkg/osd_cluster_upgrader"
 	"github.com/openshift/managed-upgrade-operator/pkg/scheduler"
 	"github.com/openshift/managed-upgrade-operator/pkg/validation"
 )
@@ -46,6 +46,7 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 		validationBuilder:      validation.NewBuilder(),
 		configManagerBuilder:   configmanager.NewBuilder(),
 		scheduler:              scheduler.NewScheduler(),
+		cvClientBuilder:        cv.NewBuilder(),
 	}
 }
 
@@ -80,6 +81,7 @@ type ReconcileUpgradeConfig struct {
 	validationBuilder      validation.ValidationBuilder
 	configManagerBuilder   configmanager.ConfigManagerBuilder
 	scheduler              scheduler.Scheduler
+	cvClientBuilder        cv.ClusterVersionBuilder
 }
 
 // Reconcile reads that state of the cluster for a UpgradeConfig object and makes changes based on the state read
@@ -138,7 +140,8 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 		reqLogger.Info("Validating UpgradeConfig")
 
 		// Get current ClusterVersion
-		cv, err := osd_cluster_upgrader.GetClusterVersion(r.client)
+		cvClient := r.cvClientBuilder.New(r.client)
+		clusterVersion, err := cvClient.GetClusterVersion()
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -150,7 +153,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 		}
 
 		// Validate UpgradeConfig instance
-		validatorResult, err := validator.IsValidUpgradeConfig(instance, cv, reqLogger)
+		validatorResult, err := validator.IsValidUpgradeConfig(instance, clusterVersion, reqLogger)
 		if err != nil {
 			reqLogger.Info("An error occurred while validating UpgradeConfig")
 			return reconcile.Result{}, err
