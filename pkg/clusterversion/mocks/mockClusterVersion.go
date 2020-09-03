@@ -8,6 +8,7 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	v1 "github.com/openshift/api/config/v1"
 	v1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
+	clusterversion "github.com/openshift/managed-upgrade-operator/pkg/clusterversion"
 	reflect "reflect"
 )
 
@@ -34,6 +35,21 @@ func (m *MockClusterVersion) EXPECT() *MockClusterVersionMockRecorder {
 	return m.recorder
 }
 
+// EnsureDesiredVersion mocks base method
+func (m *MockClusterVersion) EnsureDesiredVersion(arg0 *v1alpha1.UpgradeConfig) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnsureDesiredVersion", arg0)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// EnsureDesiredVersion indicates an expected call of EnsureDesiredVersion
+func (mr *MockClusterVersionMockRecorder) EnsureDesiredVersion(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureDesiredVersion", reflect.TypeOf((*MockClusterVersion)(nil).EnsureDesiredVersion), arg0)
+}
+
 // GetClusterVersion mocks base method
 func (m *MockClusterVersion) GetClusterVersion() (*v1.ClusterVersion, error) {
 	m.ctrl.T.Helper()
@@ -49,6 +65,21 @@ func (mr *MockClusterVersionMockRecorder) GetClusterVersion() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClusterVersion", reflect.TypeOf((*MockClusterVersion)(nil).GetClusterVersion))
 }
 
+// HasDegradedOperators mocks base method
+func (m *MockClusterVersion) HasDegradedOperators() (*clusterversion.HasDegradedOperatorsResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HasDegradedOperators")
+	ret0, _ := ret[0].(*clusterversion.HasDegradedOperatorsResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// HasDegradedOperators indicates an expected call of HasDegradedOperators
+func (mr *MockClusterVersionMockRecorder) HasDegradedOperators() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasDegradedOperators", reflect.TypeOf((*MockClusterVersion)(nil).HasDegradedOperators))
+}
+
 // HasUpgradeCommenced mocks base method
 func (m *MockClusterVersion) HasUpgradeCommenced(arg0 *v1alpha1.UpgradeConfig) (bool, error) {
 	m.ctrl.T.Helper()
@@ -62,4 +93,18 @@ func (m *MockClusterVersion) HasUpgradeCommenced(arg0 *v1alpha1.UpgradeConfig) (
 func (mr *MockClusterVersionMockRecorder) HasUpgradeCommenced(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasUpgradeCommenced", reflect.TypeOf((*MockClusterVersion)(nil).HasUpgradeCommenced), arg0)
+}
+
+// HasUpgradeCompleted mocks base method
+func (m *MockClusterVersion) HasUpgradeCompleted(arg0 *v1.ClusterVersion, arg1 *v1alpha1.UpgradeConfig) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HasUpgradeCompleted", arg0, arg1)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// HasUpgradeCompleted indicates an expected call of HasUpgradeCompleted
+func (mr *MockClusterVersionMockRecorder) HasUpgradeCompleted(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasUpgradeCompleted", reflect.TypeOf((*MockClusterVersion)(nil).HasUpgradeCompleted), arg0, arg1)
 }

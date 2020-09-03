@@ -2,21 +2,21 @@ package osd_cluster_upgrader
 
 import (
 	"fmt"
+	"github.com/openshift/managed-upgrade-operator/pkg/clusterversion"
 	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
-	configv1 "github.com/openshift/api/config/v1"
 	appsv1 "k8s.io/api/apps/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 	cvMocks "github.com/openshift/managed-upgrade-operator/pkg/clusterversion/mocks"
-	emMocks "github.com/openshift/managed-upgrade-operator/pkg/eventmanager/mocks"
 	"github.com/openshift/managed-upgrade-operator/pkg/drain"
 	mockDrain "github.com/openshift/managed-upgrade-operator/pkg/drain/mocks"
+	emMocks "github.com/openshift/managed-upgrade-operator/pkg/eventmanager/mocks"
 	mockMachinery "github.com/openshift/managed-upgrade-operator/pkg/machinery/mocks"
 	mockMaintenance "github.com/openshift/managed-upgrade-operator/pkg/maintenance/mocks"
 	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
@@ -282,11 +282,9 @@ var _ = Describe("ClusterUpgrader verification and health tests", func() {
 	Context("When the cluster healthy", func() {
 		Context("When no critical alerts are firing", func() {
 			var alertsResponse *metrics.AlertResponse
-			var operatorList *configv1.ClusterOperatorList
 
 			JustBeforeEach(func() {
 				alertsResponse = &metrics.AlertResponse{}
-				operatorList = &configv1.ClusterOperatorList{}
 			})
 			It("will have ignored some critical alerts", func() {
 				mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil)
@@ -296,7 +294,7 @@ var _ = Describe("ClusterUpgrader verification and health tests", func() {
 						Expect(strings.Contains(query, `alertname!="`+config.HealthCheck.IgnoredCriticals[1]+`"`)).To(BeTrue())
 						return &metrics.AlertResponse{}, nil
 					})
-				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, *operatorList)
+				mockCVClient.EXPECT().HasDegradedOperators().Return(&clusterversion.HasDegradedOperatorsResult{Degraded: []string{}}, nil)
 				mockMetricsClient.EXPECT().UpdateMetricClusterCheckSucceeded(upgradeConfig.Name)
 				result, err := PreClusterHealthCheck(mockKubeClient, config, mockScaler, mockDrainStrategyBuilder, mockMetricsClient, mockMaintClient, mockCVClient, mockEMClient, upgradeConfig, mockMachinery, logger)
 				Expect(err).To(Not(HaveOccurred()))
@@ -306,7 +304,7 @@ var _ = Describe("ClusterUpgrader verification and health tests", func() {
 				gomock.InOrder(
 					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
 					mockMetricsClient.EXPECT().Query(gomock.Any()).Return(alertsResponse, nil),
-					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, *operatorList),
+					mockCVClient.EXPECT().HasDegradedOperators().Return(&clusterversion.HasDegradedOperatorsResult{Degraded: []string{}}, nil),
 					mockMetricsClient.EXPECT().UpdateMetricClusterCheckSucceeded(upgradeConfig.Name),
 				)
 				// Pre-upgrade
@@ -317,7 +315,7 @@ var _ = Describe("ClusterUpgrader verification and health tests", func() {
 			It("will satisfy a post-upgrade health check", func() {
 				gomock.InOrder(
 					mockMetricsClient.EXPECT().Query(gomock.Any()).Return(alertsResponse, nil),
-					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, *operatorList),
+					mockCVClient.EXPECT().HasDegradedOperators().Return(&clusterversion.HasDegradedOperatorsResult{Degraded: []string{}}, nil),
 					mockMetricsClient.EXPECT().UpdateMetricClusterCheckSucceeded(upgradeConfig.Name),
 				)
 				result, err := PostClusterHealthCheck(mockKubeClient, config, mockScaler, mockDrainStrategyBuilder, mockMetricsClient, mockMaintClient, mockCVClient, mockEMClient, upgradeConfig, mockMachinery, logger)
@@ -327,41 +325,16 @@ var _ = Describe("ClusterUpgrader verification and health tests", func() {
 		})
 		Context("When no operators are degraded", func() {
 			var alertsResponse *metrics.AlertResponse
-			var operatorList *configv1.ClusterOperatorList
 
 			JustBeforeEach(func() {
 				alertsResponse = &metrics.AlertResponse{}
-				operatorList = &configv1.ClusterOperatorList{
-					Items: []configv1.ClusterOperator{
-						{
-							ObjectMeta: v1.ObjectMeta{
-								Name: "operator1",
-							},
-							Status: configv1.ClusterOperatorStatus{
-								Conditions: []configv1.ClusterOperatorStatusCondition{
-									{Type: configv1.OperatorAvailable, Status: configv1.ConditionTrue},
-								},
-							},
-						},
-						{
-							ObjectMeta: v1.ObjectMeta{
-								Name: "operator2",
-							},
-							Status: configv1.ClusterOperatorStatus{
-								Conditions: []configv1.ClusterOperatorStatusCondition{
-									{Type: configv1.OperatorDegraded, Status: configv1.ConditionFalse},
-								},
-							},
-						},
-					},
-				}
 			})
 
 			It("will satisfy a pre-Upgrade health check", func() {
 				gomock.InOrder(
 					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
 					mockMetricsClient.EXPECT().Query(gomock.Any()).Return(alertsResponse, nil),
-					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, *operatorList),
+					mockCVClient.EXPECT().HasDegradedOperators().Return(&clusterversion.HasDegradedOperatorsResult{Degraded: []string{}}, nil),
 					mockMetricsClient.EXPECT().UpdateMetricClusterCheckSucceeded(upgradeConfig.Name),
 				)
 				// Pre-upgrade
@@ -372,7 +345,7 @@ var _ = Describe("ClusterUpgrader verification and health tests", func() {
 			It("will satisfy a post-upgrade health check", func() {
 				gomock.InOrder(
 					mockMetricsClient.EXPECT().Query(gomock.Any()).Return(alertsResponse, nil),
-					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, *operatorList),
+					mockCVClient.EXPECT().HasDegradedOperators().Return(&clusterversion.HasDegradedOperatorsResult{Degraded: []string{}}, nil),
 					mockMetricsClient.EXPECT().UpdateMetricClusterCheckSucceeded(upgradeConfig.Name),
 				)
 				result, err := PostClusterHealthCheck(mockKubeClient, config, mockScaler, mockDrainStrategyBuilder, mockMetricsClient, mockMaintClient, mockCVClient, mockEMClient, upgradeConfig, mockMachinery, logger)
@@ -418,40 +391,15 @@ var _ = Describe("ClusterUpgrader verification and health tests", func() {
 
 		Context("When operators are degraded", func() {
 			var alertsResponse *metrics.AlertResponse
-			var operatorList *configv1.ClusterOperatorList
 
 			JustBeforeEach(func() {
 				alertsResponse = &metrics.AlertResponse{}
-				operatorList = &configv1.ClusterOperatorList{
-					Items: []configv1.ClusterOperator{
-						{
-							ObjectMeta: v1.ObjectMeta{Name: "I'm a broken operator"},
-							Spec:       configv1.ClusterOperatorSpec{},
-							Status: configv1.ClusterOperatorStatus{
-								Conditions: []configv1.ClusterOperatorStatusCondition{
-									{Type: configv1.OperatorDegraded, Status: configv1.ConditionTrue},
-								},
-							},
-						},
-						{
-							ObjectMeta: v1.ObjectMeta{
-								Name: "I'm an unavailable operator",
-							},
-							Spec: configv1.ClusterOperatorSpec{},
-							Status: configv1.ClusterOperatorStatus{
-								Conditions: []configv1.ClusterOperatorStatusCondition{
-									{Type: configv1.OperatorAvailable, Status: configv1.ConditionFalse},
-								},
-							},
-						},
-					},
-				}
 			})
 			It("will not satisfy a pre-Upgrade health check", func() {
 				gomock.InOrder(
 					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
 					mockMetricsClient.EXPECT().Query(gomock.Any()).Return(alertsResponse, nil),
-					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, *operatorList),
+					mockCVClient.EXPECT().HasDegradedOperators().Return(&clusterversion.HasDegradedOperatorsResult{Degraded: []string{"ClusterOperator"}}, nil),
 					mockMetricsClient.EXPECT().UpdateMetricClusterCheckFailed(upgradeConfig.Name),
 				)
 				result, err := PreClusterHealthCheck(mockKubeClient, config, mockScaler, mockDrainStrategyBuilder, mockMetricsClient, mockMaintClient, mockCVClient, mockEMClient, upgradeConfig, mockMachinery, logger)
@@ -461,7 +409,7 @@ var _ = Describe("ClusterUpgrader verification and health tests", func() {
 			It("will not satisfy a post-upgrade health check", func() {
 				gomock.InOrder(
 					mockMetricsClient.EXPECT().Query(gomock.Any()).Return(alertsResponse, nil),
-					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, *operatorList),
+					mockCVClient.EXPECT().HasDegradedOperators().Return(&clusterversion.HasDegradedOperatorsResult{Degraded: []string{"ClusterOperator"}}, nil),
 					mockMetricsClient.EXPECT().UpdateMetricClusterCheckFailed(upgradeConfig.Name),
 				)
 				result, err := PostClusterHealthCheck(mockKubeClient, config, mockScaler, mockDrainStrategyBuilder, mockMetricsClient, mockMaintClient, mockCVClient, mockEMClient, upgradeConfig, mockMachinery, logger)
@@ -477,7 +425,7 @@ var _ = Describe("ClusterUpgrader verification and health tests", func() {
 			mockMetricsClient.EXPECT().Query(gomock.Any()).Return(nil, fakeError)
 		})
 		It("will abort a cluster health check with the error", func() {
-			result, err := performClusterHealthCheck(mockKubeClient, mockMetricsClient, config, logger)
+			result, err := performClusterHealthCheck(mockKubeClient, mockMetricsClient, mockCVClient, config, logger)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("Unable to query critical alerts"))
 			Expect(result).To(BeFalse())
