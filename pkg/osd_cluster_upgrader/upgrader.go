@@ -6,8 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"k8s.io/apimachinery/pkg/runtime/schema"
-
 	"github.com/go-logr/logr"
 	configv1 "github.com/openshift/api/config/v1"
 	operatorv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
@@ -20,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
+	cv "github.com/openshift/managed-upgrade-operator/pkg/clusterversion"
 	"github.com/openshift/managed-upgrade-operator/pkg/configmanager"
 	"github.com/openshift/managed-upgrade-operator/pkg/machinery"
 	"github.com/openshift/managed-upgrade-operator/pkg/maintenance"
@@ -50,7 +49,7 @@ var (
 type UpgradeSteps map[upgradev1alpha1.UpgradeConditionType]UpgradeStep
 
 // Represents an individual step in the upgrade process
-type UpgradeStep func(client.Client, *osdUpgradeConfig, scaler.Scaler, metrics.Metrics, maintenance.Maintenance, *upgradev1alpha1.UpgradeConfig, machinery.Machinery, logr.Logger) (bool, error)
+type UpgradeStep func(client.Client, *osdUpgradeConfig, scaler.Scaler, metrics.Metrics, maintenance.Maintenance, cv.ClusterVersion, *upgradev1alpha1.UpgradeConfig, machinery.Machinery, logr.Logger) (bool, error)
 
 // Represents the order in which to undertake upgrade steps
 type UpgradeStepOrdering []upgradev1alpha1.UpgradeConditionType
@@ -90,6 +89,7 @@ func NewClient(c client.Client, cfm configmanager.ConfigManager, mc metrics.Metr
 		maintenance: m,
 		metrics:     mc,
 		scaler:      scaler.NewScaler(),
+		cvClient:    cv.NewCVClient(c),
 		cfg:         cfg,
 		machinery:   machinery.NewMachinery(),
 	}, nil
@@ -103,13 +103,14 @@ type osdClusterUpgrader struct {
 	maintenance maintenance.Maintenance
 	metrics     metrics.Metrics
 	scaler      scaler.Scaler
+	cvClient    cv.ClusterVersion
 	cfg         *osdUpgradeConfig
 	machinery   machinery.Machinery
 }
 
 // PreClusterHealthCheck performs cluster healthy check
-func PreClusterHealthCheck(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, machinery machinery.Machinery, logger logr.Logger) (bool, error) {
-	upgradeCommenced, err := hasUpgradeCommenced(c, upgradeConfig)
+func PreClusterHealthCheck(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, cvClient cv.ClusterVersion, upgradeConfig *upgradev1alpha1.UpgradeConfig, machinery machinery.Machinery, logger logr.Logger) (bool, error) {
+	upgradeCommenced, err := hasUpgradeCommenced(cvClient, upgradeConfig)
 	if err != nil {
 		return false, err
 	}
@@ -130,8 +131,8 @@ func PreClusterHealthCheck(c client.Client, cfg *osdUpgradeConfig, scaler scaler
 }
 
 // EnsureExtraUpgradeWorkers will scale up new workers to ensure customer capacity while upgrading.
-func EnsureExtraUpgradeWorkers(c client.Client, cfg *osdUpgradeConfig, s scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, machinery machinery.Machinery, logger logr.Logger) (bool, error) {
-	upgradeCommenced, err := hasUpgradeCommenced(c, upgradeConfig)
+func EnsureExtraUpgradeWorkers(c client.Client, cfg *osdUpgradeConfig, s scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, cvClient cv.ClusterVersion, upgradeConfig *upgradev1alpha1.UpgradeConfig, machinery machinery.Machinery, logger logr.Logger) (bool, error) {
+	upgradeCommenced, err := hasUpgradeCommenced(cvClient, upgradeConfig)
 	if err != nil {
 		return false, err
 	}
@@ -157,8 +158,8 @@ func EnsureExtraUpgradeWorkers(c client.Client, cfg *osdUpgradeConfig, s scaler.
 }
 
 // CommenceUpgrade will update the clusterversion object to apply the desired version to trigger real OCP upgrade
-func CommenceUpgrade(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, machinery machinery.Machinery, logger logr.Logger) (bool, error) {
-	upgradeCommenced, err := hasUpgradeCommenced(c, upgradeConfig)
+func CommenceUpgrade(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, cvClient cv.ClusterVersion, upgradeConfig *upgradev1alpha1.UpgradeConfig, machinery machinery.Machinery, logger logr.Logger) (bool, error) {
+	upgradeCommenced, err := hasUpgradeCommenced(cvClient, upgradeConfig)
 	if err != nil {
 		return false, err
 	}
@@ -168,23 +169,23 @@ func CommenceUpgrade(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scale
 		return true, nil
 	}
 
-	cv, err := GetClusterVersion(c)
+	clusterVersion, err := cvClient.GetClusterVersion()
 	if err != nil {
 		return false, err
 	}
 
 	// Move the cluster to the same channel first
-	if cv.Spec.Channel != desired.Channel {
-		logger.Info(fmt.Sprintf("Moving cluster from Channel %s to Channel %s", cv.Spec.Channel, desired.Channel))
-		cv.Spec.Channel = desired.Channel
-		err = c.Update(context.TODO(), cv)
+	if clusterVersion.Spec.Channel != desired.Channel {
+		logger.Info(fmt.Sprintf("Moving cluster from Channel %s to Channel %s", clusterVersion.Spec.Channel, desired.Channel))
+		clusterVersion.Spec.Channel = desired.Channel
+		err = c.Update(context.TODO(), clusterVersion)
 		// Always give a chance for re-reconcile and a CVO sync to occur
 		return false, err
 	}
 
 	// The CVO may need time sync the version before launching the upgrade
 	updateAvailable := false
-	for _, update := range cv.Status.AvailableUpdates {
+	for _, update := range clusterVersion.Status.AvailableUpdates {
 		if update.Version == desired.Version && update.Image != "" {
 			updateAvailable = true
 		}
@@ -194,13 +195,13 @@ func CommenceUpgrade(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scale
 		return false, nil
 	}
 
-	cv.Spec.Overrides = []configv1.ComponentOverride{}
-	cv.Spec.DesiredUpdate = &configv1.Update{Version: upgradeConfig.Spec.Desired.Version}
+	clusterVersion.Spec.Overrides = []configv1.ComponentOverride{}
+	clusterVersion.Spec.DesiredUpdate = &configv1.Update{Version: upgradeConfig.Spec.Desired.Version}
 	isSet, err := metricsClient.IsMetricUpgradeStartTimeSet(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
 	if err != nil {
 		return false, err
 	}
-	err = c.Update(context.TODO(), cv)
+	err = c.Update(context.TODO(), clusterVersion)
 	if err != nil {
 		return false, err
 	}
@@ -212,7 +213,7 @@ func CommenceUpgrade(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scale
 }
 
 // CreateControlPlaneMaintWindow creates the maintenance window for control plane
-func CreateControlPlaneMaintWindow(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, machinery machinery.Machinery, logger logr.Logger) (bool, error) {
+func CreateControlPlaneMaintWindow(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, cvClient cv.ClusterVersion, upgradeConfig *upgradev1alpha1.UpgradeConfig, machinery machinery.Machinery, logger logr.Logger) (bool, error) {
 	endTime := time.Now().Add(cfg.Maintenance.GetControlPlaneDuration())
 	err := m.StartControlPlane(endTime, upgradeConfig.Spec.Desired.Version, cfg.Maintenance.IgnoredAlerts.ControlPlaneCriticals)
 	if err != nil {
@@ -223,7 +224,7 @@ func CreateControlPlaneMaintWindow(c client.Client, cfg *osdUpgradeConfig, scale
 }
 
 // RemoveControlPlaneMaintWindow removes the maintenance window for control plane
-func RemoveControlPlaneMaintWindow(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, machinery machinery.Machinery, logger logr.Logger) (bool, error) {
+func RemoveControlPlaneMaintWindow(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, cvClient cv.ClusterVersion, upgradeConfig *upgradev1alpha1.UpgradeConfig, machinery machinery.Machinery, logger logr.Logger) (bool, error) {
 	err := m.EndControlPlane()
 	if err != nil {
 		return false, err
@@ -233,7 +234,7 @@ func RemoveControlPlaneMaintWindow(c client.Client, cfg *osdUpgradeConfig, scale
 }
 
 // CreateWorkerMaintWindow creates the maintenance window for workers
-func CreateWorkerMaintWindow(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, machinery machinery.Machinery, logger logr.Logger) (bool, error) {
+func CreateWorkerMaintWindow(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, cvClient cv.ClusterVersion, upgradeConfig *upgradev1alpha1.UpgradeConfig, machinery machinery.Machinery, logger logr.Logger) (bool, error) {
 	upgradingResult, err := machinery.IsUpgrading(c, "worker")
 	if err != nil {
 		return false, err
@@ -271,7 +272,7 @@ func CreateWorkerMaintWindow(c client.Client, cfg *osdUpgradeConfig, scaler scal
 }
 
 // AllWorkersUpgraded checks whether all the worker nodes are ready with new config
-func AllWorkersUpgraded(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, machinery machinery.Machinery, logger logr.Logger) (bool, error) {
+func AllWorkersUpgraded(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, cvClient cv.ClusterVersion, upgradeConfig *upgradev1alpha1.UpgradeConfig, machinery machinery.Machinery, logger logr.Logger) (bool, error) {
 	okDrain, errDrain := nodeDrained(c, cfg.GetNodeDrainDuration(), upgradeConfig, logger)
 	if errDrain != nil {
 		return false, errDrain
@@ -317,7 +318,7 @@ func AllWorkersUpgraded(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Sc
 }
 
 // RemoveExtraScaledNodes will scale down the extra workers added pre upgrade.
-func RemoveExtraScaledNodes(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, machinery machinery.Machinery, logger logr.Logger) (bool, error) {
+func RemoveExtraScaledNodes(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, cvClient cv.ClusterVersion, upgradeConfig *upgradev1alpha1.UpgradeConfig, machinery machinery.Machinery, logger logr.Logger) (bool, error) {
 	isScaled, err := scaler.EnsureScaleDownNodes(c, logger)
 	if err != nil {
 		logger.Error(err, "failed to get upgrade extra machinesets")
@@ -328,7 +329,7 @@ func RemoveExtraScaledNodes(c client.Client, cfg *osdUpgradeConfig, scaler scale
 }
 
 // UpgradeSubscriptions will update the subscriptions for the 3rd party components, like logging
-func UpdateSubscriptions(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, machinery machinery.Machinery, logger logr.Logger) (bool, error) {
+func UpdateSubscriptions(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, cvClient cv.ClusterVersion, upgradeConfig *upgradev1alpha1.UpgradeConfig, machinery machinery.Machinery, logger logr.Logger) (bool, error) {
 	for _, item := range upgradeConfig.Spec.SubscriptionUpdates {
 		sub := &operatorv1alpha1.Subscription{}
 		err := c.Get(context.TODO(), types.NamespacedName{Namespace: item.Namespace, Name: item.Name}, sub)
@@ -353,7 +354,7 @@ func UpdateSubscriptions(c client.Client, cfg *osdUpgradeConfig, scaler scaler.S
 }
 
 // PostUpgradeVerification run the verification steps which defined in performUpgradeVerification
-func PostUpgradeVerification(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, machinery machinery.Machinery, logger logr.Logger) (bool, error) {
+func PostUpgradeVerification(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, cvClient cv.ClusterVersion, upgradeConfig *upgradev1alpha1.UpgradeConfig, machinery machinery.Machinery, logger logr.Logger) (bool, error) {
 	ok, err := performUpgradeVerification(c, metricsClient, logger)
 	if err != nil || !ok {
 		metricsClient.UpdateMetricClusterVerificationFailed(upgradeConfig.Name)
@@ -434,7 +435,7 @@ func performUpgradeVerification(c client.Client, metricsClient metrics.Metrics, 
 }
 
 // RemoveMaintWindows removes all the maintenance windows we created during the upgrade
-func RemoveMaintWindow(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, machinery machinery.Machinery, logger logr.Logger) (bool, error) {
+func RemoveMaintWindow(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, cvClient cv.ClusterVersion, upgradeConfig *upgradev1alpha1.UpgradeConfig, machinery machinery.Machinery, logger logr.Logger) (bool, error) {
 	err := m.EndWorker()
 	if err != nil {
 		return false, err
@@ -444,7 +445,7 @@ func RemoveMaintWindow(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Sca
 }
 
 // PostClusterHealthCheck performs cluster health check after upgrade
-func PostClusterHealthCheck(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, machinery machinery.Machinery, logger logr.Logger) (bool, error) {
+func PostClusterHealthCheck(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, cvClient cv.ClusterVersion, upgradeConfig *upgradev1alpha1.UpgradeConfig, machinery machinery.Machinery, logger logr.Logger) (bool, error) {
 	ok, err := performClusterHealthCheck(c, metricsClient, cfg, logger)
 	if err != nil || !ok {
 		metricsClient.UpdateMetricClusterCheckFailed(upgradeConfig.Name)
@@ -456,8 +457,8 @@ func PostClusterHealthCheck(c client.Client, cfg *osdUpgradeConfig, scaler scale
 }
 
 // ControlPlaneUpgraded checks whether control plane is upgraded. The ClusterVersion reports when cvo and master nodes are upgraded.
-func ControlPlaneUpgraded(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, machinery machinery.Machinery, logger logr.Logger) (bool, error) {
-	clusterVersion, err := GetClusterVersion(c)
+func ControlPlaneUpgraded(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, cvClient cv.ClusterVersion, upgradeConfig *upgradev1alpha1.UpgradeConfig, machinery machinery.Machinery, logger logr.Logger) (bool, error) {
+	clusterVersion, err := cvClient.GetClusterVersion()
 	if err != nil {
 		return false, err
 	}
@@ -504,7 +505,7 @@ func (cu osdClusterUpgrader) UpgradeCluster(upgradeConfig *upgradev1alpha1.Upgra
 
 		logger.Info(fmt.Sprintf("Performing %s", key))
 
-		result, err := cu.Steps[key](cu.client, cu.cfg, cu.scaler, cu.metrics, cu.maintenance, upgradeConfig, cu.machinery, logger)
+		result, err := cu.Steps[key](cu.client, cu.cfg, cu.scaler, cu.metrics, cu.maintenance, cu.cvClient, upgradeConfig, cu.machinery, logger)
 
 		if err != nil {
 			logger.Error(err, fmt.Sprintf("Error when %s", key))
@@ -607,30 +608,14 @@ func isEqualVersion(cv *configv1.ClusterVersion, uc *upgradev1alpha1.UpgradeConf
 	return false
 }
 
-// GetClusterVersion gets the existing cluster versions from the CR clusterversion
-func GetClusterVersion(c client.Client) (*configv1.ClusterVersion, error) {
-	cvList := &configv1.ClusterVersionList{}
-	err := c.List(context.TODO(), cvList)
-	if err != nil {
-		return nil, err
-	}
-
-	// ClusterVersion is a singleton
-	for _, cv := range cvList.Items {
-		return &cv, nil
-	}
-
-	return nil, errors.NewNotFound(schema.GroupResource{Group: configv1.GroupName, Resource: "ClusterVersion"}, "ClusterVersion")
-}
-
 // hasUpgradeCommenced checks if the upgrade has commenced
-func hasUpgradeCommenced(c client.Client, uc *upgradev1alpha1.UpgradeConfig) (bool, error) {
-	cv, err := GetClusterVersion(c)
+func hasUpgradeCommenced(cvClient cv.ClusterVersion, uc *upgradev1alpha1.UpgradeConfig) (bool, error) {
+	clusterVersion, err := cvClient.GetClusterVersion()
 	if err != nil {
 		return false, err
 	}
 
-	if !isEqualVersion(cv, uc) {
+	if !isEqualVersion(clusterVersion, uc) {
 		return false, nil
 	}
 
