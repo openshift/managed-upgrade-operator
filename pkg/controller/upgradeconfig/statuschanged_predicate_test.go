@@ -13,8 +13,8 @@ import (
 var _ = Describe("UpgradeConfigController", func() {
 
 	var (
-		upgradeConfigName     types.NamespacedName
-		upgradeConfig         *upgradev1alpha1.UpgradeConfig
+		upgradeConfigName types.NamespacedName
+		upgradeConfig     *upgradev1alpha1.UpgradeConfig
 	)
 
 	BeforeEach(func() {
@@ -26,28 +26,27 @@ var _ = Describe("UpgradeConfigController", func() {
 	})
 
 	Context("Update", func() {
-		var scp StatusChangedPredicate
 		Context("When the old object meta doesn't exist", func() {
 			It("will not return true", func() {
-				result := scp.Update(event.UpdateEvent{MetaOld: nil, ObjectOld: upgradeConfig, MetaNew: upgradeConfig.GetObjectMeta(), ObjectNew: upgradeConfig})
+				result := StatusChangedPredicate.UpdateFunc(event.UpdateEvent{MetaOld: nil, ObjectOld: upgradeConfig, MetaNew: upgradeConfig.GetObjectMeta(), ObjectNew: upgradeConfig})
 				Expect(result).To(BeFalse())
 			})
 		})
 		Context("When the old object doesn't exist", func() {
 			It("will not return true", func() {
-				result := scp.Update(event.UpdateEvent{MetaOld: upgradeConfig.GetObjectMeta(), ObjectOld: nil, MetaNew: upgradeConfig.GetObjectMeta(), ObjectNew: upgradeConfig})
+				result := StatusChangedPredicate.UpdateFunc(event.UpdateEvent{MetaOld: upgradeConfig.GetObjectMeta(), ObjectOld: nil, MetaNew: upgradeConfig.GetObjectMeta(), ObjectNew: upgradeConfig})
 				Expect(result).To(BeFalse())
 			})
 		})
 		Context("When the new object meta doesn't exist", func() {
 			It("will not return true", func() {
-				result := scp.Update(event.UpdateEvent{MetaOld: upgradeConfig.GetObjectMeta(), ObjectOld: upgradeConfig, MetaNew: nil, ObjectNew: upgradeConfig})
+				result := StatusChangedPredicate.UpdateFunc(event.UpdateEvent{MetaOld: upgradeConfig.GetObjectMeta(), ObjectOld: upgradeConfig, MetaNew: nil, ObjectNew: upgradeConfig})
 				Expect(result).To(BeFalse())
 			})
 		})
 		Context("When the new object doesn't exist", func() {
 			It("will not return true", func() {
-				result := scp.Update(event.UpdateEvent{MetaOld: upgradeConfig.GetObjectMeta(), ObjectOld: upgradeConfig, MetaNew: upgradeConfig.GetObjectMeta(), ObjectNew: nil})
+				result := StatusChangedPredicate.UpdateFunc(event.UpdateEvent{MetaOld: upgradeConfig.GetObjectMeta(), ObjectOld: upgradeConfig, MetaNew: upgradeConfig.GetObjectMeta(), ObjectNew: nil})
 				Expect(result).To(BeFalse())
 			})
 		})
@@ -55,7 +54,7 @@ var _ = Describe("UpgradeConfigController", func() {
 			It("will return true", func() {
 				uc1 := testStructs.NewUpgradeConfigBuilder().WithNamespacedName(upgradeConfigName).GetUpgradeConfig()
 				uc2 := testStructs.NewUpgradeConfigBuilder().WithNamespacedName(upgradeConfigName).GetUpgradeConfig()
-				result := scp.Update(event.UpdateEvent{MetaOld: uc1.GetObjectMeta(), ObjectOld: uc1, MetaNew: uc2.GetObjectMeta(), ObjectNew: uc2})
+				result := StatusChangedPredicate.UpdateFunc(event.UpdateEvent{MetaOld: uc1.GetObjectMeta(), ObjectOld: uc1, MetaNew: uc2.GetObjectMeta(), ObjectNew: uc2})
 				Expect(result).To(BeTrue())
 			})
 		})
@@ -64,7 +63,7 @@ var _ = Describe("UpgradeConfigController", func() {
 				uc1 := testStructs.NewUpgradeConfigBuilder().WithNamespacedName(upgradeConfigName).GetUpgradeConfig()
 				uc2 := testStructs.NewUpgradeConfigBuilder().WithNamespacedName(upgradeConfigName).GetUpgradeConfig()
 				uc2.Status.History = []upgradev1alpha1.UpgradeHistory{{Version: "something else"}}
-				result := scp.Update(event.UpdateEvent{MetaOld: uc1.GetObjectMeta(), ObjectOld: uc1, MetaNew: uc2.GetObjectMeta(), ObjectNew: uc2})
+				result := StatusChangedPredicate.UpdateFunc(event.UpdateEvent{MetaOld: uc1.GetObjectMeta(), ObjectOld: uc1, MetaNew: uc2.GetObjectMeta(), ObjectNew: uc2})
 				Expect(result).To(BeFalse())
 			})
 		})
