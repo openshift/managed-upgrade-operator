@@ -10,7 +10,6 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 	routev1 "github.com/openshift/api/route/v1"
 	machineapi "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
-	machineconfigapi "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -698,7 +697,6 @@ func buildScheme() (*runtime.Scheme, error) {
 	schemeErrors = multierror.Append(schemeErrors, configv1.Install(testScheme))
 	schemeErrors = multierror.Append(schemeErrors, routev1.Install(testScheme))
 	schemeErrors = multierror.Append(schemeErrors, machineapi.AddToScheme(testScheme))
-	schemeErrors = multierror.Append(schemeErrors, machineconfigapi.Install(testScheme))
 	schemeErrors = multierror.Append(schemeErrors, upgradev1alpha1.SchemeBuilder.AddToScheme(testScheme))
 	return testScheme, schemeErrors.ErrorOrNil()
 }

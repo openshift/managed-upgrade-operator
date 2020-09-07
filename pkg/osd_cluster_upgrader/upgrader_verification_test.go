@@ -2,6 +2,8 @@ package osd_cluster_upgrader
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	configv1 "github.com/openshift/api/config/v1"
@@ -9,9 +11,9 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"strings"
 
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
+	mockMachinery "github.com/openshift/managed-upgrade-operator/pkg/machinery/mocks"
 	mockMaintenance "github.com/openshift/managed-upgrade-operator/pkg/maintenance/mocks"
 	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
 	mockMetrics "github.com/openshift/managed-upgrade-operator/pkg/metrics/mocks"
@@ -34,6 +36,7 @@ var _ = Describe("ClusterUpgrader verification and health tests", func() {
 		mockMaintClient   *mockMaintenance.MockMaintenance
 		mockScaler        *mockScaler.MockScaler
 		mockMetricsClient *mockMetrics.MockMetrics
+		mockMachinery     *mockMachinery.MockMachinery
 		config            *osdUpgradeConfig
 	)
 
@@ -90,7 +93,7 @@ var _ = Describe("ClusterUpgrader verification and health tests", func() {
 					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, *replicaSetList),
 					mockMetricsClient.EXPECT().UpdateMetricClusterVerificationFailed(upgradeConfig.Name),
 				)
-				result, err := PostUpgradeVerification(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
+				result, err := PostUpgradeVerification(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, mockMachinery, logger)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(BeFalse())
 			})
@@ -113,7 +116,7 @@ var _ = Describe("ClusterUpgrader verification and health tests", func() {
 					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, *dsList),
 					mockMetricsClient.EXPECT().UpdateMetricClusterVerificationFailed(upgradeConfig.Name),
 				)
-				result, err := PostUpgradeVerification(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
+				result, err := PostUpgradeVerification(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, mockMachinery, logger)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(BeFalse())
 			})
@@ -135,7 +138,7 @@ var _ = Describe("ClusterUpgrader verification and health tests", func() {
 					mockMetricsClient.EXPECT().IsAlertFiring(gomock.Any(), gomock.Any()),
 					mockMetricsClient.EXPECT().UpdateMetricClusterVerificationSucceeded(upgradeConfig.Name),
 				)
-				result, err := PostUpgradeVerification(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
+				result, err := PostUpgradeVerification(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, mockMachinery, logger)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(BeTrue())
 			})
@@ -155,7 +158,7 @@ var _ = Describe("ClusterUpgrader verification and health tests", func() {
 					mockMetricsClient.EXPECT().IsAlertFiring(gomock.Any(), gomock.Any()),
 					mockMetricsClient.EXPECT().UpdateMetricClusterVerificationSucceeded(upgradeConfig.Name),
 				)
-				result, err := PostUpgradeVerification(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
+				result, err := PostUpgradeVerification(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, mockMachinery, logger)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(BeTrue())
 			})
@@ -182,7 +185,7 @@ var _ = Describe("ClusterUpgrader verification and health tests", func() {
 					mockMetricsClient.EXPECT().IsAlertFiring(gomock.Any(), gomock.Any()),
 					mockMetricsClient.EXPECT().UpdateMetricClusterVerificationSucceeded(upgradeConfig.Name),
 				)
-				result, err := PostUpgradeVerification(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
+				result, err := PostUpgradeVerification(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, mockMachinery, logger)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(BeTrue())
 			})
@@ -209,7 +212,7 @@ var _ = Describe("ClusterUpgrader verification and health tests", func() {
 					mockMetricsClient.EXPECT().IsAlertFiring(gomock.Any(), gomock.Any()).Return(true, nil),
 					mockMetricsClient.EXPECT().UpdateMetricClusterVerificationFailed(upgradeConfig.Name),
 				)
-				result, err := PostUpgradeVerification(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
+				result, err := PostUpgradeVerification(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, mockMachinery, logger)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(BeFalse())
 			})
@@ -236,7 +239,7 @@ var _ = Describe("ClusterUpgrader verification and health tests", func() {
 					})
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, *operatorList)
 				mockMetricsClient.EXPECT().UpdateMetricClusterCheckSucceeded(upgradeConfig.Name)
-				result, err := PreClusterHealthCheck(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
+				result, err := PreClusterHealthCheck(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, mockMachinery, logger)
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(result).To(BeTrue())
 			})
@@ -248,7 +251,7 @@ var _ = Describe("ClusterUpgrader verification and health tests", func() {
 					mockMetricsClient.EXPECT().UpdateMetricClusterCheckSucceeded(upgradeConfig.Name),
 				)
 				// Pre-upgrade
-				result, err := PreClusterHealthCheck(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
+				result, err := PreClusterHealthCheck(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, mockMachinery, logger)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(BeTrue())
 			})
@@ -258,7 +261,7 @@ var _ = Describe("ClusterUpgrader verification and health tests", func() {
 					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, *operatorList),
 					mockMetricsClient.EXPECT().UpdateMetricClusterCheckSucceeded(upgradeConfig.Name),
 				)
-				result, err := PostClusterHealthCheck(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
+				result, err := PostClusterHealthCheck(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, mockMachinery, logger)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(BeTrue())
 			})
@@ -303,7 +306,7 @@ var _ = Describe("ClusterUpgrader verification and health tests", func() {
 					mockMetricsClient.EXPECT().UpdateMetricClusterCheckSucceeded(upgradeConfig.Name),
 				)
 				// Pre-upgrade
-				result, err := PreClusterHealthCheck(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
+				result, err := PreClusterHealthCheck(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, mockMachinery, logger)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(BeTrue())
 			})
@@ -313,7 +316,7 @@ var _ = Describe("ClusterUpgrader verification and health tests", func() {
 					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, *operatorList),
 					mockMetricsClient.EXPECT().UpdateMetricClusterCheckSucceeded(upgradeConfig.Name),
 				)
-				result, err := PostClusterHealthCheck(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
+				result, err := PostClusterHealthCheck(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, mockMachinery, logger)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(BeTrue())
 			})
@@ -339,7 +342,7 @@ var _ = Describe("ClusterUpgrader verification and health tests", func() {
 					mockMetricsClient.EXPECT().Query(gomock.Any()).Return(alertsResponse, nil),
 					mockMetricsClient.EXPECT().UpdateMetricClusterCheckFailed(upgradeConfig.Name),
 				)
-				result, err := PreClusterHealthCheck(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
+				result, err := PreClusterHealthCheck(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, mockMachinery, logger)
 				Expect(err).To(HaveOccurred())
 				Expect(result).To(BeFalse())
 			})
@@ -348,7 +351,7 @@ var _ = Describe("ClusterUpgrader verification and health tests", func() {
 					mockMetricsClient.EXPECT().Query(gomock.Any()).Return(alertsResponse, nil),
 					mockMetricsClient.EXPECT().UpdateMetricClusterCheckFailed(upgradeConfig.Name),
 				)
-				result, err := PostClusterHealthCheck(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
+				result, err := PostClusterHealthCheck(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, mockMachinery, logger)
 				Expect(err).To(HaveOccurred())
 				Expect(result).To(BeFalse())
 			})
@@ -392,7 +395,7 @@ var _ = Describe("ClusterUpgrader verification and health tests", func() {
 					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, *operatorList),
 					mockMetricsClient.EXPECT().UpdateMetricClusterCheckFailed(upgradeConfig.Name),
 				)
-				result, err := PreClusterHealthCheck(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
+				result, err := PreClusterHealthCheck(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, mockMachinery, logger)
 				Expect(err).To(HaveOccurred())
 				Expect(result).To(BeFalse())
 			})
@@ -402,7 +405,7 @@ var _ = Describe("ClusterUpgrader verification and health tests", func() {
 					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, *operatorList),
 					mockMetricsClient.EXPECT().UpdateMetricClusterCheckFailed(upgradeConfig.Name),
 				)
-				result, err := PostClusterHealthCheck(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
+				result, err := PostClusterHealthCheck(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, mockMachinery, logger)
 				Expect(err).To(HaveOccurred())
 				Expect(result).To(BeFalse())
 			})
@@ -423,14 +426,14 @@ var _ = Describe("ClusterUpgrader verification and health tests", func() {
 		It("will abort Pre-Upgrade check", func() {
 			expectUpgradeHasNotCommenced(mockKubeClient, upgradeConfig, nil)
 			mockMetricsClient.EXPECT().UpdateMetricClusterCheckFailed(upgradeConfig.Name)
-			result, err := PreClusterHealthCheck(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
+			result, err := PreClusterHealthCheck(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, mockMachinery, logger)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("Unable to query critical alerts"))
 			Expect(result).To(BeFalse())
 		})
 		It("will abort Post-Upgrade check", func() {
 			mockMetricsClient.EXPECT().UpdateMetricClusterCheckFailed(upgradeConfig.Name)
-			result, err := PostClusterHealthCheck(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, logger)
+			result, err := PostClusterHealthCheck(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, upgradeConfig, mockMachinery, logger)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("Unable to query critical alerts"))
 			Expect(result).To(BeFalse())
