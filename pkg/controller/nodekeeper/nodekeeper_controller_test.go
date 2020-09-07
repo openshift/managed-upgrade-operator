@@ -6,6 +6,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
+	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -36,6 +37,7 @@ var _ = Describe("NodeKeeperController", func() {
 		testNodeName             types.NamespacedName
 		upgradeConfigName        types.NamespacedName
 		upgradeConfigList        upgradev1alpha1.UpgradeConfigList
+		pdbList                  policyv1beta1.PodDisruptionBudgetList
 		config                   nodeKeeperConfig
 	)
 
@@ -127,6 +129,16 @@ var _ = Describe("NodeKeeperController", func() {
 						},
 					},
 				}
+				pdbList = policyv1beta1.PodDisruptionBudgetList{
+					Items: []policyv1beta1.PodDisruptionBudget{
+						{
+							Status: policyv1beta1.PodDisruptionBudgetStatus{
+								DesiredHealthy: 1,
+								ExpectedPods:   2,
+							},
+						},
+					},
+				}
 
 				gomock.InOrder(
 					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, upgradeConfigList).Return(nil),
@@ -135,6 +147,7 @@ var _ = Describe("NodeKeeperController", func() {
 					mockConfigManagerBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockConfigManager),
 					mockConfigManager.EXPECT().Into(gomock.Any()).SetArg(0, config),
 					mockMetricsBuilder.EXPECT().NewClient(gomock.Any()).Return(mockMetricsClient, nil),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, pdbList).Return(nil),
 					mockMetricsClient.EXPECT().UpdateMetricNodeDrainFailed(gomock.Any()).Times(1),
 					mockMetricsClient.EXPECT().ResetMetricNodeDrainFailed(gomock.Any()).Times(0),
 				)
@@ -143,7 +156,17 @@ var _ = Describe("NodeKeeperController", func() {
 				Expect(result.Requeue).To(BeFalse())
 				Expect(result.RequeueAfter).To(BeZero())
 			})
-			It("should reset any alerts once node is not draining", func() {
+			It("should reset any alerts once a drain is successful", func() {
+				pdbList = policyv1beta1.PodDisruptionBudgetList{
+					Items: []policyv1beta1.PodDisruptionBudget{
+						{
+							Status: policyv1beta1.PodDisruptionBudgetStatus{
+								DesiredHealthy: 1,
+								ExpectedPods:   1,
+							},
+						},
+					},
+				}
 				testNode := corev1.Node{
 					Spec: corev1.NodeSpec{
 						Unschedulable: false,
@@ -156,6 +179,7 @@ var _ = Describe("NodeKeeperController", func() {
 					mockConfigManagerBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockConfigManager),
 					mockConfigManager.EXPECT().Into(gomock.Any()).SetArg(0, config),
 					mockMetricsBuilder.EXPECT().NewClient(gomock.Any()).Return(mockMetricsClient, nil),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, pdbList).Return(nil),
 					mockMetricsClient.EXPECT().UpdateMetricNodeDrainFailed(gomock.Any()).Times(0),
 					mockMetricsClient.EXPECT().ResetMetricNodeDrainFailed(gomock.Any()).Times(1),
 				)
