@@ -30,7 +30,7 @@ For the purpose of upgrading a cluster, an `UpgradeConfig` resource _must_ be co
 | ---- | ---------- | ------- |
 | `type` | The cluster upgrader to use when upgrading (valid values: `OSD`)| `OSD` |  
 | `upgradeAt` | Timestamp indicating when the upgrade can commence (ISO-8601)| `2020-05-01T12:00:00Z` |
-| `PDBForceDrainTimeout` | Duration in minutes that a PDB-blocked node is allowed to drain before a drain is forced | `120` |
+| `pdbForceDrainTimeout` | Duration in minutes that a PDB-blocked node is allowed to drain before a drain is forced | `120` |
 | `desired.version` | The desired OCP release to upgrade to | `4.4.6` |
 | `desired.channel` | The [channel](https://github.com/openshift/cincinnati/blob/master/docs/design/openshift.md#Channels) the Cluster Version Operator should be using to validate update versions | `fast-4.4` |
 
@@ -44,7 +44,7 @@ metadata:
 spec:
   type: "OSD"
   upgradeAt: "2020-06-20T12:00:00Z"
-  PDBForceDrainTimeout: 120
+  pdbForceDrainTimeout: 120
   desired:
     channel: "fast-4.4"
     version: "4.4.6"

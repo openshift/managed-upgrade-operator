@@ -22,8 +22,7 @@ type UpgradeConfigSpec struct {
 	UpgradeAt string `json:"upgradeAt"`
 
 	// The maximum grace period granted to a node whose drain is blocked by a Pod Disruption Budget, before that drain is forced. Measured in minutes.
-	PDBForceDrainTimeout int32 `json:"PDBForceDrainTimeout"`
-
+	PDBForceDrainTimeout int32 `json:"pdbForceDrainTimeout"`
 
 	// +kubebuilder:validation:Enum={"OSD"}
 	// Type indicates the ClusterUpgrader implementation to use to perform an upgrade of the cluster
