@@ -7,7 +7,6 @@ import (
 	"github.com/blang/semver"
 	"net/http"
 	"net/url"
-	"os"
 	"path"
 	"time"
 
@@ -25,7 +24,8 @@ import (
 
 const (
 	OCM_API_URL                = "https://api.stage.openshift.com/"
-	CLUSTERSV1_PATH            = "/api/clusters_mgmt/v1/clusters"
+	CLUSTERS_V1_PATH           = "/api/clusters_mgmt/v1/clusters"
+	UPGRADEPOLICIES_V1_PATH    = "upgrade_policies"
 	UPGRADECONFIG_CR_NAME      = "osd-upgrade-config"
 	UPGRADECONFIG_CR_NAMESPACE = "openshift-managed-upgrade-operator"
 )
@@ -64,6 +64,18 @@ type clusterUpgrade struct {
 	NodeDrainGracePeriod nodeDrainGracePeriod `json:"node_drain_grace_period"`
 }
 
+type clusterList struct {
+	Kind  string           `json:"kind"`
+	Page  int64            `json:"page"`
+	Size  int64            `json:"size"`
+	Total int64            `json:"total"`
+	Items []cluster `json:"items"`
+}
+
+type cluster struct {
+	Id   string `json:"id"`
+}
+
 type upgradeVersion struct {
 	Id           string `json:"id"`
 	ChannelGroup string `json:"channel_group"`
@@ -82,12 +94,14 @@ type ocmRoundTripper struct {
 func Initialize(client client.Client, watchInterval time.Duration) {
 	log.Info("Initializing the upgradeConfigManager")
 
-	//Set up the OCM client here
-	conn, err := setupOCMConnection(client)
-	if err != nil {
-		log.Error(err, "failed to set up OCM connection")
-		return
-	}
+	var conn *sdk.Connection = nil
+	// TODO: Commenting below out until we can use OCM for AccessToken auth
+	////Set up the OCM client here
+	//conn, err := setupOCMConnection(client)
+	//if err != nil {
+	//	log.Error(err, "failed to set up OCM connection")
+	//	return
+	//}
 
 	// Fetch the cluster AccessToken
 	accessToken, err := util.GetAccessToken(client)
@@ -156,12 +170,15 @@ func (s *upgradeConfigManager) RefreshUpgradeConfig(log logr.Logger) error {
 
 	// If we don't have an internal cluster ID yet, fetch it from OCM
 	if s.clusterID == "" {
-		cluster, err := getClusterFromOCMSDK(s.client, s.ocm.ClustersMgmt().V1().Clusters())
+		// TODO: hack! replace with using the actual OCM SDK, once the OCM SDK supports AccessToken auth.
+		// Uncomment the block below for that.
+		//cluster, err := getClusterFromOCMSDK(s.client, s.ocm.ClustersMgmt().V1().Clusters())
+		clusterId, err := getClusterIdFromOCMAPI(s.client, s.httpClient)
 		if err != nil {
 			log.Error(err, "cannot obtain internal cluster ID")
 			return err
 		}
-		s.clusterID = cluster.ID()
+		s.clusterID = *clusterId
 	}
 
 	// Poll the upgrade service
@@ -183,14 +200,14 @@ func (s *upgradeConfigManager) RefreshUpgradeConfig(log logr.Logger) error {
 
 func getClusterUpgradeStatus(clusterId string, client *http.Client) (*clusterUpgrade, error) {
 
-	// hack
+	// TODO: hack!! to test against a local mock upgrade policy service for now. replace with the line below.
 	//url, err := url.Parse(OCM_API_URL)
 	url, err := url.Parse("http://127.0.0.1:5000")
 	if err != nil {
 		log.Error(err, "OCM API URL unparsable.")
 		return nil, fmt.Errorf("can't parse OCM API url: %v", err)
 	}
-	url.Path = path.Join(url.Path, CLUSTERSV1_PATH, clusterId, "upgrades")
+	url.Path = path.Join(url.Path, CLUSTERS_V1_PATH, clusterId, UPGRADEPOLICIES_V1_PATH)
 
 	request := &http.Request{
 		Method: "GET",
@@ -286,21 +303,18 @@ func applyUpgradeConfig(upgrade *clusterUpgrade, c client.Client) error {
 func setupOCMConnection(c client.Client) (*sdk.Connection, error) {
 
 	// Fetch the cluster AccessToken
-	//accessToken, err := util.GetAccessToken(c)
-	//if err != nil {
-	//	return nil, fmt.Errorf("cannot setup OCM connection: %v", err)
-	//}
-
-	// temporary hack
-	accessToken := os.Getenv("BEARER_TOKEN")
+	accessToken, err := util.GetAccessToken(c)
+	if err != nil {
+		return nil, fmt.Errorf("cannot setup OCM connection: %v", err)
+	}
+	accessTokenStr := fmt.Sprintf("%s:%s", accessToken.ClusterId, accessToken.PullSecret)
 
 	// Create the connection, and remember to close it:
 	connection, err := sdk.NewConnectionBuilder().
 		URL(OCM_API_URL).
-		Tokens(accessToken).
+		Tokens(accessTokenStr).
 		Build()
 
-	connection.ClustersMgmt().V1().Clusters()
 	return connection, err
 }
 
@@ -346,35 +360,59 @@ func inferUpgradeChannelFromChannelGroup(channelGroup string, toVersion string) 
 	return &channel, nil
 }
 
-//func getClusterIdFromOCMAPI(kc client.Client) (*string, error) {
-//
-//	// fetch the clusterversion, which contains the internal ID
-//	cv := &configv1.ClusterVersion{}
-//	err := kc.Get(context.TODO(), types.NamespacedName{Name: "version"}, cv)
-//	if err != nil {
-//		return nil, fmt.Errorf("can't get clusterversion: %v", err)
-//	}
-//	externalID := cv.Spec.ClusterID
-//
-//	search := fmt.Sprintf("external_id = '%s'", externalID)
-//	query := make(url.Values)
-//	query.Add("page", "1")
-//	query.Add("size", "1")
-//	query.Add("search", search)
-//
-//	urlPath := fmt.Sprintf("%s%s", OCM_API_URL, CLUSTERSV1_PATH)
-//	uri := &url.URL{
-//		Path:     urlPath,
-//		RawQuery: query.Encode(),
-//	}
-//
-//	request := &http.Request{
-//		Method: "GET",
-//		URL:    uri,
-//	}
-//	_, err = s.httpClient.Do(request)
-//	if err != nil {
-//		return nil, fmt.Errorf("can't get cluster ID: %v", err)
-//	}
-//	return nil, nil
-//}
+// TODO: To be superceded by properly using the OCM SDK when supporting AccessToken auth
+// See: getClusterFromOCMSDK
+func getClusterIdFromOCMAPI(kc client.Client, client *http.Client) (*string, error) {
+
+	// fetch the clusterversion, which contains the internal ID
+	cv := &configv1.ClusterVersion{}
+	err := kc.Get(context.TODO(), types.NamespacedName{Name: "version"}, cv)
+	if err != nil {
+		return nil, fmt.Errorf("can't get clusterversion: %v", err)
+	}
+	externalID := cv.Spec.ClusterID
+
+	search := fmt.Sprintf("external_id = '%s'", externalID)
+	query := make(url.Values)
+	query.Add("page", "1")
+	query.Add("size", "1")
+	query.Add("search", search)
+
+	url, err := url.Parse(OCM_API_URL)
+	if err != nil {
+		log.Error(err, "OCM API URL unparsable.")
+		return nil, fmt.Errorf("can't parse OCM API url: %v", err)
+	}
+	url.Path = path.Join(url.Path, CLUSTERS_V1_PATH)
+	url.RawQuery = query.Encode()
+	request := &http.Request{
+		Method: "GET",
+		URL:    url,
+	}
+
+	response, err := client.Do(request)
+	if err != nil {
+		return nil, fmt.Errorf("can't query upgrade service: %v", err)
+	}
+
+	if response.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("received error code %v", response.StatusCode)
+	}
+
+	if response.Body != nil {
+		defer response.Body.Close()
+	}
+
+	var listResponse clusterList
+	decoder := json.NewDecoder(response.Body)
+	err = decoder.Decode(&listResponse)
+	if err != nil {
+		log.Error(err, "unable to decode upgrade service response")
+		return nil, err
+	}
+	if listResponse.Size != 1 || len(listResponse.Items) != 1 {
+		return nil, fmt.Errorf("no items returned from upgrade service")
+	}
+
+	return &listResponse.Items[0].Id, nil
+}
