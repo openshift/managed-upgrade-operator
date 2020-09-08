@@ -16,13 +16,13 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/openshift-online/ocm-sdk-go"
-	cmv1 "github.com/openshift-online/ocm-sdk-go/clustersmgmt/v1"
 	configv1 "github.com/openshift/api/config/v1"
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 	"github.com/openshift/managed-upgrade-operator/util"
 )
 
 const (
+	// TODO: determine means of identifying correct API endpoint
 	OCM_API_URL                = "https://api.stage.openshift.com/"
 	CLUSTERS_V1_PATH           = "/api/clusters_mgmt/v1/clusters"
 	UPGRADEPOLICIES_V1_PATH    = "upgrade_policies"
@@ -32,26 +32,32 @@ const (
 
 var log = logf.Log.WithName("managed-upgrade-operator")
 
-// TotalAccountWatcher global var for TotalAccountWatcher
 var UpgradeConfigManager *upgradeConfigManager
 
 type upgradeConfigManager struct {
+	// How frequently to poll for changes
 	watchInterval time.Duration
-	client        client.Client
-	clusterID     string
-	ocm           *sdk.Connection
-	httpClient    *http.Client
+	// Cluster k8s client
+	client client.Client
+	// Internal cluster ID
+	clusterID string
+	// OCM SDK connection for API queries
+	ocm *sdk.Connection
+	// HTTP client used for API queries (TODO: remove in favour of OCM SDK)
+	httpClient *http.Client
 }
 
-type clusterUpgradeList struct {
-	Kind  string           `json:"kind"`
-	Page  int64            `json:"page"`
-	Size  int64            `json:"size"`
-	Total int64            `json:"total"`
-	Items []clusterUpgrade `json:"items"`
+// Represents an unmarshalled Upgrade Policy response from Cluster Services
+type upgradePolicyList struct {
+	Kind  string          `json:"kind"`
+	Page  int64           `json:"page"`
+	Size  int64           `json:"size"`
+	Total int64           `json:"total"`
+	Items []upgradePolicy `json:"items"`
 }
 
-type clusterUpgrade struct {
+// Represents an unmarshalled individual Upgrade Policy response from Cluster Services
+type upgradePolicy struct {
 	Id                   int64                `json:"id"`
 	Kind                 string               `json:"kind"`
 	Href                 string               `json:"href"`
@@ -64,18 +70,6 @@ type clusterUpgrade struct {
 	NodeDrainGracePeriod nodeDrainGracePeriod `json:"node_drain_grace_period"`
 }
 
-type clusterList struct {
-	Kind  string           `json:"kind"`
-	Page  int64            `json:"page"`
-	Size  int64            `json:"size"`
-	Total int64            `json:"total"`
-	Items []cluster `json:"items"`
-}
-
-type cluster struct {
-	Id   string `json:"id"`
-}
-
 type upgradeVersion struct {
 	Id           string `json:"id"`
 	ChannelGroup string `json:"channel_group"`
@@ -84,6 +78,21 @@ type upgradeVersion struct {
 type nodeDrainGracePeriod struct {
 	Value int64  `json:"value"`
 	Units string `json:"units"`
+}
+
+// Represents an unmarshalled Cluster List response from Cluster Services
+type clusterList struct {
+	Kind  string    `json:"kind"`
+	Page  int64     `json:"page"`
+	Size  int64     `json:"size"`
+	Total int64     `json:"total"`
+	Items []cluster `json:"items"`
+}
+
+// Represents an unmarshalled Cluster response from Cluster Services
+// We only care about the cluster ID here, so other fields are ignored.
+type cluster struct {
+	Id string `json:"id"`
 }
 
 type ocmRoundTripper struct {
@@ -133,7 +142,7 @@ func (ort *ocmRoundTripper) RoundTrip(req *http.Request) (*http.Response, error)
 	return transport.RoundTrip(req)
 }
 
-// NewTotalAccountWatcher returns a new instance of the TotalAccountWatcher interface
+// Returns a new instance of the UpgradeConfigManager
 func NewUpgradeConfigManager(
 	client client.Client,
 	watchInterval time.Duration,
@@ -148,7 +157,7 @@ func NewUpgradeConfigManager(
 	}
 }
 
-// UpgradeConfigManager will trigger X every `scanInternal` and only stop if the operator is killed or a
+// UpgradeConfigManager will trigger X every `watchInterval` and only stop if the operator is killed or a
 // message is sent on the stopCh
 func (s *upgradeConfigManager) Start(log logr.Logger, stopCh <-chan struct{}) {
 	log.Info("Starting the upgradeConfigManager")
@@ -166,6 +175,8 @@ func (s *upgradeConfigManager) Start(log logr.Logger, stopCh <-chan struct{}) {
 	}
 }
 
+// The primary function called each watch interval to synchronise the cluster's
+// UpgradeConfig against the Cluster Service's Upgrade Policy.
 func (s *upgradeConfigManager) RefreshUpgradeConfig(log logr.Logger) error {
 
 	// If we don't have an internal cluster ID yet, fetch it from OCM
@@ -181,15 +192,15 @@ func (s *upgradeConfigManager) RefreshUpgradeConfig(log logr.Logger) error {
 		s.clusterID = *clusterId
 	}
 
-	// Poll the upgrade service
-	upgradeResponse, err := getClusterUpgradeStatus(s.clusterID, s.httpClient)
+	// Retrieve the cluster's upgrade policy from Cluster Services
+	upgradeResponse, err := getClusterUpgradePolicy(s.clusterID, s.httpClient)
 	if err != nil {
 		log.Error(err, "cannot fetch next upgrade status")
 		return err
 	}
 
-	// Apply UpgradeConfig changes
-	err = applyUpgradeConfig(upgradeResponse, s.client)
+	// Apply the Upgrade Policy to the cluster
+	err = applyUpgradePolicy(upgradeResponse, s.client)
 	if err != nil {
 		log.Error(err, "cannot apply upgrade config")
 		return err
@@ -198,7 +209,8 @@ func (s *upgradeConfigManager) RefreshUpgradeConfig(log logr.Logger) error {
 	return nil
 }
 
-func getClusterUpgradeStatus(clusterId string, client *http.Client) (*clusterUpgrade, error) {
+// Queries and returns the Upgrade Policy from Cluster Services
+func getClusterUpgradePolicy(clusterId string, client *http.Client) (*upgradePolicy, error) {
 
 	// TODO: hack!! to test against a local mock upgrade policy service for now. replace with the line below.
 	//url, err := url.Parse(OCM_API_URL)
@@ -226,7 +238,7 @@ func getClusterUpgradeStatus(clusterId string, client *http.Client) (*clusterUpg
 		defer response.Body.Close()
 	}
 
-	var upgradeResponse clusterUpgradeList
+	var upgradeResponse upgradePolicyList
 	decoder := json.NewDecoder(response.Body)
 	decoder.DisallowUnknownFields()
 	err = decoder.Decode(&upgradeResponse)
@@ -241,7 +253,8 @@ func getClusterUpgradeStatus(clusterId string, client *http.Client) (*clusterUpg
 	return &upgradeResponse.Items[0], nil
 }
 
-func applyUpgradeConfig(upgrade *clusterUpgrade, c client.Client) error {
+// Applies the supplied Upgrade Policy to the cluster in the form of an UpgradeConfig
+func applyUpgradePolicy(upgrade *upgradePolicy, c client.Client) error {
 	// Fetch the current UpgradeConfig instance, if it exists
 	upgradeConfigs := &upgradev1alpha1.UpgradeConfigList{}
 	err := c.List(context.TODO(), upgradeConfigs, &client.ListOptions{})
@@ -282,12 +295,14 @@ func applyUpgradeConfig(upgrade *clusterUpgrade, c client.Client) error {
 		return fmt.Errorf("unable to determine channel from channel group '%v' and version '%v'", upgrade.Version.ChannelGroup, upgrade.Version.Id)
 	}
 
+	// translate policy elements into an UpgradeConfig
 	upgradeConfig.Spec.Desired.Channel = *upgradeChannel
 	upgradeConfig.Spec.PDBForceDrainTimeout = int32(upgrade.NodeDrainGracePeriod.Value)
 	upgradeConfig.Spec.UpgradeAt = upgrade.NextRun
 	upgradeConfig.Spec.Type = upgradev1alpha1.UpgradeType(upgrade.UpgradeType)
 	upgradeConfig.Spec.Desired.Version = upgrade.Version.Id
 
+	// Decide whether to create or apply the resource
 	if isNewUpgradeConfig {
 		err = c.Create(context.TODO(), &upgradeConfig, &client.CreateOptions{})
 	} else {
@@ -300,53 +315,55 @@ func applyUpgradeConfig(upgrade *clusterUpgrade, c client.Client) error {
 	return nil
 }
 
-func setupOCMConnection(c client.Client) (*sdk.Connection, error) {
+// Sets up an authenticated OCM client connection
+//func setupOCMConnection(c client.Client) (*sdk.Connection, error) {
+//
+//	// Fetch the cluster AccessToken
+//	accessToken, err := util.GetAccessToken(c)
+//	if err != nil {
+//		return nil, fmt.Errorf("cannot setup OCM connection: %v", err)
+//	}
+//	accessTokenStr := fmt.Sprintf("%s:%s", accessToken.ClusterId, accessToken.PullSecret)
+//
+//	// Create the connection, and remember to close it:
+//	connection, err := sdk.NewConnectionBuilder().
+//		URL(OCM_API_URL).
+//		Tokens(accessTokenStr).
+//		Build()
+//
+//	return connection, err
+//}
 
-	// Fetch the cluster AccessToken
-	accessToken, err := util.GetAccessToken(c)
-	if err != nil {
-		return nil, fmt.Errorf("cannot setup OCM connection: %v", err)
-	}
-	accessTokenStr := fmt.Sprintf("%s:%s", accessToken.ClusterId, accessToken.PullSecret)
-
-	// Create the connection, and remember to close it:
-	connection, err := sdk.NewConnectionBuilder().
-		URL(OCM_API_URL).
-		Tokens(accessTokenStr).
-		Build()
-
-	return connection, err
-}
-
-func getClusterFromOCMSDK(kc client.Client, csc *cmv1.ClustersClient) (*cmv1.Cluster, error) {
-
-	// fetch the clusterversion, which contains the internal ID
-	cv := &configv1.ClusterVersion{}
-	err := kc.Get(context.TODO(), types.NamespacedName{Name: "version"}, cv)
-	if err != nil {
-		return nil, fmt.Errorf("can't get clusterversion: %v", err)
-	}
-	externalID := cv.Spec.ClusterID
-
-	// query the cluster service for the cluster
-	query := fmt.Sprintf("external_id = '%s'", externalID)
-
-	response, err := csc.List().Search(query).Page(1).Size(1).Send()
-	if err != nil {
-		return nil, fmt.Errorf("failed to locate cluster '%s': %v", externalID, err)
-	}
-
-	// return the cluster if it was found
-
-	switch response.Total() {
-	case 0:
-		return nil, fmt.Errorf("there is no cluster with identifier or name '%s'", externalID)
-	case 1:
-		return response.Items().Slice()[0], nil
-	default:
-		return nil, fmt.Errorf("there are %d clusters with identifier or name '%s'", response.Total(), externalID)
-	}
-}
+// Queries the cluster's data from OCM
+//func getClusterFromOCMSDK(kc client.Client, csc *cmv1.ClustersClient) (*cmv1.Cluster, error) {
+//
+//	// fetch the clusterversion, which contains the internal ID
+//	cv := &configv1.ClusterVersion{}
+//	err := kc.Get(context.TODO(), types.NamespacedName{Name: "version"}, cv)
+//	if err != nil {
+//		return nil, fmt.Errorf("can't get clusterversion: %v", err)
+//	}
+//	externalID := cv.Spec.ClusterID
+//
+//	// query the cluster service for the cluster
+//	query := fmt.Sprintf("external_id = '%s'", externalID)
+//
+//	response, err := csc.List().Search(query).Page(1).Size(1).Send()
+//	if err != nil {
+//		return nil, fmt.Errorf("failed to locate cluster '%s': %v", externalID, err)
+//	}
+//
+//	// return the cluster if it was found
+//
+//	switch response.Total() {
+//	case 0:
+//		return nil, fmt.Errorf("there is no cluster with identifier or name '%s'", externalID)
+//	case 1:
+//		return response.Items().Slice()[0], nil
+//	default:
+//		return nil, fmt.Errorf("there are %d clusters with identifier or name '%s'", response.Total(), externalID)
+//	}
+//}
 
 // Infers a CVO channel name from the channel group and TO desired version edges
 func inferUpgradeChannelFromChannelGroup(channelGroup string, toVersion string) (*string, error) {
