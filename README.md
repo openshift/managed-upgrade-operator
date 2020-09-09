@@ -1,7 +1,5 @@
 # Managed Upgrade Operator
 
-> :warning: **Under Development**
-
 [![Go Report Card](https://goreportcard.com/badge/github.com/openshift/managed-upgrade-operator)](https://goreportcard.com/report/github.com/openshift/managed-upgrade-operator)
 [![codecov](https://codecov.io/gh/openshift/managed-upgrade-operator/branch/master/graph/badge.svg)](https://codecov.io/gh/openshift/managed-upgrade-operator)
 [![GoDoc](https://godoc.org/github.com/openshift/managed-upgrade-operator?status.svg)](https://pkg.go.dev/mod/github.com/openshift/managed-upgrade-operator)
