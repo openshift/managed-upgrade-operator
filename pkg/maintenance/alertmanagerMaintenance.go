@@ -93,6 +93,10 @@ func getAuthentication(c client.Client) (runtime.ClientAuthInfoWriter, error) {
 
 // Start a control plane maintenance in Alertmanager for version
 // Time is converted to UTC
+// Note: As during the upgrade process, the controlplane upgrade and worker upgrade
+//       will happen at the same time in the end of the control plane phase,
+//       to make sure we won't have any gap of the silences between the two parts of upgrade,
+//       the controlplane silence should also cover the same critirias for worker silence
 func (amm *alertManagerMaintenance) StartControlPlane(endsAt time.Time, version string, ignoredCriticalAlerts []string) error {
 	defaultComment := fmt.Sprintf("Silence for %s upgrade to version %s", controlPlaneSilenceCommentId, version)
 	defaultSilence, err := amm.client.Filter(equalsComment(defaultComment))
