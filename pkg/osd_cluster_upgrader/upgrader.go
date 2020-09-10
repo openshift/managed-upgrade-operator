@@ -13,7 +13,6 @@ import (
 	operatorv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -247,7 +246,7 @@ func CreateWorkerMaintWindow(c client.Client, cfg *osdUpgradeConfig, scaler scal
 	pendingWorkerCount := upgradingResult.MachineCount - upgradingResult.UpdatedCount
 	// We use the maximum of the PDB drain timeout and node drain timeout to compute a 'worst case' wait time
 	pdbForceDrainTimeout := time.Duration(upgradeConfig.Spec.PDBForceDrainTimeout) * time.Minute
-	nodeDrainTimeout := cfg.GetNodeDrainDuration()
+	nodeDrainTimeout := cfg.NodeDrain.GetDuration()
 	waitTimePeriod := time.Duration(pendingWorkerCount) * pdbForceDrainTimeout
 	if pdbForceDrainTimeout < nodeDrainTimeout {
 		waitTimePeriod = time.Duration(pendingWorkerCount) * nodeDrainTimeout
@@ -272,18 +271,6 @@ func CreateWorkerMaintWindow(c client.Client, cfg *osdUpgradeConfig, scaler scal
 
 // AllWorkersUpgraded checks whether all the worker nodes are ready with new config
 func AllWorkersUpgraded(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, upgradeConfig *upgradev1alpha1.UpgradeConfig, machinery machinery.Machinery, logger logr.Logger) (bool, error) {
-	okDrain, errDrain := nodeDrained(c, cfg.GetNodeDrainDuration(), upgradeConfig, logger)
-	if errDrain != nil {
-		return false, errDrain
-	}
-
-	if !okDrain {
-		logger.Info("Node drain timeout.")
-		metricsClient.UpdateMetricNodeDrainFailed(upgradeConfig.Name)
-		return false, nil
-	}
-	metricsClient.ResetMetricNodeDrainFailed(upgradeConfig.Name)
-
 	upgradingResult, errUpgrade := machinery.IsUpgrading(c, "worker")
 	if errUpgrade != nil {
 		return false, errUpgrade
@@ -634,42 +621,5 @@ func hasUpgradeCommenced(c client.Client, uc *upgradev1alpha1.UpgradeConfig) (bo
 		return false, nil
 	}
 
-	return true, nil
-}
-
-// nodeDrained checks if the nodes are being drained successfully during the upgrade
-func nodeDrained(c client.Client, drainTimeOut time.Duration, uc *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
-
-	podDisruptionBudgetAtLimit := false
-	pdbList := &policyv1beta1.PodDisruptionBudgetList{}
-	errPDB := c.List(context.TODO(), pdbList)
-	if errPDB != nil {
-		return false, errPDB
-	}
-	for _, pdb := range pdbList.Items {
-		if pdb.Status.DesiredHealthy == pdb.Status.ExpectedPods {
-			podDisruptionBudgetAtLimit = true
-		}
-	}
-
-	var drainStarted metav1.Time
-	nodeList := &corev1.NodeList{}
-	errNode := c.List(context.TODO(), nodeList)
-	if errNode != nil {
-		return false, errNode
-	}
-	for _, node := range nodeList.Items {
-		if node.Spec.Unschedulable && len(node.Spec.Taints) > 0 {
-			for _, n := range node.Spec.Taints {
-				if n.Effect == corev1.TaintEffectNoSchedule {
-					drainStarted = *n.TimeAdded
-					if drainStarted.Add(drainTimeOut).Before(metav1.Now().Time) && !podDisruptionBudgetAtLimit {
-						logger.Info(fmt.Sprintf("The node cannot be drained within %d minutes.", int64(drainTimeOut)))
-						return false, nil
-					}
-				}
-			}
-		}
-	}
 	return true, nil
 }
