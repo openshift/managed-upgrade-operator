@@ -3,14 +3,15 @@ package configmanager
 import (
 	"context"
 	"fmt"
-	"github.com/openshift/managed-upgrade-operator/config"
 
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/openshift/managed-upgrade-operator/config"
 )
 
-var (
+const (
 	CONFIG_MAP_NAME = config.OperatorName + "-config"
 	CONFIG_PATH     = "config.yaml"
 )

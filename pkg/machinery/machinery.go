@@ -5,6 +5,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const (
+	MasterLabel = "node-role.kubernetes.io/master"
+)
+
 //go:generate mockgen -destination=mocks/machinery.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/machinery Machinery
 type Machinery interface {
 	IsUpgrading(c client.Client, nodeType string) (*UpgradingResult, error)
