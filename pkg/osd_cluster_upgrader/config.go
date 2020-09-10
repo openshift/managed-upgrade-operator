@@ -3,13 +3,15 @@ package osd_cluster_upgrader
 import (
 	"fmt"
 	"time"
+
+	"github.com/openshift/managed-upgrade-operator/pkg/machinery"
 )
 
 type osdUpgradeConfig struct {
-	Maintenance maintenanceConfig `yaml:"maintenance"`
-	Scale       scaleConfig       `yaml:"scale"`
-	NodeDrain   nodeDrain         `yaml:"nodeDrain"`
-	HealthCheck healthCheck       `yaml:"healthCheck"`
+	Maintenance maintenanceConfig   `yaml:"maintenance"`
+	Scale       scaleConfig         `yaml:"scale"`
+	NodeDrain   machinery.NodeDrain `yaml:"nodeDrain"`
+	HealthCheck healthCheck         `yaml:"healthCheck"`
 }
 
 type maintenanceConfig struct {
@@ -48,10 +50,6 @@ type scaleConfig struct {
 	TimeOut int `yaml:"timeOut"`
 }
 
-type nodeDrain struct {
-	TimeOut int `yaml:"timeOut"`
-}
-
 type healthCheck struct {
 	IgnoredCriticals []string `yaml:"ignoredCriticals"`
 }
@@ -63,7 +61,7 @@ func (cfg *osdUpgradeConfig) IsValid() error {
 	if cfg.Scale.TimeOut <= 0 {
 		return fmt.Errorf("Config scale timeOut is invalid")
 	}
-	if cfg.NodeDrain.TimeOut <= 0 {
+	if cfg.NodeDrain.Timeout <= 0 {
 		return fmt.Errorf("Config nodeDrain timeOut is invalid")
 	}
 
@@ -72,8 +70,4 @@ func (cfg *osdUpgradeConfig) IsValid() error {
 
 func (cfg *osdUpgradeConfig) GetScaleDuration() time.Duration {
 	return time.Duration(cfg.Scale.TimeOut) * time.Minute
-}
-
-func (cfg *osdUpgradeConfig) GetNodeDrainDuration() time.Duration {
-	return time.Duration(cfg.NodeDrain.TimeOut) * time.Minute
 }

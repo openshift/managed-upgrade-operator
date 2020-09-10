@@ -21,6 +21,7 @@ const (
 	metricsTag   = "upgradeoperator"
 	nameLabel    = "upgradeconfig_name"
 	versionLabel = "version"
+	nodeLabel = "node_name"
 )
 
 //go:generate mockgen -destination=mocks/metrics.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/metrics Metrics
@@ -155,7 +156,7 @@ var (
 		Subsystem: metricsTag,
 		Name:      "node_drain_timeout",
 		Help:      "Node cannot be drained successfully in time.",
-	}, []string{nameLabel})
+	}, []string{nodeLabel})
 )
 
 func init() {
@@ -252,15 +253,15 @@ func (c *Counter) ResetMetricUpgradeWorkerTimeout(upgradeConfigName, version str
 		float64(0))
 }
 
-func (c *Counter) UpdateMetricNodeDrainFailed(upgradeConfigName string) {
+func (c *Counter) UpdateMetricNodeDrainFailed(nodeName string) {
 	metricNodeDrainFailed.With(prometheus.Labels{
-		nameLabel: upgradeConfigName}).Set(
+		nodeLabel: nodeName}).Set(
 		float64(1))
 }
 
-func (c *Counter) ResetMetricNodeDrainFailed(upgradeConfigName string) {
+func (c *Counter) ResetMetricNodeDrainFailed(nodeName string) {
 	metricNodeDrainFailed.With(prometheus.Labels{
-		nameLabel: upgradeConfigName}).Set(
+		nodeLabel: nodeName}).Set(
 		float64(0))
 }
 

@@ -3,8 +3,9 @@ package scaler
 import (
 	"context"
 	"fmt"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"time"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
@@ -13,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
+	"github.com/openshift/managed-upgrade-operator/pkg/machinery"
 	"github.com/openshift/managed-upgrade-operator/util/mocks"
 
 	. "github.com/onsi/ginkgo"
@@ -443,7 +445,7 @@ var _ = Describe("Node scaling tests", func() {
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Labels: map[string]string{
-								"node-role.kubernetes.io/master": "",
+								machinery.MasterLabel: "",
 							},
 						},
 						Status: corev1.NodeStatus{
@@ -474,7 +476,7 @@ var _ = Describe("Node scaling tests", func() {
 					NotMatchingLabels{LABEL_UPGRADE: "true"},
 				}).SetArg(1, *originalMachineSets),
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
-					NotMatchingLabels{"node-role.kubernetes.io/master": ""},
+					NotMatchingLabels{machinery.MasterLabel: ""},
 				}).SetArg(1, *nodes),
 			)
 			result, err := scaler.EnsureScaleDownNodes(mockKubeClient, logger)
