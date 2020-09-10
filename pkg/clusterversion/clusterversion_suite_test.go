@@ -1,4 +1,4 @@
-package osd_cluster_upgrader
+package clusterversion
 
 import (
 	"testing"
@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestUpgradeConfig(t *testing.T) {
+func TestValidation(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ClusterUpgrader Suite")
+	RunSpecs(t, "ClusterVersion Suite")
 }

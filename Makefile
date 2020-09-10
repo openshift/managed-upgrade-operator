@@ -33,6 +33,7 @@ generate:
 	go generate pkg/configmanager/config.go
 	go generate pkg/scheduler/scheduler.go
 	go generate pkg/machinery/machinery.go
+	go generate pkg/clusterversion/cv.go
 
 .PHONY: run
 run: 
