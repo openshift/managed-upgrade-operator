@@ -7,21 +7,23 @@ import (
 
 	"github.com/go-openapi/strfmt"
 	"github.com/golang/mock/gomock"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	routev1 "github.com/openshift/api/route/v1"
+	ammocks "github.com/openshift/managed-upgrade-operator/pkg/alertmanager/mocks"
 	"github.com/openshift/managed-upgrade-operator/util/mocks"
 	amv2Models "github.com/prometheus/alertmanager/api/v2/models"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Alert Manager Maintenance Client", func() {
 	var (
 		mockCtrl              *gomock.Controller
 		mockKubeClient        *mocks.MockClient
-		silenceClient         *MockAlertManagerSilencer
+		silenceClient         *ammocks.MockAlertManagerSilencer
 		maintenance           alertManagerMaintenance
 		testComment           = "test comment"
 		testOperatorName      = "managed-upgrade-operator"
@@ -63,7 +65,7 @@ var _ = Describe("Alert Manager Maintenance Client", func() {
 
 	BeforeEach(func() {
 		mockCtrl = gomock.NewController(GinkgoT())
-		silenceClient = NewMockAlertManagerSilencer(mockCtrl)
+		silenceClient = ammocks.NewMockAlertManagerSilencer(mockCtrl)
 		maintenance = alertManagerMaintenance{client: silenceClient}
 		mockKubeClient = mocks.NewMockClient(mockCtrl)
 	})
