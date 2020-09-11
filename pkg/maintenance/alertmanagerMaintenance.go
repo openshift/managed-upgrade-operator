@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/openshift/managed-upgrade-operator/config"
+	"github.com/openshift/managed-upgrade-operator/pkg/alertmanager"
 	amv2Models "github.com/prometheus/alertmanager/api/v2/models"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -41,15 +42,15 @@ func (ammb *alertManagerMaintenanceBuilder) NewClient(client client.Client) (Mai
 	}
 
 	return &alertManagerMaintenance{
-		client: &alertManagerSilenceClient{
-			transport: transport,
+		client: &alertmanager.AlertManagerSilenceClient{
+			Transport: transport,
 		},
 	}, nil
 }
 
 type alertManagerMaintenance struct {
 	//	client alertManagerSilenceClient
-	client AlertManagerSilencer
+	client alertmanager.AlertManagerSilencer
 }
 
 func getTransport(c client.Client) (*httptransport.Runtime, error) {

@@ -1,4 +1,4 @@
-package maintenance
+package alertmanager
 
 import (
 	"context"
@@ -10,21 +10,21 @@ import (
 	"net/http"
 )
 
-//go:generate mockgen -destination=alertManagerSilenceMock.go -package=maintenance github.com/openshift/managed-upgrade-operator/pkg/maintenance AlertManagerSilencer
+//go:generate mockgen -destination=mocks/alertManagerSilenceClient.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/alertmanager AlertManagerSilencer
 type AlertManagerSilencer interface {
 	Create(matchers amv2Models.Matchers, startsAt strfmt.DateTime, endsAt strfmt.DateTime, creator string, comment string) error
 	List(filter []string) (*amSilence.GetSilencesOK, error)
 	Delete(id string) error
 	Update(id string, endsAt strfmt.DateTime) error
-	Filter(predicates ...silencePredicate) (*[]amv2Models.GettableSilence, error)
+	Filter(predicates ...SilencePredicate) (*[]amv2Models.GettableSilence, error)
 }
 
-type alertManagerSilenceClient struct {
-	transport *httptransport.Runtime
+type AlertManagerSilenceClient struct {
+	Transport *httptransport.Runtime
 }
 
-// Creates a silence in Alertmanager instance defined in transport
-func (ams *alertManagerSilenceClient) Create(matchers amv2Models.Matchers, startsAt strfmt.DateTime, endsAt strfmt.DateTime, creator string, comment string) error {
+// Creates a silence in Alertmanager instance defined in Transport
+func (ams *AlertManagerSilenceClient) Create(matchers amv2Models.Matchers, startsAt strfmt.DateTime, endsAt strfmt.DateTime, creator string, comment string) error {
 	pParams := &amSilence.PostSilencesParams{
 		Silence: &amv2Models.PostableSilence{
 			Silence: amv2Models.Silence{
@@ -39,7 +39,7 @@ func (ams *alertManagerSilenceClient) Create(matchers amv2Models.Matchers, start
 		HTTPClient: &http.Client{},
 	}
 
-	silenceClient := amSilence.New(ams.transport, strfmt.Default)
+	silenceClient := amSilence.New(ams.Transport, strfmt.Default)
 	_, err := silenceClient.PostSilences(pParams)
 	if err != nil {
 		return err
@@ -48,15 +48,15 @@ func (ams *alertManagerSilenceClient) Create(matchers amv2Models.Matchers, start
 	return nil
 }
 
-// list silences in Alertmanager instance defined in transport
-func (ams *alertManagerSilenceClient) List(filter []string) (*amSilence.GetSilencesOK, error) {
+// list silences in Alertmanager instance defined in Transport
+func (ams *AlertManagerSilenceClient) List(filter []string) (*amSilence.GetSilencesOK, error) {
 	gParams := &amSilence.GetSilencesParams{
 		Filter:     filter,
 		Context:    context.TODO(),
 		HTTPClient: &http.Client{},
 	}
 
-	silenceClient := amSilence.New(ams.transport, strfmt.Default)
+	silenceClient := amSilence.New(ams.Transport, strfmt.Default)
 	results, err := silenceClient.GetSilences(gParams)
 	if err != nil {
 		return nil, err
@@ -65,15 +65,15 @@ func (ams *alertManagerSilenceClient) List(filter []string) (*amSilence.GetSilen
 	return results, nil
 }
 
-// Delete silence in Alertmanager instance defined in transport
-func (ams *alertManagerSilenceClient) Delete(id string) error {
+// Delete silence in Alertmanager instance defined in Transport
+func (ams *AlertManagerSilenceClient) Delete(id string) error {
 	dParams := &amSilence.DeleteSilenceParams{
 		SilenceID:  strfmt.UUID(id),
 		Context:    context.TODO(),
 		HTTPClient: &http.Client{},
 	}
 
-	silenceClient := amSilence.New(ams.transport, strfmt.Default)
+	silenceClient := amSilence.New(ams.Transport, strfmt.Default)
 	_, err := silenceClient.DeleteSilence(dParams)
 	if err != nil {
 		return err
@@ -82,9 +82,9 @@ func (ams *alertManagerSilenceClient) Delete(id string) error {
 	return nil
 }
 
-// Update silence end time in AlertManager instance defined in transport
-func (ams *alertManagerSilenceClient) Update(id string, endsAt strfmt.DateTime) error {
-	silenceClient := amSilence.New(ams.transport, strfmt.Default)
+// Update silence end time in AlertManager instance defined in Transport
+func (ams *AlertManagerSilenceClient) Update(id string, endsAt strfmt.DateTime) error {
+	silenceClient := amSilence.New(ams.Transport, strfmt.Default)
 	gParams := &amSilence.GetSilenceParams{
 		SilenceID:  strfmt.UUID(id),
 		Context:    context.TODO(),
@@ -112,10 +112,10 @@ func (ams *alertManagerSilenceClient) Update(id string, endsAt strfmt.DateTime) 
 	return nil
 }
 
-type silencePredicate func(*amv2Models.GettableSilence) bool
+type SilencePredicate func(*amv2Models.GettableSilence) bool
 
 // Filter silences in Alertmanager based on the predicates
-func (ams *alertManagerSilenceClient) Filter(predicates ...silencePredicate) (*[]amv2Models.GettableSilence, error) {
+func (ams *AlertManagerSilenceClient) Filter(predicates ...SilencePredicate) (*[]amv2Models.GettableSilence, error) {
 	silences, err := ams.List([]string{})
 	if err != nil {
 		return nil, err
