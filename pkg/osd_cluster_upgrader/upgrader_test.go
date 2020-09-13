@@ -340,8 +340,6 @@ var _ = Describe("ClusterUpgrader", func() {
 		Context("When all workers are upgraded", func() {
 			It("Indicates that all workers are upgraded", func() {
 				gomock.InOrder(
-					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).Times(2),
-					mockMetricsClient.EXPECT().ResetMetricNodeDrainFailed(upgradeConfig.Name),
 					mockMachineryClient.EXPECT().IsUpgrading(gomock.Any(), "worker").Return(&machinery.UpgradingResult{IsUpgrading: false}, nil),
 					mockMaintClient.EXPECT().IsActive(),
 					mockMetricsClient.EXPECT().IsMetricNodeUpgradeEndTimeSet(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version),
@@ -356,8 +354,6 @@ var _ = Describe("ClusterUpgrader", func() {
 		Context("When all workers are not upgraded", func() {
 			It("Indicates that all workers are not upgraded", func() {
 				gomock.InOrder(
-					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).Times(2),
-					mockMetricsClient.EXPECT().ResetMetricNodeDrainFailed(upgradeConfig.Name),
 					mockMachineryClient.EXPECT().IsUpgrading(gomock.Any(), "worker").Return(&machinery.UpgradingResult{IsUpgrading: true}, nil),
 					mockMaintClient.EXPECT().IsActive(),
 					mockMetricsClient.EXPECT().UpdateMetricUpgradeWorkerTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version),

@@ -56,7 +56,7 @@ $ oc new-project managed-upgrade-operator
 * Run the operator via the Operator SDK:
 
 ```
-$ operator-sdk run --local --watch-namespace=""
+$ OPERATOR_NAMESPACE=managed-upgrade-operator operator-sdk run --local --watch-namespace=""
 ``` 
 
 (`make run` will also work here)

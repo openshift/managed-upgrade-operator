@@ -12,6 +12,8 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/openshift/managed-upgrade-operator/pkg/machinery"
 )
 
 const (
@@ -180,7 +182,7 @@ func (s *machineSetScaler) EnsureScaleDownNodes(c client.Client, logger logr.Log
 	// Desired replicas should match worker and infra count of nodes.
 	nonMasterNodes := &corev1.NodeList{}
 	err = c.List(context.TODO(), nonMasterNodes, []client.ListOption{
-		NotMatchingLabels{"node-role.kubernetes.io/master": ""},
+		NotMatchingLabels{machinery.MasterLabel: ""},
 	}...)
 	if err != nil {
 		logger.Error(err, "failed to list nodes")
