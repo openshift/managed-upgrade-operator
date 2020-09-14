@@ -14,6 +14,18 @@ go get -u github.com/onsi/ginkgo/ginkgo  # installs the ginkgo CLI
 go get -u github.com/onsi/gomega/...     # fetches the Matcher/Assertion library
 ```
 
+## Bootstrapping the tests
+```
+$ cd pkg/maintenance
+$ ginkgo bootstrap
+$ ginkgo generate maintenance.go
+
+find .
+./maintenance.go
+./maintenance_suite_test.go
+./maintenance_test.go
+```
+
 ## How to run the tests
 
 * You can run the tests using `make test` or `go test ./...`
