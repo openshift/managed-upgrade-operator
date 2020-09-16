@@ -109,7 +109,7 @@ type osdClusterUpgrader struct {
 
 // PreClusterHealthCheck performs cluster healthy check
 func PreClusterHealthCheck(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, cvClient cv.ClusterVersion, upgradeConfig *upgradev1alpha1.UpgradeConfig, machinery machinery.Machinery, logger logr.Logger) (bool, error) {
-	upgradeCommenced, err := hasUpgradeCommenced(cvClient, upgradeConfig)
+	upgradeCommenced, err := cvClient.HasUpgradeCommenced(upgradeConfig)
 	if err != nil {
 		return false, err
 	}
@@ -131,7 +131,7 @@ func PreClusterHealthCheck(c client.Client, cfg *osdUpgradeConfig, scaler scaler
 
 // EnsureExtraUpgradeWorkers will scale up new workers to ensure customer capacity while upgrading.
 func EnsureExtraUpgradeWorkers(c client.Client, cfg *osdUpgradeConfig, s scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, cvClient cv.ClusterVersion, upgradeConfig *upgradev1alpha1.UpgradeConfig, machinery machinery.Machinery, logger logr.Logger) (bool, error) {
-	upgradeCommenced, err := hasUpgradeCommenced(cvClient, upgradeConfig)
+	upgradeCommenced, err := cvClient.HasUpgradeCommenced(upgradeConfig)
 	if err != nil {
 		return false, err
 	}
@@ -158,7 +158,7 @@ func EnsureExtraUpgradeWorkers(c client.Client, cfg *osdUpgradeConfig, s scaler.
 
 // CommenceUpgrade will update the clusterversion object to apply the desired version to trigger real OCP upgrade
 func CommenceUpgrade(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, cvClient cv.ClusterVersion, upgradeConfig *upgradev1alpha1.UpgradeConfig, machinery machinery.Machinery, logger logr.Logger) (bool, error) {
-	upgradeCommenced, err := hasUpgradeCommenced(cvClient, upgradeConfig)
+	upgradeCommenced, err := cvClient.HasUpgradeCommenced(upgradeConfig)
 	if err != nil {
 		return false, err
 	}
@@ -596,7 +596,7 @@ func isEqualVersion(cv *configv1.ClusterVersion, uc *upgradev1alpha1.UpgradeConf
 }
 
 // hasUpgradeCommenced checks if the upgrade has commenced
-func hasUpgradeCommenced(cvClient cv.ClusterVersion, uc *upgradev1alpha1.UpgradeConfig) (bool, error) {
+func HasUpgradeCommenced(cvClient cv.ClusterVersion, uc *upgradev1alpha1.UpgradeConfig) (bool, error) {
 	clusterVersion, err := cvClient.GetClusterVersion()
 	if err != nil {
 		return false, err
@@ -608,4 +608,3 @@ func hasUpgradeCommenced(cvClient cv.ClusterVersion, uc *upgradev1alpha1.Upgrade
 
 	return true, nil
 }
-

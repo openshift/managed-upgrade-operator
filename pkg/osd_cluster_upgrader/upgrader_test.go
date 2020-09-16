@@ -201,7 +201,7 @@ var _ = Describe("ClusterUpgrader", func() {
 			It("Indicates an error", func() {
 				fakeError := fmt.Errorf("a fake error")
 				gomock.InOrder(
-					mockCVClient.EXPECT().GetClusterVersion().Return(preUpgradeCV, fakeError),
+					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, fakeError),
 				)
 				result, err := CommenceUpgrade(mockKubeClient, config, mockScalerClient, mockMetricsClient, mockMaintClient, mockCVClient, upgradeConfig, mockMachineryClient, logger)
 				Expect(err).To(HaveOccurred())
