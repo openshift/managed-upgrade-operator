@@ -46,8 +46,6 @@ var _ = Describe("ClusterUpgrader", func() {
 		// upgradeconfig to be used during tests
 		upgradeConfigName types.NamespacedName
 		upgradeConfig     *upgradev1alpha1.UpgradeConfig
-		// clusterversion indicating a cluster hasn't yet commenced upgrading
-		preUpgradeCV       *configv1.ClusterVersion
 		upgradeCommencedCV *configv1.ClusterVersion
 		config             *osdUpgradeConfig
 	)
@@ -58,27 +56,6 @@ var _ = Describe("ClusterUpgrader", func() {
 			Namespace: "test-namespace",
 		}
 		upgradeConfig = testStructs.NewUpgradeConfigBuilder().WithNamespacedName(upgradeConfigName).GetUpgradeConfig()
-		preUpgradeCV = &configv1.ClusterVersion{
-			Spec: configv1.ClusterVersionSpec{
-				DesiredUpdate: &configv1.Update{Version: upgradeConfig.Spec.Desired.Version + "different"},
-				Channel:       upgradeConfig.Spec.Desired.Channel,
-			},
-			Status: configv1.ClusterVersionStatus{
-				Conditions: []configv1.ClusterOperatorStatusCondition{
-					{
-						Type:   configv1.OperatorAvailable,
-						Status: configv1.ConditionTrue,
-					},
-				},
-				AvailableUpdates: []configv1.Update{
-					{
-						Version: upgradeConfig.Spec.Desired.Version,
-						Image:   "quay.io/this-doesnt-exist",
-						Force:   false,
-					},
-				},
-			},
-		}
 		upgradeCommencedCV = &configv1.ClusterVersion{
 			Spec: configv1.ClusterVersionSpec{
 				DesiredUpdate: &configv1.Update{Version: upgradeConfig.Spec.Desired.Version},
@@ -308,6 +285,7 @@ var _ = Describe("ClusterUpgrader", func() {
 		Context("When updating the clusterversion fails", func() {
 			It("Indicates an error", func() {
 				fakeError := fmt.Errorf("fake error")
+				clusterVersion := &configv1.ClusterVersion{}
 				gomock.InOrder(
 					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
 					mockCVClient.EXPECT().GetClusterVersion().Return(clusterVersion, nil),
