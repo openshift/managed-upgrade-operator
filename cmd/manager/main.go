@@ -5,8 +5,10 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/openshift/managed-upgrade-operator/pkg/upgrade_config_manager"
 	"os"
 	"runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
 	"time"
 
@@ -135,7 +137,6 @@ func main() {
 		os.Exit(1)
 	}
 
-
 	if err = routev1.Install(mgr.GetScheme()); err != nil {
 		log.Error(err, "")
 		os.Exit(1)
@@ -159,10 +160,33 @@ func main() {
 	// Add the Metrics Service
 	addMetrics(ctx, cfg)
 
-	log.Info("Starting the Cmd.")
+	// Define stopCh which we'll use to notify the upgradeConfigManager (and any other routine)
+	// to stop work. This channel can also be used to signal routines to complete any cleanup
+	// work
+	stopCh := signals.SetupSignalHandler()
+
+	upgradeConfigManagerClient, err := client.New(cfg, client.Options{})
+	if err != nil {
+		log.Error(err, "unable to create configmanager client")
+		os.Exit(1)
+	}
+
+	uc_mgr, err := upgrade_config_manager.NewBuilder().NewManager(upgradeConfigManagerClient)
+	if err != nil {
+		if err == upgrade_config_manager.ErrNoConfigManagerDefined {
+			log.Info("Skipping UpgradeConfig manager, not configured in configmap")
+		} else {
+			log.Error(err, "Couldn't initialize UpgradeConfig manager")
+			os.Exit(1)
+		}
+	} else {
+		log.Info("starting UpgradeConfig manager")
+		go uc_mgr.Start(stopCh)
+	}
 
 	// Start the Cmd
-	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
+	log.Info("Starting the Cmd.")
+	if err := mgr.Start(stopCh); err != nil {
 		log.Error(err, "Manager exited non-zero")
 		os.Exit(1)
 	}

@@ -2,12 +2,11 @@ package cluster_upgrader_builder
 
 import (
 	"github.com/go-logr/logr"
+	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 	"github.com/openshift/managed-upgrade-operator/pkg/configmanager"
 	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 	"github.com/openshift/managed-upgrade-operator/pkg/osd_cluster_upgrader"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Interface describing the functions of a cluster upgrader.
