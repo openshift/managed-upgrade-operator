@@ -281,9 +281,9 @@ var _ = Describe("ClusterUpgrader", func() {
 				fakeError := fmt.Errorf("fake error")
 				clusterVersion := &configv1.ClusterVersion{
 					Spec: configv1.ClusterVersionSpec{
-					Channel:       upgradeConfig.Spec.Desired.Channel,
-					DesiredUpdate: &configv1.Update{Version: upgradeConfig.Spec.Desired.Version},
-				},
+						Channel:       upgradeConfig.Spec.Desired.Channel,
+						DesiredUpdate: &configv1.Update{Version: upgradeConfig.Spec.Desired.Version},
+					},
 					Status: configv1.ClusterVersionStatus{
 						Conditions: []configv1.ClusterOperatorStatusCondition{
 							{
@@ -298,7 +298,7 @@ var _ = Describe("ClusterUpgrader", func() {
 								Force:   false,
 							},
 						},
-					},}
+					}}
 				gomock.InOrder(
 					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
 					mockCVClient.EXPECT().GetClusterVersion().Return(clusterVersion, nil),
