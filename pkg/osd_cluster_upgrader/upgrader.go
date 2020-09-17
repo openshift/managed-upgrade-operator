@@ -584,27 +584,3 @@ func newUpgradeCondition(reason, msg string, conditionType upgradev1alpha1.Upgra
 		Message: msg,
 	}
 }
-
-func isEqualVersion(cv *configv1.ClusterVersion, uc *upgradev1alpha1.UpgradeConfig) bool {
-	if cv.Spec.DesiredUpdate != nil &&
-		cv.Spec.DesiredUpdate.Version == uc.Spec.Desired.Version &&
-		cv.Spec.Channel == uc.Spec.Desired.Channel {
-		return true
-	}
-
-	return false
-}
-
-// hasUpgradeCommenced checks if the upgrade has commenced
-func HasUpgradeCommenced(cvClient cv.ClusterVersion, uc *upgradev1alpha1.UpgradeConfig) (bool, error) {
-	clusterVersion, err := cvClient.GetClusterVersion()
-	if err != nil {
-		return false, err
-	}
-
-	if !isEqualVersion(clusterVersion, uc) {
-		return false, nil
-	}
-
-	return true, nil
-}

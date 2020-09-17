@@ -5,10 +5,10 @@
 package mocks
 
 import (
-	reflect "reflect"
-
 	gomock "github.com/golang/mock/gomock"
 	v1 "github.com/openshift/api/config/v1"
+	v1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
+	reflect "reflect"
 )
 
 // MockClusterVersion is a mock of ClusterVersion interface
@@ -56,6 +56,7 @@ func (m *MockClusterVersion) HasUpgradeCommenced(arg0 *v1alpha1.UpgradeConfig) (
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
+}
 
 // HasUpgradeCommenced indicates an expected call of HasUpgradeCommenced
 func (mr *MockClusterVersionMockRecorder) HasUpgradeCommenced(arg0 interface{}) *gomock.Call {
