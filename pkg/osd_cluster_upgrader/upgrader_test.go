@@ -46,8 +46,8 @@ var _ = Describe("ClusterUpgrader", func() {
 		// upgradeconfig to be used during tests
 		upgradeConfigName types.NamespacedName
 		upgradeConfig     *upgradev1alpha1.UpgradeConfig
-		upgradeCommencedCV *configv1.ClusterVersion
-		config             *osdUpgradeConfig
+		//	upgradeCommencedCV *configv1.ClusterVersion
+		config *osdUpgradeConfig
 	)
 
 	BeforeEach(func() {
@@ -56,12 +56,6 @@ var _ = Describe("ClusterUpgrader", func() {
 			Namespace: "test-namespace",
 		}
 		upgradeConfig = testStructs.NewUpgradeConfigBuilder().WithNamespacedName(upgradeConfigName).GetUpgradeConfig()
-		upgradeCommencedCV = &configv1.ClusterVersion{
-			Spec: configv1.ClusterVersionSpec{
-				DesiredUpdate: &configv1.Update{Version: upgradeConfig.Spec.Desired.Version},
-				Channel:       upgradeConfig.Spec.Desired.Channel,
-			},
-		}
 		mockCtrl = gomock.NewController(GinkgoT())
 		mockKubeClient = mocks.NewMockClient(mockCtrl)
 		mockMaintClient = mockMaintenance.NewMockMaintenance(mockCtrl)
@@ -354,21 +348,21 @@ var _ = Describe("ClusterUpgrader", func() {
 	Context("When the upgrader can't tell if the cluster's upgrade has commenced", func() {
 		var fakeError = fmt.Errorf("fake upgradeCommenced error")
 		It("will abort the pre-upgrade health check", func() {
-			gomock.InOrder(mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(true, nil))
+			gomock.InOrder(mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(true, fakeError))
 			result, err := PreClusterHealthCheck(mockKubeClient, config, mockScalerClient, mockMetricsClient, mockMaintClient, mockCVClient, upgradeConfig, mockMachineryClient, logger)
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(Equal(fakeError))
 			Expect(result).To(BeFalse())
 		})
 		It("will abort the spinning up of extra workers", func() {
-			gomock.InOrder(mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(true, nil))
+			gomock.InOrder(mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(true, fakeError))
 			result, err := EnsureExtraUpgradeWorkers(mockKubeClient, config, mockScalerClient, mockMetricsClient, mockMaintClient, mockCVClient, upgradeConfig, mockMachineryClient, logger)
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(Equal(fakeError))
 			Expect(result).To(BeFalse())
 		})
 		It("will abort the commencing of an upgrade", func() {
-			gomock.InOrder(mockCVClient.EXPECT().GetClusterVersion().Return(upgradeCommencedCV, fakeError))
+			gomock.InOrder(mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(true, fakeError))
 			result, err := CommenceUpgrade(mockKubeClient, config, mockScalerClient, mockMetricsClient, mockMaintClient, mockCVClient, upgradeConfig, mockMachineryClient, logger)
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(Equal(fakeError))
