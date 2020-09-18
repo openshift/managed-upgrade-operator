@@ -8,6 +8,7 @@ import (
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 	"github.com/openshift/managed-upgrade-operator/pkg/pod"
 	"github.com/openshift/managed-upgrade-operator/util/mocks"
 
@@ -173,6 +174,65 @@ var _ = Describe("OSD Drain Strategy", func() {
 				Expect(result).To(BeTrue())
 				Expect(err).To(BeNil())
 			})
+		})
+	})
+
+	Context("OSD PDB drain strategy", func() {
+		var (
+			pdbPodName  = "test-pdb-pod"
+			pdbAppKey   = "app"
+			pdbAppValue = "app1"
+			pdbList     policyv1beta1.PodDisruptionBudgetList
+			podList     corev1.PodList
+			testNode    *corev1.Node
+		)
+
+		BeforeEach(func() {
+			testNode = &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "test-node"}}
+			pdbList = policyv1beta1.PodDisruptionBudgetList{
+				Items: []policyv1beta1.PodDisruptionBudget{
+					{
+						Spec: policyv1beta1.PodDisruptionBudgetSpec{
+							Selector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									pdbAppKey: pdbAppValue,
+								},
+							},
+						},
+					},
+				},
+			}
+			podList = corev1.PodList{
+				Items: []corev1.Pod{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: pdbPodName,
+							Labels: map[string]string{
+								pdbAppKey:     pdbAppValue,
+								"other-label": "label1",
+							},
+						},
+						Spec: corev1.PodSpec{
+							NodeName: testNode.Name,
+						},
+					},
+				},
+			}
+		})
+		It("should have a PDB drain strategy if the node has a PDB Pod", func() {
+			gomock.InOrder(
+				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, pdbList).Return(nil),
+				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, podList).Return(nil),
+			)
+			ts, err := getOsdTimedStrategies(mockKubeClient, &upgradev1alpha1.UpgradeConfig{}, testNode, &NodeDrain{})
+			hasPdbStrategy := false
+			for _, ts := range ts {
+				if ts.GetName() == pdbStrategyName {
+					hasPdbStrategy = true
+				}
+			}
+			Expect(hasPdbStrategy).To(BeTrue())
+			Expect(err).To(BeNil())
 		})
 	})
 

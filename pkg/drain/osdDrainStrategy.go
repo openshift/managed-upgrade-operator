@@ -119,6 +119,8 @@ func getOsdTimedStrategies(c client.Client, uc *upgradev1alpha1.UpgradeConfig, n
 		return nil, err
 	}
 
+	pdbPodsOnNode := pod.FilterPods(allPods, isOnNode(node), isNotDaemonSet, isPdbPod(pdbList))
+	hasPdbPod := len(pdbPodsOnNode.Items) > 0
 	timedDrainStrategies := []TimedDrainStrategy{
 		&timedStrategy{
 			name:         defaultPodStrategyName,
@@ -129,6 +131,18 @@ func getOsdTimedStrategies(c client.Client, uc *upgradev1alpha1.UpgradeConfig, n
 				filters: []pod.PodPredicate{isOnNode(node), isNotDaemonSet, isNotPdbPod(pdbList)},
 			},
 		},
+	}
+
+	if hasPdbPod {
+		timedDrainStrategies = append(timedDrainStrategies, &timedStrategy{
+			name:         pdbStrategyName,
+			description:  "PDB pod removal",
+			waitDuration: uc.GetPDBDrainTimeoutDuration(),
+			strategy: &ensurePodDeletionStrategy{
+				client:  c,
+				filters: []pod.PodPredicate{isOnNode(node), isNotDaemonSet, isPdbPod(pdbList)},
+			},
+		})
 	}
 
 	return timedDrainStrategies, nil
