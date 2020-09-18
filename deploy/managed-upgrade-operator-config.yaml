@@ -6,7 +6,6 @@ data:
   config.yaml: |
     maintenance:
       controlPlaneTime: 90
-      workerNodeTime: 8
       ignoredAlerts:
         controlPlaneCriticals:
         - etcdMembersDown
@@ -20,6 +19,7 @@ data:
       timeOut: 60
     nodeDrain:
       timeOut: 45
+      workerNodeTime: 8
     healthCheck:
       ignoredCriticals:
       - DNSErrors05MinSRE

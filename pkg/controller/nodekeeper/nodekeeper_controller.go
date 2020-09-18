@@ -8,7 +8,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime"
@@ -22,6 +21,7 @@ import (
 
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 	"github.com/openshift/managed-upgrade-operator/pkg/configmanager"
+	"github.com/openshift/managed-upgrade-operator/pkg/drain"
 	"github.com/openshift/managed-upgrade-operator/pkg/machinery"
 	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
 )
@@ -46,6 +46,7 @@ func newReconciler(mgr manager.Manager, client client.Client) reconcile.Reconcil
 		configManagerBuilder: configmanager.NewBuilder(),
 		machinery:            machinery.NewMachinery(),
 		metricsClientBuilder: metrics.NewBuilder(),
+		drainstrategyBuilder: drain.NewBuilder(),
 		scheme:               mgr.GetScheme(),
 	}
 }
@@ -81,6 +82,7 @@ type ReconcileNodeKeeper struct {
 	configManagerBuilder configmanager.ConfigManagerBuilder
 	machinery            machinery.Machinery
 	metricsClientBuilder metrics.MetricsBuilder
+	drainstrategyBuilder drain.NodeDrainStrategyBuilder
 	scheme               *runtime.Scheme
 }
 
@@ -108,7 +110,7 @@ func (r *ReconcileNodeKeeper) Reconcile(request reconcile.Request) (reconcile.Re
 	}
 
 	history := uc.Status.History.GetHistory(uc.Spec.Desired.Version)
-	if !(history.Phase == upgradev1alpha1.UpgradePhaseUpgrading && upgradeResult.IsUpgrading) {
+	if !(history != nil && history.Phase == upgradev1alpha1.UpgradePhaseUpgrading && upgradeResult.IsUpgrading) {
 		return reconcile.Result{}, nil
 	}
 
@@ -123,7 +125,7 @@ func (r *ReconcileNodeKeeper) Reconcile(request reconcile.Request) (reconcile.Re
 		return reconcile.Result{}, err
 	}
 
-	result := isDraining(node)
+	result := r.machinery.IsNodeDraining(node)
 	metricsClient, err := r.metricsClientBuilder.NewClient(r.client)
 	if err != nil {
 		return reconcile.Result{}, err
@@ -140,9 +142,23 @@ func (r *ReconcileNodeKeeper) Reconcile(request reconcile.Request) (reconcile.Re
 		return reconcile.Result{}, err
 	}
 
-	isNodeDrainTimedOut := result.StartTime != nil && result.StartTime.Add(cfg.NodeDrain.GetDuration()).Before(metav1.Now().Time)
+	drainStrategy, err := r.drainstrategyBuilder.NewNodeDrainStrategy(r.client, uc, node, &cfg.NodeDrain)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	res, err := drainStrategy.Execute(result.StartTime)
+	for _, r := range res {
+		reqLogger.Info(r.Message)
+	}
+	if err != nil {
+		return reconcile.Result{}, err
+	}
 
-	if isNodeDrainTimedOut {
+	hasFailed, err := drainStrategy.HasFailed(result.StartTime)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	if hasFailed {
 		reqLogger.Info(fmt.Sprintf("Node drain timed out %s. Alerting.", node.Name))
 		metricsClient.UpdateMetricNodeDrainFailed(node.Name)
 		return reconcile.Result{RequeueAfter: time.Minute * 1}, nil
@@ -175,27 +191,4 @@ func getUpgradeConfigCR(c client.Client, ns string) (*upgradev1alpha1.UpgradeCon
 	}
 
 	return nil, errors.NewNotFound(schema.GroupResource{Group: upgradev1alpha1.SchemeGroupVersion.Group, Resource: "UpgradeConfig"}, "UpgradeConfig")
-}
-
-type isDrainResult struct {
-	IsDraining bool
-	StartTime  *metav1.Time
-}
-
-func isDraining(node *corev1.Node) isDrainResult {
-	var drainStartedAtTime *metav1.Time
-	isDraining := false
-	if node.Spec.Unschedulable && len(node.Spec.Taints) > 0 {
-		for _, n := range node.Spec.Taints {
-			if n.Effect == corev1.TaintEffectNoSchedule {
-				isDraining = true
-				drainStartedAtTime = n.TimeAdded
-			}
-		}
-	}
-
-	return isDrainResult{
-		IsDraining: isDraining,
-		StartTime:  drainStartedAtTime,
-	}
 }

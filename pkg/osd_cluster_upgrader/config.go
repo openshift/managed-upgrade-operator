@@ -4,19 +4,18 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/openshift/managed-upgrade-operator/pkg/machinery"
+	"github.com/openshift/managed-upgrade-operator/pkg/drain"
 )
 
 type osdUpgradeConfig struct {
-	Maintenance maintenanceConfig   `yaml:"maintenance"`
-	Scale       scaleConfig         `yaml:"scale"`
-	NodeDrain   machinery.NodeDrain `yaml:"nodeDrain"`
-	HealthCheck healthCheck         `yaml:"healthCheck"`
+	Maintenance maintenanceConfig `yaml:"maintenance"`
+	Scale       scaleConfig       `yaml:"scale"`
+	NodeDrain   drain.NodeDrain   `yaml:"nodeDrain"`
+	HealthCheck healthCheck       `yaml:"healthCheck"`
 }
 
 type maintenanceConfig struct {
 	ControlPlaneTime int           `yaml:"controlPlaneTime" default:"60"`
-	WorkerNodeTime   int           `yaml:"workerNodeTime" default:"8"`
 	IgnoredAlerts    ignoredAlerts `yaml:"ignoredAlerts"`
 }
 
@@ -31,19 +30,12 @@ func (cfg *maintenanceConfig) IsValid() error {
 	if cfg.ControlPlaneTime <= 0 {
 		return fmt.Errorf("Config maintenace controlPlaneTime out is invalid")
 	}
-	if cfg.WorkerNodeTime <= 0 {
-		return fmt.Errorf("Config maintenace workerNodeTime is invalid")
-	}
 
 	return nil
 }
 
 func (cfg *maintenanceConfig) GetControlPlaneDuration() time.Duration {
 	return time.Duration(cfg.ControlPlaneTime) * time.Minute
-}
-
-func (cfg *maintenanceConfig) GetWorkerNodeDuration() time.Duration {
-	return time.Duration(cfg.WorkerNodeTime) * time.Minute
 }
 
 type scaleConfig struct {
@@ -63,6 +55,9 @@ func (cfg *osdUpgradeConfig) IsValid() error {
 	}
 	if cfg.NodeDrain.Timeout <= 0 {
 		return fmt.Errorf("Config nodeDrain timeOut is invalid")
+	}
+	if cfg.NodeDrain.WorkerNodeTime <= 0 {
+		return fmt.Errorf("Config maintenace workerNodeTime is invalid")
 	}
 
 	return nil

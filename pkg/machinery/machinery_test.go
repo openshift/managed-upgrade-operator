@@ -2,12 +2,16 @@ package machinery
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/golang/mock/gomock"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	machineconfigapi "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	machineconfigapi "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 
 	"github.com/openshift/managed-upgrade-operator/util/mocks"
 )
@@ -64,6 +68,43 @@ var _ = Describe("Machinery client and utils", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result.IsUpgrading).To(BeTrue())
 			})
+		})
+	})
+
+	Context("When assessing if a node is draining", func() {
+		It("Reports if the node is draining", func() {
+			testNode := &corev1.Node{
+				Spec: corev1.NodeSpec{
+					Unschedulable: true,
+					Taints: []corev1.Taint{
+						{Effect: corev1.TaintEffectNoSchedule},
+					},
+				},
+			}
+			result := machineryClient.IsNodeDraining(testNode)
+			Expect(result.IsDraining).To(BeTrue())
+		})
+		It("Reports if the node is not draining", func() {
+			testNode := &corev1.Node{
+				Spec: corev1.NodeSpec{},
+			}
+			result := machineryClient.IsNodeDraining(testNode)
+			Expect(result.IsDraining).To(BeFalse())
+		})
+		It("Reports the time the node started draining", func() {
+			startTime := &metav1.Time{Time: time.Now()}
+			testNode := &corev1.Node{
+				Spec: corev1.NodeSpec{
+					Unschedulable: true,
+					Taints: []corev1.Taint{
+						{Effect: corev1.TaintEffectNoSchedule,
+							TimeAdded: startTime},
+					},
+				},
+			}
+			result := machineryClient.IsNodeDraining(testNode)
+			Expect(result.IsDraining).To(BeTrue())
+			Expect(result.StartTime).To(Equal(startTime))
 		})
 	})
 })

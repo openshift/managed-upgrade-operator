@@ -7,18 +7,19 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
-	testStructs "github.com/openshift/managed-upgrade-operator/util/mocks/structs"
 	"k8s.io/apimachinery/pkg/types"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
+	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 	cvMocks "github.com/openshift/managed-upgrade-operator/pkg/clusterversion/mocks"
+	"github.com/openshift/managed-upgrade-operator/pkg/drain"
 	"github.com/openshift/managed-upgrade-operator/pkg/machinery"
 	mockMachinery "github.com/openshift/managed-upgrade-operator/pkg/machinery/mocks"
 	mockMaintenance "github.com/openshift/managed-upgrade-operator/pkg/maintenance/mocks"
 	mockMetrics "github.com/openshift/managed-upgrade-operator/pkg/metrics/mocks"
 	mockScaler "github.com/openshift/managed-upgrade-operator/pkg/scaler/mocks"
 	"github.com/openshift/managed-upgrade-operator/util/mocks"
+	testStructs "github.com/openshift/managed-upgrade-operator/util/mocks/structs"
 )
 
 var _ = Describe("ClusterUpgrader maintenance window tests", func() {
@@ -52,7 +53,6 @@ var _ = Describe("ClusterUpgrader maintenance window tests", func() {
 		stepCounter = make(map[upgradev1alpha1.UpgradeConditionType]int)
 		config = &osdUpgradeConfig{
 			Maintenance: maintenanceConfig{
-				WorkerNodeTime:   8,
 				ControlPlaneTime: 90,
 				IgnoredAlerts: ignoredAlerts{
 					ControlPlaneCriticals: []string{"ignoreAlert1SRE", "ignoreAlert2SRE"},
@@ -60,6 +60,9 @@ var _ = Describe("ClusterUpgrader maintenance window tests", func() {
 			},
 			Scale: scaleConfig{
 				TimeOut: 30,
+			},
+			NodeDrain: drain.NodeDrain{
+				WorkerNodeTime: 8,
 			},
 		}
 	})
