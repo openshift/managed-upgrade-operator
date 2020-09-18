@@ -1,16 +1,24 @@
 package drain
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"time"
 
 	"github.com/hashicorp/go-multierror"
 	corev1 "k8s.io/api/core/v1"
+	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
+	"github.com/openshift/managed-upgrade-operator/pkg/pod"
+)
+
+var (
+	pdbStrategyName        = "PDB"
+	defaultPodStrategyName = "Default"
 )
 
 func NewOSDDrainStrategy(c client.Client, uc *upgradev1alpha1.UpgradeConfig, node *corev1.Node, cfg *NodeDrain, ts []TimedDrainStrategy) (NodeDrainStrategy, error) {
@@ -99,5 +107,29 @@ func maxWaitDuration(ts []TimedDrainStrategy) TimedDrainStrategy {
 }
 
 func getOsdTimedStrategies(c client.Client, uc *upgradev1alpha1.UpgradeConfig, node *corev1.Node, cfg *NodeDrain) ([]TimedDrainStrategy, error) {
-	return []TimedDrainStrategy{}, nil
+	pdbList := &policyv1beta1.PodDisruptionBudgetList{}
+	err := c.List(context.TODO(), pdbList)
+	if err != nil {
+		return nil, err
+	}
+
+	allPods := &corev1.PodList{}
+	err = c.List(context.TODO(), allPods)
+	if err != nil {
+		return nil, err
+	}
+
+	timedDrainStrategies := []TimedDrainStrategy{
+		&timedStrategy{
+			name:         defaultPodStrategyName,
+			description:  "Default pod removal",
+			waitDuration: cfg.GetTimeOutDuration(),
+			strategy: &ensurePodDeletionStrategy{
+				client:  c,
+				filters: []pod.PodPredicate{isOnNode(node), isNotDaemonSet, isNotPdbPod(pdbList)},
+			},
+		},
+	}
+
+	return timedDrainStrategies, nil
 }
