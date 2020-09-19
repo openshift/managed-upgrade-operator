@@ -68,12 +68,6 @@ var _ = Describe("ClusterUpgrader verification and health tests", func() {
 				IgnoredCriticals: []string{"alert1", "alert2"},
 			},
 		}
-		/*		upgradeHasNotCommencedCV = &configv1.ClusterVersion{
-				Spec: configv1.ClusterVersionSpec{
-					DesiredUpdate: &configv1.Update{Version: upgradeConfig.Spec.Desired.Version + "different"},
-					Channel:       upgradeConfig.Spec.Desired.Channel,
-				},
-			}*/
 	})
 
 	AfterEach(func() {
