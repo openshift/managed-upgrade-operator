@@ -4,6 +4,7 @@ import (
 	"context"
 
 	configv1 "github.com/openshift/api/config/v1"
+	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -12,6 +13,7 @@ import (
 //go:generate mockgen -destination=mocks/mockClusterVersion.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/clusterversion ClusterVersion
 type ClusterVersion interface {
 	GetClusterVersion() (*configv1.ClusterVersion, error)
+	HasUpgradeCommenced(*upgradev1alpha1.UpgradeConfig) (bool, error)
 }
 
 //go:generate mockgen -destination=mocks/mockClusterVersionBuilder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/clusterversion ClusterVersionBuilder
@@ -51,4 +53,30 @@ func (c *clusterVersionClient) GetClusterVersion() (*configv1.ClusterVersion, er
 	}
 
 	return nil, errors.NewNotFound(schema.GroupResource{Group: configv1.GroupName, Resource: "ClusterVersion"}, "ClusterVersion")
+}
+
+// isEqualVersion compare the upgrade version state for cv and uc
+func isEqualVersion(cv *configv1.ClusterVersion, uc *upgradev1alpha1.UpgradeConfig) bool {
+	if cv.Spec.DesiredUpdate != nil &&
+		cv.Spec.DesiredUpdate.Version == uc.Spec.Desired.Version &&
+		cv.Spec.Channel == uc.Spec.Desired.Channel {
+		return true
+	}
+
+	return false
+}
+
+// hasUpgradeCommenced checks if the upgrade has commenced
+func (c *clusterVersionClient) HasUpgradeCommenced(uc *upgradev1alpha1.UpgradeConfig) (bool, error) {
+
+	clusterVersion, err := c.GetClusterVersion()
+	if err != nil {
+		return false, err
+	}
+
+	if !isEqualVersion(clusterVersion, uc) {
+		return false, nil
+	}
+
+	return true, nil
 }

@@ -7,6 +7,7 @@ package mocks
 import (
 	gomock "github.com/golang/mock/gomock"
 	v1 "github.com/openshift/api/config/v1"
+	v1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 	reflect "reflect"
 )
 
@@ -46,4 +47,19 @@ func (m *MockClusterVersion) GetClusterVersion() (*v1.ClusterVersion, error) {
 func (mr *MockClusterVersionMockRecorder) GetClusterVersion() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClusterVersion", reflect.TypeOf((*MockClusterVersion)(nil).GetClusterVersion))
+}
+
+// HasUpgradeCommenced mocks base method
+func (m *MockClusterVersion) HasUpgradeCommenced(arg0 *v1alpha1.UpgradeConfig) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HasUpgradeCommenced", arg0)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// HasUpgradeCommenced indicates an expected call of HasUpgradeCommenced
+func (mr *MockClusterVersionMockRecorder) HasUpgradeCommenced(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasUpgradeCommenced", reflect.TypeOf((*MockClusterVersion)(nil).HasUpgradeCommenced), arg0)
 }

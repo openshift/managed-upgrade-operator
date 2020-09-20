@@ -5,17 +5,22 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	configv1 "github.com/openshift/api/config/v1"
+	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 	"github.com/openshift/managed-upgrade-operator/util/mocks"
+	testStructs "github.com/openshift/managed-upgrade-operator/util/mocks/structs"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 var _ = Describe("ClusterVersion client and utils", func() {
 
 	var (
-		cvClient       ClusterVersion
-		mockCtrl       *gomock.Controller
-		mockKubeClient *mocks.MockClient
-		testName       string
+		cvClient          ClusterVersion
+		mockCtrl          *gomock.Controller
+		mockKubeClient    *mocks.MockClient
+		testName          string
+		upgradeConfig     *upgradev1alpha1.UpgradeConfig
+		upgradeConfigName types.NamespacedName
 	)
 
 	BeforeEach(func() {
@@ -23,6 +28,11 @@ var _ = Describe("ClusterVersion client and utils", func() {
 		mockKubeClient = mocks.NewMockClient(mockCtrl)
 		cvClient = &clusterVersionClient{mockKubeClient}
 		testName = "testClusterversion"
+		upgradeConfigName = types.NamespacedName{
+			Name:      "test-upgradeconfig",
+			Namespace: "test-namespace",
+		}
+		upgradeConfig = testStructs.NewUpgradeConfigBuilder().WithNamespacedName(upgradeConfigName).GetUpgradeConfig()
 	})
 
 	Context("ClusterVersion client", func() {
@@ -46,6 +56,25 @@ var _ = Describe("ClusterVersion client and utils", func() {
 			clusterVersion, err := cvClient.GetClusterVersion()
 			Expect(clusterVersion).To(BeNil())
 			Expect(err).Should(Not(BeNil()))
+		})
+	})
+
+	Context("When the cluster's desired version matches the UpgradeConfig's", func() {
+		It("Indicates the upgrade has commenced", func() {
+			clusterVersion := configv1.ClusterVersion{
+				Spec: configv1.ClusterVersionSpec{
+					Channel:       upgradeConfig.Spec.Desired.Channel,
+					DesiredUpdate: &configv1.Update{Version: upgradeConfig.Spec.Desired.Version},
+				},
+			}
+			gomock.InOrder(
+				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, configv1.ClusterVersionList{
+					Items: []configv1.ClusterVersion{clusterVersion},
+				}).Return(nil),
+			)
+			hasCommenced, err := cvClient.HasUpgradeCommenced(upgradeConfig)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(hasCommenced).To(BeTrue())
 		})
 	})
 })
