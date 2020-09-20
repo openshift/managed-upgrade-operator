@@ -61,15 +61,11 @@ func (ds *osdDrainStrategy) HasFailed(startTime *metav1.Time) (bool, error) {
 	}
 
 	maxWaitStrategy := maxWaitDuration(ds.timedDrainStrategies)
-	if !isAfter(startTime, maxWaitStrategy.GetWaitDuration()) {
-		return false, nil
+	if maxWaitStrategy.GetWaitDuration() > ds.cfg.GetTimeOutDuration() {
+		return isAfter(startTime, maxWaitStrategy.GetWaitDuration()+ds.cfg.GetExpectedDrainDuration()), nil
+	} else {
+		return isAfter(startTime, ds.cfg.GetTimeOutDuration()+ds.cfg.GetExpectedDrainDuration()), nil
 	}
-	failed, err := maxWaitStrategy.GetStrategy().HasFailed()
-	if err != nil {
-		return false, err
-	}
-
-	return failed && isAfter(startTime, maxWaitStrategy.GetWaitDuration()+ds.cfg.GetExpectedDrainDuration()), nil
 }
 
 type timedStrategy struct {
