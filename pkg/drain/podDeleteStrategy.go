@@ -23,7 +23,8 @@ func (pds *podDeletionStrategy) Execute() (*DrainStrategyResult, error) {
 
 	podsToDelete := pod.FilterPods(allPods, pds.filters...)
 
-	delRes, err := pod.DeletePods(pds.client, podsToDelete)
+	gp := int64(0)
+	delRes, err := pod.DeletePods(pds.client, podsToDelete, &client.DeleteOptions{GracePeriodSeconds: &gp})
 	if err != nil {
 		return nil, err
 	}

@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestMaintenance(t *testing.T) {
+func TestDrain(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Drain Suite")
 }

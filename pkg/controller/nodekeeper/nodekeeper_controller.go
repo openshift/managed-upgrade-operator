@@ -144,6 +144,7 @@ func (r *ReconcileNodeKeeper) Reconcile(request reconcile.Request) (reconcile.Re
 
 	drainStrategy, err := r.drainstrategyBuilder.NewNodeDrainStrategy(r.client, uc, node, &cfg.NodeDrain)
 	if err != nil {
+		reqLogger.Error(err, "Error while executing drain.")
 		return reconcile.Result{}, err
 	}
 	res, err := drainStrategy.Execute(result.StartTime)

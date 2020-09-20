@@ -57,7 +57,7 @@ func (cfg *osdUpgradeConfig) IsValid() error {
 		return fmt.Errorf("Config nodeDrain timeOut is invalid")
 	}
 	if cfg.NodeDrain.ExpectedNodeDrainTime <= 0 {
-		return fmt.Errorf("Config maintenace workerNodeTime is invalid")
+		return fmt.Errorf("Config nodeDrain expectedNodeDrainTime is invalid")
 	}
 
 	return nil

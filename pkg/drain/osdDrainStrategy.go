@@ -61,7 +61,7 @@ func (ds *osdDrainStrategy) HasFailed(startTime *metav1.Time) (bool, error) {
 	}
 
 	maxWaitStrategy := maxWaitDuration(ds.timedDrainStrategies)
-	if maxWaitStrategy.GetWaitDuration() > ds.cfg.GetTimeOutDuration() {
+	if maxWaitStrategy != nil && maxWaitStrategy.GetWaitDuration() > ds.cfg.GetTimeOutDuration() {
 		return isAfter(startTime, maxWaitStrategy.GetWaitDuration()+ds.cfg.GetExpectedDrainDuration()), nil
 	} else {
 		return isAfter(startTime, ds.cfg.GetTimeOutDuration()+ds.cfg.GetExpectedDrainDuration()), nil
@@ -96,6 +96,10 @@ func isAfter(t *metav1.Time, d time.Duration) bool {
 }
 
 func maxWaitDuration(ts []TimedDrainStrategy) TimedDrainStrategy {
+	if len(ts) == 0 {
+		return nil
+	}
+
 	sort.Slice(ts, func(i, j int) bool {
 		iWait := ts[i].GetWaitDuration()
 		jWait := ts[j].GetWaitDuration()
@@ -132,7 +136,7 @@ func getOsdTimedStrategies(c client.Client, uc *upgradev1alpha1.UpgradeConfig, n
 	})
 	defaultPodFinalizerRemoval := newTimedStrategy(defaultPodFinalizerRemovalName, "Default pod finalizer removal", cfg.GetTimeOutDuration(), &removeFinalizersStrategy{
 		client:  c,
-		filters: []pod.PodPredicate{isOnNode(node), isNotDaemonSet, isNotPdbPod(pdbList)},
+		filters: []pod.PodPredicate{isOnNode(node), isNotDaemonSet, isNotPdbPod(pdbList), hasFinalizers},
 	})
 	timedDrainStrategies := []TimedDrainStrategy{defaultPodDelete, defaultPodFinalizerRemoval}
 
@@ -145,7 +149,7 @@ func getOsdTimedStrategies(c client.Client, uc *upgradev1alpha1.UpgradeConfig, n
 		})
 		pdbPodFinalizerRemoval := newTimedStrategy(pdbPodFinalizerRemovalName, "PDB Pod finalizer removal", uc.GetPDBDrainTimeoutDuration(), &removeFinalizersStrategy{
 			client:  c,
-			filters: []pod.PodPredicate{isOnNode(node), isNotDaemonSet, isPdbPod(pdbList)},
+			filters: []pod.PodPredicate{isOnNode(node), isNotDaemonSet, isPdbPod(pdbList), hasFinalizers},
 		})
 		timedDrainStrategies = append(timedDrainStrategies, pdbPodDelete, pdbPodFinalizerRemoval)
 	}
