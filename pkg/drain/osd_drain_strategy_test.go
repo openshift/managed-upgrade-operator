@@ -128,13 +128,13 @@ var _ = Describe("OSD Drain Strategy", func() {
 					[]TimedDrainStrategy{},
 				}
 			})
-			It("should not fail before default timeout has elapsed", func() {
+			It("should not fail before default timeout wait has elapsed", func() {
 				notLongEnough := &metav1.Time{Time: time.Now().Add(nodeDrainConfig.GetTimeOutDuration() / 2)}
 				result, err := osdDrain.HasFailed(notLongEnough)
 				Expect(result).To(BeFalse())
 				Expect(err).To(BeNil())
 			})
-			It("should fail after default timeout has elapsed", func() {
+			It("should fail after default timeout wait has elapsed", func() {
 				tooLongAgo := &metav1.Time{Time: time.Now().Add(-2 * nodeDrainConfig.GetTimeOutDuration())}
 				result, err := osdDrain.HasFailed(tooLongAgo)
 				Expect(result).To(BeTrue())
@@ -150,6 +150,7 @@ var _ = Describe("OSD Drain Strategy", func() {
 				mockTimedDrainTwo = NewMockTimedDrainStrategy(mockCtrl)
 				nodeDrainConfig = &NodeDrain{
 					WorkerNodeTime: 8,
+					Timeout:        15,
 				}
 				osdDrain = &osdDrainStrategy{
 					mockKubeClient,
@@ -167,12 +168,26 @@ var _ = Describe("OSD Drain Strategy", func() {
 					mockTimedDrainOne.EXPECT().GetWaitDuration().Return(mockOneDuration).AnyTimes(),
 					mockTimedDrainTwo.EXPECT().GetWaitDuration().Return(mockTwoDuration).AnyTimes(),
 					mockTimedDrainTwo.EXPECT().GetStrategy().Return(mockStrategyTwo),
-					mockStrategyTwo.EXPECT().HasFailed().Return(true, nil),
 					mockTimedDrainTwo.EXPECT().GetWaitDuration().Return(mockTwoDuration),
 				)
 				result, err := osdDrain.HasFailed(drainStartedSixtyNineMinsAgo)
 				Expect(result).To(BeTrue())
 				Expect(err).To(BeNil())
+			})
+			It("should fail after default timeout wait has elapsed + allowed time for drain to occur if max strategy wait duration is less", func() {
+				mockOneDuration := time.Minute * 5
+				mockTwoDuration := time.Minute * 10
+				gomock.InOrder(
+					// Need to use 'Any' as the sort function calls these functions many times
+					mockTimedDrainOne.EXPECT().GetWaitDuration().Return(mockOneDuration).AnyTimes(),
+					mockTimedDrainTwo.EXPECT().GetWaitDuration().Return(mockTwoDuration).AnyTimes(),
+					mockTimedDrainTwo.EXPECT().GetStrategy().Return(mockStrategyTwo),
+					mockTimedDrainTwo.EXPECT().GetWaitDuration().Return(mockTwoDuration),
+				)
+
+				thirtyOneMinsAgo := &metav1.Time{Time: time.Now().Add(-16*time.Minute - nodeDrainConfig.GetTimeOutDuration())}
+				result, _ := osdDrain.HasFailed(thirtyOneMinsAgo)
+				Expect(result).To(BeTrue())
 			})
 		})
 	})
@@ -225,13 +240,18 @@ var _ = Describe("OSD Drain Strategy", func() {
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, podList).Return(nil),
 			)
 			ts, err := getOsdTimedStrategies(mockKubeClient, &upgradev1alpha1.UpgradeConfig{}, testNode, &NodeDrain{})
-			hasPdbStrategy := false
+			hasPdbDeleteStrategy := false
+			hasPdbFinalizerRemovalStrategy := false
 			for _, ts := range ts {
-				if ts.GetName() == pdbStrategyName {
-					hasPdbStrategy = true
+				if ts.GetName() == pdbPodDeleteName {
+					hasPdbDeleteStrategy = true
+				}
+				if ts.GetName() == pdbPodFinalizerRemovalName {
+					hasPdbFinalizerRemovalStrategy = true
 				}
 			}
-			Expect(hasPdbStrategy).To(BeTrue())
+			Expect(hasPdbDeleteStrategy).To(BeTrue())
+			Expect(hasPdbFinalizerRemovalStrategy).To(BeTrue())
 			Expect(err).To(BeNil())
 		})
 	})
