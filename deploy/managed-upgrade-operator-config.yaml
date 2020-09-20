@@ -19,7 +19,7 @@ data:
       timeOut: 60
     nodeDrain:
       timeOut: 45
-      workerNodeTime: 8
+      expectedNodeDrainTime: 8
     healthCheck:
       ignoredCriticals:
       - DNSErrors05MinSRE

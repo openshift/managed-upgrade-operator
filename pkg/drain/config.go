@@ -5,8 +5,8 @@ import (
 )
 
 type NodeDrain struct {
-	Timeout        int `yaml:"timeOut"`
-	WorkerNodeTime int `yaml:"workerNodeTime" default:"8"`
+	Timeout               int `yaml:"timeOut"`
+	ExpectedNodeDrainTime int `yaml:"expectedNodeDrainTime" default:"8"`
 }
 
 func (nd *NodeDrain) GetTimeOutDuration() time.Duration {
@@ -14,5 +14,5 @@ func (nd *NodeDrain) GetTimeOutDuration() time.Duration {
 }
 
 func (nd *NodeDrain) GetExpectedDrainDuration() time.Duration {
-	return time.Duration(nd.WorkerNodeTime) * time.Minute
+	return time.Duration(nd.ExpectedNodeDrainTime) * time.Minute
 }

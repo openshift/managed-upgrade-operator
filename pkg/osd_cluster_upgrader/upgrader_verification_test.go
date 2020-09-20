@@ -68,7 +68,7 @@ var _ = Describe("ClusterUpgrader verification and health tests", func() {
 				IgnoredCriticals: []string{"alert1", "alert2"},
 			},
 			NodeDrain: drain.NodeDrain{
-				WorkerNodeTime: 8,
+				ExpectedNodeDrainTime: 8,
 			},
 		}
 	})

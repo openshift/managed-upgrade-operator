@@ -118,8 +118,8 @@ var _ = Describe("NodeKeeperController", func() {
 				}
 				config = nodeKeeperConfig{
 					NodeDrain: drain.NodeDrain{
-						Timeout:        5,
-						WorkerNodeTime: 8,
+						Timeout:               5,
+						ExpectedNodeDrainTime: 8,
 					},
 				}
 			})

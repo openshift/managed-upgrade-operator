@@ -62,7 +62,7 @@ var _ = Describe("ClusterUpgrader maintenance window tests", func() {
 				TimeOut: 30,
 			},
 			NodeDrain: drain.NodeDrain{
-				WorkerNodeTime: 8,
+				ExpectedNodeDrainTime: 8,
 			},
 		}
 	})

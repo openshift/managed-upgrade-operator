@@ -74,7 +74,7 @@ var _ = Describe("ClusterUpgrader", func() {
 				TimeOut: 30,
 			},
 			NodeDrain: drain.NodeDrain{
-				WorkerNodeTime: 8,
+				ExpectedNodeDrainTime: 8,
 			},
 		}
 	})

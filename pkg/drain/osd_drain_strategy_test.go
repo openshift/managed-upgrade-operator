@@ -149,8 +149,8 @@ var _ = Describe("OSD Drain Strategy", func() {
 				mockTimedDrainOne = NewMockTimedDrainStrategy(mockCtrl)
 				mockTimedDrainTwo = NewMockTimedDrainStrategy(mockCtrl)
 				nodeDrainConfig = &NodeDrain{
-					WorkerNodeTime: 8,
-					Timeout:        15,
+					ExpectedNodeDrainTime: 8,
+					Timeout:               15,
 				}
 				osdDrain = &osdDrainStrategy{
 					mockKubeClient,
