@@ -5,7 +5,7 @@ import (
 )
 
 type NodeDrain struct {
-	Timeout int `yaml:"timeOut"`
+	Timeout int `yaml:"timeOut" default:"45"`
 }
 
 func (nd *NodeDrain) GetDuration() time.Duration {
