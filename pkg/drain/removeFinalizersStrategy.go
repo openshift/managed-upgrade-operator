@@ -35,7 +35,6 @@ func (rfs *removeFinalizersStrategy) Execute() (*DrainStrategyResult, error) {
 }
 
 func (fdps *removeFinalizersStrategy) HasFailed() (bool, error) {
-	// TODO: update to reflect removefinalizers not delete pods
 	allPods := &corev1.PodList{}
 	err := fdps.client.List(context.TODO(), allPods)
 	if err != nil {
