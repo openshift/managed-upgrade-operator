@@ -15,8 +15,8 @@ type osdUpgradeConfig struct {
 }
 
 type maintenanceConfig struct {
-	ControlPlaneTime int           `yaml:"controlPlaneTime"`
-	WorkerNodeTime   int           `yaml:"workerNodeTime"`
+	ControlPlaneTime int           `yaml:"controlPlaneTime" default:"60"`
+	WorkerNodeTime   int           `yaml:"workerNodeTime" default:"8"`
 	IgnoredAlerts    ignoredAlerts `yaml:"ignoredAlerts"`
 }
 
@@ -47,7 +47,7 @@ func (cfg *maintenanceConfig) GetWorkerNodeDuration() time.Duration {
 }
 
 type scaleConfig struct {
-	TimeOut int `yaml:"timeOut"`
+	TimeOut int `yaml:"timeOut" default:"30"`
 }
 
 type healthCheck struct {
