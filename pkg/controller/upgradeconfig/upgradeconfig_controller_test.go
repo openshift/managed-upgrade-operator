@@ -111,6 +111,7 @@ var _ = Describe("UpgradeConfigController", func() {
 			It("Returns without error", func() {
 				notFound := k8serrs.NewNotFound(schema.GroupResource{}, upgradeConfigName.Name)
 				mockKubeClient.EXPECT().Get(gomock.Any(), upgradeConfigName, gomock.Any()).SetArg(2, *upgradeConfig).Return(notFound)
+				mockMetricsClient.EXPECT().ResetMetrics()
 				result, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result.Requeue).To(BeFalse())

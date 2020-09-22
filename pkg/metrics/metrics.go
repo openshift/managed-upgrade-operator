@@ -21,7 +21,7 @@ const (
 	metricsTag   = "upgradeoperator"
 	nameLabel    = "upgradeconfig_name"
 	versionLabel = "version"
-	nodeLabel = "node_name"
+	nodeLabel    = "node_name"
 )
 
 //go:generate mockgen -destination=mocks/metrics.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/metrics Metrics
@@ -50,6 +50,7 @@ type Metrics interface {
 	IsMetricNodeUpgradeEndTimeSet(upgradeConfigName string, version string) (bool, error)
 	IsAlertFiring(alert string, namespaces []string) (bool, error)
 	Query(query string) (*AlertResponse, error)
+	ResetMetrics()
 }
 
 //go:generate mockgen -destination=mocks/metrics_builder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/metrics MetricsBuilder
@@ -157,10 +158,8 @@ var (
 		Name:      "node_drain_timeout",
 		Help:      "Node cannot be drained successfully in time.",
 	}, []string{nodeLabel})
-)
 
-func init() {
-	metrics.Registry.MustRegister(
+	metricsList = []*prometheus.GaugeVec{
 		metricValidationFailed,
 		metricClusterCheckFailed,
 		metricScalingFailed,
@@ -172,7 +171,13 @@ func init() {
 		metricUpgradeControlPlaneTimeout,
 		metricUpgradeWorkerTimeout,
 		metricNodeDrainFailed,
-	)
+	}
+)
+
+func init() {
+	for _, m := range metricsList {
+		metrics.Registry.MustRegister(m)
+	}
 }
 
 func (c *Counter) UpdateMetricValidationFailed(upgradeConfigName string) {
@@ -428,4 +433,10 @@ type AlertData struct {
 type AlertResult struct {
 	Metric map[string]string `json:"metric"`
 	Value  []interface{}     `json:"value"`
+}
+
+func (c *Counter) ResetMetrics() {
+	for _, m := range metricsList {
+		m.Reset()
+	}
 }
