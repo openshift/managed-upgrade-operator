@@ -3,7 +3,6 @@ package nodekeeper
 import (
 	"context"
 	"fmt"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"os"
 	"time"
 
@@ -11,6 +10,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -30,13 +31,18 @@ var log = logf.Log.WithName("controller_nodekeeper")
 // Add creates a new NodeKeeper Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager) error {
-	return add(mgr, newReconciler(mgr))
+	kubeConfig := controllerruntime.GetConfigOrDie()
+	c, err := client.New(kubeConfig, client.Options{})
+	if err != nil {
+		return err
+	}
+	return add(mgr, newReconciler(mgr, c))
 }
 
 // newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager) reconcile.Reconciler {
+func newReconciler(mgr manager.Manager, client client.Client) reconcile.Reconciler {
 	return &ReconcileNodeKeeper{
-		client:               mgr.GetClient(),
+		client:               client,
 		configManagerBuilder: configmanager.NewBuilder(),
 		machinery:            machinery.NewMachinery(),
 		metricsClientBuilder: metrics.NewBuilder(),
