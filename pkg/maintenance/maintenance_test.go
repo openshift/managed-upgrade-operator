@@ -3,6 +3,7 @@ package maintenance
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/go-openapi/strfmt"
@@ -25,13 +26,15 @@ var _ = Describe("Alert Manager Maintenance Client", func() {
 		mockKubeClient        *mocks.MockClient
 		silenceClient         *ammocks.MockAlertManagerSilencer
 		maintenance           alertManagerMaintenance
-		testComment           = "test comment"
-		testOperatorName      = "managed-upgrade-operator"
-		testCreatedByOperator = testOperatorName
-		testCreatedByTest     = "Tester the Creator"
-		testNow               = strfmt.DateTime(time.Now().UTC())
-		testEnd               = strfmt.DateTime(time.Now().UTC().Add(90 * time.Minute))
-		testVersion           = "V-1.million.25"
+		testComment                 = "test comment"
+		testOperatorName            = "managed-upgrade-operator"
+		testCreatedByOperator       = testOperatorName
+		testCreatedByTest           = "Tester the Creator"
+		testNow                     = strfmt.DateTime(time.Now().UTC())
+		testEnd                     = strfmt.DateTime(time.Now().UTC().Add(90 * time.Minute))
+		testVersion                 = "V-1.million.25"
+		testWorkerCount       int32 = 5
+		testNewWorkerCount    int32 = 4
 
 		// Create test silence created by the operator
 		testSilence = amv2Models.Silence{
@@ -46,7 +49,7 @@ var _ = Describe("Alert Manager Maintenance Client", func() {
 
 		activeSilenceId      = "test-id"
 		activeSilenceStatus  = amv2Models.SilenceStatusStateActive
-		activeSilenceComment = "Silence for OSD worker node upgrade to version " + testVersion
+		activeSilenceComment = "Silence for OSD with " + strconv.Itoa(int(testWorkerCount)) + " worker node upgrade to version " + testVersion
 		testActiveSilences   = []amv2Models.GettableSilence{
 			{
 				ID:     &activeSilenceId,
@@ -100,35 +103,50 @@ var _ = Describe("Alert Manager Maintenance Client", func() {
 	Context("Creating a worker silence", func() {
 		It("Should not error on successfull maintenance start", func() {
 			gomock.InOrder(
-				silenceClient.EXPECT().Filter(gomock.Any()).Return(&testNoActiveSilences, nil),
+				silenceClient.EXPECT().Filter(gomock.Any()).Return(&testNoActiveSilences, nil).Times(2),
 				silenceClient.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil),
 			)
 			end := time.Now().Add(90 * time.Minute)
-			err := maintenance.SetWorker(end, testVersion)
+			err := maintenance.SetWorker(end, testVersion, testWorkerCount)
 			Expect(err).Should(Not(HaveOccurred()))
 		})
 		It("Should error on failing to start maintenance", func() {
 			gomock.InOrder(
-				silenceClient.EXPECT().Filter(gomock.Any()).Return(&testNoActiveSilences, nil),
+				silenceClient.EXPECT().Filter(gomock.Any()).Return(&testNoActiveSilences, nil).Times(2),
 				silenceClient.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("fake error")),
 			)
 			end := time.Now().Add(90 * time.Minute)
-			err := maintenance.SetWorker(end, testVersion)
+			err := maintenance.SetWorker(end, testVersion, testWorkerCount)
 			Expect(err).Should(HaveOccurred())
 		})
 	})
 
-	// Updating an existing worker silence
-	Context("Updating a worker silence", func() {
-		It("Should update a silence if one already exists", func() {
+	// Do not update if worker count unchanged
+	Context("Do not create new silence", func() {
+		It("Should not create new silence if one already exists with same comment", func() {
 			gomock.InOrder(
 				silenceClient.EXPECT().Filter(gomock.Any()).Return(&testActiveSilences, nil),
-				silenceClient.EXPECT().Update(gomock.Any(), gomock.Any()),
 			)
 			end := time.Now().Add(90 * time.Minute)
-			err := maintenance.SetWorker(end, testVersion)
+			err := maintenance.SetWorker(end, testVersion, testWorkerCount)
 			Expect(err).ShouldNot(HaveOccurred())
 		})
+	})
+
+	// Delete old silence and create new one with new worker count
+	Context("Recreate silence", func() {
+		It("Should create new silence when the worker count changed", func() {
+			gomock.InOrder(
+				silenceClient.EXPECT().Filter(gomock.Any()).Return(&testNoActiveSilences, nil),
+				silenceClient.EXPECT().Filter(gomock.Any()).Return(&testActiveSilences, nil),
+				silenceClient.EXPECT().Delete(gomock.Any()),
+				silenceClient.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil),
+			)
+			end := time.Now().Add(90 * time.Minute)
+			err := maintenance.SetWorker(end, testVersion, testNewWorkerCount)
+			Expect(err).ShouldNot(HaveOccurred())
+		})
+
 	})
 
 	// Finding and removing all active maintenances

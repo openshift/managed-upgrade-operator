@@ -9,7 +9,7 @@ import (
 //go:generate mockgen -destination=mocks/maintenance.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/maintenance Maintenance
 type Maintenance interface {
 	StartControlPlane(endsAt time.Time, version string, ignoredAlerts []string) error
-	SetWorker(endsAt time.Time, version string) error
+	SetWorker(endsAt time.Time, version string, count int32) error
 	EndControlPlane() error
 	EndWorker() error
 	EndSilences(comment string) error
