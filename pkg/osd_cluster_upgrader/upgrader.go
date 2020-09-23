@@ -246,7 +246,7 @@ func CreateWorkerMaintWindow(c client.Client, cfg *osdUpgradeConfig, scaler scal
 
 	pendingWorkerCount := upgradingResult.MachineCount - upgradingResult.UpdatedCount
 	if pendingWorkerCount < 1 {
-		logger.Info(fmt.Sprintf("No worker node left for upgrading."))
+		logger.Info("No worker node left for upgrading.")
 		return true, nil
 	}
 
