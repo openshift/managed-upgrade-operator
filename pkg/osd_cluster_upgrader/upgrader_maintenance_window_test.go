@@ -100,7 +100,7 @@ var _ = Describe("ClusterUpgrader maintenance window tests", func() {
 
 	Context("When creating a worker maintenance window", func() {
 		It("Asks the maintenance client to do so", func() {
-			mockMachineryClient.EXPECT().IsUpgrading(gomock.Any(), "worker").Return(&machinery.UpgradingResult{IsUpgrading: true}, nil)
+			mockMachineryClient.EXPECT().IsUpgrading(gomock.Any(), "worker").Return(&machinery.UpgradingResult{IsUpgrading: true, MachineCount: 4, UpdatedCount: 2}, nil)
 			mockMaintClient.EXPECT().SetWorker(gomock.Any(), upgradeConfig.Spec.Desired.Version, gomock.Any())
 			result, err := CreateWorkerMaintWindow(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, mockCVClient, upgradeConfig, mockMachineryClient, logger)
 			Expect(err).NotTo(HaveOccurred())
@@ -108,12 +108,18 @@ var _ = Describe("ClusterUpgrader maintenance window tests", func() {
 		})
 		It("Indicates when creating the maintenance window has failed", func() {
 			fakeError := fmt.Errorf("fake error")
-			mockMachineryClient.EXPECT().IsUpgrading(gomock.Any(), "worker").Return(&machinery.UpgradingResult{IsUpgrading: true}, nil)
+			mockMachineryClient.EXPECT().IsUpgrading(gomock.Any(), "worker").Return(&machinery.UpgradingResult{IsUpgrading: true, MachineCount: 4, UpdatedCount: 2}, nil)
 			mockMaintClient.EXPECT().SetWorker(gomock.Any(), upgradeConfig.Spec.Desired.Version, gomock.Any()).Return(fakeError)
 			result, err := CreateWorkerMaintWindow(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, mockCVClient, upgradeConfig, mockMachineryClient, logger)
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(Equal(fakeError))
 			Expect(result).To(BeFalse())
+		})
+		It("Skip creating maintenance window if no pending worker node left", func() {
+			mockMachineryClient.EXPECT().IsUpgrading(gomock.Any(), "worker").Return(&machinery.UpgradingResult{IsUpgrading: true, MachineCount: 4, UpdatedCount: 4}, nil)
+			result, err := CreateWorkerMaintWindow(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, mockCVClient, upgradeConfig, mockMachineryClient, logger)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(BeTrue())
 		})
 		It("Does not proceed if isUpgrading check fails", func() {
 			mockMachineryClient.EXPECT().IsUpgrading(gomock.Any(), "worker").Return(nil, fmt.Errorf("fake error"))

@@ -246,8 +246,10 @@ func CreateWorkerMaintWindow(c client.Client, cfg *osdUpgradeConfig, scaler scal
 
 	pendingWorkerCount := upgradingResult.MachineCount - upgradingResult.UpdatedCount
 	if pendingWorkerCount < 1 {
+		logger.Info(fmt.Sprintf("No worker node left for upgrading."))
 		return true, nil
 	}
+
 	// We use the maximum of the PDB drain timeout and node drain timeout to compute a 'worst case' wait time
 	pdbForceDrainTimeout := time.Duration(upgradeConfig.Spec.PDBForceDrainTimeout) * time.Minute
 	nodeDrainTimeout := cfg.NodeDrain.GetDuration()
