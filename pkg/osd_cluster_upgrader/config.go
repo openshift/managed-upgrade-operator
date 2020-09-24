@@ -8,10 +8,11 @@ import (
 )
 
 type osdUpgradeConfig struct {
-	Maintenance maintenanceConfig `yaml:"maintenance"`
-	Scale       scaleConfig       `yaml:"scale"`
-	NodeDrain   drain.NodeDrain   `yaml:"nodeDrain"`
-	HealthCheck healthCheck       `yaml:"healthCheck"`
+	Maintenance  maintenanceConfig   `yaml:"maintenance"`
+	Scale        scaleConfig         `yaml:"scale"`
+	NodeDrain    machinery.NodeDrain `yaml:"nodeDrain"`
+	HealthCheck  healthCheck         `yaml:"healthCheck"`
+	Verification verification        `yaml:"verification"`
 }
 
 type maintenanceConfig struct {
@@ -44,6 +45,11 @@ type scaleConfig struct {
 
 type healthCheck struct {
 	IgnoredCriticals []string `yaml:"ignoredCriticals"`
+}
+
+type verification struct {
+	IgnoredNamespaces      []string `yaml:"ignoredNamespaces"`
+	NamespacePrefixToCheck []string `yaml:"namespacePrefixToCheck"`
 }
 
 func (cfg *osdUpgradeConfig) IsValid() error {
