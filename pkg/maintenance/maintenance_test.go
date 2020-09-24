@@ -3,7 +3,6 @@ package maintenance
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/go-openapi/strfmt"
@@ -49,7 +48,7 @@ var _ = Describe("Alert Manager Maintenance Client", func() {
 
 		activeSilenceId      = "test-id"
 		activeSilenceStatus  = amv2Models.SilenceStatusStateActive
-		activeSilenceComment = "Silence for OSD with " + strconv.Itoa(int(testWorkerCount)) + " worker node upgrade to version " + testVersion
+		activeSilenceComment = fmt.Sprintf("Silence for OSD with %d worker node upgrade to version %s", testWorkerCount, testVersion)
 		testActiveSilences   = []amv2Models.GettableSilence{
 			{
 				ID:     &activeSilenceId,
