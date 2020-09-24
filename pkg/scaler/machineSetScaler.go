@@ -11,13 +11,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/openshift/managed-upgrade-operator/pkg/drain"
 	"github.com/openshift/managed-upgrade-operator/pkg/machinery"
 )
 
 const (
-	LABEL_UPGRADE = "upgrade.managed.openshift.io"
+	LABEL_UPGRADE         = "upgrade.managed.openshift.io"
+	LABEL_MACHINESET      = "machine.openshift.io/cluster-api-machineset"
+	MACHINE_API_NAMESPACE = "openshift-machine-api"
 )
 
 type machineSetScaler struct{}
@@ -27,7 +31,7 @@ func (s *machineSetScaler) EnsureScaleUpNodes(c client.Client, timeOut time.Dura
 	upgradeMachinesets := &machineapi.MachineSetList{}
 
 	err := c.List(context.TODO(), upgradeMachinesets, []client.ListOption{
-		client.InNamespace("openshift-machine-api"),
+		client.InNamespace(MACHINE_API_NAMESPACE),
 		client.MatchingLabels{LABEL_UPGRADE: "true"},
 	}...)
 	if err != nil {
@@ -37,7 +41,7 @@ func (s *machineSetScaler) EnsureScaleUpNodes(c client.Client, timeOut time.Dura
 	originalMachineSets := &machineapi.MachineSetList{}
 
 	err = c.List(context.TODO(), originalMachineSets, []client.ListOption{
-		client.InNamespace("openshift-machine-api"),
+		client.InNamespace(MACHINE_API_NAMESPACE),
 		client.MatchingLabels{"hive.openshift.io/machine-pool": "worker"},
 	}...)
 	if err != nil {
@@ -75,7 +79,9 @@ func (s *machineSetScaler) EnsureScaleUpNodes(c client.Client, timeOut time.Dura
 		}
 		newMs.Spec.Replicas = &replica
 		newMs.Spec.Template.Labels[LABEL_UPGRADE] = "true"
+		newMs.Spec.Template.Labels[LABEL_MACHINESET] = newMs.Name
 		newMs.Spec.Selector.MatchLabels[LABEL_UPGRADE] = "true"
+		newMs.Spec.Selector.MatchLabels[LABEL_MACHINESET] = newMs.Name
 		logger.Info(fmt.Sprintf("creating machineset %s for upgrade", newMs.Name))
 
 		err = c.Create(context.TODO(), newMs)
@@ -89,12 +95,6 @@ func (s *machineSetScaler) EnsureScaleUpNodes(c client.Client, timeOut time.Dura
 		// New machineset created, machines must not ready at the moment, so skip following steps
 		return false, nil
 	}
-	nodes := &corev1.NodeList{}
-	err = c.List(context.TODO(), nodes)
-	if err != nil {
-		logger.Error(err, "failed to list nodes")
-		return false, err
-	}
 	allNodeReady := true
 	for _, ms := range upgradeMachinesets.Items {
 		//We assume the create time is the start time for scale up extra compute nodes
@@ -107,28 +107,32 @@ func (s *machineSetScaler) EnsureScaleUpNodes(c client.Client, timeOut time.Dura
 			logger.Info(fmt.Sprintf("not all machines are ready for machineset:%s", ms.Name))
 			return false, nil
 		}
+
 		machines := &machineapi.MachineList{}
 		err := c.List(context.TODO(), machines, []client.ListOption{
-			client.InNamespace("openshift-machine-api"),
+			client.InNamespace(MACHINE_API_NAMESPACE),
 			client.MatchingLabels{LABEL_UPGRADE: "true"},
+			client.MatchingLabels{LABEL_MACHINESET: ms.Name},
 		}...)
-		if err != nil {
+		if err != nil || len(machines.Items) != 1 {
 			logger.Error(err, "failed to list extra upgrade machine")
+			return false, err
+		}
+
+		machine := machines.Items[0]
+		node := &corev1.Node{}
+		err = c.Get(context.TODO(), types.NamespacedName{Name: machine.Status.NodeRef.Name}, node)
+		if err != nil {
+			logger.Error(err, "failed to get node")
 			return false, err
 		}
 		nodeReady := false
 		var nodeName string
-		for _, node := range nodes.Items {
-			if node.Annotations["machine.openshift.io/machine"] == "openshift-machine-api/"+machines.Items[0].Name {
-				for _, con := range node.Status.Conditions {
-					if con.Type == corev1.NodeReady && con.Status == corev1.ConditionTrue {
-						nodeReady = true
-						nodeName = node.Name
-					}
-				}
-
+		for _, con := range node.Status.Conditions {
+			if con.Type == corev1.NodeReady && con.Status == corev1.ConditionTrue {
+				nodeReady = true
+				nodeName = node.Name
 			}
-
 		}
 		if !nodeReady {
 			allNodeReady = false
@@ -137,7 +141,6 @@ func (s *machineSetScaler) EnsureScaleUpNodes(c client.Client, timeOut time.Dura
 				return false, NewScaleTimeOutError(fmt.Sprintf("Timeout waiting for node:%s to become ready", nodeName))
 			}
 		}
-
 	}
 	if !allNodeReady {
 		return false, nil
@@ -147,15 +150,14 @@ func (s *machineSetScaler) EnsureScaleUpNodes(c client.Client, timeOut time.Dura
 }
 
 // This will remove extra MachineSets and report when the nodes are removed.
-func (s *machineSetScaler) EnsureScaleDownNodes(c client.Client, logger logr.Logger) (bool, error) {
+func (s *machineSetScaler) EnsureScaleDownNodes(c client.Client, nds drain.NodeDrainStrategy, logger logr.Logger) (bool, error) {
 	upgradeMachinesets := &machineapi.MachineSetList{}
 
 	err := c.List(context.TODO(), upgradeMachinesets, []client.ListOption{
-		client.InNamespace("openshift-machine-api"),
+		client.InNamespace(MACHINE_API_NAMESPACE),
 		client.MatchingLabels{LABEL_UPGRADE: "true"},
 	}...)
 	if err != nil {
-		logger.Error(err, "failed to get upgrade extra machinesets")
 		return false, err
 	}
 
@@ -168,10 +170,35 @@ func (s *machineSetScaler) EnsureScaleDownNodes(c client.Client, logger logr.Log
 		}
 	}
 
+	if nds != nil {
+		upgradeNodes, err := getExtraUpgradeNodes(c)
+		if err != nil {
+			return false, err
+		}
+		for _, n := range upgradeNodes.Items {
+			res, err := nds.Execute(&n)
+			for _, r := range res {
+				logger.Info(r.Message)
+			}
+			if err != nil {
+				return false, err
+			}
+		}
+		for _, n := range upgradeNodes.Items {
+			hasFailed, err := nds.HasFailed(&n)
+			if err != nil {
+				return false, err
+			}
+			if hasFailed {
+				return false, NewDrainTimeOutError(n.Name)
+			}
+		}
+	}
+
 	// MachineSets control workers and infras nodes.
 	originalMachineSets := &machineapi.MachineSetList{}
 	err = c.List(context.TODO(), originalMachineSets, []client.ListOption{
-		client.InNamespace("openshift-machine-api"),
+		client.InNamespace(MACHINE_API_NAMESPACE),
 		NotMatchingLabels{LABEL_UPGRADE: "true"},
 	}...)
 	if err != nil {
@@ -219,4 +246,31 @@ func NotSelectorFromSet(ls NotMatchingLabels) labels.Selector {
 	}
 
 	return selector
+}
+
+func getExtraUpgradeNodes(c client.Client) (*corev1.NodeList, error) {
+	nodes := &corev1.NodeList{}
+	err := c.List(context.TODO(), nodes)
+	if err != nil {
+		return nil, err
+	}
+	machines := &machineapi.MachineList{}
+	err = c.List(context.TODO(), machines, []client.ListOption{
+		client.InNamespace(MACHINE_API_NAMESPACE),
+		client.MatchingLabels{LABEL_UPGRADE: "true"},
+	}...)
+	if err != nil {
+		return nil, err
+	}
+
+	extraUpgradeNodes := &corev1.NodeList{}
+	for _, machine := range machines.Items {
+		for _, node := range nodes.Items {
+			if node.Name == machine.Status.NodeRef.Name {
+				extraUpgradeNodes.Items = append(extraUpgradeNodes.Items, node)
+			}
+		}
+	}
+
+	return extraUpgradeNodes, nil
 }

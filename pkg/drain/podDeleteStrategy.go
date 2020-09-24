@@ -14,38 +14,40 @@ type podDeletionStrategy struct {
 	filters []pod.PodPredicate
 }
 
-func (pds *podDeletionStrategy) Execute() (*DrainStrategyResult, error) {
+func (pds *podDeletionStrategy) Execute(node *corev1.Node) (*DrainStrategyResult, error) {
+	podsToDelete, err := pds.getPodList(node)
+	if err != nil {
+		return nil, err
+	}
+
+	gp := int64(0)
+	res, err := pod.DeletePods(pds.client, podsToDelete, &client.DeleteOptions{GracePeriodSeconds: &gp})
+	if err != nil {
+		return nil, err
+	}
+
+	return &DrainStrategyResult{
+		Message:     res.Message,
+		HasExecuted: res.NumMarkedForDeletion > 0,
+	}, nil
+}
+
+func (pds *podDeletionStrategy) IsValid(node *corev1.Node) (bool, error) {
+	targetPods, err := pds.getPodList(node)
+	if err != nil {
+		return false, err
+	}
+
+	return len(targetPods.Items) > 0, nil
+}
+
+func (pds *podDeletionStrategy) getPodList(node *corev1.Node) (*corev1.PodList, error) {
 	allPods := &corev1.PodList{}
 	err := pds.client.List(context.TODO(), allPods)
 	if err != nil {
 		return nil, err
 	}
 
-	podsToDelete := pod.FilterPods(allPods, pds.filters...)
-
-	gp := int64(0)
-	delRes, err := pod.DeletePods(pds.client, podsToDelete, &client.DeleteOptions{GracePeriodSeconds: &gp})
-	if err != nil {
-		return nil, err
-	}
-
-	return &DrainStrategyResult{
-		Message:     delRes.Message,
-		HasExecuted: delRes.NumMarkedForDeletion > 0,
-	}, nil
-}
-
-func (fdps *podDeletionStrategy) HasFailed() (bool, error) {
-	allPods := &corev1.PodList{}
-	err := fdps.client.List(context.TODO(), allPods)
-	if err != nil {
-		return false, err
-	}
-
-	filterPods := pod.FilterPods(allPods, fdps.filters...)
-	if len(filterPods.Items) == 0 {
-		return false, nil
-	}
-
-	return true, nil
+	filters := append([]pod.PodPredicate{isOnNode(node)}, pds.filters...)
+	return pod.FilterPods(allPods, filters...), nil
 }

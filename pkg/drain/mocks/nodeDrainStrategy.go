@@ -7,7 +7,7 @@ package mocks
 import (
 	gomock "github.com/golang/mock/gomock"
 	drain "github.com/openshift/managed-upgrade-operator/pkg/drain"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/api/core/v1"
 	reflect "reflect"
 )
 
@@ -35,7 +35,7 @@ func (m *MockNodeDrainStrategy) EXPECT() *MockNodeDrainStrategyMockRecorder {
 }
 
 // Execute mocks base method
-func (m *MockNodeDrainStrategy) Execute(arg0 *v1.Time) ([]*drain.DrainStrategyResult, error) {
+func (m *MockNodeDrainStrategy) Execute(arg0 *v1.Node) ([]*drain.DrainStrategyResult, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Execute", arg0)
 	ret0, _ := ret[0].([]*drain.DrainStrategyResult)
@@ -50,7 +50,7 @@ func (mr *MockNodeDrainStrategyMockRecorder) Execute(arg0 interface{}) *gomock.C
 }
 
 // HasFailed mocks base method
-func (m *MockNodeDrainStrategy) HasFailed(arg0 *v1.Time) (bool, error) {
+func (m *MockNodeDrainStrategy) HasFailed(arg0 *v1.Node) (bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "HasFailed", arg0)
 	ret0, _ := ret[0].(bool)

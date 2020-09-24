@@ -71,7 +71,7 @@ var _ = Describe("Machinery client and utils", func() {
 		})
 	})
 
-	Context("When assessing if a node is draining", func() {
+	Context("When assessing if a node is cordoned", func() {
 		It("Reports if the node is draining", func() {
 			testNode := &corev1.Node{
 				Spec: corev1.NodeSpec{
@@ -81,15 +81,15 @@ var _ = Describe("Machinery client and utils", func() {
 					},
 				},
 			}
-			result := machineryClient.IsNodeDraining(testNode)
-			Expect(result.IsDraining).To(BeTrue())
+			result := machineryClient.IsNodeCordoned(testNode)
+			Expect(result.IsCordoned).To(BeTrue())
 		})
 		It("Reports if the node is not draining", func() {
 			testNode := &corev1.Node{
 				Spec: corev1.NodeSpec{},
 			}
-			result := machineryClient.IsNodeDraining(testNode)
-			Expect(result.IsDraining).To(BeFalse())
+			result := machineryClient.IsNodeCordoned(testNode)
+			Expect(result.IsCordoned).To(BeFalse())
 		})
 		It("Reports the time the node started draining", func() {
 			startTime := &metav1.Time{Time: time.Now()}
@@ -102,9 +102,9 @@ var _ = Describe("Machinery client and utils", func() {
 					},
 				},
 			}
-			result := machineryClient.IsNodeDraining(testNode)
-			Expect(result.IsDraining).To(BeTrue())
-			Expect(result.StartTime).To(Equal(startTime))
+			result := machineryClient.IsNodeCordoned(testNode)
+			Expect(result.IsCordoned).To(BeTrue())
+			Expect(result.AddedAt).To(Equal(startTime))
 		})
 	})
 })

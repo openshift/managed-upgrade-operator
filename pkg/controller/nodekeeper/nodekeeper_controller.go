@@ -125,12 +125,12 @@ func (r *ReconcileNodeKeeper) Reconcile(request reconcile.Request) (reconcile.Re
 		return reconcile.Result{}, err
 	}
 
-	result := r.machinery.IsNodeDraining(node)
+	result := r.machinery.IsNodeCordoned(node)
 	metricsClient, err := r.metricsClientBuilder.NewClient(r.client)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-	if !result.IsDraining {
+	if !result.IsCordoned {
 		metricsClient.ResetMetricNodeDrainFailed(node.Name)
 		return reconcile.Result{}, nil
 	}
@@ -142,12 +142,12 @@ func (r *ReconcileNodeKeeper) Reconcile(request reconcile.Request) (reconcile.Re
 		return reconcile.Result{}, err
 	}
 
-	drainStrategy, err := r.drainstrategyBuilder.NewNodeDrainStrategy(r.client, uc, node, &cfg.NodeDrain)
+	drainStrategy, err := r.drainstrategyBuilder.NewNodeDrainStrategy(r.client, uc, &cfg.NodeDrain)
 	if err != nil {
 		reqLogger.Error(err, "Error while executing drain.")
 		return reconcile.Result{}, err
 	}
-	res, err := drainStrategy.Execute(result.StartTime)
+	res, err := drainStrategy.Execute(node)
 	for _, r := range res {
 		reqLogger.Info(r.Message)
 	}
@@ -155,7 +155,7 @@ func (r *ReconcileNodeKeeper) Reconcile(request reconcile.Request) (reconcile.Re
 		return reconcile.Result{}, err
 	}
 
-	hasFailed, err := drainStrategy.HasFailed(result.StartTime)
+	hasFailed, err := drainStrategy.HasFailed(node)
 	if err != nil {
 		return reconcile.Result{}, err
 	}

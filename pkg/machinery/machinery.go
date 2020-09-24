@@ -13,7 +13,7 @@ const (
 //go:generate mockgen -destination=mocks/machinery.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/machinery Machinery
 type Machinery interface {
 	IsUpgrading(c client.Client, nodeType string) (*UpgradingResult, error)
-	IsNodeDraining(node *corev1.Node) *IsDrainResult
+	IsNodeCordoned(node *corev1.Node) *IsCordonedResult
 }
 
 type machinery struct{}

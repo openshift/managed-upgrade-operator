@@ -14,37 +14,39 @@ type removeFinalizersStrategy struct {
 	filters []pod.PodPredicate
 }
 
-func (rfs *removeFinalizersStrategy) Execute() (*DrainStrategyResult, error) {
+func (rfs *removeFinalizersStrategy) Execute(node *corev1.Node) (*DrainStrategyResult, error) {
+	podsWithFinalizers, err := rfs.getPodList(node)
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := pod.RemoveFinalizersFromPod(rfs.client, podsWithFinalizers)
+	if err != nil {
+		return nil, err
+	}
+
+	return &DrainStrategyResult{
+		Message:     res.Message,
+		HasExecuted: res.NumRemoved > 0,
+	}, nil
+}
+
+func (rfs *removeFinalizersStrategy) IsValid(node *corev1.Node) (bool, error) {
+	targetPods, err := rfs.getPodList(node)
+	if err != nil {
+		return false, err
+	}
+
+	return len(targetPods.Items) > 0, nil
+}
+
+func (rfs *removeFinalizersStrategy) getPodList(node *corev1.Node) (*corev1.PodList, error) {
 	allPods := &corev1.PodList{}
 	err := rfs.client.List(context.TODO(), allPods)
 	if err != nil {
 		return nil, err
 	}
 
-	podsWithFinalizers := pod.FilterPods(allPods, rfs.filters...)
-
-	finRes, err := pod.RemoveFinalizersFromPod(rfs.client, podsWithFinalizers)
-	if err != nil {
-		return nil, err
-	}
-
-	return &DrainStrategyResult{
-		Message: finRes.Message,
-		HasExecuted: finRes.NumRemoved > 0,
-	}, nil
-}
-
-func (fdps *removeFinalizersStrategy) HasFailed() (bool, error) {
-	allPods := &corev1.PodList{}
-	err := fdps.client.List(context.TODO(), allPods)
-	if err != nil {
-		return false, err
-	}
-
-	filterPods := pod.FilterPods(allPods, fdps.filters...)
-	if len(filterPods.Items) == 0 {
-		return false, nil
-	}
-
-	return true, nil
+	filters := append([]pod.PodPredicate{isOnNode(node), hasFinalizers}, rfs.filters...)
+	return pod.FilterPods(allPods, filters...), nil
 }

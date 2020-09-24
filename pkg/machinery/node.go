@@ -5,25 +5,25 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type IsDrainResult struct {
-	IsDraining bool
-	StartTime  *metav1.Time
+type IsCordonedResult struct {
+	IsCordoned bool
+	AddedAt    *metav1.Time
 }
 
-func (m *machinery) IsNodeDraining(node *corev1.Node) *IsDrainResult {
-	var drainStartedAtTime *metav1.Time
-	isDraining := false
+func (m *machinery) IsNodeCordoned(node *corev1.Node) *IsCordonedResult {
+	var cordonAddedTime *metav1.Time
+	isCordoned := false
 	if node.Spec.Unschedulable && len(node.Spec.Taints) > 0 {
 		for _, n := range node.Spec.Taints {
 			if n.Effect == corev1.TaintEffectNoSchedule {
-				isDraining = true
-				drainStartedAtTime = n.TimeAdded
+				isCordoned = true
+				cordonAddedTime = n.TimeAdded
 			}
 		}
 	}
 
-	return &IsDrainResult{
-		IsDraining: isDraining,
-		StartTime:  drainStartedAtTime,
+	return &IsCordonedResult{
+		IsCordoned: isCordoned,
+		AddedAt:    cordonAddedTime,
 	}
 }
