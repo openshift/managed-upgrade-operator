@@ -8,16 +8,22 @@ import (
 )
 
 type osdUpgradeConfig struct {
-	Maintenance maintenanceConfig   `yaml:"maintenance"`
-	Scale       scaleConfig         `yaml:"scale"`
-	NodeDrain   machinery.NodeDrain `yaml:"nodeDrain"`
-	HealthCheck healthCheck         `yaml:"healthCheck"`
+	Maintenance  maintenanceConfig   `yaml:"maintenance"`
+	Scale        scaleConfig         `yaml:"scale"`
+	NodeDrain    machinery.NodeDrain `yaml:"nodeDrain"`
+	HealthCheck  healthCheck         `yaml:"healthCheck"`
+	Verification verification        `yaml:"verification`
 }
 
 type maintenanceConfig struct {
 	ControlPlaneTime int           `yaml:"controlPlaneTime" default:"60"`
 	WorkerNodeTime   int           `yaml:"workerNodeTime" default:"8"`
 	IgnoredAlerts    ignoredAlerts `yaml:"ignoredAlerts"`
+}
+
+type verification struct {
+	IgnoredNamespaces      []string `yaml:"ignoredNamespaces"`
+	NamespacePrefixToCheck []string `yaml:"namespacePrefixToCheck`
 }
 
 type ignoredAlerts struct {

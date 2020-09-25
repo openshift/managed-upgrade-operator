@@ -35,18 +35,18 @@ func (m *MockMetrics) EXPECT() *MockMetricsMockRecorder {
 }
 
 // IsAlertFiring mocks base method
-func (m *MockMetrics) IsAlertFiring(arg0 string, arg1 []string) (bool, error) {
+func (m *MockMetrics) IsAlertFiring(arg0 string, arg1, arg2 []string) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsAlertFiring", arg0, arg1)
+	ret := m.ctrl.Call(m, "IsAlertFiring", arg0, arg1, arg2)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // IsAlertFiring indicates an expected call of IsAlertFiring
-func (mr *MockMetricsMockRecorder) IsAlertFiring(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockMetricsMockRecorder) IsAlertFiring(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsAlertFiring", reflect.TypeOf((*MockMetrics)(nil).IsAlertFiring), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsAlertFiring", reflect.TypeOf((*MockMetrics)(nil).IsAlertFiring), arg0, arg1, arg2)
 }
 
 // IsMetricControlPlaneEndTimeSet mocks base method

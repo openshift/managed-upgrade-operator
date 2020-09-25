@@ -67,6 +67,10 @@ var _ = Describe("ClusterUpgrader verification and health tests", func() {
 			HealthCheck: healthCheck{
 				IgnoredCriticals: []string{"alert1", "alert2"},
 			},
+			Verification: verification{
+				IgnoredNamespaces:      []string{"kube-test1"},
+				NamespacePrefixToCheck: []string{"openshift", "default"},
+			},
 		}
 	})
 
@@ -138,7 +142,7 @@ var _ = Describe("ClusterUpgrader verification and health tests", func() {
 				gomock.InOrder(
 					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, *replicaSetList),
 					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, *dsList),
-					mockMetricsClient.EXPECT().IsAlertFiring(gomock.Any(), gomock.Any()),
+					mockMetricsClient.EXPECT().IsAlertFiring(gomock.Any(), gomock.Any(), gomock.Any()),
 					mockMetricsClient.EXPECT().UpdateMetricClusterVerificationSucceeded(upgradeConfig.Name),
 				)
 				result, err := PostUpgradeVerification(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, mockCVClient, upgradeConfig, mockMachinery, logger)
@@ -158,7 +162,7 @@ var _ = Describe("ClusterUpgrader verification and health tests", func() {
 				gomock.InOrder(
 					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, *replicaSetList),
 					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, *dsList),
-					mockMetricsClient.EXPECT().IsAlertFiring(gomock.Any(), gomock.Any()),
+					mockMetricsClient.EXPECT().IsAlertFiring(gomock.Any(), gomock.Any(), gomock.Any()),
 					mockMetricsClient.EXPECT().UpdateMetricClusterVerificationSucceeded(upgradeConfig.Name),
 				)
 				result, err := PostUpgradeVerification(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, mockCVClient, upgradeConfig, mockMachinery, logger)
@@ -185,7 +189,7 @@ var _ = Describe("ClusterUpgrader verification and health tests", func() {
 				gomock.InOrder(
 					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, *replicaSetList),
 					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, *dsList),
-					mockMetricsClient.EXPECT().IsAlertFiring(gomock.Any(), gomock.Any()),
+					mockMetricsClient.EXPECT().IsAlertFiring(gomock.Any(), gomock.Any(), gomock.Any()),
 					mockMetricsClient.EXPECT().UpdateMetricClusterVerificationSucceeded(upgradeConfig.Name),
 				)
 				result, err := PostUpgradeVerification(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, mockCVClient, upgradeConfig, mockMachinery, logger)
@@ -212,7 +216,7 @@ var _ = Describe("ClusterUpgrader verification and health tests", func() {
 				gomock.InOrder(
 					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, *replicaSetList),
 					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, *dsList),
-					mockMetricsClient.EXPECT().IsAlertFiring(gomock.Any(), gomock.Any()).Return(true, nil),
+					mockMetricsClient.EXPECT().IsAlertFiring(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil),
 					mockMetricsClient.EXPECT().UpdateMetricClusterVerificationFailed(upgradeConfig.Name),
 				)
 				result, err := PostUpgradeVerification(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, mockCVClient, upgradeConfig, mockMachinery, logger)
@@ -220,7 +224,50 @@ var _ = Describe("ClusterUpgrader verification and health tests", func() {
 				Expect(result).To(BeFalse())
 			})
 		})
-
+		Context("When core replicasets are not satisfied but ignored", func() {
+			It("Pass cluster verification", func() {
+				replicaSetList = &appsv1.ReplicaSetList{
+					Items: []appsv1.ReplicaSet{
+						{
+							ObjectMeta: v1.ObjectMeta{Namespace: "kube-testns"},
+							Status:     appsv1.ReplicaSetStatus{Replicas: 3, ReadyReplicas: 1},
+						},
+					},
+				}
+				dsList = &appsv1.DaemonSetList{}
+				gomock.InOrder(
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, *replicaSetList),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, *dsList),
+					mockMetricsClient.EXPECT().IsAlertFiring(gomock.Any(), gomock.Any(), gomock.Any()),
+					mockMetricsClient.EXPECT().UpdateMetricClusterVerificationSucceeded(upgradeConfig.Name),
+				)
+				result, err := PostUpgradeVerification(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, mockCVClient, upgradeConfig, mockMachinery, logger)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(BeTrue())
+			})
+		})
+		Context("When core daemonsets are not satisfied but ignored", func() {
+			It("Pass cluster verification", func() {
+				replicaSetList = &appsv1.ReplicaSetList{}
+				dsList = &appsv1.DaemonSetList{
+					Items: []appsv1.DaemonSet{
+						{
+							ObjectMeta: v1.ObjectMeta{Namespace: "kube-testns"},
+							Status:     appsv1.DaemonSetStatus{DesiredNumberScheduled: 3, NumberReady: 1},
+						},
+					},
+				}
+				gomock.InOrder(
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, *replicaSetList),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, *dsList),
+					mockMetricsClient.EXPECT().IsAlertFiring(gomock.Any(), gomock.Any(), gomock.Any()),
+					mockMetricsClient.EXPECT().UpdateMetricClusterVerificationSucceeded(upgradeConfig.Name),
+				)
+				result, err := PostUpgradeVerification(mockKubeClient, config, mockScaler, mockMetricsClient, mockMaintClient, mockCVClient, upgradeConfig, mockMachinery, logger)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(BeTrue())
+			})
+		})
 	})
 
 	Context("When the cluster healthy", func() {
