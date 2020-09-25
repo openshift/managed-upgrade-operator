@@ -29,7 +29,7 @@ data:
     verification:
       ignoredNamespaces:
       - openshift-logging
-      namespacePrefixToCheck
+      namespacePrefixToCheck:
       - openshift
       - kube
       - default

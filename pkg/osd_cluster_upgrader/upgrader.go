@@ -420,9 +420,7 @@ func performUpgradeVerification(c client.Client, cfg *osdUpgradeConfig, metricsC
 	for _, namespacePrefix := range namespacePrefixesToCheck {
 		namespacePrefixesAsRegex = append(namespacePrefixesAsRegex, fmt.Sprintf("^%s-.*", namespacePrefix))
 	}
-	for _, ignoredNS := range namespaceToIgnore {
-		namespaceIgnoreAlert = append(namespaceIgnoreAlert, fmt.Sprintf("%s", ignoredNS))
-	}
+	namespaceIgnoreAlert = append(namespaceIgnoreAlert, namespaceToIgnore...)
 	isTargetDownFiring, err := metricsClient.IsAlertFiring("TargetDown", namespacePrefixesAsRegex, namespaceIgnoreAlert)
 	if err != nil {
 		return false, fmt.Errorf("can't query for alerts: %v", err)

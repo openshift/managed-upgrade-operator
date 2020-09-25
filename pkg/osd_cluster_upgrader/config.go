@@ -12,18 +12,13 @@ type osdUpgradeConfig struct {
 	Scale        scaleConfig         `yaml:"scale"`
 	NodeDrain    machinery.NodeDrain `yaml:"nodeDrain"`
 	HealthCheck  healthCheck         `yaml:"healthCheck"`
-	Verification verification        `yaml:"verification`
+	Verification verification        `yaml:"verification"`
 }
 
 type maintenanceConfig struct {
 	ControlPlaneTime int           `yaml:"controlPlaneTime" default:"60"`
 	WorkerNodeTime   int           `yaml:"workerNodeTime" default:"8"`
 	IgnoredAlerts    ignoredAlerts `yaml:"ignoredAlerts"`
-}
-
-type verification struct {
-	IgnoredNamespaces      []string `yaml:"ignoredNamespaces"`
-	NamespacePrefixToCheck []string `yaml:"namespacePrefixToCheck`
 }
 
 type ignoredAlerts struct {
@@ -58,6 +53,11 @@ type scaleConfig struct {
 
 type healthCheck struct {
 	IgnoredCriticals []string `yaml:"ignoredCriticals"`
+}
+
+type verification struct {
+	IgnoredNamespaces      []string `yaml:"ignoredNamespaces"`
+	NamespacePrefixToCheck []string `yaml:"namespacePrefixToCheck"`
 }
 
 func (cfg *osdUpgradeConfig) IsValid() error {
