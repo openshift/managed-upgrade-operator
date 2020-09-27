@@ -277,7 +277,7 @@ func applyUpgradePolicies(upgradePolicies *upgradePolicyList, cluster *clusterIn
 		if len(upgradeConfigs.Items) > 0 {
 			for _, upgradeConfig := range upgradeConfigs.Items {
 				log.Info(fmt.Sprintf("Removing expired UpgradeConfig %s", upgradeConfig.Name))
-				err = c.Delete(context.TODO(), &upgradeConfig, &client.DeleteOptions{})
+				err = c.Delete(context.TODO(), &upgradeConfig)
 				if err != nil {
 					return false, fmt.Errorf("unable to delete existing upgrade config: %v", err)
 				}
@@ -301,19 +301,22 @@ func applyUpgradePolicies(upgradePolicies *upgradePolicyList, cluster *clusterIn
 		originalUpgradeConfig = upgradeConfigs.Items[0]
 		// If there was an existing UpgradeConfig, make a clone of its contents
 		originalUpgradeConfig.DeepCopyInto(&replacementUpgradeConfig)
+	} else {
+		// No existing UpgradeConfig exists, give the new one the default name/namespace
+		operatorNS, err := getOperatorNamespace()
+		if err != nil {
+			return false, fmt.Errorf("unable to determine running namespace, missing env OPERATOR_NAMESPACE")
+		}
+		replacementUpgradeConfig.Name = UPGRADECONFIG_CR_NAME
+		replacementUpgradeConfig.Namespace = operatorNS
 	}
 
 	// And build up the replacement UpgradeConfig based on the policy
-	operatorNS, err := getOperatorNamespace()
-	if err != nil {
-		return false, fmt.Errorf("unable to determine running namespace, missing env OPERATOR_NAMESPACE")
-	}
 	// determine channel from channel group
 	upgradeChannel, err := inferUpgradeChannelFromChannelGroup(cluster.Version.ChannelGroup, upgradePolicy.Version)
 	if err != nil {
 		return false, fmt.Errorf("unable to determine channel from channel group '%v' and version '%v'", cluster.Version.ChannelGroup, upgradePolicy.Version)
 	}
-	// build the UpgradeConfig
 	replacementUpgradeConfig.Spec = upgradev1alpha1.UpgradeConfigSpec{
 		Desired: upgradev1alpha1.Update{
 			Version: upgradePolicy.Version,
@@ -324,8 +327,6 @@ func applyUpgradePolicies(upgradePolicies *upgradePolicyList, cluster *clusterIn
 		Type:                 upgradev1alpha1.UpgradeType(upgradePolicy.UpgradeType),
 	}
 	replacementUpgradeConfig.Status = upgradev1alpha1.UpgradeConfigStatus{}
-	replacementUpgradeConfig.Name = UPGRADECONFIG_CR_NAME
-	replacementUpgradeConfig.Namespace = operatorNS
 
 	// is there a difference between the original and replacement?
 	changed := !reflect.DeepEqual(replacementUpgradeConfig.Spec, originalUpgradeConfig.Spec)
