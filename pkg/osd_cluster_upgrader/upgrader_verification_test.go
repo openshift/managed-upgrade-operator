@@ -70,8 +70,8 @@ var _ = Describe("ClusterUpgrader verification and health tests", func() {
 			NodeDrain: drain.NodeDrain{
 				ExpectedNodeDrainTime: 8,
 			Verification: verification{
-				IgnoredNamespaces:      []string{"kube-test1"},
-				NamespacePrefixToCheck: []string{"openshift", "default"},
+				IgnoredNamespaces:        []string{"kube-test1"},
+				NamespacePrefixesToCheck: []string{"openshift", "default"},
 			},
 		}
 	})

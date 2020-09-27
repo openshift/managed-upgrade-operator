@@ -48,8 +48,8 @@ type healthCheck struct {
 }
 
 type verification struct {
-	IgnoredNamespaces      []string `yaml:"ignoredNamespaces"`
-	NamespacePrefixToCheck []string `yaml:"namespacePrefixToCheck"`
+	IgnoredNamespaces        []string `yaml:"ignoredNamespaces"`
+	NamespacePrefixesToCheck []string `yaml:"namespacePrefixesToCheck"`
 }
 
 func (cfg *osdUpgradeConfig) IsValid() error {

@@ -360,7 +360,7 @@ func PostUpgradeVerification(c client.Client, cfg *osdUpgradeConfig, scaler scal
 // performPostUpgradeVerification verifies all replicasets are at expected counts and all daemonsets are at expected counts
 func performUpgradeVerification(c client.Client, cfg *osdUpgradeConfig, metricsClient metrics.Metrics, logger logr.Logger) (bool, error) {
 
-	namespacePrefixesToCheck := cfg.Verification.NamespacePrefixToCheck
+	namespacePrefixesToCheck := cfg.Verification.NamespacePrefixesToCheck
 	namespaceToIgnore := cfg.Verification.IgnoredNamespaces
 
 	// Verify all ReplicaSets in the default, kube* and openshfit* namespaces are satisfied
