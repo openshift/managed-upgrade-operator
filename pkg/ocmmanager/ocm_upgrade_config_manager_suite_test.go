@@ -1,4 +1,4 @@
-package ocm_upgrade_config_manager
+package ocmmanager
 
 import (
 "testing"

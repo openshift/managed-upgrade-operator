@@ -1,4 +1,4 @@
-package ocm_upgrade_config_manager
+package ocmmanager
 
 import (
 	"context"
@@ -58,7 +58,7 @@ func NewManager(client client.Client) (*osdUpgradeConfigManager, error) {
 
 	cfg, err := readConfigManagerConfig(client)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read OCM configManager configuration")
+		return nil, fmt.Errorf("failed to read OCM configManager configuration: %v", err)
 	}
 
 	return &osdUpgradeConfigManager{
@@ -139,7 +139,7 @@ func (ort *ocmRoundTripper) RoundTrip(req *http.Request) (*http.Response, error)
 	return transport.RoundTrip(req)
 }
 
-// UpgradeConfigManager will trigger X every `WatchInterval` and only stop if the operator is killed or a
+// UpgradeConfigManager will trigger X every `WatchIntervalMinutes` and only stop if the operator is killed or a
 // message is sent on the stopCh
 func (s *osdUpgradeConfigManager) Start(stopCh <-chan struct{}) {
 	log.Info("Starting the upgradeConfigManager")
@@ -183,7 +183,8 @@ func readConfigManagerConfig(client client.Client) (*ocmUpgradeConfigManagerConf
 		return nil, err
 	}
 
-	return cfg, nil
+	err = cfg.IsValid()
+	return cfg, err
 }
 
 // The primary function called each watch interval to synchronise the cluster's
@@ -224,10 +225,9 @@ func (s *osdUpgradeConfigManager) RefreshUpgradeConfig() (bool, error) {
 // Queries and returns the Upgrade Policy from Cluster Services
 func getClusterUpgradePolicies(cluster *clusterInfo, client *http.Client, cfg *ocmUpgradeConfigManagerConfig) (*upgradePolicyList, error) {
 
-	url, err := url.Parse(cfg.ConfigManagerConfig.OcmBaseURL)
+	url, err := cfg.GetOCMBaseURL()
 	if err != nil {
-		log.Error(err, "OCM API URL unparsable.")
-		return nil, fmt.Errorf("can't parse OCM API url: %v", err)
+		return nil, fmt.Errorf("can't read OCM API url: %v", err)
 	}
 	url.Path = path.Join(url.Path, CLUSTERS_V1_PATH, cluster.Id, UPGRADEPOLICIES_V1_PATH)
 
@@ -292,16 +292,16 @@ func applyUpgradePolicies(upgradePolicies *upgradePolicyList, cluster *clusterIn
 	}
 	upgradePolicy := upgradePolicies.Items[0]
 
+	// Set up an UpgradeConfig that reflects the policy
+	replacementUpgradeConfig := upgradev1alpha1.UpgradeConfig{}
+
 	// Check if we have an existing UpgradeConfig to compare against, for the refresh
 	originalUpgradeConfig := upgradev1alpha1.UpgradeConfig{}
 	if len(upgradeConfigs.Items) > 0 {
 		originalUpgradeConfig = upgradeConfigs.Items[0]
+		// If there was an existing UpgradeConfig, make a clone of its contents
+		originalUpgradeConfig.DeepCopyInto(&replacementUpgradeConfig)
 	}
-
-	// Set up an UpgradeConfig that reflects the policy
-	replacementUpgradeConfig := upgradev1alpha1.UpgradeConfig{}
-	// If there was an existing UpgradeConfig, make a clone of its contents
-	originalUpgradeConfig.DeepCopyInto(&replacementUpgradeConfig)
 
 	// And build up the replacement UpgradeConfig based on the policy
 	operatorNS, err := getOperatorNamespace()

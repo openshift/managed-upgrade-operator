@@ -5,7 +5,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/openshift/managed-upgrade-operator/pkg/upgrade_config_manager"
 	"os"
 	"runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -22,6 +21,7 @@ import (
 	machineconfigapi "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	"github.com/openshift/managed-upgrade-operator/pkg/apis"
 	"github.com/openshift/managed-upgrade-operator/pkg/controller"
+	"github.com/openshift/managed-upgrade-operator/pkg/upgrade_config_manager"
 	"github.com/openshift/managed-upgrade-operator/version"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"github.com/operator-framework/operator-sdk/pkg/kube-metrics"
@@ -171,7 +171,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	uc_mgr, err := upgrade_config_manager.NewBuilder().NewManager(upgradeConfigManagerClient)
+	ucMgr, err := upgrade_config_manager.NewBuilder().NewManager(upgradeConfigManagerClient)
 	if err != nil {
 		if err == upgrade_config_manager.ErrNoConfigManagerDefined {
 			log.Info("Skipping UpgradeConfig manager, not configured in configmap")
@@ -181,7 +181,7 @@ func main() {
 		}
 	} else {
 		log.Info("starting UpgradeConfig manager")
-		go uc_mgr.Start(stopCh)
+		go ucMgr.Start(stopCh)
 	}
 
 	// Start the Cmd

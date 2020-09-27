@@ -2,12 +2,12 @@ package upgrade_config_manager
 
 import (
 	"fmt"
-	"github.com/openshift/managed-upgrade-operator/pkg/configmanager"
 	"os"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/openshift/managed-upgrade-operator/pkg/ocm_upgrade_config_manager"
+	"github.com/openshift/managed-upgrade-operator/pkg/configmanager"
+	"github.com/openshift/managed-upgrade-operator/pkg/ocmmanager"
 )
 
 type ConfigManagerSource string
@@ -42,7 +42,7 @@ func (ucb *upgradeConfigManagerBuilder) NewManager(client client.Client) (Upgrad
 
 	switch cfg.ConfigManager.Source {
 	case string(OCM):
-		mgr, err := ocm_upgrade_config_manager.NewManager(client)
+		mgr, err := ocmmanager.NewManager(client)
 		if err != nil {
 			return nil, err
 		}
