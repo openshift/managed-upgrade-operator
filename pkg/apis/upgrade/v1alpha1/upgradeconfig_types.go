@@ -24,7 +24,6 @@ type UpgradeConfigSpec struct {
 	// The maximum grace period granted to a node whose drain is blocked by a Pod Disruption Budget, before that drain is forced. Measured in minutes.
 	PDBForceDrainTimeout int32 `json:"PDBForceDrainTimeout"`
 
-
 	// +kubebuilder:validation:Enum={"OSD"}
 	// Type indicates the ClusterUpgrader implementation to use to perform an upgrade of the cluster
 	Type UpgradeType `json:"type"`
@@ -142,6 +141,10 @@ type UpgradeConfig struct {
 
 	Spec   UpgradeConfigSpec   `json:"spec,omitempty"`
 	Status UpgradeConfigStatus `json:"status,omitempty"`
+}
+
+func (uc *UpgradeConfig) GetPDBDrainTimeoutDuration() time.Duration {
+	return time.Duration(uc.Spec.PDBForceDrainTimeout) * time.Minute
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

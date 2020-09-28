@@ -14,6 +14,7 @@ import (
 
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 	cvMocks "github.com/openshift/managed-upgrade-operator/pkg/clusterversion/mocks"
+	"github.com/openshift/managed-upgrade-operator/pkg/drain"
 	mockMachinery "github.com/openshift/managed-upgrade-operator/pkg/machinery/mocks"
 	mockMaintenance "github.com/openshift/managed-upgrade-operator/pkg/maintenance/mocks"
 	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
@@ -58,7 +59,6 @@ var _ = Describe("ClusterUpgrader verification and health tests", func() {
 		stepCounter = make(map[upgradev1alpha1.UpgradeConditionType]int)
 		config = &osdUpgradeConfig{
 			Maintenance: maintenanceConfig{
-				WorkerNodeTime:   8,
 				ControlPlaneTime: 90,
 			},
 			Scale: scaleConfig{
@@ -66,6 +66,9 @@ var _ = Describe("ClusterUpgrader verification and health tests", func() {
 			},
 			HealthCheck: healthCheck{
 				IgnoredCriticals: []string{"alert1", "alert2"},
+			},
+			NodeDrain: drain.NodeDrain{
+				ExpectedNodeDrainTime: 8,
 			},
 		}
 	})

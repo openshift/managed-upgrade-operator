@@ -7,6 +7,7 @@ package mocks
 import (
 	gomock "github.com/golang/mock/gomock"
 	machinery "github.com/openshift/managed-upgrade-operator/pkg/machinery"
+	v1 "k8s.io/api/core/v1"
 	reflect "reflect"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -32,6 +33,20 @@ func NewMockMachinery(ctrl *gomock.Controller) *MockMachinery {
 // EXPECT returns an object that allows the caller to indicate expected use
 func (m *MockMachinery) EXPECT() *MockMachineryMockRecorder {
 	return m.recorder
+}
+
+// IsNodeDraining mocks base method
+func (m *MockMachinery) IsNodeDraining(arg0 *v1.Node) *machinery.IsDrainResult {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsNodeDraining", arg0)
+	ret0, _ := ret[0].(*machinery.IsDrainResult)
+	return ret0
+}
+
+// IsNodeDraining indicates an expected call of IsNodeDraining
+func (mr *MockMachineryMockRecorder) IsNodeDraining(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsNodeDraining", reflect.TypeOf((*MockMachinery)(nil).IsNodeDraining), arg0)
 }
 
 // IsUpgrading mocks base method
