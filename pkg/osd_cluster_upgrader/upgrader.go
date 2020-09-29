@@ -347,7 +347,7 @@ func UpdateSubscriptions(c client.Client, cfg *osdUpgradeConfig, scaler scaler.S
 
 // PostUpgradeVerification run the verification steps which defined in performUpgradeVerification
 func PostUpgradeVerification(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, metricsClient metrics.Metrics, m maintenance.Maintenance, cvClient cv.ClusterVersion, upgradeConfig *upgradev1alpha1.UpgradeConfig, machinery machinery.Machinery, logger logr.Logger) (bool, error) {
-	ok, err := performUpgradeVerification(c, metricsClient, logger)
+	ok, err := performUpgradeVerification(c, cfg, metricsClient, logger)
 	if err != nil || !ok {
 		metricsClient.UpdateMetricClusterVerificationFailed(upgradeConfig.Name)
 		return false, err
@@ -358,9 +358,10 @@ func PostUpgradeVerification(c client.Client, cfg *osdUpgradeConfig, scaler scal
 }
 
 // performPostUpgradeVerification verifies all replicasets are at expected counts and all daemonsets are at expected counts
-func performUpgradeVerification(c client.Client, metricsClient metrics.Metrics, logger logr.Logger) (bool, error) {
+func performUpgradeVerification(c client.Client, cfg *osdUpgradeConfig, metricsClient metrics.Metrics, logger logr.Logger) (bool, error) {
 
-	namespacePrefixesToCheck := []string{"default", "kube", "openshift"}
+	namespacePrefixesToCheck := cfg.Verification.NamespacePrefixesToCheck
+	namespaceToIgnore := cfg.Verification.IgnoredNamespaces
 
 	// Verify all ReplicaSets in the default, kube* and openshfit* namespaces are satisfied
 	replicaSetList := &appsv1.ReplicaSetList{}
@@ -372,10 +373,12 @@ func performUpgradeVerification(c client.Client, metricsClient metrics.Metrics, 
 	totalRs := 0
 	for _, replicaSet := range replicaSetList.Items {
 		for _, namespacePrefix := range namespacePrefixesToCheck {
-			if strings.HasPrefix(replicaSet.Namespace, namespacePrefix) {
-				totalRs = totalRs + 1
-				if replicaSet.Status.ReadyReplicas == replicaSet.Status.Replicas {
-					readyRs = readyRs + 1
+			for _, ingoredNS := range namespaceToIgnore {
+				if strings.HasPrefix(replicaSet.Namespace, namespacePrefix) && replicaSet.Namespace != ingoredNS {
+					totalRs = totalRs + 1
+					if replicaSet.Status.ReadyReplicas == replicaSet.Status.Replicas {
+						readyRs = readyRs + 1
+					}
 				}
 			}
 		}
@@ -395,10 +398,12 @@ func performUpgradeVerification(c client.Client, metricsClient metrics.Metrics, 
 	totalDS := 0
 	for _, daemonSet := range daemonSetList.Items {
 		for _, namespacePrefix := range namespacePrefixesToCheck {
-			if strings.HasPrefix(daemonSet.Namespace, namespacePrefix) {
-				totalDS = totalDS + 1
-				if daemonSet.Status.DesiredNumberScheduled == daemonSet.Status.NumberReady {
-					readyDS = readyDS + 1
+			for _, ignoredNS := range namespaceToIgnore {
+				if strings.HasPrefix(daemonSet.Namespace, namespacePrefix) && daemonSet.Namespace != ignoredNS {
+					totalDS = totalDS + 1
+					if daemonSet.Status.DesiredNumberScheduled == daemonSet.Status.NumberReady {
+						readyDS = readyDS + 1
+					}
 				}
 			}
 		}
@@ -411,10 +416,12 @@ func performUpgradeVerification(c client.Client, metricsClient metrics.Metrics, 
 	// If daemonsets and replicasets are satisfied, any active TargetDown alerts will eventually go away.
 	// Wait for that to occur before declaring the verification complete.
 	namespacePrefixesAsRegex := make([]string, 0)
+	namespaceIgnoreAlert := make([]string, 0)
 	for _, namespacePrefix := range namespacePrefixesToCheck {
 		namespacePrefixesAsRegex = append(namespacePrefixesAsRegex, fmt.Sprintf("^%s-.*", namespacePrefix))
 	}
-	isTargetDownFiring, err := metricsClient.IsAlertFiring("TargetDown", namespacePrefixesAsRegex)
+	namespaceIgnoreAlert = append(namespaceIgnoreAlert, namespaceToIgnore...)
+	isTargetDownFiring, err := metricsClient.IsAlertFiring("TargetDown", namespacePrefixesAsRegex, namespaceIgnoreAlert)
 	if err != nil {
 		return false, fmt.Errorf("can't query for alerts: %v", err)
 	}
@@ -525,7 +532,7 @@ func performClusterHealthCheck(c client.Client, metricsClient metrics.Metrics, c
 	if len(ic) > 0 {
 		icQuery = `,alertname!="` + strings.Join(ic, `",alertname!="`) + `"`
 	}
-	healthCheckQuery := `ALERTS{alertstate="firing",severity="critical",namespace=~"^openshift.*|^kube.*|^default$",namespace!="openshift-customer-monitoring"` + icQuery + "}"
+	healthCheckQuery := `ALERTS{alertstate="firing",severity="critical",namespace=~"^openshift.*|^kube.*|^default$",namespace!="openshift-customer-monitoring",namespace!="openshift-logging"` + icQuery + "}"
 	alerts, err := metricsClient.Query(healthCheckQuery)
 	if err != nil {
 		return false, fmt.Errorf("Unable to query critical alerts: %s", err)
