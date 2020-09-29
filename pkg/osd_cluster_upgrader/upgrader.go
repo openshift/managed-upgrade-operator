@@ -532,7 +532,7 @@ func performClusterHealthCheck(c client.Client, metricsClient metrics.Metrics, c
 	if len(ic) > 0 {
 		icQuery = `,alertname!="` + strings.Join(ic, `",alertname!="`) + `"`
 	}
-	healthCheckQuery := `ALERTS{alertstate="firing",severity="critical",namespace=~"^openshift.*|^kube.*|^default$",namespace!="openshift-customer-monitoring",pod!~"^elasticsearch-.*",service!="fluentd"` + icQuery + "}"
+	healthCheckQuery := `ALERTS{alertstate="firing",severity="critical",namespace=~"^openshift.*|^kube.*|^default$",namespace!="openshift-customer-monitoring|openshift-logging"` + icQuery + "}"
 	alerts, err := metricsClient.Query(healthCheckQuery)
 	if err != nil {
 		return false, fmt.Errorf("Unable to query critical alerts: %s", err)

@@ -8,11 +8,11 @@ import (
 )
 
 type osdUpgradeConfig struct {
-	Maintenance  maintenanceConfig   `yaml:"maintenance"`
-	Scale        scaleConfig         `yaml:"scale"`
-	NodeDrain    machinery.NodeDrain `yaml:"nodeDrain"`
-	HealthCheck  healthCheck         `yaml:"healthCheck"`
-	Verification verification        `yaml:"verification"`
+	Maintenance  maintenanceConfig `yaml:"maintenance"`
+	Scale        scaleConfig       `yaml:"scale"`
+	NodeDrain    drain.NodeDrain   `yaml:"nodeDrain"`
+	HealthCheck  healthCheck       `yaml:"healthCheck"`
+	Verification verification      `yaml:"verification"`
 }
 
 type maintenanceConfig struct {
