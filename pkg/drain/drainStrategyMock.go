@@ -6,6 +6,7 @@ package drain
 
 import (
 	gomock "github.com/golang/mock/gomock"
+	v1 "k8s.io/api/core/v1"
 	reflect "reflect"
 )
 
@@ -33,31 +34,31 @@ func (m *MockDrainStrategy) EXPECT() *MockDrainStrategyMockRecorder {
 }
 
 // Execute mocks base method
-func (m *MockDrainStrategy) Execute() (*DrainStrategyResult, error) {
+func (m *MockDrainStrategy) Execute(arg0 *v1.Node) (*DrainStrategyResult, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Execute")
+	ret := m.ctrl.Call(m, "Execute", arg0)
 	ret0, _ := ret[0].(*DrainStrategyResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Execute indicates an expected call of Execute
-func (mr *MockDrainStrategyMockRecorder) Execute() *gomock.Call {
+func (mr *MockDrainStrategyMockRecorder) Execute(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*MockDrainStrategy)(nil).Execute))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*MockDrainStrategy)(nil).Execute), arg0)
 }
 
-// HasFailed mocks base method
-func (m *MockDrainStrategy) HasFailed() (bool, error) {
+// IsValid mocks base method
+func (m *MockDrainStrategy) IsValid(arg0 *v1.Node) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HasFailed")
+	ret := m.ctrl.Call(m, "IsValid", arg0)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// HasFailed indicates an expected call of HasFailed
-func (mr *MockDrainStrategyMockRecorder) HasFailed() *gomock.Call {
+// IsValid indicates an expected call of IsValid
+func (mr *MockDrainStrategyMockRecorder) IsValid(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasFailed", reflect.TypeOf((*MockDrainStrategy)(nil).HasFailed))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsValid", reflect.TypeOf((*MockDrainStrategy)(nil).IsValid), arg0)
 }

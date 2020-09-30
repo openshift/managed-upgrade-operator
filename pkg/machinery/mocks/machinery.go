@@ -35,18 +35,18 @@ func (m *MockMachinery) EXPECT() *MockMachineryMockRecorder {
 	return m.recorder
 }
 
-// IsNodeDraining mocks base method
-func (m *MockMachinery) IsNodeDraining(arg0 *v1.Node) *machinery.IsDrainResult {
+// IsNodeCordoned mocks base method
+func (m *MockMachinery) IsNodeCordoned(arg0 *v1.Node) *machinery.IsCordonedResult {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsNodeDraining", arg0)
-	ret0, _ := ret[0].(*machinery.IsDrainResult)
+	ret := m.ctrl.Call(m, "IsNodeCordoned", arg0)
+	ret0, _ := ret[0].(*machinery.IsCordonedResult)
 	return ret0
 }
 
-// IsNodeDraining indicates an expected call of IsNodeDraining
-func (mr *MockMachineryMockRecorder) IsNodeDraining(arg0 interface{}) *gomock.Call {
+// IsNodeCordoned indicates an expected call of IsNodeCordoned
+func (mr *MockMachineryMockRecorder) IsNodeCordoned(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsNodeDraining", reflect.TypeOf((*MockMachinery)(nil).IsNodeDraining), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsNodeCordoned", reflect.TypeOf((*MockMachinery)(nil).IsNodeCordoned), arg0)
 }
 
 // IsUpgrading mocks base method
