@@ -1,26 +1,27 @@
 package upgrade_config_manager
 
-import "fmt"
-
-const (
-	OCM ConfigManagerSource = "OCM"
+import (
+	"fmt"
+	"time"
 )
 
-type upgradeConfigManagerConfig struct {
-	ConfigManager configManager `yaml:"configManager"`
+type UpgradeConfigManagerConfig struct {
+	ConfigManager ConfigManager `yaml:"configManager"`
 }
 
-type configManager struct {
-	Source string `yaml:"source"`
+type ConfigManager struct {
+	WatchIntervalMinutes int    `yaml:"watchInterval" default:"1"`
 }
 
 var ErrNoConfigManagerDefined = fmt.Errorf("no configManager defined in configuration")
 
-func (cfg *upgradeConfigManagerConfig) IsValid() error {
-	switch cfg.ConfigManager.Source {
-	case string(OCM):
-		return nil
-	default:
+func (cfg *UpgradeConfigManagerConfig) IsValid() error {
+	if cfg.ConfigManager.WatchIntervalMinutes <= 0 {
 		return ErrNoConfigManagerDefined
 	}
+	return nil
+}
+
+func (cfg *UpgradeConfigManagerConfig) GetWatchInterval() time.Duration {
+	return time.Duration(cfg.ConfigManager.WatchIntervalMinutes) * time.Minute
 }

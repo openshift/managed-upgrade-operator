@@ -1,4 +1,4 @@
-package ocmmanager
+package ocmprovider
 
 import (
 "testing"

@@ -8,6 +8,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
+	v1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 )
 
 // MockUpgradeConfigManager is a mock of UpgradeConfigManager interface.
@@ -33,29 +34,44 @@ func (m *MockUpgradeConfigManager) EXPECT() *MockUpgradeConfigManagerMockRecorde
 	return m.recorder
 }
 
-// RefreshUpgradeConfig mocks base method.
-func (m *MockUpgradeConfigManager) RefreshUpgradeConfig() (bool, error) {
+// Get mocks base method.
+func (m *MockUpgradeConfigManager) Get() (*v1alpha1.UpgradeConfigList, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RefreshUpgradeConfig")
+	ret := m.ctrl.Call(m, "Get")
+	ret0, _ := ret[0].(*v1alpha1.UpgradeConfigList)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Get indicates an expected call of Get.
+func (mr *MockUpgradeConfigManagerMockRecorder) Get() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockUpgradeConfigManager)(nil).Get))
+}
+
+// Refresh mocks base method.
+func (m *MockUpgradeConfigManager) Refresh() (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Refresh")
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// RefreshUpgradeConfig indicates an expected call of RefreshUpgradeConfig.
-func (mr *MockUpgradeConfigManagerMockRecorder) RefreshUpgradeConfig() *gomock.Call {
+// Refresh indicates an expected call of Refresh.
+func (mr *MockUpgradeConfigManagerMockRecorder) Refresh() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RefreshUpgradeConfig", reflect.TypeOf((*MockUpgradeConfigManager)(nil).RefreshUpgradeConfig))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Refresh", reflect.TypeOf((*MockUpgradeConfigManager)(nil).Refresh))
 }
 
-// Start mocks base method.
-func (m *MockUpgradeConfigManager) Start(arg0 <-chan struct{}) {
+// StartSync mocks base method.
+func (m *MockUpgradeConfigManager) StartSync(arg0 <-chan struct{}) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Start", arg0)
+	m.ctrl.Call(m, "StartSync", arg0)
 }
 
-// Start indicates an expected call of Start.
-func (mr *MockUpgradeConfigManagerMockRecorder) Start(arg0 interface{}) *gomock.Call {
+// StartSync indicates an expected call of StartSync.
+func (mr *MockUpgradeConfigManagerMockRecorder) StartSync(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockUpgradeConfigManager)(nil).Start), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartSync", reflect.TypeOf((*MockUpgradeConfigManager)(nil).StartSync), arg0)
 }

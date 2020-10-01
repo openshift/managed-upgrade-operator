@@ -173,16 +173,10 @@ func main() {
 
 	ucMgr, err := upgrade_config_manager.NewBuilder().NewManager(upgradeConfigManagerClient)
 	if err != nil {
-		if err == upgrade_config_manager.ErrNoConfigManagerDefined {
-			log.Info("Skipping UpgradeConfig manager, not configured in configmap")
-		} else {
-			log.Error(err, "Couldn't initialize UpgradeConfig manager")
-			os.Exit(1)
-		}
-	} else {
-		log.Info("starting UpgradeConfig manager")
-		go ucMgr.Start(stopCh)
+		log.Error(err, "can't read config manager configuration")
 	}
+	log.Info("Starting UpgradeConfig manager")
+	go ucMgr.StartSync(stopCh)
 
 	// Start the Cmd
 	log.Info("Starting the Cmd.")
