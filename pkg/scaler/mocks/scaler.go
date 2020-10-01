@@ -7,6 +7,7 @@ package mocks
 import (
 	logr "github.com/go-logr/logr"
 	gomock "github.com/golang/mock/gomock"
+	drain "github.com/openshift/managed-upgrade-operator/pkg/drain"
 	reflect "reflect"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
 	time "time"
@@ -36,18 +37,18 @@ func (m *MockScaler) EXPECT() *MockScalerMockRecorder {
 }
 
 // EnsureScaleDownNodes mocks base method
-func (m *MockScaler) EnsureScaleDownNodes(arg0 client.Client, arg1 logr.Logger) (bool, error) {
+func (m *MockScaler) EnsureScaleDownNodes(arg0 client.Client, arg1 drain.NodeDrainStrategy, arg2 logr.Logger) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnsureScaleDownNodes", arg0, arg1)
+	ret := m.ctrl.Call(m, "EnsureScaleDownNodes", arg0, arg1, arg2)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // EnsureScaleDownNodes indicates an expected call of EnsureScaleDownNodes
-func (mr *MockScalerMockRecorder) EnsureScaleDownNodes(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockScalerMockRecorder) EnsureScaleDownNodes(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureScaleDownNodes", reflect.TypeOf((*MockScaler)(nil).EnsureScaleDownNodes), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureScaleDownNodes", reflect.TypeOf((*MockScaler)(nil).EnsureScaleDownNodes), arg0, arg1, arg2)
 }
 
 // EnsureScaleUpNodes mocks base method

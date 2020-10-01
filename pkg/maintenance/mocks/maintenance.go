@@ -91,17 +91,17 @@ func (mr *MockMaintenanceMockRecorder) IsActive() *gomock.Call {
 }
 
 // SetWorker mocks base method
-func (m *MockMaintenance) SetWorker(arg0 time.Time, arg1 string) error {
+func (m *MockMaintenance) SetWorker(arg0 time.Time, arg1 string, arg2 int32) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SetWorker", arg0, arg1)
+	ret := m.ctrl.Call(m, "SetWorker", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // SetWorker indicates an expected call of SetWorker
-func (mr *MockMaintenanceMockRecorder) SetWorker(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockMaintenanceMockRecorder) SetWorker(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetWorker", reflect.TypeOf((*MockMaintenance)(nil).SetWorker), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetWorker", reflect.TypeOf((*MockMaintenance)(nil).SetWorker), arg0, arg1, arg2)
 }
 
 // StartControlPlane mocks base method

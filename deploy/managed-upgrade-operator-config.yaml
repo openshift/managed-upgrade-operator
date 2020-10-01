@@ -6,7 +6,6 @@ data:
   config.yaml: |
     maintenance:
       controlPlaneTime: 90
-      workerNodeTime: 8
       ignoredAlerts:
         controlPlaneCriticals:
         - etcdMembersDown
@@ -20,9 +19,17 @@ data:
       timeOut: 60
     nodeDrain:
       timeOut: 45
+      expectedNodeDrainTime: 8
     healthCheck:
       ignoredCriticals:
       - DNSErrors05MinSRE
       - MetricsClientSendFailingSRE
       - UpgradeNodeScalingFailedSRE
       - UpgradeClusterCheckFailedSRE
+    verification:
+      ignoredNamespaces:
+      - openshift-logging
+      namespacePrefixesToCheck:
+      - openshift
+      - kube
+      - default

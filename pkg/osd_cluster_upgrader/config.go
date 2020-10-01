@@ -4,19 +4,19 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/openshift/managed-upgrade-operator/pkg/machinery"
+	"github.com/openshift/managed-upgrade-operator/pkg/drain"
 )
 
 type osdUpgradeConfig struct {
-	Maintenance maintenanceConfig   `yaml:"maintenance"`
-	Scale       scaleConfig         `yaml:"scale"`
-	NodeDrain   machinery.NodeDrain `yaml:"nodeDrain"`
-	HealthCheck healthCheck         `yaml:"healthCheck"`
+	Maintenance  maintenanceConfig `yaml:"maintenance"`
+	Scale        scaleConfig       `yaml:"scale"`
+	NodeDrain    drain.NodeDrain   `yaml:"nodeDrain"`
+	HealthCheck  healthCheck       `yaml:"healthCheck"`
+	Verification verification      `yaml:"verification"`
 }
 
 type maintenanceConfig struct {
-	ControlPlaneTime int           `yaml:"controlPlaneTime"`
-	WorkerNodeTime   int           `yaml:"workerNodeTime"`
+	ControlPlaneTime int           `yaml:"controlPlaneTime" default:"60"`
 	IgnoredAlerts    ignoredAlerts `yaml:"ignoredAlerts"`
 }
 
@@ -31,9 +31,6 @@ func (cfg *maintenanceConfig) IsValid() error {
 	if cfg.ControlPlaneTime <= 0 {
 		return fmt.Errorf("Config maintenace controlPlaneTime out is invalid")
 	}
-	if cfg.WorkerNodeTime <= 0 {
-		return fmt.Errorf("Config maintenace workerNodeTime is invalid")
-	}
 
 	return nil
 }
@@ -42,16 +39,17 @@ func (cfg *maintenanceConfig) GetControlPlaneDuration() time.Duration {
 	return time.Duration(cfg.ControlPlaneTime) * time.Minute
 }
 
-func (cfg *maintenanceConfig) GetWorkerNodeDuration() time.Duration {
-	return time.Duration(cfg.WorkerNodeTime) * time.Minute
-}
-
 type scaleConfig struct {
-	TimeOut int `yaml:"timeOut"`
+	TimeOut int `yaml:"timeOut" default:"30"`
 }
 
 type healthCheck struct {
 	IgnoredCriticals []string `yaml:"ignoredCriticals"`
+}
+
+type verification struct {
+	IgnoredNamespaces        []string `yaml:"ignoredNamespaces"`
+	NamespacePrefixesToCheck []string `yaml:"namespacePrefixesToCheck"`
 }
 
 func (cfg *osdUpgradeConfig) IsValid() error {
@@ -63,6 +61,9 @@ func (cfg *osdUpgradeConfig) IsValid() error {
 	}
 	if cfg.NodeDrain.Timeout <= 0 {
 		return fmt.Errorf("Config nodeDrain timeOut is invalid")
+	}
+	if cfg.NodeDrain.ExpectedNodeDrainTime <= 0 {
+		return fmt.Errorf("Config nodeDrain expectedNodeDrainTime is invalid")
 	}
 
 	return nil

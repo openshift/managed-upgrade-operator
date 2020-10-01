@@ -9,6 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -33,13 +34,18 @@ var (
 // Add creates a new UpgradeConfig Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager) error {
-	return add(mgr, newReconciler(mgr))
+	kubeConfig := controllerruntime.GetConfigOrDie()
+	c, err := client.New(kubeConfig, client.Options{})
+	if err != nil {
+		return err
+	}
+	return add(mgr, newReconciler(mgr, c))
 }
 
 // newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager) reconcile.Reconciler {
+func newReconciler(mgr manager.Manager, client client.Client) reconcile.Reconciler {
 	return &ReconcileUpgradeConfig{
-		client:                 mgr.GetClient(),
+		client:                 client,
 		scheme:                 mgr.GetScheme(),
 		metricsClientBuilder:   metrics.NewBuilder(),
 		clusterUpgraderBuilder: cub.NewBuilder(),
@@ -107,6 +113,8 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
+			metricsClient.ResetMetrics()
+			reqLogger.Info("Reset all the metrics due to no upgrade config present.")
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.

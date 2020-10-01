@@ -36,7 +36,7 @@ generate:
 	go generate pkg/clusterversion/cv.go
 	go generate pkg/upgrade_config_manager/upgrade_config_manager.go
 	go generate pkg/policyprovider/policyprovider.go
-
+	go generate pkg/drain/strategy.go
 
 .PHONY: run
 run: 

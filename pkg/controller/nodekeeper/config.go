@@ -3,11 +3,11 @@ package nodekeeper
 import (
 	"fmt"
 
-	"github.com/openshift/managed-upgrade-operator/pkg/machinery"
+	"github.com/openshift/managed-upgrade-operator/pkg/drain"
 )
 
 type nodeKeeperConfig struct {
-	NodeDrain machinery.NodeDrain `yaml:"nodeDrain"`
+	NodeDrain drain.NodeDrain `yaml:"nodeDrain"`
 }
 
 func (nkc *nodeKeeperConfig) IsValid() error {

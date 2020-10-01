@@ -8,6 +8,7 @@ rules:
   - ""
   resources:
   - pods
+  - pods/finalizers
   - services
   - serviceaccounts
   - services/finalizers

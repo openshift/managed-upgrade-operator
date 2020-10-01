@@ -138,31 +138,36 @@ func (amm *alertManagerMaintenance) StartControlPlane(endsAt time.Time, version 
 
 // Start a worker node maintenance in Alertmanager for version
 // Time is converted to UTC
-func (amm *alertManagerMaintenance) SetWorker(endsAt time.Time, version string) error {
+func (amm *alertManagerMaintenance) SetWorker(endsAt time.Time, version string, count int32) error {
 	comment := fmt.Sprintf("Silence for %s upgrade to version %s", workerSilenceCommentId, version)
-	silenceList, err := amm.client.Filter(equalsComment(comment))
+	fullComment := fmt.Sprintf("%s with remaining %d nodes", comment, count)
+	silenceList, err := amm.client.Filter(equalsComment(fullComment))
 	if err != nil {
 		return err
 	}
+
 	exists := len(*silenceList) > 0
 
 	end := strfmt.DateTime(endsAt.UTC())
-	if exists {
-		// Update the silence end time
-		sl := *silenceList
-		silence := sl[0]
-		err = amm.client.Update(*silence.ID, end)
+	if !exists {
+		oldSilenceList, err := amm.client.Filter(activeSilences, containsComment(comment))
 		if err != nil {
 			return err
 		}
-	} else {
+		if len(*oldSilenceList) > 0 {
+			oldSl := *oldSilenceList
+			oldSilence := oldSl[0]
+			err = amm.client.Delete(*oldSilence.ID)
+			if err != nil {
+				return err
+			}
+		}
 		now := strfmt.DateTime(time.Now().UTC())
-		err = amm.client.Create(createDefaultMatchers(), now, end, config.OperatorName, comment)
+		err = amm.client.Create(createDefaultMatchers(), now, end, config.OperatorName, fullComment)
+		if err != nil {
+			return err
+		}
 	}
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
