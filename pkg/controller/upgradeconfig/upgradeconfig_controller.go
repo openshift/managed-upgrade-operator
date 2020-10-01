@@ -2,6 +2,9 @@ package upgradeconfig
 
 import (
 	"context"
+	"github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -65,7 +68,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource UpgradeConfig, status change will not trigger a reconcile
-	err = c.Watch(&source.Kind{Type: &upgradev1alpha1.UpgradeConfig{}}, &handler.EnqueueRequestForObject{}, StatusChangedPredicate)
+	err = c.Watch(&source.Kind{Type: &upgradev1alpha1.UpgradeConfig{}}, &handler.EnqueueRequestForObject{}, StatusChangedPredicate, OSDUpgradePredicate)
 	if err != nil {
 		return err
 	}
@@ -255,4 +258,25 @@ func (r *ReconcileUpgradeConfig) upgradeCluster(upgrader cub.ClusterUpgrader, uc
 	me = multierror.Append(err, me)
 
 	return reconcile.Result{RequeueAfter: 1 * time.Minute}, me.ErrorOrNil()
+}
+
+
+var OSDUpgradePredicate = predicate.Funcs{
+	UpdateFunc: func(e event.UpdateEvent) bool {
+		return isOsdUpgrade(e.MetaNew.GetName())
+	},
+	// Create is required to avoid reconciliation at controller initialisation.
+	CreateFunc: func(e event.CreateEvent) bool {
+		return isOsdUpgrade(e.Meta.GetName())
+	},
+	DeleteFunc: func(e event.DeleteEvent) bool {
+		return isOsdUpgrade(e.Meta.GetName())
+	},
+	GenericFunc: func(e event.GenericEvent) bool {
+		return isOsdUpgrade(e.Meta.GetName())
+	},
+}
+
+func isOsdUpgrade(name string) bool {
+	return name == upgradeconfigmanager.UPGRADECONFIG_CR_NAME
 }
