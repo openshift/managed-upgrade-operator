@@ -1,4 +1,4 @@
-package upgrade_config_manager
+package upgradeconfigmanager
 
 import (
 	"fmt"

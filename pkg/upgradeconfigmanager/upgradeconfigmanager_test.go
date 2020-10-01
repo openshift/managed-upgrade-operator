@@ -1,20 +1,20 @@
-package upgrade_config_manager
+package upgradeconfigmanager
 
 import (
 	"context"
 	"fmt"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"os"
 
 	"github.com/golang/mock/gomock"
 	configv1 "github.com/openshift/api/config/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 	cvMocks "github.com/openshift/managed-upgrade-operator/pkg/clusterversion/mocks"
 	configMocks "github.com/openshift/managed-upgrade-operator/pkg/configmanager/mocks"
-	ppMocks "github.com/openshift/managed-upgrade-operator/pkg/policyprovider/mocks"
+	ppMocks "github.com/openshift/managed-upgrade-operator/pkg/specprovider/mocks"
 	"github.com/openshift/managed-upgrade-operator/util/mocks"
 
 	. "github.com/onsi/ginkgo"
@@ -39,27 +39,27 @@ var _ = Describe("UpgradeConfigManager", func() {
 		mockConfigManagerBuilder *configMocks.MockConfigManagerBuilder
 		mockCVClientBuilder      *cvMocks.MockClusterVersionBuilder
 		mockCVClient             *cvMocks.MockClusterVersion
-		mockPPClientBuilder      *ppMocks.MockPolicyProviderBuilder
-		mockPPClient             *ppMocks.MockPolicyProvider
+		mockSPClientBuilder      *ppMocks.MockSpecProviderBuilder
+		mockSPClient             *ppMocks.MockSpecProvider
 	)
 
 	BeforeEach(func() {
+		_ = os.Setenv("OPERATOR_NAMESPACE", TEST_OPERATOR_NAMESPACE)
 		mockConfigManagerBuilder = configMocks.NewMockConfigManagerBuilder(mockCtrl)
-		//mockConfigManager = configMocks.NewMockConfigManager(mockCtrl)
 		mockCVClientBuilder = cvMocks.NewMockClusterVersionBuilder(mockCtrl)
 		mockCVClient = cvMocks.NewMockClusterVersion(mockCtrl)
-		mockPPClientBuilder = ppMocks.NewMockPolicyProviderBuilder(mockCtrl)
-		mockPPClient = ppMocks.NewMockPolicyProvider(mockCtrl)
+		mockSPClientBuilder = ppMocks.NewMockSpecProviderBuilder(mockCtrl)
+		mockSPClient = ppMocks.NewMockSpecProvider(mockCtrl)
 		mockCtrl = gomock.NewController(GinkgoT())
 		mockKubeClient = mocks.NewMockClient(mockCtrl)
 	})
 
 	JustBeforeEach(func() {
 		manager = &upgradeConfigManager{
-			client:                mockKubeClient,
-			cvClientBuilder:       mockCVClientBuilder,
-			policyProviderBuilder: mockPPClientBuilder,
-			configManagerBuilder:  mockConfigManagerBuilder,
+			client:               mockKubeClient,
+			cvClientBuilder:      mockCVClientBuilder,
+			specProviderBuilder:  mockSPClientBuilder,
+			configManagerBuilder: mockConfigManagerBuilder,
 		}
 	})
 
@@ -84,21 +84,17 @@ var _ = Describe("UpgradeConfigManager", func() {
 					Type:                 TEST_UPGRADE_TYPE,
 				},
 			}
-			upgradeConfigs := &upgradev1alpha1.UpgradeConfigList{
-				Items: []upgradev1alpha1.UpgradeConfig{upgradeConfig},
-			}
 			gomock.InOrder(
-				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, *upgradeConfigs).Return(nil),
+				mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, upgradeConfig).Return(nil),
 			)
-			ucs, err := manager.Get()
+			uc, err := manager.Get()
 			Expect(err).To(BeNil())
-			Expect(ucs.Items).To(ContainElement(upgradeConfig))
-			Expect(len(ucs.Items)).To(Equal(1))
+			Expect(uc.Spec).To(Equal(upgradeConfig.Spec))
 		})
 
 		It("Errors if they can't be retrieved", func() {
 			gomock.InOrder(
-				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("Some error")),
+				mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("Some error")),
 			)
 			ucs, err := manager.Get()
 			Expect(err).To(Equal(ErrRetrievingUpgradeConfigs))
@@ -134,18 +130,12 @@ var _ = Describe("UpgradeConfigManager", func() {
 					Phase:   upgradev1alpha1.UpgradePhaseUpgrading,
 				},
 			}
-			upgradeConfigs := &upgradev1alpha1.UpgradeConfigList{
-				Items: []upgradev1alpha1.UpgradeConfig{upgradeConfig},
-			}
-			inprogress, err := upgradeInProgress(upgradeConfigs, mockCVClient)
+			inprogress, err := upgradeInProgress(&upgradeConfig, mockCVClient)
 			Expect(err).To(BeNil())
 			Expect(inprogress).To(BeTrue())
 		})
 
 		It("will indicate correctly if CVO says so", func() {
-			upgradeConfigs := &upgradev1alpha1.UpgradeConfigList{
-				Items: []upgradev1alpha1.UpgradeConfig{upgradeConfig},
-			}
 			cv := &configv1.ClusterVersion{
 				Spec: configv1.ClusterVersionSpec{
 					DesiredUpdate: &configv1.Update{Version: TEST_UPGRADE_VERSION},
@@ -163,15 +153,12 @@ var _ = Describe("UpgradeConfigManager", func() {
 			gomock.InOrder(
 				mockCVClient.EXPECT().GetClusterVersion().Return(cv, nil),
 			)
-			inprogress, err := upgradeInProgress(upgradeConfigs, mockCVClient)
+			inprogress, err := upgradeInProgress(&upgradeConfig, mockCVClient)
 			Expect(err).To(BeNil())
 			Expect(inprogress).To(BeTrue())
 		})
 
 		It("will indicate correctly if neither UpgradeConfig or CVO say so", func() {
-			upgradeConfigs := &upgradev1alpha1.UpgradeConfigList{
-				Items: []upgradev1alpha1.UpgradeConfig{upgradeConfig},
-			}
 			cv := &configv1.ClusterVersion{
 				Spec: configv1.ClusterVersionSpec{
 					DesiredUpdate: &configv1.Update{Version: TEST_UPGRADE_VERSION},
@@ -189,7 +176,7 @@ var _ = Describe("UpgradeConfigManager", func() {
 			gomock.InOrder(
 				mockCVClient.EXPECT().GetClusterVersion().Return(cv, nil),
 			)
-			inprogress, err := upgradeInProgress(upgradeConfigs, mockCVClient)
+			inprogress, err := upgradeInProgress(&upgradeConfig, mockCVClient)
 			Expect(err).To(BeNil())
 			Expect(inprogress).To(BeFalse())
 		})
@@ -226,7 +213,7 @@ var _ = Describe("UpgradeConfigManager", func() {
 
 		It("If existing cluster UpgradeConfigs can't be returned", func() {
 			gomock.InOrder(
-				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("some error")),
+				mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(ErrRetrievingUpgradeConfigs),
 			)
 			_, err := manager.Refresh()
 			Expect(err).To(Equal(ErrRetrievingUpgradeConfigs))
@@ -239,11 +226,8 @@ var _ = Describe("UpgradeConfigManager", func() {
 					Phase:   upgradev1alpha1.UpgradePhaseUpgrading,
 				},
 			}
-			upgradeConfigs := &upgradev1alpha1.UpgradeConfigList{
-				Items: []upgradev1alpha1.UpgradeConfig{upgradeConfig},
-			}
 			gomock.InOrder(
-				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, *upgradeConfigs).Return(nil),
+				mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, upgradeConfig).Return(nil),
 				mockCVClientBuilder.EXPECT().New(gomock.Any()).Return(mockCVClient),
 			)
 			changed, err := manager.Refresh()
@@ -252,15 +236,12 @@ var _ = Describe("UpgradeConfigManager", func() {
 		})
 
 		It("should indicate if the provider couldn't pull properly", func() {
-			upgradeConfigs := &upgradev1alpha1.UpgradeConfigList{
-				Items: []upgradev1alpha1.UpgradeConfig{upgradeConfig},
-			}
 			gomock.InOrder(
-				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, *upgradeConfigs).Return(nil),
+				mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, upgradeConfig).Return(nil),
 				mockCVClientBuilder.EXPECT().New(gomock.Any()).Return(mockCVClient),
 				mockCVClient.EXPECT().GetClusterVersion().Return(cv, nil),
-				mockPPClientBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockPPClient, nil),
-				mockPPClient.EXPECT().Get().Return(nil, fmt.Errorf("some error")),
+				mockSPClientBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockSPClient, nil),
+				mockSPClient.EXPECT().Get().Return(nil, fmt.Errorf("some error")),
 			)
 			changed, err := manager.Refresh()
 			Expect(err).To(Equal(ErrProviderSpecPull))
@@ -268,15 +249,12 @@ var _ = Describe("UpgradeConfigManager", func() {
 		})
 
 		It("should remove existing UpgradeConfigs if no provider configs are pulled", func() {
-			upgradeConfigs := &upgradev1alpha1.UpgradeConfigList{
-				Items: []upgradev1alpha1.UpgradeConfig{upgradeConfig},
-			}
 			gomock.InOrder(
-				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, *upgradeConfigs).Return(nil),
+				mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, upgradeConfig).Return(nil),
 				mockCVClientBuilder.EXPECT().New(gomock.Any()).Return(mockCVClient),
 				mockCVClient.EXPECT().GetClusterVersion().Return(cv, nil),
-				mockPPClientBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockPPClient, nil),
-				mockPPClient.EXPECT().Get().Return([]upgradev1alpha1.UpgradeConfigSpec{}, nil),
+				mockSPClientBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockSPClient, nil),
+				mockSPClient.EXPECT().Get().Return([]upgradev1alpha1.UpgradeConfigSpec{}, nil),
 				mockKubeClient.EXPECT().Delete(gomock.Any(), gomock.Any()).DoAndReturn(
 					func(ctx context.Context, uc *upgradev1alpha1.UpgradeConfig) error {
 						Expect(uc.Name).To(Equal(TEST_UPGRADECONFIG_CR))
@@ -292,8 +270,24 @@ var _ = Describe("UpgradeConfigManager", func() {
 			Expect(changed).To(BeTrue())
 		})
 
+		It("should indicate no change if no specs are returned by the provider", func() {
+			notFound := errors.NewNotFound(schema.GroupResource{
+				Group:    "test",
+				Resource: "test",
+			}, "test")
+			gomock.InOrder(
+				mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(notFound),
+				mockCVClientBuilder.EXPECT().New(gomock.Any()).Return(mockCVClient),
+				mockCVClient.EXPECT().GetClusterVersion().Return(cv, nil),
+				mockSPClientBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockSPClient, nil),
+				mockSPClient.EXPECT().Get().Return([]upgradev1alpha1.UpgradeConfigSpec{}, nil),
+			)
+			changed, err := manager.Refresh()
+			Expect(err).To(BeNil())
+			Expect(changed).To(BeFalse())
+		})
+
 		It("should create an upgrade config if the provider returns one", func() {
-			upgradeConfigs := &upgradev1alpha1.UpgradeConfigList{}
 			upgradeConfigSpecs := []upgradev1alpha1.UpgradeConfigSpec{
 				upgradeConfig.Spec,
 			}
@@ -302,11 +296,11 @@ var _ = Describe("UpgradeConfigManager", func() {
 				Resource: "test",
 			}, "test")
 			gomock.InOrder(
-				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, *upgradeConfigs).Return(nil),
+				mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(notFound),
 				mockCVClientBuilder.EXPECT().New(gomock.Any()).Return(mockCVClient),
 				mockCVClient.EXPECT().GetClusterVersion().Return(cv, nil),
-				mockPPClientBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockPPClient, nil),
-				mockPPClient.EXPECT().Get().Return(upgradeConfigSpecs, nil),
+				mockSPClientBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockSPClient, nil),
+				mockSPClient.EXPECT().Get().Return(upgradeConfigSpecs, nil),
 				mockKubeClient.EXPECT().Update(gomock.Any(), gomock.Any()).Return(notFound),
 				mockKubeClient.EXPECT().Create(gomock.Any(), gomock.Any()).DoAndReturn(
 					func(ctx context.Context, uc *upgradev1alpha1.UpgradeConfig) error {
@@ -329,13 +323,13 @@ var _ = Describe("UpgradeConfigManager", func() {
 				upgradeConfig.Spec,
 			}
 			// The existing upgradeconfig on the cluster
-			oldUpgradeConfig := 			&upgradev1alpha1.UpgradeConfig{
+			oldUpgradeConfig := &upgradev1alpha1.UpgradeConfig{
 				ObjectMeta: v1.ObjectMeta{
-					Name:                       TEST_UPGRADECONFIG_CR,
-					Namespace:                  TEST_OPERATOR_NAMESPACE,
+					Name:      TEST_UPGRADECONFIG_CR,
+					Namespace: TEST_OPERATOR_NAMESPACE,
 				},
-				Spec:       upgradev1alpha1.UpgradeConfigSpec{
-					Desired:              upgradev1alpha1.Update{
+				Spec: upgradev1alpha1.UpgradeConfigSpec{
+					Desired: upgradev1alpha1.Update{
 						Version: "old version",
 						Channel: "old channel",
 					},
@@ -344,16 +338,13 @@ var _ = Describe("UpgradeConfigManager", func() {
 					Type:                 "old type",
 				},
 			}
-			upgradeConfigs := &upgradev1alpha1.UpgradeConfigList{
-				Items: []upgradev1alpha1.UpgradeConfig{*oldUpgradeConfig},
-			}
 
 			gomock.InOrder(
-				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, *upgradeConfigs).Return(nil),
+				mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, *oldUpgradeConfig).Return(nil),
 				mockCVClientBuilder.EXPECT().New(gomock.Any()).Return(mockCVClient),
 				mockCVClient.EXPECT().GetClusterVersion().Return(cv, nil),
-				mockPPClientBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockPPClient, nil),
-				mockPPClient.EXPECT().Get().Return(upgradeConfigSpecs, nil),
+				mockSPClientBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockSPClient, nil),
+				mockSPClient.EXPECT().Get().Return(upgradeConfigSpecs, nil),
 				mockKubeClient.EXPECT().Update(gomock.Any(), gomock.Any()).DoAndReturn(
 					func(ctx context.Context, uc *upgradev1alpha1.UpgradeConfig) error {
 						Expect(uc.Name).To(Equal(TEST_UPGRADECONFIG_CR))
@@ -368,7 +359,6 @@ var _ = Describe("UpgradeConfigManager", func() {
 			Expect(err).To(BeNil())
 			Expect(changed).To(BeTrue())
 		})
-
 
 	})
 })

@@ -34,8 +34,8 @@ generate:
 	go generate pkg/scheduler/scheduler.go
 	go generate pkg/machinery/machinery.go
 	go generate pkg/clusterversion/cv.go
-	go generate pkg/upgrade_config_manager/upgrade_config_manager.go
-	go generate pkg/policyprovider/policyprovider.go
+	go generate pkg/upgradeconfigmanager/upgradeconfigmanager.go
+	go generate pkg/specprovider/specprovider.go
 	go generate pkg/drain/strategy.go
 
 .PHONY: run

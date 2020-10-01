@@ -3,13 +3,12 @@ package nodekeeper
 import (
 	"context"
 	"fmt"
-	"os"
+	"github.com/openshift/managed-upgrade-operator/util"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -24,6 +23,7 @@ import (
 	"github.com/openshift/managed-upgrade-operator/pkg/drain"
 	"github.com/openshift/managed-upgrade-operator/pkg/machinery"
 	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
+	"github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager"
 )
 
 var log = logf.Log.WithName("controller_nodekeeper")
@@ -42,12 +42,13 @@ func Add(mgr manager.Manager) error {
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager, client client.Client) reconcile.Reconciler {
 	return &ReconcileNodeKeeper{
-		client:               client,
-		configManagerBuilder: configmanager.NewBuilder(),
-		machinery:            machinery.NewMachinery(),
-		metricsClientBuilder: metrics.NewBuilder(),
-		drainstrategyBuilder: drain.NewBuilder(),
-		scheme:               mgr.GetScheme(),
+		client:                      client,
+		configManagerBuilder:        configmanager.NewBuilder(),
+		machinery:                   machinery.NewMachinery(),
+		metricsClientBuilder:        metrics.NewBuilder(),
+		drainstrategyBuilder:        drain.NewBuilder(),
+		upgradeConfigManagerBuilder: upgradeconfigmanager.NewBuilder(),
+		scheme:                      mgr.GetScheme(),
 	}
 }
 
@@ -78,12 +79,13 @@ var _ reconcile.Reconciler = &ReconcileNodeKeeper{}
 type ReconcileNodeKeeper struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client               client.Client
-	configManagerBuilder configmanager.ConfigManagerBuilder
-	machinery            machinery.Machinery
-	metricsClientBuilder metrics.MetricsBuilder
-	drainstrategyBuilder drain.NodeDrainStrategyBuilder
-	scheme               *runtime.Scheme
+	client                      client.Client
+	configManagerBuilder        configmanager.ConfigManagerBuilder
+	machinery                   machinery.Machinery
+	metricsClientBuilder        metrics.MetricsBuilder
+	drainstrategyBuilder        drain.NodeDrainStrategyBuilder
+	upgradeConfigManagerBuilder upgradeconfigmanager.UpgradeConfigManagerBuilder
+	scheme                      *runtime.Scheme
 }
 
 // Note:
@@ -92,13 +94,13 @@ type ReconcileNodeKeeper struct {
 func (r *ReconcileNodeKeeper) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Name", request.Name)
 
-	operatorNamespace, err := getOperatorNamespace()
+	upgradeConfigManagerClient, err := r.upgradeConfigManagerBuilder.NewManager(r.client)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-	uc, err := getUpgradeConfigCR(r.client, operatorNamespace)
+	uc, err := upgradeConfigManagerClient.Get()
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if err == upgradeconfigmanager.ErrUpgradeConfigNotFound {
 			return reconcile.Result{}, nil
 		}
 		return reconcile.Result{}, err
@@ -135,6 +137,10 @@ func (r *ReconcileNodeKeeper) Reconcile(request reconcile.Request) (reconcile.Re
 		return reconcile.Result{}, nil
 	}
 
+	operatorNamespace, err := util.GetOperatorNamespace()
+	if err != nil {
+		return reconcile.Result{}, nil
+	}
 	cfm := r.configManagerBuilder.New(r.client, operatorNamespace)
 	cfg := &nodeKeeperConfig{}
 	err = cfm.Into(cfg)
@@ -166,30 +172,4 @@ func (r *ReconcileNodeKeeper) Reconcile(request reconcile.Request) (reconcile.Re
 	}
 
 	return reconcile.Result{RequeueAfter: time.Minute * 1}, nil
-}
-
-// getOperatorNamespace retrieves the operators namespace from an environment
-// variable and returns it to the caller.
-func getOperatorNamespace() (string, error) {
-	envVarOperatorNamespace := "OPERATOR_NAMESPACE"
-	ns, found := os.LookupEnv(envVarOperatorNamespace)
-	if !found {
-		return "", fmt.Errorf("%s must be set", envVarOperatorNamespace)
-	}
-	return ns, nil
-}
-
-func getUpgradeConfigCR(c client.Client, ns string) (*upgradev1alpha1.UpgradeConfig, error) {
-	uCList := &upgradev1alpha1.UpgradeConfigList{}
-
-	err := c.List(context.TODO(), uCList, &client.ListOptions{Namespace: ns})
-	if err != nil {
-		return nil, err
-	}
-
-	for _, uC := range uCList.Items {
-		return &uC, nil
-	}
-
-	return nil, errors.NewNotFound(schema.GroupResource{Group: upgradev1alpha1.SchemeGroupVersion.Group, Resource: "UpgradeConfig"}, "UpgradeConfig")
 }

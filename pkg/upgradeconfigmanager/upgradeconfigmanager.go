@@ -1,14 +1,14 @@
-package upgrade_config_manager
+package upgradeconfigmanager
 
 import (
 	"context"
 	"fmt"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"math"
 	"math/rand"
 	"reflect"
 	"time"
 
+	"k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -16,7 +16,7 @@ import (
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 	cv "github.com/openshift/managed-upgrade-operator/pkg/clusterversion"
 	"github.com/openshift/managed-upgrade-operator/pkg/configmanager"
-	"github.com/openshift/managed-upgrade-operator/pkg/policyprovider"
+	"github.com/openshift/managed-upgrade-operator/pkg/specprovider"
 	"github.com/openshift/managed-upgrade-operator/util"
 )
 
@@ -33,22 +33,23 @@ const (
 
 // Errors
 var (
-	ErrClusterIsUpgrading = fmt.Errorf("cluster is upgrading")
+	ErrClusterIsUpgrading       = fmt.Errorf("cluster is upgrading")
 	ErrRetrievingUpgradeConfigs = fmt.Errorf("unable to retrieve upgradeconfigs")
 	ErrMissingOperatorNamespace = fmt.Errorf("can't determine operator namespace, missing env OPERATOR_NAMESPACE")
-	ErrProviderSpecPull = fmt.Errorf("unable to retrieve upgrade policySpecs")
-	ErrRemovingUpgradeConfig = fmt.Errorf("unable to remove existing UpgradeConfig")
-	ErrCreatingUpgradeConfig = fmt.Errorf("unable to create new UpgradeConfig")
+	ErrProviderSpecPull         = fmt.Errorf("unable to retrieve upgrade spec")
+	ErrRemovingUpgradeConfig    = fmt.Errorf("unable to remove existing UpgradeConfig")
+	ErrCreatingUpgradeConfig    = fmt.Errorf("unable to create new UpgradeConfig")
+	ErrUpgradeConfigNotFound    = fmt.Errorf("upgrade config not found")
 )
 
-//go:generate mockgen -destination=mocks/upgrade_config_manager.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/upgrade_config_manager UpgradeConfigManager
+//go:generate mockgen -destination=mocks/upgradeconfigmanager.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager UpgradeConfigManager
 type UpgradeConfigManager interface {
-	Get() (*upgradev1alpha1.UpgradeConfigList, error)
+	Get() (*upgradev1alpha1.UpgradeConfig, error)
 	StartSync(stopCh <-chan struct{})
 	Refresh() (bool, error)
 }
 
-//go:generate mockgen -destination=mocks/upgrade_config_manager_builder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/upgrade_config_manager UpgradeConfigManagerBuilder
+//go:generate mockgen -destination=mocks/upgradeconfigmanager_builder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager UpgradeConfigManagerBuilder
 type UpgradeConfigManagerBuilder interface {
 	NewManager(client.Client) (UpgradeConfigManager, error)
 }
@@ -60,36 +61,44 @@ func NewBuilder() UpgradeConfigManagerBuilder {
 type upgradeConfigManagerBuilder struct{}
 
 type upgradeConfigManager struct {
-	client                client.Client
-	cvClientBuilder       cv.ClusterVersionBuilder
-	policyProviderBuilder policyprovider.PolicyProviderBuilder
-	configManagerBuilder  configmanager.ConfigManagerBuilder
+	client               client.Client
+	cvClientBuilder      cv.ClusterVersionBuilder
+	specProviderBuilder  specprovider.SpecProviderBuilder
+	configManagerBuilder configmanager.ConfigManagerBuilder
 }
 
 func (ucb *upgradeConfigManagerBuilder) NewManager(client client.Client) (UpgradeConfigManager, error) {
 
-	ppBuilder := policyprovider.NewBuilder()
+	spBuilder := specprovider.NewBuilder()
 	cvBuilder := cv.NewBuilder()
 	cmBuilder := configmanager.NewBuilder()
 
 	return &upgradeConfigManager{
-		client:                client,
-		cvClientBuilder:       cvBuilder,
-		policyProviderBuilder: ppBuilder,
-		configManagerBuilder:  cmBuilder,
+		client:               client,
+		cvClientBuilder:      cvBuilder,
+		specProviderBuilder:  spBuilder,
+		configManagerBuilder: cmBuilder,
 	}, nil
 }
 
-func (s *upgradeConfigManager) Get() (*upgradev1alpha1.UpgradeConfigList, error) {
-	upgradeConfigs := &upgradev1alpha1.UpgradeConfigList{}
-	err := s.client.List(context.TODO(), upgradeConfigs, &client.ListOptions{})
+func (s *upgradeConfigManager) Get() (*upgradev1alpha1.UpgradeConfig, error) {
+	instance := &upgradev1alpha1.UpgradeConfig{}
+	ns, err := util.GetOperatorNamespace()
 	if err != nil {
+		return nil, ErrMissingOperatorNamespace
+	}
+	err = s.client.Get(context.TODO(), client.ObjectKey{Name: UPGRADECONFIG_CR_NAME, Namespace: ns}, instance)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return nil, ErrUpgradeConfigNotFound
+		}
+		log.Error(err, "error retrieving UpgradeConfig")
 		return nil, ErrRetrievingUpgradeConfigs
 	}
-	return upgradeConfigs, nil
+	return instance, nil
 }
 
-// Syncs UpgradeConfigs from the policy provider periodically until the operator is killed or a message is sent on the stopCh
+// Syncs UpgradeConfigs from the spec provider periodically until the operator is killed or a message is sent on the stopCh
 func (s *upgradeConfigManager) StartSync(stopCh <-chan struct{}) {
 	log.Info("Starting the upgradeConfigManager")
 
@@ -127,9 +136,7 @@ func (s *upgradeConfigManager) StartSync(stopCh <-chan struct{}) {
 	}
 }
 
-// Refreshes UpgradeConfigs from the UpgradeConfig providerApplies the supplied Upgrade Policy to the cluster in the form of an UpgradeConfig
-// Returns an indication of if the policy being applied differs to the existing UpgradeConfig,
-// and indication of error if one occurs.
+// Refreshes UpgradeConfigs from the UpgradeConfig provider
 func (s *upgradeConfigManager) Refresh() (bool, error) {
 
 	// Get the running namespace
@@ -139,14 +146,21 @@ func (s *upgradeConfigManager) Refresh() (bool, error) {
 	}
 
 	// Get the current UpgradeConfigs on the cluster
-	currentUpgradeConfigs, err := s.Get()
+	currentUpgradeConfig, err := s.Get()
+	foundUpgradeConfig := false
 	if err != nil {
-		return false, ErrRetrievingUpgradeConfigs
+		if err == ErrUpgradeConfigNotFound {
+			currentUpgradeConfig = &upgradev1alpha1.UpgradeConfig{}
+		} else {
+			return false, err
+		}
+	} else {
+		foundUpgradeConfig = true
 	}
 
 	// If we are in the middle of an upgrade, we should not refresh
 	cvClient := s.cvClientBuilder.New(s.client)
-	upgrading, err := upgradeInProgress(currentUpgradeConfigs, cvClient)
+	upgrading, err := upgradeInProgress(currentUpgradeConfig, cvClient)
 	if err != nil {
 		return false, err
 	}
@@ -155,61 +169,58 @@ func (s *upgradeConfigManager) Refresh() (bool, error) {
 	}
 
 	// Get the latest config specs from the provider
-	pp, err := s.policyProviderBuilder.New(s.client, s.configManagerBuilder)
+	pp, err := s.specProviderBuilder.New(s.client, s.configManagerBuilder)
 	if err != nil {
-		return false, fmt.Errorf("unable to create policy provider: %v", err)
+		return false, fmt.Errorf("unable to create spec provider: %v", err)
 	}
-	policySpecs, err := pp.Get()
+	configSpecs, err := pp.Get()
 	if err != nil {
 		log.Error(err, "error pulling provider specs")
 		return false, ErrProviderSpecPull
 	}
 
-	// If there are no policySpecs, remove any existing UpgradeConfigs
-	if len(policySpecs) == 0 {
-		if len(currentUpgradeConfigs.Items) > 0 {
-			for _, upgradeConfig := range currentUpgradeConfigs.Items {
-				log.Info(fmt.Sprintf("Removing expired UpgradeConfig %s", upgradeConfig.Name))
-				err = s.client.Delete(context.TODO(), &upgradeConfig)
-				if err != nil {
-					log.Error(err, "can't remove UpgradeConfig")
-					return false, ErrRemovingUpgradeConfig
-				}
+	// If there are no configSpecs, remove the existing UpgradeConfig
+	if len(configSpecs) == 0 {
+		if foundUpgradeConfig {
+			log.Info(fmt.Sprintf("Removing expired UpgradeConfig %s", currentUpgradeConfig.Name))
+			err = s.client.Delete(context.TODO(), currentUpgradeConfig)
+			if err != nil {
+				log.Error(err, "can't remove UpgradeConfig")
+				return false, ErrRemovingUpgradeConfig
 			}
+			return true, nil
 		}
-		return true, nil
+		return false, nil
 	}
 
 	// We are basing on an assumption of one (1) UpgradeConfig per cluster right now.
-	// So just use the first policy returned
-	if len(policySpecs) > 1 {
-		log.Info("More than one Upgrade Policy received, only considering the first.")
+	// So just use the first spec returned
+	if len(configSpecs) > 1 {
+		log.Info("More than one Upgrade Spec received, only considering the first.")
 	}
-	upgradeConfigSpec := policySpecs[0]
+	upgradeConfigSpec := configSpecs[0]
 
 	// Set up the UpgradeConfig we will replace with
 	replacementUpgradeConfig := upgradev1alpha1.UpgradeConfig{}
 
 	// Check if we have an existing UpgradeConfig to compare against, for the refresh
-	originalUpgradeConfig := upgradev1alpha1.UpgradeConfig{}
-	if len(currentUpgradeConfigs.Items) > 0 {
-		originalUpgradeConfig = currentUpgradeConfigs.Items[0]
+	if foundUpgradeConfig {
 		// If there was an existing UpgradeConfig, make a clone of its contents
-		originalUpgradeConfig.DeepCopyInto(&replacementUpgradeConfig)
+		currentUpgradeConfig.DeepCopyInto(&replacementUpgradeConfig)
 	} else {
 		// No existing UpgradeConfig exists, give the new one the default name/namespace
 		replacementUpgradeConfig.Name = UPGRADECONFIG_CR_NAME
 		replacementUpgradeConfig.Namespace = operatorNS
 	}
 
-	// Replace the spec with the refreshed policy spec
+	// Replace the spec with the refreshed upgrade spec
 	upgradeConfigSpec.DeepCopyInto(&replacementUpgradeConfig.Spec)
 
 	// is there a difference between the original and replacement?
-	changed := !reflect.DeepEqual(replacementUpgradeConfig.Spec, originalUpgradeConfig.Spec)
+	changed := !reflect.DeepEqual(replacementUpgradeConfig.Spec, currentUpgradeConfig.Spec)
 	if changed {
 		// Apply the resource
-		log.Info("cluster upgrade policy has changed, will update")
+		log.Info("cluster upgrade spec has changed, will update")
 		err = s.client.Update(context.TODO(), &replacementUpgradeConfig)
 		if err != nil {
 			if errors.IsNotFound(err) {
@@ -221,7 +232,7 @@ func (s *upgradeConfigManager) Refresh() (bool, error) {
 			return false, fmt.Errorf("unable to apply UpgradeConfig changes: %v", err)
 		}
 	} else {
-		log.Info(fmt.Sprintf("no change in policy from existing UpgradeConfig %v, won't update", originalUpgradeConfig.Name))
+		log.Info(fmt.Sprintf("no change in spec from existing UpgradeConfig %v, won't update", currentUpgradeConfig.Name))
 	}
 
 	return changed, nil
@@ -253,13 +264,11 @@ func durationWithJitter(t time.Duration, factor float64) time.Duration {
 }
 
 // Determines if the cluster is currently upgrading or error if unable to determine
-func upgradeInProgress(ucl *upgradev1alpha1.UpgradeConfigList, cvClient cv.ClusterVersion) (bool, error) {
+func upgradeInProgress(uc *upgradev1alpha1.UpgradeConfig, cvClient cv.ClusterVersion) (bool, error) {
 	// First check all the UpgradeConfigs
-	for _, uc := range ucl.Items {
-		phase := getCurrentUpgradeConfigPhase(uc)
-		if phase == upgradev1alpha1.UpgradePhaseUpgrading {
-			return true, nil
-		}
+	phase := getCurrentUpgradeConfigPhase(uc)
+	if phase == upgradev1alpha1.UpgradePhaseUpgrading {
+		return true, nil
 	}
 
 	// Then check CVO
@@ -277,7 +286,7 @@ func upgradeInProgress(ucl *upgradev1alpha1.UpgradeConfigList, cvClient cv.Clust
 }
 
 // Returns the upgrade phase of the current desired upgrade from the UpgradeConfig
-func getCurrentUpgradeConfigPhase(uc upgradev1alpha1.UpgradeConfig) upgradev1alpha1.UpgradePhase {
+func getCurrentUpgradeConfigPhase(uc *upgradev1alpha1.UpgradeConfig) upgradev1alpha1.UpgradePhase {
 	var history upgradev1alpha1.UpgradeHistory
 	found := false
 	for _, h := range uc.Status.History {

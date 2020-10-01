@@ -1,4 +1,4 @@
-package policyprovider
+package specprovider
 
 import (
 	"fmt"
@@ -11,24 +11,24 @@ import (
 	"github.com/openshift/managed-upgrade-operator/util"
 )
 
-//go:generate mockgen -destination=mocks/policyprovider.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/policyprovider PolicyProvider
-type PolicyProvider interface {
+//go:generate mockgen -destination=mocks/specprovider.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/specprovider SpecProvider
+type SpecProvider interface {
 	Get() ([]upgradev1alpha1.UpgradeConfigSpec, error)
 }
 
-//go:generate mockgen -destination=mocks/policyprovider_builder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/policyprovider PolicyProviderBuilder
-type PolicyProviderBuilder interface {
-	New(client.Client, configmanager.ConfigManagerBuilder) (PolicyProvider, error)
+//go:generate mockgen -destination=mocks/specprovider_builder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/specprovider SpecProviderBuilder
+type SpecProviderBuilder interface {
+	New(client.Client, configmanager.ConfigManagerBuilder) (SpecProvider, error)
 }
 
-func NewBuilder() PolicyProviderBuilder {
-	return &policyProviderBuilder{}
+func NewBuilder() SpecProviderBuilder {
+	return &specProviderBuilder{}
 }
 
-type policyProviderBuilder struct{}
+type specProviderBuilder struct{}
 
-func (ppb *policyProviderBuilder) New(client client.Client, builder configmanager.ConfigManagerBuilder) (PolicyProvider, error) {
-	cfg, err := readPolicyProviderConfig(client, builder)
+func (ppb *specProviderBuilder) New(client client.Client, builder configmanager.ConfigManagerBuilder) (SpecProvider, error) {
+	cfg, err := readSpecProviderConfig(client, builder)
 	if err != nil {
 		return nil, err
 	}
@@ -45,17 +45,17 @@ func (ppb *policyProviderBuilder) New(client client.Client, builder configmanage
 		}
 		return mgr, nil
 	}
-	return nil, fmt.Errorf("no valid configured policy provider")
+	return nil, fmt.Errorf("no valid configured spec provider")
 }
 
-// Read policy provider configuration
-func readPolicyProviderConfig(client client.Client, cfb configmanager.ConfigManagerBuilder) (*PolicyProviderConfig, error) {
+// Read spec provider configuration
+func readSpecProviderConfig(client client.Client, cfb configmanager.ConfigManagerBuilder) (*SpecProviderConfig, error) {
 	ns, err := util.GetOperatorNamespace()
 	if err != nil {
 		return nil, err
 	}
 	cfm := cfb.New(client, ns)
-	cfg := &PolicyProviderConfig{}
+	cfg := &SpecProviderConfig{}
 	err = cfm.Into(cfg)
 	if err != nil {
 		return nil, err

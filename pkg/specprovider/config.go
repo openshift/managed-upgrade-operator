@@ -1,4 +1,4 @@
-package policyprovider
+package specprovider
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ const (
 
 type ConfigManagerSource string
 
-type PolicyProviderConfig struct {
+type SpecProviderConfig struct {
 	ConfigManager ConfigManager `yaml:"configManager"`
 }
 
@@ -18,13 +18,13 @@ type ConfigManager struct {
 	Source string `yaml:"source"`
 }
 
-var ErrNoPolicyProviderDefined = fmt.Errorf("no configManager policy provider defined in configuration")
+var ErrNoSpecProviderDefined = fmt.Errorf("no configManager spec provider defined in configuration")
 
-func (cfg *PolicyProviderConfig) IsValid() error {
+func (cfg *SpecProviderConfig) IsValid() error {
 	switch cfg.ConfigManager.Source {
 	case string(OCM):
 		return nil
 	default:
-		return ErrNoPolicyProviderDefined
+		return ErrNoSpecProviderDefined
 	}
 }

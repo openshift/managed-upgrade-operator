@@ -16,6 +16,7 @@ import (
 	"github.com/openshift/managed-upgrade-operator/pkg/machinery"
 	mockMachinery "github.com/openshift/managed-upgrade-operator/pkg/machinery/mocks"
 	mockMetrics "github.com/openshift/managed-upgrade-operator/pkg/metrics/mocks"
+	mockUCMgr "github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager/mocks"
 	"github.com/openshift/managed-upgrade-operator/util/mocks"
 	testStructs "github.com/openshift/managed-upgrade-operator/util/mocks/structs"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,20 +27,21 @@ import (
 
 var _ = Describe("NodeKeeperController", func() {
 	var (
-		reconciler               *ReconcileNodeKeeper
-		mockCtrl                 *gomock.Controller
-		mockKubeClient           *mocks.MockClient
-		mockConfigManagerBuilder *configMocks.MockConfigManagerBuilder
-		mockConfigManager        *configMocks.MockConfigManager
-		mockMachineryClient      *mockMachinery.MockMachinery
-		mockMetricsBuilder       *mockMetrics.MockMetricsBuilder
-		mockMetricsClient        *mockMetrics.MockMetrics
-		mockDrainStrategyBuilder *mockDrain.MockNodeDrainStrategyBuilder
-		mockDrainStrategy        *mockDrain.MockNodeDrainStrategy
-		testNodeName             types.NamespacedName
-		upgradeConfigName        types.NamespacedName
-		upgradeConfigList        upgradev1alpha1.UpgradeConfigList
-		config                   nodeKeeperConfig
+		reconciler                      *ReconcileNodeKeeper
+		mockCtrl                        *gomock.Controller
+		mockKubeClient                  *mocks.MockClient
+		mockConfigManagerBuilder        *configMocks.MockConfigManagerBuilder
+		mockConfigManager               *configMocks.MockConfigManager
+		mockMachineryClient             *mockMachinery.MockMachinery
+		mockMetricsBuilder              *mockMetrics.MockMetricsBuilder
+		mockMetricsClient               *mockMetrics.MockMetrics
+		mockDrainStrategyBuilder        *mockDrain.MockNodeDrainStrategyBuilder
+		mockDrainStrategy               *mockDrain.MockNodeDrainStrategy
+		mockUpgradeConfigManager        *mockUCMgr.MockUpgradeConfigManager
+		mockUpgradeConfigManagerBuilder *mockUCMgr.MockUpgradeConfigManagerBuilder
+		testNodeName                    types.NamespacedName
+		upgradeConfigName               types.NamespacedName
+		config                          nodeKeeperConfig
 	)
 
 	BeforeEach(func() {
@@ -52,6 +54,8 @@ var _ = Describe("NodeKeeperController", func() {
 		mockMetricsClient = mockMetrics.NewMockMetrics(mockCtrl)
 		mockDrainStrategyBuilder = mockDrain.NewMockNodeDrainStrategyBuilder(mockCtrl)
 		mockDrainStrategy = mockDrain.NewMockNodeDrainStrategy(mockCtrl)
+		mockUpgradeConfigManagerBuilder = mockUCMgr.NewMockUpgradeConfigManagerBuilder(mockCtrl)
+		mockUpgradeConfigManager = mockUCMgr.NewMockUpgradeConfigManager(mockCtrl)
 		testNodeName = types.NamespacedName{
 			Name: "test-node-1",
 		}
@@ -68,6 +72,7 @@ var _ = Describe("NodeKeeperController", func() {
 			mockMachineryClient,
 			mockMetricsBuilder,
 			mockDrainStrategyBuilder,
+			mockUpgradeConfigManagerBuilder,
 			runtime.NewScheme(),
 		}
 	})
@@ -84,11 +89,9 @@ var _ = Describe("NodeKeeperController", func() {
 		Context("When to check nodes", func() {
 			It("should not check node if not in upgrade phase", func() {
 				uc := *testStructs.NewUpgradeConfigBuilder().WithNamespacedName(upgradeConfigName).WithPhase(upgradev1alpha1.UpgradePhasePending).GetUpgradeConfig()
-				upgradeConfigList = upgradev1alpha1.UpgradeConfigList{
-					Items: []upgradev1alpha1.UpgradeConfig{uc},
-				}
 				gomock.InOrder(
-					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, upgradeConfigList).Return(nil),
+					mockUpgradeConfigManagerBuilder.EXPECT().NewManager(gomock.Any()).Return(mockUpgradeConfigManager, nil),
+					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
 					mockMachineryClient.EXPECT().IsUpgrading(gomock.Any(), "worker").Return(&machinery.UpgradingResult{IsUpgrading: true}, nil),
 					mockKubeClient.EXPECT().Get(gomock.Any(), testNodeName, gomock.Any()).Times(0),
 				)
@@ -97,11 +100,9 @@ var _ = Describe("NodeKeeperController", func() {
 			})
 			It("should not check node if machines are not upgrading", func() {
 				uc := *testStructs.NewUpgradeConfigBuilder().WithNamespacedName(upgradeConfigName).WithPhase(upgradev1alpha1.UpgradePhaseUpgrading).GetUpgradeConfig()
-				upgradeConfigList = upgradev1alpha1.UpgradeConfigList{
-					Items: []upgradev1alpha1.UpgradeConfig{uc},
-				}
 				gomock.InOrder(
-					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, upgradeConfigList).Return(nil),
+					mockUpgradeConfigManagerBuilder.EXPECT().NewManager(gomock.Any()).Return(mockUpgradeConfigManager, nil),
+					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
 					mockMachineryClient.EXPECT().IsUpgrading(gomock.Any(), "worker").Return(&machinery.UpgradingResult{IsUpgrading: false}, nil),
 					mockKubeClient.EXPECT().Get(gomock.Any(), testNodeName, gomock.Any()).Times(0),
 				)
@@ -111,11 +112,9 @@ var _ = Describe("NodeKeeperController", func() {
 		})
 
 		Context("Alerting for node drain problems", func() {
+			var uc upgradev1alpha1.UpgradeConfig
 			BeforeEach(func() {
-				uc := *testStructs.NewUpgradeConfigBuilder().WithNamespacedName(upgradeConfigName).WithPhase(upgradev1alpha1.UpgradePhaseUpgrading).GetUpgradeConfig()
-				upgradeConfigList = upgradev1alpha1.UpgradeConfigList{
-					Items: []upgradev1alpha1.UpgradeConfig{uc},
-				}
+				uc = *testStructs.NewUpgradeConfigBuilder().WithNamespacedName(upgradeConfigName).WithPhase(upgradev1alpha1.UpgradePhaseUpgrading).GetUpgradeConfig()
 				config = nodeKeeperConfig{
 					NodeDrain: drain.NodeDrain{
 						Timeout:               5,
@@ -125,7 +124,8 @@ var _ = Describe("NodeKeeperController", func() {
 			})
 			It("should alert when a node drain takes too long", func() {
 				gomock.InOrder(
-					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, upgradeConfigList).Return(nil),
+					mockUpgradeConfigManagerBuilder.EXPECT().NewManager(gomock.Any()).Return(mockUpgradeConfigManager, nil),
+					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
 					mockMachineryClient.EXPECT().IsUpgrading(gomock.Any(), "worker").Return(&machinery.UpgradingResult{IsUpgrading: true}, nil),
 					mockKubeClient.EXPECT().Get(gomock.Any(), testNodeName, gomock.Any()).Times(1),
 					mockMachineryClient.EXPECT().IsNodeCordoned(gomock.Any()).Return(&machinery.IsCordonedResult{IsCordoned: true, AddedAt: &metav1.Time{Time: time.Now().Add(-10 * time.Minute)}}),
@@ -145,7 +145,8 @@ var _ = Describe("NodeKeeperController", func() {
 			})
 			It("should reset any alerts once node is not cordoned", func() {
 				gomock.InOrder(
-					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, upgradeConfigList).Return(nil),
+					mockUpgradeConfigManagerBuilder.EXPECT().NewManager(gomock.Any()).Return(mockUpgradeConfigManager, nil),
+					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
 					mockMachineryClient.EXPECT().IsUpgrading(gomock.Any(), "worker").Return(&machinery.UpgradingResult{IsUpgrading: true}, nil),
 					mockKubeClient.EXPECT().Get(gomock.Any(), testNodeName, gomock.Any()).Times(1),
 					mockMachineryClient.EXPECT().IsNodeCordoned(gomock.Any()).Return(&machinery.IsCordonedResult{IsCordoned: false}),

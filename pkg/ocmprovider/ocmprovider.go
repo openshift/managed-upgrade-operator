@@ -42,7 +42,7 @@ var (
 
 func New(client client.Client, ocmBaseUrl *url.URL) (*ocmProvider, error) {
 
-	log.Info("Initializing OCM Policy Provider")
+	log.Info("Initializing OCM Spec Provider")
 
 	// Fetch the cluster AccessToken
 	accessToken, err := util.GetAccessToken(client)
