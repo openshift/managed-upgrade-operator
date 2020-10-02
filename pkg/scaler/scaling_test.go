@@ -14,6 +14,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
+	"github.com/openshift/managed-upgrade-operator/pkg/drain"
+	mockDrain "github.com/openshift/managed-upgrade-operator/pkg/drain/mocks"
 	"github.com/openshift/managed-upgrade-operator/pkg/machinery"
 	"github.com/openshift/managed-upgrade-operator/util/mocks"
 
@@ -491,6 +493,85 @@ var _ = Describe("Node scaling tests", func() {
 				}).SetArg(1, *nodes),
 			)
 			result, err := scaler.EnsureScaleDownNodes(mockKubeClient, nil, logger)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(BeTrue())
+		})
+
+		It("should apply drain strategies if NodeDrainStrategy exists", func() {
+			mockDrainStrategy := mockDrain.NewMockNodeDrainStrategy(mockCtrl)
+			var replicas int32 = 1
+			var node1Name = "test-node-1"
+			originalMachineSets := &machineapi.MachineSetList{
+				Items: []machineapi.MachineSet{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-machineset",
+							Namespace: MACHINE_API_NAMESPACE,
+						},
+						Spec: machineapi.MachineSetSpec{
+							Replicas: &replicas,
+						},
+					},
+				},
+			}
+			upgradeMachines := &machineapi.MachineList{
+				Items: []machineapi.Machine{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-machine-1",
+							Namespace: MACHINE_API_NAMESPACE,
+						},
+						Status: machineapi.MachineStatus{
+							NodeRef: &corev1.ObjectReference{
+								Name: node1Name,
+							},
+						},
+					},
+				},
+			}
+			nodes := &corev1.NodeList{
+				Items: []corev1.Node{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: node1Name,
+						},
+					},
+					{},
+				},
+			}
+			masterNodes := &corev1.NodeList{
+				Items: nodes.Items[0:1],
+			}
+			gomock.InOrder(
+				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
+					client.InNamespace(MACHINE_API_NAMESPACE),
+					client.MatchingLabels{LABEL_UPGRADE: "true"},
+				}).SetArg(1, *upgradeMachinesets),
+				// Verify that every specific machine returned to scale down actually does get deleted
+				mockKubeClient.EXPECT().Delete(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(ctx context.Context, set *machineapi.MachineSet) error {
+						found := false
+						for _, m := range upgradeMachinesets.Items {
+							if set.Name == m.Name {
+								found = true
+							}
+						}
+						Expect(found).To(BeTrue())
+						return nil
+					}).Times(2),
+				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, *nodes),
+				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, *upgradeMachines),
+				mockDrainStrategy.EXPECT().Execute(gomock.Any()).Return([]*drain.DrainStrategyResult{}, nil),
+				mockDrainStrategy.EXPECT().HasFailed(gomock.Any()).Return(false, nil),
+				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
+					client.InNamespace(MACHINE_API_NAMESPACE),
+					NotMatchingLabels{LABEL_UPGRADE: "true"},
+				}).SetArg(1, *originalMachineSets),
+				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
+					NotMatchingLabels{machinery.MasterLabel: ""},
+				}).SetArg(1, *masterNodes),
+			)
+			result, err := scaler.EnsureScaleDownNodes(mockKubeClient, mockDrainStrategy, logger)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(BeTrue())
 		})
