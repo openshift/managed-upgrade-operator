@@ -165,7 +165,8 @@ func (s *upgradeConfigManager) Refresh() (bool, error) {
 		return false, err
 	}
 	if upgrading {
-		return false, ErrClusterIsUpgrading
+		log.Info("skipping spec refresh as the cluster is currently upgrading")
+		return false, nil
 	}
 
 	// Get the latest config specs from the provider

@@ -42,8 +42,6 @@ var (
 
 func New(client client.Client, ocmBaseUrl *url.URL) (*ocmProvider, error) {
 
-	log.Info("Initializing OCM Spec Provider")
-
 	// Fetch the cluster AccessToken
 	accessToken, err := util.GetAccessToken(client)
 	if err != nil {
@@ -137,6 +135,8 @@ func (ort *ocmRoundTripper) RoundTrip(req *http.Request) (*http.Response, error)
 // Returns an indication of if the upgrade config had changed during the refresh,
 // and indication of error if one occurs.
 func (s *ocmProvider) Get() ([]upgradev1alpha1.UpgradeConfigSpec, error) {
+
+	log.Info("Commencing sync with OCM Spec provider")
 
 	cluster, err := getClusterFromOCMApi(s.client, s.httpClient, s.ocmBaseUrl)
 	if err != nil {

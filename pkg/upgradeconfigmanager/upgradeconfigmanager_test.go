@@ -231,7 +231,7 @@ var _ = Describe("UpgradeConfigManager", func() {
 				mockCVClientBuilder.EXPECT().New(gomock.Any()).Return(mockCVClient),
 			)
 			changed, err := manager.Refresh()
-			Expect(err).To(Equal(ErrClusterIsUpgrading))
+			Expect(err).To(BeNil())
 			Expect(changed).To(BeFalse())
 		})
 
