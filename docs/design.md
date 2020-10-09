@@ -107,6 +107,13 @@ A fully-populated example of an `UpgradeConfig` status is included below:
         type: PreHealthCheck
 ```
 
+## Config Managers
+
+The `managed-upgrade-operator` provides a configurable mechanism for retrieving and storing an `UpgradeConfig` 
+Custom Resource that can be reconciled against by the `UpgradeConfig` controller.
+
+For more information, see the dedicated section on this topic: [UpgradeConfig Managers](configmanager.md)
+
 ## Upgrade Process
 
 ### Cluster Upgrader
@@ -155,3 +162,4 @@ The following checks are made against the desired version in the `UpgradeConfig`
  
 * The version to upgrade to is greater than the currently-installed version (rollbacks are not supported)
 * The [Cluster Version Operator](https://github.com/openshift/cluster-version-operator) reports it as an available version to upgrade to. 
+
