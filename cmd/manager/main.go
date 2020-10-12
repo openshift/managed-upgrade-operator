@@ -10,11 +10,12 @@ import (
 	"strings"
 	"time"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
+
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -26,6 +27,10 @@ import (
 	routev1 "github.com/openshift/api/route/v1"
 	machineapi "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
 	machineconfigapi "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
+	"github.com/openshift/managed-upgrade-operator/pkg/apis"
+	"github.com/openshift/managed-upgrade-operator/pkg/controller"
+	"github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager"
+	"github.com/openshift/managed-upgrade-operator/version"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	kubemetrics "github.com/operator-framework/operator-sdk/pkg/kube-metrics"
 	"github.com/operator-framework/operator-sdk/pkg/leader"
@@ -33,10 +38,6 @@ import (
 	"github.com/operator-framework/operator-sdk/pkg/metrics"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
 	"github.com/spf13/pflag"
-	"github.com/openshift/managed-upgrade-operator/pkg/apis"
-	"github.com/openshift/managed-upgrade-operator/pkg/controller"
-	"github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager"
-	"github.com/openshift/managed-upgrade-operator/version"
 )
 
 // Change below variables to serve metrics on different host or port.
@@ -203,6 +204,7 @@ func addMetrics(ctx context.Context, cfg *rest.Config) error {
 
 	if err := serveCRMetrics(cfg, operatorNs); err != nil {
 		log.Info("Could not generate and serve custom resource metrics", "error", err.Error())
+		return err
 	}
 
 	// Add to the below struct any other metrics ports you want to expose.
@@ -215,6 +217,7 @@ func addMetrics(ctx context.Context, cfg *rest.Config) error {
 	service, err := metrics.CreateMetricsService(ctx, cfg, servicePorts)
 	if err != nil {
 		log.Info("Could not create metrics Service", "error", err.Error())
+		return err
 	}
 
 	// CreateServiceMonitors will automatically create the prometheus-operator ServiceMonitor resources
@@ -229,9 +232,11 @@ func addMetrics(ctx context.Context, cfg *rest.Config) error {
 		// ErrServiceMonitorNotPresent, which can be used to safely skip ServiceMonitor creation.
 		if err == metrics.ErrServiceMonitorNotPresent {
 			log.Info("Install prometheus-operator in your cluster to create ServiceMonitor objects", "error", err.Error())
+			return err
 		}
+
 	}
-	return err
+	return nil
 }
 
 // serveCRMetrics gets the Operator/CustomResource GVKs and generates metrics based on those types.
