@@ -27,13 +27,12 @@ import (
 	machineapi "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
 	machineconfigapi "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
-	"github.com/operator-framework/operator-sdk/pkg/kube-metrics"
+	kubemetrics "github.com/operator-framework/operator-sdk/pkg/kube-metrics"
 	"github.com/operator-framework/operator-sdk/pkg/leader"
 	"github.com/operator-framework/operator-sdk/pkg/log/zap"
 	"github.com/operator-framework/operator-sdk/pkg/metrics"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
 	"github.com/spf13/pflag"
-
 	"github.com/openshift/managed-upgrade-operator/pkg/apis"
 	"github.com/openshift/managed-upgrade-operator/pkg/controller"
 	"github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager"
@@ -159,7 +158,10 @@ func main() {
 	}
 
 	// Add the Metrics Service
-	addMetrics(ctx, cfg)
+	if err := addMetrics(ctx, cfg); err != nil {
+		log.Error(err, "Metrics service is not added.")
+		os.Exit(1)
+	}
 
 	// Define stopCh which we'll use to notify the upgradeConfigManager (and any other routine)
 	// to stop work. This channel can also be used to signal routines to complete any cleanup
@@ -189,13 +191,13 @@ func main() {
 
 // addMetrics will create the Services and Service Monitors to allow the operator export the metrics by using
 // the Prometheus operator
-func addMetrics(ctx context.Context, cfg *rest.Config) {
+func addMetrics(ctx context.Context, cfg *rest.Config) error {
 	// Get the namespace the operator is currently deployed in.
 	operatorNs, err := k8sutil.GetOperatorNamespace()
 	if err != nil {
 		if errors.Is(err, k8sutil.ErrRunLocal) {
 			log.Info("Skipping CR metrics server creation; not running in a cluster.")
-			return
+			return nil
 		}
 	}
 
@@ -229,6 +231,7 @@ func addMetrics(ctx context.Context, cfg *rest.Config) {
 			log.Info("Install prometheus-operator in your cluster to create ServiceMonitor objects", "error", err.Error())
 		}
 	}
+	return err
 }
 
 // serveCRMetrics gets the Operator/CustomResource GVKs and generates metrics based on those types.
