@@ -5,35 +5,36 @@
 package mocks
 
 import (
-	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 	time "time"
+
+	gomock "github.com/golang/mock/gomock"
 )
 
-// MockMaintenance is a mock of Maintenance interface
+// MockMaintenance is a mock of Maintenance interface.
 type MockMaintenance struct {
 	ctrl     *gomock.Controller
 	recorder *MockMaintenanceMockRecorder
 }
 
-// MockMaintenanceMockRecorder is the mock recorder for MockMaintenance
+// MockMaintenanceMockRecorder is the mock recorder for MockMaintenance.
 type MockMaintenanceMockRecorder struct {
 	mock *MockMaintenance
 }
 
-// NewMockMaintenance creates a new mock instance
+// NewMockMaintenance creates a new mock instance.
 func NewMockMaintenance(ctrl *gomock.Controller) *MockMaintenance {
 	mock := &MockMaintenance{ctrl: ctrl}
 	mock.recorder = &MockMaintenanceMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockMaintenance) EXPECT() *MockMaintenanceMockRecorder {
 	return m.recorder
 }
 
-// EndControlPlane mocks base method
+// EndControlPlane mocks base method.
 func (m *MockMaintenance) EndControlPlane() error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EndControlPlane")
@@ -41,13 +42,13 @@ func (m *MockMaintenance) EndControlPlane() error {
 	return ret0
 }
 
-// EndControlPlane indicates an expected call of EndControlPlane
+// EndControlPlane indicates an expected call of EndControlPlane.
 func (mr *MockMaintenanceMockRecorder) EndControlPlane() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EndControlPlane", reflect.TypeOf((*MockMaintenance)(nil).EndControlPlane))
 }
 
-// EndSilences mocks base method
+// EndSilences mocks base method.
 func (m *MockMaintenance) EndSilences(arg0 string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EndSilences", arg0)
@@ -55,13 +56,13 @@ func (m *MockMaintenance) EndSilences(arg0 string) error {
 	return ret0
 }
 
-// EndSilences indicates an expected call of EndSilences
+// EndSilences indicates an expected call of EndSilences.
 func (mr *MockMaintenanceMockRecorder) EndSilences(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EndSilences", reflect.TypeOf((*MockMaintenance)(nil).EndSilences), arg0)
 }
 
-// EndWorker mocks base method
+// EndWorker mocks base method.
 func (m *MockMaintenance) EndWorker() error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EndWorker")
@@ -69,13 +70,13 @@ func (m *MockMaintenance) EndWorker() error {
 	return ret0
 }
 
-// EndWorker indicates an expected call of EndWorker
+// EndWorker indicates an expected call of EndWorker.
 func (mr *MockMaintenanceMockRecorder) EndWorker() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EndWorker", reflect.TypeOf((*MockMaintenance)(nil).EndWorker))
 }
 
-// IsActive mocks base method
+// IsActive mocks base method.
 func (m *MockMaintenance) IsActive() (bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IsActive")
@@ -84,13 +85,13 @@ func (m *MockMaintenance) IsActive() (bool, error) {
 	return ret0, ret1
 }
 
-// IsActive indicates an expected call of IsActive
+// IsActive indicates an expected call of IsActive.
 func (mr *MockMaintenanceMockRecorder) IsActive() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsActive", reflect.TypeOf((*MockMaintenance)(nil).IsActive))
 }
 
-// SetWorker mocks base method
+// SetWorker mocks base method.
 func (m *MockMaintenance) SetWorker(arg0 time.Time, arg1 string, arg2 int32) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SetWorker", arg0, arg1, arg2)
@@ -98,13 +99,13 @@ func (m *MockMaintenance) SetWorker(arg0 time.Time, arg1 string, arg2 int32) err
 	return ret0
 }
 
-// SetWorker indicates an expected call of SetWorker
+// SetWorker indicates an expected call of SetWorker.
 func (mr *MockMaintenanceMockRecorder) SetWorker(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetWorker", reflect.TypeOf((*MockMaintenance)(nil).SetWorker), arg0, arg1, arg2)
 }
 
-// StartControlPlane mocks base method
+// StartControlPlane mocks base method.
 func (m *MockMaintenance) StartControlPlane(arg0 time.Time, arg1 string, arg2 []string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StartControlPlane", arg0, arg1, arg2)
@@ -112,7 +113,7 @@ func (m *MockMaintenance) StartControlPlane(arg0 time.Time, arg1 string, arg2 []
 	return ret0
 }
 
-// StartControlPlane indicates an expected call of StartControlPlane
+// StartControlPlane indicates an expected call of StartControlPlane.
 func (mr *MockMaintenanceMockRecorder) StartControlPlane(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartControlPlane", reflect.TypeOf((*MockMaintenance)(nil).StartControlPlane), arg0, arg1, arg2)

@@ -5,35 +5,36 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	validation "github.com/openshift/managed-upgrade-operator/pkg/validation"
-	reflect "reflect"
 )
 
-// MockValidationBuilder is a mock of ValidationBuilder interface
+// MockValidationBuilder is a mock of ValidationBuilder interface.
 type MockValidationBuilder struct {
 	ctrl     *gomock.Controller
 	recorder *MockValidationBuilderMockRecorder
 }
 
-// MockValidationBuilderMockRecorder is the mock recorder for MockValidationBuilder
+// MockValidationBuilderMockRecorder is the mock recorder for MockValidationBuilder.
 type MockValidationBuilderMockRecorder struct {
 	mock *MockValidationBuilder
 }
 
-// NewMockValidationBuilder creates a new mock instance
+// NewMockValidationBuilder creates a new mock instance.
 func NewMockValidationBuilder(ctrl *gomock.Controller) *MockValidationBuilder {
 	mock := &MockValidationBuilder{ctrl: ctrl}
 	mock.recorder = &MockValidationBuilderMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockValidationBuilder) EXPECT() *MockValidationBuilderMockRecorder {
 	return m.recorder
 }
 
-// NewClient mocks base method
+// NewClient mocks base method.
 func (m *MockValidationBuilder) NewClient() (validation.Validator, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "NewClient")
@@ -42,7 +43,7 @@ func (m *MockValidationBuilder) NewClient() (validation.Validator, error) {
 	return ret0, ret1
 }
 
-// NewClient indicates an expected call of NewClient
+// NewClient indicates an expected call of NewClient.
 func (mr *MockValidationBuilderMockRecorder) NewClient() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewClient", reflect.TypeOf((*MockValidationBuilder)(nil).NewClient))

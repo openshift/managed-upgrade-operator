@@ -5,35 +5,36 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	configmanager "github.com/openshift/managed-upgrade-operator/pkg/configmanager"
-	reflect "reflect"
 )
 
-// MockConfigManager is a mock of ConfigManager interface
+// MockConfigManager is a mock of ConfigManager interface.
 type MockConfigManager struct {
 	ctrl     *gomock.Controller
 	recorder *MockConfigManagerMockRecorder
 }
 
-// MockConfigManagerMockRecorder is the mock recorder for MockConfigManager
+// MockConfigManagerMockRecorder is the mock recorder for MockConfigManager.
 type MockConfigManagerMockRecorder struct {
 	mock *MockConfigManager
 }
 
-// NewMockConfigManager creates a new mock instance
+// NewMockConfigManager creates a new mock instance.
 func NewMockConfigManager(ctrl *gomock.Controller) *MockConfigManager {
 	mock := &MockConfigManager{ctrl: ctrl}
 	mock.recorder = &MockConfigManagerMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockConfigManager) EXPECT() *MockConfigManagerMockRecorder {
 	return m.recorder
 }
 
-// Into mocks base method
+// Into mocks base method.
 func (m *MockConfigManager) Into(arg0 configmanager.ConfigValidator) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Into", arg0)
@@ -41,7 +42,7 @@ func (m *MockConfigManager) Into(arg0 configmanager.ConfigValidator) error {
 	return ret0
 }
 
-// Into indicates an expected call of Into
+// Into indicates an expected call of Into.
 func (mr *MockConfigManagerMockRecorder) Into(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Into", reflect.TypeOf((*MockConfigManager)(nil).Into), arg0)

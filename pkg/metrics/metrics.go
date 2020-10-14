@@ -20,6 +20,7 @@ import (
 const (
 	metricsTag   = "upgradeoperator"
 	nameLabel    = "upgradeconfig_name"
+	eventLabel   = "event"
 	versionLabel = "version"
 	nodeLabel    = "node_name"
 )
@@ -45,10 +46,12 @@ type Metrics interface {
 	ResetMetricUpgradeWorkerTimeout(string, string)
 	UpdateMetricNodeDrainFailed(string)
 	ResetMetricNodeDrainFailed(string)
+	UpdateMetricNotificationEventSent(string, string, string)
 	IsMetricUpgradeStartTimeSet(upgradeConfigName string, version string) (bool, error)
 	IsMetricControlPlaneEndTimeSet(upgradeConfigName string, version string) (bool, error)
 	IsMetricNodeUpgradeEndTimeSet(upgradeConfigName string, version string) (bool, error)
 	IsAlertFiring(alert string, checkedNS, ignoredNS []string) (bool, error)
+	IsMetricNotificationEventSentSet(upgradeConfigName string, event string, version string) (bool, error)
 	Query(query string) (*AlertResponse, error)
 	ResetMetrics()
 	ResetAllMetricNodeDrainFailed()
@@ -159,6 +162,11 @@ var (
 		Name:      "node_drain_timeout",
 		Help:      "Node cannot be drained successfully in time.",
 	}, []string{nodeLabel})
+	metricUpgradeNotification = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Subsystem: metricsTag,
+		Name:      "upgrade_notification",
+		Help:      "Notification event raised",
+	}, []string{nameLabel, eventLabel, versionLabel})
 
 	metricsList = []*prometheus.GaugeVec{
 		metricValidationFailed,
@@ -172,6 +180,7 @@ var (
 		metricUpgradeControlPlaneTimeout,
 		metricUpgradeWorkerTimeout,
 		metricNodeDrainFailed,
+		metricUpgradeNotification,
 	}
 )
 
@@ -339,6 +348,27 @@ func (c *Counter) UpdateMetricUpgradeWindowBreached(upgradeConfigName string) {
 	metricUpgradeWindowBreached.With(prometheus.Labels{
 		nameLabel: upgradeConfigName}).Set(
 		float64(1))
+}
+
+func (c *Counter) UpdateMetricNotificationEventSent(upgradeConfigName string, event string, version string) {
+	metricUpgradeNotification.With(prometheus.Labels{
+		versionLabel: version,
+		eventLabel:   event,
+		nameLabel:    upgradeConfigName}).Set(
+		float64(1))
+}
+
+func (c *Counter) IsMetricNotificationEventSentSet(upgradeConfigName string, event string, version string) (bool, error) {
+	cpMetrics, err := c.Query(fmt.Sprintf("%s_upgrade_notification{%s=\"%s\",%s=\"%s\",%s=\"%s\"}", metricsTag, nameLabel, upgradeConfigName, eventLabel, event, versionLabel, version))
+	if err != nil {
+		return false, err
+	}
+
+	if len(cpMetrics.Data.Result) > 0 {
+		return true, nil
+	}
+
+	return false, nil
 }
 
 func (c *Counter) IsAlertFiring(alert string, checkedNS, ignoredNS []string) (bool, error) {

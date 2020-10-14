@@ -36,6 +36,8 @@ import (
 
 	"github.com/openshift/managed-upgrade-operator/pkg/apis"
 	"github.com/openshift/managed-upgrade-operator/pkg/controller"
+	"github.com/openshift/managed-upgrade-operator/pkg/eventmanager"
+	"github.com/openshift/managed-upgrade-operator/pkg/notifier"
 	"github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager"
 	"github.com/openshift/managed-upgrade-operator/version"
 )
@@ -179,8 +181,30 @@ func main() {
 	log.Info("Starting UpgradeConfig manager")
 	go ucMgr.StartSync(stopCh)
 
+	// Create the event manager
+	eventManagerClient, err := client.New(cfg, client.Options{})
+	if err != nil {
+		log.Error(err, "unable to create eventmanager client")
+		os.Exit(1)
+	}
+	runEventManager := true
+	eventMgr, err := eventmanager.NewBuilder().NewManager(eventManagerClient)
+	if err != nil {
+		if err == notifier.ErrNoNotifierConfigured {
+			// No notifier client has been configured, so don't run an event manager
+			log.Info("No notifier client configured, event manager will not run.")
+			runEventManager = false
+		} else {
+			log.Error(err, "unable to create eventmanager")
+			os.Exit(1)
+		}
+	}
+	if runEventManager {
+		log.Info("Starting Event manager")
+		go eventMgr.Start(stopCh)
+	}
+
 	// Start the Cmd
-	log.Info("Starting the Cmd.")
 	if err := mgr.Start(stopCh); err != nil {
 		log.Error(err, "Manager exited non-zero")
 		os.Exit(1)
