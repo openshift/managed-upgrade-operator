@@ -5,35 +5,36 @@
 package drain
 
 import (
-	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 	time "time"
+
+	gomock "github.com/golang/mock/gomock"
 )
 
-// MockTimedDrainStrategy is a mock of TimedDrainStrategy interface
+// MockTimedDrainStrategy is a mock of TimedDrainStrategy interface.
 type MockTimedDrainStrategy struct {
 	ctrl     *gomock.Controller
 	recorder *MockTimedDrainStrategyMockRecorder
 }
 
-// MockTimedDrainStrategyMockRecorder is the mock recorder for MockTimedDrainStrategy
+// MockTimedDrainStrategyMockRecorder is the mock recorder for MockTimedDrainStrategy.
 type MockTimedDrainStrategyMockRecorder struct {
 	mock *MockTimedDrainStrategy
 }
 
-// NewMockTimedDrainStrategy creates a new mock instance
+// NewMockTimedDrainStrategy creates a new mock instance.
 func NewMockTimedDrainStrategy(ctrl *gomock.Controller) *MockTimedDrainStrategy {
 	mock := &MockTimedDrainStrategy{ctrl: ctrl}
 	mock.recorder = &MockTimedDrainStrategyMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockTimedDrainStrategy) EXPECT() *MockTimedDrainStrategyMockRecorder {
 	return m.recorder
 }
 
-// GetDescription mocks base method
+// GetDescription mocks base method.
 func (m *MockTimedDrainStrategy) GetDescription() string {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetDescription")
@@ -41,13 +42,13 @@ func (m *MockTimedDrainStrategy) GetDescription() string {
 	return ret0
 }
 
-// GetDescription indicates an expected call of GetDescription
+// GetDescription indicates an expected call of GetDescription.
 func (mr *MockTimedDrainStrategyMockRecorder) GetDescription() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDescription", reflect.TypeOf((*MockTimedDrainStrategy)(nil).GetDescription))
 }
 
-// GetName mocks base method
+// GetName mocks base method.
 func (m *MockTimedDrainStrategy) GetName() string {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetName")
@@ -55,13 +56,13 @@ func (m *MockTimedDrainStrategy) GetName() string {
 	return ret0
 }
 
-// GetName indicates an expected call of GetName
+// GetName indicates an expected call of GetName.
 func (mr *MockTimedDrainStrategyMockRecorder) GetName() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetName", reflect.TypeOf((*MockTimedDrainStrategy)(nil).GetName))
 }
 
-// GetStrategy mocks base method
+// GetStrategy mocks base method.
 func (m *MockTimedDrainStrategy) GetStrategy() DrainStrategy {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetStrategy")
@@ -69,13 +70,13 @@ func (m *MockTimedDrainStrategy) GetStrategy() DrainStrategy {
 	return ret0
 }
 
-// GetStrategy indicates an expected call of GetStrategy
+// GetStrategy indicates an expected call of GetStrategy.
 func (mr *MockTimedDrainStrategyMockRecorder) GetStrategy() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStrategy", reflect.TypeOf((*MockTimedDrainStrategy)(nil).GetStrategy))
 }
 
-// GetWaitDuration mocks base method
+// GetWaitDuration mocks base method.
 func (m *MockTimedDrainStrategy) GetWaitDuration() time.Duration {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetWaitDuration")
@@ -83,7 +84,7 @@ func (m *MockTimedDrainStrategy) GetWaitDuration() time.Duration {
 	return ret0
 }
 
-// GetWaitDuration indicates an expected call of GetWaitDuration
+// GetWaitDuration indicates an expected call of GetWaitDuration.
 func (mr *MockTimedDrainStrategyMockRecorder) GetWaitDuration() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetWaitDuration", reflect.TypeOf((*MockTimedDrainStrategy)(nil).GetWaitDuration))
