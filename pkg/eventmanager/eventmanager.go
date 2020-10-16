@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	REFRESH_INTERVAL = 3 * time.Minute
+	REFRESH_INTERVAL = 5 * time.Minute
 )
 
 var log = logf.Log.WithName("event-manager")

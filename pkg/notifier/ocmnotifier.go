@@ -78,6 +78,16 @@ func (s *ocmNotifier) NotifyState(value NotifyState, description string) error {
 		return fmt.Errorf("can't determine policy ID to notify for: %v", err)
 	}
 
+	currentState, err := s.getClusterUpgradePolicyState(*policyId)
+	if err != nil {
+		return fmt.Errorf("can't determine policy state: %v", err)
+	}
+
+	// Don't notify if the state is already at the same value
+	if currentState.Value == string(value) {
+		return nil
+	}
+
 	err = s.sendNotification(value, description, *policyId)
 	if err != nil {
 		return fmt.Errorf("can't send notification: %v", err)
@@ -188,6 +198,44 @@ func (s *ocmNotifier) getClusterUpgradePolicies() (*upgradePolicyList, error) {
 	}
 
 	return &upgradeResponse, nil
+}
+
+// Queries and returns the Upgrade Policy state from Cluster Services
+func (s *ocmNotifier) getClusterUpgradePolicyState(policyId string) (*upgradePolicyState, error) {
+
+	upUrl, err := url.Parse(s.ocmBaseUrl.String())
+	if err != nil {
+		return nil, fmt.Errorf("can't read OCM API url: %v", err)
+	}
+	upUrl.Path = path.Join(upUrl.Path, CLUSTERS_V1_PATH, s.clusterID, UPGRADEPOLICIES_V1_PATH, policyId, STATE_V1_PATH)
+
+	request := &http.Request{
+		Method: "GET",
+		URL:    upUrl,
+	}
+	response, err := s.httpClient.Do(request)
+	if err != nil {
+		return nil, fmt.Errorf("can't query upgrade policy state service: %v", err)
+	}
+	operationId := response.Header[OPERATION_ID_HEADER]
+
+	if response.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("received error code '%v' from OCM upgrade policy state service, operation id '%v'", response.StatusCode, operationId)
+	}
+
+	if response.Body != nil {
+		defer response.Body.Close()
+	}
+
+	var stateResponse upgradePolicyState
+	decoder := json.NewDecoder(response.Body)
+	decoder.DisallowUnknownFields()
+	err = decoder.Decode(&stateResponse)
+	if err != nil {
+		return nil, fmt.Errorf("unable to decode OCM upgrade policy response, operation id '%v'", operationId)
+	}
+
+	return &stateResponse, nil
 }
 
 // Read cluster info from OCM

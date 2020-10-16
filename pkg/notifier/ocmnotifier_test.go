@@ -27,6 +27,7 @@ const (
 	TEST_POLICY_ID                   = "aaaaaa-bbbbbb-cccccc-dddddd"
 	TEST_CLUSTER_ID_WITH_NO_POLICIES = "555555-666666-777777-888888"
 	TEST_CLUSTER_ID_FOR_BAD_REPLY    = "999999-aaaaaa-bbbbbb-cccccc"
+	TEST_CLUSTER_ID_FOR_SAME_STATE   = "000000-000000-000000-000000"
 
 	// Upgrade policy constants
 	TEST_OPERATOR_NAMESPACE        = "openshift-managed-upgrade-operator"
@@ -134,18 +135,38 @@ var _ = Describe("OCM Notifier", func() {
 		})
 
 		Context("When a matching policy can be found", func() {
-			var uc upgradev1alpha1.UpgradeConfig
-			BeforeEach(func() {
-				uc = *testStructs.NewUpgradeConfigBuilder().WithNamespacedName(upgradeConfigName).WithPhase(upgradev1alpha1.UpgradePhasePending).GetUpgradeConfig()
-				uc.Spec.Desired.Version = TEST_UPGRADEPOLICY_VERSION
-				uc.Spec.UpgradeAt = TEST_UPGRADEPOLICY_TIME
-				notifier.clusterID = TEST_CLUSTER_ID
+
+			Context("When the policy state matches the notifying state", func() {
+				var uc upgradev1alpha1.UpgradeConfig
+				BeforeEach(func() {
+					uc = *testStructs.NewUpgradeConfigBuilder().WithNamespacedName(upgradeConfigName).WithPhase(upgradev1alpha1.UpgradePhasePending).GetUpgradeConfig()
+					uc.Spec.Desired.Version = TEST_UPGRADEPOLICY_VERSION
+					uc.Spec.UpgradeAt = TEST_UPGRADEPOLICY_TIME
+					notifier.clusterID = TEST_CLUSTER_ID_FOR_SAME_STATE
+				})
+				It("does not send a notification", func() {
+					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil)
+					err := notifier.NotifyState(TEST_STATE_VALUE, TEST_STATE_DESCRIPTION)
+					Expect(err).To(BeNil())
+				})
+
 			})
-			It("sends a notification", func() {
-				mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil)
-				err := notifier.NotifyState(TEST_STATE_VALUE, TEST_STATE_DESCRIPTION)
-				Expect(err).To(BeNil())
+
+			Context("When the policy state does not match the notifying state", func() {
+				var uc upgradev1alpha1.UpgradeConfig
+				BeforeEach(func() {
+					uc = *testStructs.NewUpgradeConfigBuilder().WithNamespacedName(upgradeConfigName).WithPhase(upgradev1alpha1.UpgradePhasePending).GetUpgradeConfig()
+					uc.Spec.Desired.Version = TEST_UPGRADEPOLICY_VERSION
+					uc.Spec.UpgradeAt = TEST_UPGRADEPOLICY_TIME
+					notifier.clusterID = TEST_CLUSTER_ID
+				})
+				It("sends a notification", func() {
+					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil)
+					err := notifier.NotifyState(TEST_STATE_VALUE, TEST_STATE_DESCRIPTION)
+					Expect(err).To(BeNil())
+				})
 			})
+
 		})
 
 	})
@@ -163,6 +184,11 @@ func ocmServerMock() *httptest.Server {
 
 	statePath := path.Join(CLUSTERS_V1_PATH, TEST_CLUSTER_ID, UPGRADEPOLICIES_V1_PATH, TEST_POLICY_ID, STATE_V1_PATH)
 	handler.HandleFunc(statePath, stateMock)
+
+	upPolicyPathSameState := path.Join(CLUSTERS_V1_PATH, TEST_CLUSTER_ID_FOR_SAME_STATE, UPGRADEPOLICIES_V1_PATH)
+	handler.HandleFunc(upPolicyPathSameState, policyMockSameState)
+	statePathSameState := path.Join(CLUSTERS_V1_PATH, TEST_CLUSTER_ID_FOR_SAME_STATE, UPGRADEPOLICIES_V1_PATH, TEST_POLICY_ID, STATE_V1_PATH)
+	handler.HandleFunc(statePathSameState, stateMockSameValue)
 
 	srv := httptest.NewServer(handler)
 	return srv
@@ -248,12 +274,53 @@ func noPolicyMock(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, string(responseJson))
 }
 
-func stateMock(w http.ResponseWriter, r *http.Request) {
+func policyMockSameState(w http.ResponseWriter, r *http.Request) {
+	response := upgradePolicyList{
+		Kind:  "UpgradePolicyList",
+		Page:  1,
+		Size:  1,
+		Total: 1,
+		Items: []upgradePolicy{
+			{
+				Id:           TEST_POLICY_ID,
+				Kind:         "UpgradePolicy",
+				Href:         "test",
+				Schedule:     "test",
+				ScheduleType: "manual",
+				UpgradeType:  TEST_UPGRADEPOLICY_UPGRADETYPE,
+				Version:      TEST_UPGRADEPOLICY_VERSION,
+				NextRun:      TEST_UPGRADEPOLICY_TIME,
+				NodeDrainGracePeriod: nodeDrainGracePeriod{
+					Value: TEST_UPGRADEPOLICY_PDB_TIME,
+					Unit:  "minutes",
+				},
+				ClusterId: TEST_CLUSTER_ID_FOR_SAME_STATE,
+			},
+		},
+	}
+	responseJson, _ := json.Marshal(response)
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintln(w, string(responseJson))
+}
+
+func stateMockSameValue(w http.ResponseWriter, r *http.Request) {
 	response := upgradePolicyState{
 		Kind:        "UpgradePolicyState",
 		Href:        "test",
 		Value:       "test",
 		Description: "test",
+	}
+	responseJson, _ := json.Marshal(response)
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintln(w, string(responseJson))
+}
+
+func stateMock(w http.ResponseWriter, r *http.Request) {
+	response := upgradePolicyState{
+		Kind:        "UpgradePolicyState",
+		Href:        "test",
+		Value:       TEST_STATE_VALUE,
+		Description: TEST_STATE_DESCRIPTION,
 	}
 	responseJson, _ := json.Marshal(response)
 	w.Header().Set("Content-Type", "application/json")
