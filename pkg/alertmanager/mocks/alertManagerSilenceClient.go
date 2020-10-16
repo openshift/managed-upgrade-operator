@@ -5,38 +5,39 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	strfmt "github.com/go-openapi/strfmt"
 	gomock "github.com/golang/mock/gomock"
 	alertmanager "github.com/openshift/managed-upgrade-operator/pkg/alertmanager"
 	silence "github.com/prometheus/alertmanager/api/v2/client/silence"
 	models "github.com/prometheus/alertmanager/api/v2/models"
-	reflect "reflect"
 )
 
-// MockAlertManagerSilencer is a mock of AlertManagerSilencer interface
+// MockAlertManagerSilencer is a mock of AlertManagerSilencer interface.
 type MockAlertManagerSilencer struct {
 	ctrl     *gomock.Controller
 	recorder *MockAlertManagerSilencerMockRecorder
 }
 
-// MockAlertManagerSilencerMockRecorder is the mock recorder for MockAlertManagerSilencer
+// MockAlertManagerSilencerMockRecorder is the mock recorder for MockAlertManagerSilencer.
 type MockAlertManagerSilencerMockRecorder struct {
 	mock *MockAlertManagerSilencer
 }
 
-// NewMockAlertManagerSilencer creates a new mock instance
+// NewMockAlertManagerSilencer creates a new mock instance.
 func NewMockAlertManagerSilencer(ctrl *gomock.Controller) *MockAlertManagerSilencer {
 	mock := &MockAlertManagerSilencer{ctrl: ctrl}
 	mock.recorder = &MockAlertManagerSilencerMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockAlertManagerSilencer) EXPECT() *MockAlertManagerSilencerMockRecorder {
 	return m.recorder
 }
 
-// Create mocks base method
+// Create mocks base method.
 func (m *MockAlertManagerSilencer) Create(arg0 models.Matchers, arg1, arg2 strfmt.DateTime, arg3, arg4 string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Create", arg0, arg1, arg2, arg3, arg4)
@@ -44,13 +45,13 @@ func (m *MockAlertManagerSilencer) Create(arg0 models.Matchers, arg1, arg2 strfm
 	return ret0
 }
 
-// Create indicates an expected call of Create
+// Create indicates an expected call of Create.
 func (mr *MockAlertManagerSilencerMockRecorder) Create(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockAlertManagerSilencer)(nil).Create), arg0, arg1, arg2, arg3, arg4)
 }
 
-// Delete mocks base method
+// Delete mocks base method.
 func (m *MockAlertManagerSilencer) Delete(arg0 string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Delete", arg0)
@@ -58,13 +59,13 @@ func (m *MockAlertManagerSilencer) Delete(arg0 string) error {
 	return ret0
 }
 
-// Delete indicates an expected call of Delete
+// Delete indicates an expected call of Delete.
 func (mr *MockAlertManagerSilencerMockRecorder) Delete(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockAlertManagerSilencer)(nil).Delete), arg0)
 }
 
-// Filter mocks base method
+// Filter mocks base method.
 func (m *MockAlertManagerSilencer) Filter(arg0 ...alertmanager.SilencePredicate) (*[]models.GettableSilence, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{}
@@ -77,13 +78,13 @@ func (m *MockAlertManagerSilencer) Filter(arg0 ...alertmanager.SilencePredicate)
 	return ret0, ret1
 }
 
-// Filter indicates an expected call of Filter
+// Filter indicates an expected call of Filter.
 func (mr *MockAlertManagerSilencerMockRecorder) Filter(arg0 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Filter", reflect.TypeOf((*MockAlertManagerSilencer)(nil).Filter), arg0...)
 }
 
-// List mocks base method
+// List mocks base method.
 func (m *MockAlertManagerSilencer) List(arg0 []string) (*silence.GetSilencesOK, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "List", arg0)
@@ -92,13 +93,13 @@ func (m *MockAlertManagerSilencer) List(arg0 []string) (*silence.GetSilencesOK, 
 	return ret0, ret1
 }
 
-// List indicates an expected call of List
+// List indicates an expected call of List.
 func (mr *MockAlertManagerSilencerMockRecorder) List(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockAlertManagerSilencer)(nil).List), arg0)
 }
 
-// Update mocks base method
+// Update mocks base method.
 func (m *MockAlertManagerSilencer) Update(arg0 string, arg1 strfmt.DateTime) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Update", arg0, arg1)
@@ -106,7 +107,7 @@ func (m *MockAlertManagerSilencer) Update(arg0 string, arg1 strfmt.DateTime) err
 	return ret0
 }
 
-// Update indicates an expected call of Update
+// Update indicates an expected call of Update.
 func (mr *MockAlertManagerSilencerMockRecorder) Update(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockAlertManagerSilencer)(nil).Update), arg0, arg1)

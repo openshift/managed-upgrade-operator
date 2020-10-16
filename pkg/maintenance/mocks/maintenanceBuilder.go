@@ -5,36 +5,37 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	maintenance "github.com/openshift/managed-upgrade-operator/pkg/maintenance"
-	reflect "reflect"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// MockMaintenanceBuilder is a mock of MaintenanceBuilder interface
+// MockMaintenanceBuilder is a mock of MaintenanceBuilder interface.
 type MockMaintenanceBuilder struct {
 	ctrl     *gomock.Controller
 	recorder *MockMaintenanceBuilderMockRecorder
 }
 
-// MockMaintenanceBuilderMockRecorder is the mock recorder for MockMaintenanceBuilder
+// MockMaintenanceBuilderMockRecorder is the mock recorder for MockMaintenanceBuilder.
 type MockMaintenanceBuilderMockRecorder struct {
 	mock *MockMaintenanceBuilder
 }
 
-// NewMockMaintenanceBuilder creates a new mock instance
+// NewMockMaintenanceBuilder creates a new mock instance.
 func NewMockMaintenanceBuilder(ctrl *gomock.Controller) *MockMaintenanceBuilder {
 	mock := &MockMaintenanceBuilder{ctrl: ctrl}
 	mock.recorder = &MockMaintenanceBuilderMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockMaintenanceBuilder) EXPECT() *MockMaintenanceBuilderMockRecorder {
 	return m.recorder
 }
 
-// NewClient mocks base method
+// NewClient mocks base method.
 func (m *MockMaintenanceBuilder) NewClient(arg0 client.Client) (maintenance.Maintenance, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "NewClient", arg0)
@@ -43,7 +44,7 @@ func (m *MockMaintenanceBuilder) NewClient(arg0 client.Client) (maintenance.Main
 	return ret0, ret1
 }
 
-// NewClient indicates an expected call of NewClient
+// NewClient indicates an expected call of NewClient.
 func (mr *MockMaintenanceBuilderMockRecorder) NewClient(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewClient", reflect.TypeOf((*MockMaintenanceBuilder)(nil).NewClient), arg0)
