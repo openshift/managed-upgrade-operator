@@ -7,14 +7,14 @@ import (
 
 	"github.com/golang/mock/gomock"
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
-	"github.com/openshift/managed-upgrade-operator/pkg/notifier"
-	"github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager"
-	testStructs "github.com/openshift/managed-upgrade-operator/util/mocks/structs"
 	configMock "github.com/openshift/managed-upgrade-operator/pkg/configmanager/mocks"
 	metricsMock "github.com/openshift/managed-upgrade-operator/pkg/metrics/mocks"
+	"github.com/openshift/managed-upgrade-operator/pkg/notifier"
 	notifierMock "github.com/openshift/managed-upgrade-operator/pkg/notifier/mocks"
+	"github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager"
 	ucMgrMock "github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager/mocks"
 	"github.com/openshift/managed-upgrade-operator/util/mocks"
+	testStructs "github.com/openshift/managed-upgrade-operator/util/mocks/structs"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -24,10 +24,7 @@ const (
 	TEST_OPERATOR_NAMESPACE = "openshift-managed-upgrade-operator"
 	TEST_UPGRADECONFIG_CR   = "osd-upgrade-config"
 	TEST_UPGRADE_VERSION    = "4.4.4"
-	TEST_UPGRADE_CHANNEL    = "stable-4.4"
 	TEST_UPGRADE_TIME       = "2020-06-20T00:00:00Z"
-	TEST_UPGRADE_PDB_TIME   = 60
-	TEST_UPGRADE_TYPE       = "OSD"
 )
 
 var _ = Describe("OCM Notifier", func() {
@@ -92,7 +89,7 @@ var _ = Describe("OCM Notifier", func() {
 			It("does no action", func() {
 				gomock.InOrder(
 					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
-					mockMetricsClient.EXPECT().IsMetricUpgradeStartTimeSet(TEST_UPGRADECONFIG_CR, TEST_UPGRADE_VERSION).Return(true, nil),
+					mockMetricsClient.EXPECT().IsClusterVersionAtVersion(TEST_UPGRADE_VERSION).Return(true, nil),
 					mockMetricsClient.EXPECT().IsMetricNotificationEventSentSet(TEST_UPGRADECONFIG_CR, string(notifier.StateStarted), TEST_UPGRADE_VERSION).Return(true, nil),
 					mockMetricsClient.EXPECT().IsMetricNodeUpgradeEndTimeSet(TEST_UPGRADECONFIG_CR, TEST_UPGRADE_VERSION).Return(true, nil),
 					mockMetricsClient.EXPECT().IsMetricNotificationEventSentSet(TEST_UPGRADECONFIG_CR, string(notifier.StateCompleted), TEST_UPGRADE_VERSION).Return(true, nil),
@@ -105,7 +102,7 @@ var _ = Describe("OCM Notifier", func() {
 			It("sends a correct notification", func() {
 				gomock.InOrder(
 					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
-					mockMetricsClient.EXPECT().IsMetricUpgradeStartTimeSet(TEST_UPGRADECONFIG_CR, TEST_UPGRADE_VERSION).Return(true, nil),
+					mockMetricsClient.EXPECT().IsClusterVersionAtVersion(TEST_UPGRADE_VERSION).Return(true, nil),
 					mockMetricsClient.EXPECT().IsMetricNotificationEventSentSet(TEST_UPGRADECONFIG_CR, string(notifier.StateStarted), TEST_UPGRADE_VERSION).Return(false, nil),
 					mockNotifier.EXPECT().NotifyState(notifier.StateStarted, gomock.Any()),
 					mockMetricsClient.EXPECT().UpdateMetricNotificationEventSent(TEST_UPGRADECONFIG_CR, string(notifier.StateStarted), TEST_UPGRADE_VERSION),
@@ -134,7 +131,7 @@ var _ = Describe("OCM Notifier", func() {
 			It("does no action", func() {
 				gomock.InOrder(
 					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
-					mockMetricsClient.EXPECT().IsMetricUpgradeStartTimeSet(TEST_UPGRADECONFIG_CR, TEST_UPGRADE_VERSION).Return(true, nil),
+					mockMetricsClient.EXPECT().IsClusterVersionAtVersion(TEST_UPGRADE_VERSION).Return(true, nil),
 					mockMetricsClient.EXPECT().IsMetricNotificationEventSentSet(TEST_UPGRADECONFIG_CR, string(notifier.StateStarted), TEST_UPGRADE_VERSION).Return(true, nil),
 					mockMetricsClient.EXPECT().IsMetricNodeUpgradeEndTimeSet(TEST_UPGRADECONFIG_CR, TEST_UPGRADE_VERSION).Return(true, nil),
 					mockMetricsClient.EXPECT().IsMetricNotificationEventSentSet(TEST_UPGRADECONFIG_CR, string(notifier.StateCompleted), TEST_UPGRADE_VERSION).Return(true, nil),
@@ -147,7 +144,7 @@ var _ = Describe("OCM Notifier", func() {
 			It("sends a correct notification", func() {
 				gomock.InOrder(
 					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
-					mockMetricsClient.EXPECT().IsMetricUpgradeStartTimeSet(TEST_UPGRADECONFIG_CR, TEST_UPGRADE_VERSION).Return(true, nil),
+					mockMetricsClient.EXPECT().IsClusterVersionAtVersion(TEST_UPGRADE_VERSION).Return(true, nil),
 					mockMetricsClient.EXPECT().IsMetricNotificationEventSentSet(TEST_UPGRADECONFIG_CR, string(notifier.StateStarted), TEST_UPGRADE_VERSION).Return(true, nil),
 					mockMetricsClient.EXPECT().IsMetricNodeUpgradeEndTimeSet(TEST_UPGRADECONFIG_CR, TEST_UPGRADE_VERSION).Return(true, nil),
 					mockMetricsClient.EXPECT().IsMetricNotificationEventSentSet(TEST_UPGRADECONFIG_CR, string(notifier.StateCompleted), TEST_UPGRADE_VERSION).Return(false, nil),

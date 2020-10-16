@@ -52,6 +52,7 @@ type Metrics interface {
 	IsMetricNodeUpgradeEndTimeSet(upgradeConfigName string, version string) (bool, error)
 	IsAlertFiring(alert string, checkedNS, ignoredNS []string) (bool, error)
 	IsMetricNotificationEventSentSet(upgradeConfigName string, event string, version string) (bool, error)
+	IsClusterVersionAtVersion(version string) (bool, error)
 	Query(query string) (*AlertResponse, error)
 	ResetMetrics()
 	ResetAllMetricNodeDrainFailed()
@@ -360,6 +361,19 @@ func (c *Counter) UpdateMetricNotificationEventSent(upgradeConfigName string, ev
 
 func (c *Counter) IsMetricNotificationEventSentSet(upgradeConfigName string, event string, version string) (bool, error) {
 	cpMetrics, err := c.Query(fmt.Sprintf("%s_upgrade_notification{%s=\"%s\",%s=\"%s\",%s=\"%s\"}", metricsTag, nameLabel, upgradeConfigName, eventLabel, event, versionLabel, version))
+	if err != nil {
+		return false, err
+	}
+
+	if len(cpMetrics.Data.Result) > 0 {
+		return true, nil
+	}
+
+	return false, nil
+}
+
+func (c *Counter) IsClusterVersionAtVersion(version string) (bool, error) {
+	cpMetrics, err := c.Query(fmt.Sprintf("cluster_version{version=\"%s\",type=\"current\"}", version))
 	if err != nil {
 		return false, err
 	}

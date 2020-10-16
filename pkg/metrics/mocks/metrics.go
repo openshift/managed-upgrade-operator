@@ -50,6 +50,21 @@ func (mr *MockMetricsMockRecorder) IsAlertFiring(arg0, arg1, arg2 interface{}) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsAlertFiring", reflect.TypeOf((*MockMetrics)(nil).IsAlertFiring), arg0, arg1, arg2)
 }
 
+// IsClusterVersionAtVersion mocks base method.
+func (m *MockMetrics) IsClusterVersionAtVersion(arg0 string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsClusterVersionAtVersion", arg0)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IsClusterVersionAtVersion indicates an expected call of IsClusterVersionAtVersion.
+func (mr *MockMetricsMockRecorder) IsClusterVersionAtVersion(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsClusterVersionAtVersion", reflect.TypeOf((*MockMetrics)(nil).IsClusterVersionAtVersion), arg0)
+}
+
 // IsMetricControlPlaneEndTimeSet mocks base method.
 func (m *MockMetrics) IsMetricControlPlaneEndTimeSet(arg0, arg1 string) (bool, error) {
 	m.ctrl.T.Helper()

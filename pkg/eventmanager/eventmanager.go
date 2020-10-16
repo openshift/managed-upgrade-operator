@@ -118,16 +118,29 @@ func (s *eventManager) notificationRefresh() error {
 
 func checkUpgradeStart(mc metrics.Metrics, nc notifier.Notifier, uc *upgradev1alpha1.UpgradeConfig) error {
 
-	// Check if the start time metric has been set
-	isSet, err := mc.IsMetricUpgradeStartTimeSet(uc.Name, uc.Spec.Desired.Version)
+	upgradeStarted := false
+
+	// Check if the cluster is at the version in the UpgradeConfig
+	isSet, err := mc.IsClusterVersionAtVersion(uc.Spec.Desired.Version)
 	if err != nil {
-		return fmt.Errorf("can't check cluster metric UpgradeStartTime: %v", err)
+		return fmt.Errorf("can't check cluster metric ClusterVersion: %v", err)
+	} else {
+		upgradeStarted = isSet
 	}
-	if !isSet {
+
+	// As a backup if metrics is unavailable, check if upgradeConfig indicates the upgrade has completed
+	if !upgradeStarted {
+		upgradePhase, err := getUpgradePhase(uc)
+		if err == nil && *upgradePhase == upgradev1alpha1.UpgradePhaseUpgraded {
+			upgradeStarted = true
+		}
+	}
+
+	if !upgradeStarted {
 		return nil
 	}
 
-	// Check if a notification for it has been sent successfully
+	// Check if a notification for it has already been sent successfully
 	isNotified, err := mc.IsMetricNotificationEventSentSet(uc.Name, string(notifier.StateStarted), uc.Spec.Desired.Version)
 	if err != nil {
 		return fmt.Errorf("can't check cluster metric NotificationSent: %v", err)
@@ -135,7 +148,10 @@ func checkUpgradeStart(mc metrics.Metrics, nc notifier.Notifier, uc *upgradev1al
 	if isNotified {
 		return nil
 	}
-	err = nc.NotifyState(notifier.StateStarted, "Cluster upgrade has commenced.")
+
+	// Send the notification and indicate it has been sent
+	description := fmt.Sprintf("Cluster is currently being upgraded to version %s", uc.Spec.Desired.Version)
+	err = nc.NotifyState(notifier.StateStarted, description)
 	if err != nil {
 		return fmt.Errorf("can't send notification '%s': %v", notifier.StateStarted, err)
 	}
@@ -146,12 +162,26 @@ func checkUpgradeStart(mc metrics.Metrics, nc notifier.Notifier, uc *upgradev1al
 
 func checkUpgradeEnd(mc metrics.Metrics, nc notifier.Notifier, uc *upgradev1alpha1.UpgradeConfig) error {
 
-	// Check if the start time metric has been set
+	upgradeEnded := false
+
+	// Check metrics if the node upgrade end time metric has been set
 	isSet, err := mc.IsMetricNodeUpgradeEndTimeSet(uc.Name, uc.Spec.Desired.Version)
 	if err != nil {
-		return fmt.Errorf("can't check cluster metric UpgradeCompleteTime: %v", err)
+		log.Error(err, "could not check metrics for upgrade end time")
+	} else {
+	   upgradeEnded = isSet
 	}
-	if !isSet {
+
+	// As a backup, check if upgradeConfig indicates the upgrade has completed
+	if !upgradeEnded {
+		upgradePhase, err := getUpgradePhase(uc)
+		if err == nil && *upgradePhase == upgradev1alpha1.UpgradePhaseUpgraded {
+			upgradeEnded = true
+		}
+	}
+
+	// If the upgrade hasn't ended, do nothing
+	if !upgradeEnded {
 		return nil
 	}
 
@@ -163,11 +193,32 @@ func checkUpgradeEnd(mc metrics.Metrics, nc notifier.Notifier, uc *upgradev1alph
 	if isNotified {
 		return nil
 	}
-	err = nc.NotifyState(notifier.StateCompleted, "Cluster upgrade has completed.")
+
+	// Send the notification and indicate it has been sent
+	description := fmt.Sprintf("Cluster has been successfully upgraded to version %s", uc.Spec.Desired.Version)
+	err = nc.NotifyState(notifier.StateCompleted, description)
 	if err != nil {
 		return fmt.Errorf("can't send notification '%s': %v", notifier.StateCompleted, err)
 	}
 	mc.UpdateMetricNotificationEventSent(uc.Name, string(notifier.StateCompleted), uc.Spec.Desired.Version)
 
 	return nil
+}
+
+// Returns the phase of the currently executing upgrade or error if no phase can be found
+func getUpgradePhase(uc *upgradev1alpha1.UpgradeConfig) (*upgradev1alpha1.UpgradePhase, error) {
+	// Check if upgradeConfig indicates the upgrade has completed
+	var history upgradev1alpha1.UpgradeHistory
+	found := false
+	for _, h := range uc.Status.History {
+		if h.Version == uc.Spec.Desired.Version {
+			history = h
+			found = true
+		}
+	}
+	if !found {
+		return nil, fmt.Errorf("no history found")
+	}
+
+	return &history.Phase, nil
 }
