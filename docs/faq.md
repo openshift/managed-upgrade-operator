@@ -14,7 +14,7 @@ Currently this is a manual process. We are working on dashboards and other metri
 
 **Does MUO reserve compute capacity?**
 
-Yes. MUO will create a temporary +1 to every worker and infra `machinesets` within the cluster. In multi availability zones, this is true for each zone.
+Yes. MUO will create a temporary +1 to every worker `machinesets` within the cluster. In multi availability zones, this is true for each zone.
 
 **Does MUO maintain correct instance types for each machine pool?**
 
