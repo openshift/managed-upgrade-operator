@@ -217,7 +217,6 @@ func addMetrics(ctx context.Context, cfg *rest.Config) error {
 	service, err := metrics.CreateMetricsService(ctx, cfg, servicePorts)
 	if err != nil {
 		log.Info("Could not create metrics Service", "error", err.Error())
-		return err
 	}
 
 	// CreateServiceMonitors will automatically create the prometheus-operator ServiceMonitor resources
@@ -232,7 +231,6 @@ func addMetrics(ctx context.Context, cfg *rest.Config) error {
 		// ErrServiceMonitorNotPresent, which can be used to safely skip ServiceMonitor creation.
 		if err == metrics.ErrServiceMonitorNotPresent {
 			log.Info("Install prometheus-operator in your cluster to create ServiceMonitor objects", "error", err.Error())
-			return err
 		}
 
 	}
