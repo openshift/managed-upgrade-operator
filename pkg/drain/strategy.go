@@ -23,13 +23,13 @@ type NodeDrainStrategy interface {
 	HasFailed(*corev1.Node) (bool, error)
 }
 
-//go:generate mockgen -destination=./drainStrategyMock.go -package=drain github.com/openshift/managed-upgrade-operator/pkg/drain DrainStrategy
+//go:generate mockgen -destination=./drainStrategyMock.go -package=drain -self_package=github.com/openshift/managed-upgrade-operator/pkg/drain github.com/openshift/managed-upgrade-operator/pkg/drain DrainStrategy
 type DrainStrategy interface {
 	Execute(*corev1.Node) (*DrainStrategyResult, error)
 	IsValid(*corev1.Node) (bool, error)
 }
 
-//go:generate mockgen -destination=./timedDrainStrategyMock.go -package=drain github.com/openshift/managed-upgrade-operator/pkg/drain TimedDrainStrategy
+//go:generate mockgen -destination=./timedDrainStrategyMock.go -package=drain -self_package=github.com/openshift/managed-upgrade-operator/pkg/drain github.com/openshift/managed-upgrade-operator/pkg/drain TimedDrainStrategy
 type TimedDrainStrategy interface {
 	GetWaitDuration() time.Duration
 	GetName() string

@@ -20,6 +20,7 @@ import (
 const (
 	metricsTag   = "upgradeoperator"
 	nameLabel    = "upgradeconfig_name"
+	eventLabel   = "event"
 	versionLabel = "version"
 	nodeLabel    = "node_name"
 )
@@ -38,6 +39,8 @@ type Metrics interface {
 	UpdateMetricClusterVerificationFailed(string)
 	UpdateMetricClusterVerificationSucceeded(string)
 	UpdateMetricUpgradeWindowNotBreached(string)
+	UpdateMetricUpgradeConfigSynced(string)
+	ResetMetricUpgradeConfigSynced(string)
 	UpdateMetricUpgradeWindowBreached(string)
 	UpdateMetricUpgradeControlPlaneTimeout(string, string)
 	ResetMetricUpgradeControlPlaneTimeout(string, string)
@@ -45,10 +48,13 @@ type Metrics interface {
 	ResetMetricUpgradeWorkerTimeout(string, string)
 	UpdateMetricNodeDrainFailed(string)
 	ResetMetricNodeDrainFailed(string)
+	UpdateMetricNotificationEventSent(string, string, string)
 	IsMetricUpgradeStartTimeSet(upgradeConfigName string, version string) (bool, error)
 	IsMetricControlPlaneEndTimeSet(upgradeConfigName string, version string) (bool, error)
 	IsMetricNodeUpgradeEndTimeSet(upgradeConfigName string, version string) (bool, error)
 	IsAlertFiring(alert string, checkedNS, ignoredNS []string) (bool, error)
+	IsMetricNotificationEventSentSet(upgradeConfigName string, event string, version string) (bool, error)
+	IsClusterVersionAtVersion(version string) (bool, error)
 	Query(query string) (*AlertResponse, error)
 	ResetMetrics()
 	ResetAllMetricNodeDrainFailed()
@@ -144,6 +150,11 @@ var (
 		Name:      "upgrade_window_breached",
 		Help:      "Failed to commence upgrade during the upgrade window",
 	}, []string{nameLabel})
+	metricUpgradeConfigSynced = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Subsystem: metricsTag,
+		Name:      "upgradeconfig_synced",
+		Help:      "UpgradeConfig has not been synced in time",
+	}, []string{nameLabel})
 	metricUpgradeControlPlaneTimeout = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Subsystem: metricsTag,
 		Name:      "controlplane_timeout",
@@ -159,6 +170,11 @@ var (
 		Name:      "node_drain_timeout",
 		Help:      "Node cannot be drained successfully in time.",
 	}, []string{nodeLabel})
+	metricUpgradeNotification = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Subsystem: metricsTag,
+		Name:      "upgrade_notification",
+		Help:      "Notification event raised",
+	}, []string{nameLabel, eventLabel, versionLabel})
 
 	metricsList = []*prometheus.GaugeVec{
 		metricValidationFailed,
@@ -169,9 +185,11 @@ var (
 		metricNodeUpgradeEndTime,
 		metricClusterVerificationFailed,
 		metricUpgradeWindowBreached,
+		metricUpgradeConfigSynced,
 		metricUpgradeControlPlaneTimeout,
 		metricUpgradeWorkerTimeout,
 		metricNodeDrainFailed,
+		metricUpgradeNotification,
 	}
 )
 
@@ -215,6 +233,14 @@ func (c *Counter) UpdateMetricScalingSucceeded(upgradeConfigName string) {
 	metricScalingFailed.With(prometheus.Labels{
 		nameLabel: upgradeConfigName}).Set(
 		float64(0))
+}
+
+func (c *Counter) UpdateMetricUpgradeConfigSynced(name string) {
+	metricUpgradeConfigSynced.With(prometheus.Labels{nameLabel: name}).Set(float64(1))
+}
+
+func (c *Counter) ResetMetricUpgradeConfigSynced(name string) {
+	metricUpgradeConfigSynced.With(prometheus.Labels{nameLabel: name}).Set(float64(0))
 }
 
 func (c *Counter) UpdateMetricUpgradeStartTime(time time.Time, upgradeConfigName string, version string) {
@@ -339,6 +365,40 @@ func (c *Counter) UpdateMetricUpgradeWindowBreached(upgradeConfigName string) {
 	metricUpgradeWindowBreached.With(prometheus.Labels{
 		nameLabel: upgradeConfigName}).Set(
 		float64(1))
+}
+
+func (c *Counter) UpdateMetricNotificationEventSent(upgradeConfigName string, event string, version string) {
+	metricUpgradeNotification.With(prometheus.Labels{
+		versionLabel: version,
+		eventLabel:   event,
+		nameLabel:    upgradeConfigName}).Set(
+		float64(1))
+}
+
+func (c *Counter) IsMetricNotificationEventSentSet(upgradeConfigName string, event string, version string) (bool, error) {
+	cpMetrics, err := c.Query(fmt.Sprintf("%s_upgrade_notification{%s=\"%s\",%s=\"%s\",%s=\"%s\"}", metricsTag, nameLabel, upgradeConfigName, eventLabel, event, versionLabel, version))
+	if err != nil {
+		return false, err
+	}
+
+	if len(cpMetrics.Data.Result) > 0 {
+		return true, nil
+	}
+
+	return false, nil
+}
+
+func (c *Counter) IsClusterVersionAtVersion(version string) (bool, error) {
+	cpMetrics, err := c.Query(fmt.Sprintf("cluster_version{version=\"%s\",type=\"current\"}", version))
+	if err != nil {
+		return false, err
+	}
+
+	if len(cpMetrics.Data.Result) > 0 {
+		return true, nil
+	}
+
+	return false, nil
 }
 
 func (c *Counter) IsAlertFiring(alert string, checkedNS, ignoredNS []string) (bool, error) {

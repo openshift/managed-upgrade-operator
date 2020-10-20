@@ -31,6 +31,8 @@ If you like to contribute to the Managed Upgrade Operator, please read our [Cont
 
 ## Documentation
 
+* [FAQ](./docs/faq.md) -- Frequently Asked Questions.
+
 ### For Developers
 
 * [Design](./docs/design.md) -- Describes the interaction between the operator and the custom resource definition.

@@ -15,7 +15,6 @@ require (
 	github.com/hashicorp/go-multierror v1.1.0
 	github.com/onsi/ginkgo v1.12.0
 	github.com/onsi/gomega v1.10.0
-	github.com/openshift-online/ocm-sdk-go v0.1.124
 	github.com/openshift/api v0.0.0-20200522173408-17ada6e4245b
 	github.com/openshift/cluster-version-operator v3.11.1-0.20190629164025-08cac1c02538+incompatible
 	github.com/openshift/machine-api-operator v0.2.1-0.20200226185612-9b0170a1ba07

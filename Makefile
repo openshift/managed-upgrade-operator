@@ -37,6 +37,8 @@ generate:
 	go generate pkg/upgradeconfigmanager/upgradeconfigmanager.go
 	go generate pkg/specprovider/specprovider.go
 	go generate pkg/drain/strategy.go
+	go generate pkg/eventmanager/eventmanager.go
+	go generate pkg/notifier/notifier.go
 
 .PHONY: run
 run: 
