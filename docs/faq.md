@@ -22,7 +22,7 @@ Yes. MUO creates the extra compute based on the found instance types of the curr
 
 **How does MUO handle [PodDisruptionBudgets](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/#pod-disruption-budgets) that block node draining?**
 
-There is a configurable duration that sets how long MUO should respect a PodDisruptionBudget. Upon reaching this duration MUO will forcefully delete the detected pod. The current default configuration can be seen [here](https://github.com/openshift/managed-upgrade-operator/blob/master/deploy/crds/upgrade.managed.openshift.io_v1alpha1_upgradeconfig_cr.yaml#L8).
+There is a configurable duration that sets how long MUO should respect a PodDisruptionBudget. Upon reaching this duration MUO will forcefully delete the detected pod. The current default configuration (in minutes) can be seen [here](https://github.com/openshift/managed-upgrade-operator/blob/master/deploy/crds/upgrade.managed.openshift.io_v1alpha1_upgradeconfig_cr.yaml#L8).
 
 **What happens to a node that is failing to drain NOT due a PodDisruptionBudget?**
 
