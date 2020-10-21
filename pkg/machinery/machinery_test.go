@@ -30,6 +30,10 @@ var _ = Describe("Machinery client and utils", func() {
 		machineryClient = &machinery{}
 	})
 
+	AfterEach(func() {
+		mockCtrl.Finish()
+	})
+
 	Context("When assessing whether all machines are upgraded", func() {
 		var configPool *machineconfigapi.MachineConfigPool
 		var nodeType = "worker"

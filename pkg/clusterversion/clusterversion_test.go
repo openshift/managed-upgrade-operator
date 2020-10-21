@@ -35,6 +35,10 @@ var _ = Describe("ClusterVersion client and utils", func() {
 		upgradeConfig = testStructs.NewUpgradeConfigBuilder().WithNamespacedName(upgradeConfigName).GetUpgradeConfig()
 	})
 
+	AfterEach(func() {
+		mockCtrl.Finish()
+	})
+	
 	Context("ClusterVersion client", func() {
 		It("should get the ClusterVersion resource", func() {
 			gomock.InOrder(

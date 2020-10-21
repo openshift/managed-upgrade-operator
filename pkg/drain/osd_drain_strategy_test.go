@@ -41,6 +41,9 @@ var _ = Describe("OSD Drain Strategy", func() {
 			mockTimedDrainTwo = NewMockTimedDrainStrategy(mockCtrl)
 			mockStrategyTwo = NewMockDrainStrategy(mockCtrl)
 		})
+		AfterEach(func() {
+			mockCtrl.Finish()
+		})
 		It("should not error if there are no Strategies", func() {
 			osdDrain = &osdDrainStrategy{
 				mockKubeClient,
@@ -88,7 +91,6 @@ var _ = Describe("OSD Drain Strategy", func() {
 			gomock.InOrder(
 				mockMachineryClient.EXPECT().IsNodeCordoned(gomock.Any()).Return(&machinery.IsCordonedResult{IsCordoned: true, AddedAt: fortyFiveMinsAgo}),
 				mockTimedDrainOne.EXPECT().GetWaitDuration().Return(time.Minute*60),
-				mockTimedDrainOne.EXPECT().GetStrategy().Return(mockStrategyOne),
 				mockStrategyOne.EXPECT().Execute(gomock.Any()).Times(0),
 				mockTimedDrainOne.EXPECT().GetDescription().Times(0).Return("Drain one"),
 			)
@@ -112,7 +114,6 @@ var _ = Describe("OSD Drain Strategy", func() {
 				mockStrategyOne.EXPECT().Execute(gomock.Any()).Times(1).Return(&DrainStrategyResult{Message: "", HasExecuted: true}, nil),
 				mockTimedDrainOne.EXPECT().GetDescription().Times(1).Return("Drain one"),
 				mockTimedDrainTwo.EXPECT().GetWaitDuration().Return(time.Minute*60),
-				mockTimedDrainTwo.EXPECT().GetStrategy().Return(mockStrategyTwo),
 				mockStrategyTwo.EXPECT().Execute(gomock.Any()).Times(0),
 			)
 			result, err := osdDrain.Execute(&corev1.Node{})
@@ -136,6 +137,9 @@ var _ = Describe("OSD Drain Strategy", func() {
 					nodeDrainConfig,
 					[]TimedDrainStrategy{},
 				}
+			})
+			AfterEach(func() {
+				mockCtrl.Finish()
 			})
 			It("should not fail before default timeout wait has elapsed", func() {
 				notLongEnough := &metav1.Time{Time: time.Now().Add(nodeDrainConfig.GetTimeOutDuration() / 2)}
@@ -173,6 +177,9 @@ var _ = Describe("OSD Drain Strategy", func() {
 					nodeDrainConfig,
 					[]TimedDrainStrategy{mockTimedDrainTwo, mockTimedDrainOne},
 				}
+			})
+			AfterEach(func() {
+				mockCtrl.Finish()
 			})
 			It("should fail after the last strategy has failed + allowed time for drain to occur", func() {
 				drainStartedSixtyNineMinsAgo := &metav1.Time{Time: time.Now().Add(-69 * time.Minute)}
@@ -223,8 +230,6 @@ var _ = Describe("OSD Drain Strategy", func() {
 					mockTimedDrainTwo.EXPECT().GetWaitDuration().Return(mockTwoDuration),
 					mockTimedDrainTwo.EXPECT().GetStrategy().Return(mockStrategyOne),
 					mockStrategyOne.EXPECT().IsValid(gomock.Any()).Return(true, nil),
-					mockTimedDrainOne.EXPECT().GetWaitDuration().Return(mockOneDuration),
-					mockTimedDrainOne.EXPECT().GetWaitDuration().Return(mockOneDuration),
 				)
 
 				result, _ := osdDrain.HasFailed(&corev1.Node{})
