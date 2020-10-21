@@ -43,14 +43,7 @@ func New(client client.Client, ocmBaseUrl *url.URL, upgradeConfigManager upgrade
 		},
 	}
 
-	// Get the cluster ID once rather than each time
-	cluster, err := getClusterFromOCMApi(client, httpClient, ocmBaseUrl)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to retrieve external cluster ID")
-	}
-
 	return &ocmNotifier{
-		clusterID:            cluster.Id,
 		client:               client,
 		ocmBaseUrl:           ocmBaseUrl,
 		httpClient:           httpClient,
@@ -59,8 +52,6 @@ func New(client client.Client, ocmBaseUrl *url.URL, upgradeConfigManager upgrade
 }
 
 type ocmNotifier struct {
-	// External cluster ID
-	clusterID string
 	// Cluster k8s client
 	client client.Client
 	// Base OCM API Url
@@ -73,12 +64,16 @@ type ocmNotifier struct {
 
 func (s *ocmNotifier) NotifyState(value NotifyState, description string) error {
 
-	policyId, err := s.getPolicyIdForUpgradeConfig()
+	clusterId, err := s.getInternalClusterId()
+	if err != nil {
+		return err
+	}
+	policyId, err := s.getPolicyIdForUpgradeConfig(*clusterId)
 	if err != nil {
 		return fmt.Errorf("can't determine policy ID to notify for: %v", err)
 	}
 
-	currentState, err := s.getClusterUpgradePolicyState(*policyId)
+	currentState, err := s.getClusterUpgradePolicyState(*policyId, *clusterId)
 	if err != nil {
 		return fmt.Errorf("can't determine policy state: %v", err)
 	}
@@ -88,7 +83,7 @@ func (s *ocmNotifier) NotifyState(value NotifyState, description string) error {
 		return nil
 	}
 
-	err = s.sendNotification(value, description, *policyId)
+	err = s.sendNotification(value, description, *policyId, *clusterId)
 	if err != nil {
 		return fmt.Errorf("can't send notification: %v", err)
 	}
@@ -96,7 +91,7 @@ func (s *ocmNotifier) NotifyState(value NotifyState, description string) error {
 }
 
 // Determines the Cluster Services Upgrade Policy ID corresponding to the UpgradeConfig
-func (s *ocmNotifier) getPolicyIdForUpgradeConfig() (*string, error) {
+func (s *ocmNotifier) getPolicyIdForUpgradeConfig(clusterId string) (*string, error) {
 	// Get current UC
 	uc, err := s.upgradeConfigManager.Get()
 	if err != nil {
@@ -104,7 +99,7 @@ func (s *ocmNotifier) getPolicyIdForUpgradeConfig() (*string, error) {
 	}
 
 	// Get current policies
-	policies, err := s.getClusterUpgradePolicies()
+	policies, err := s.getClusterUpgradePolicies(clusterId)
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +122,8 @@ func (s *ocmNotifier) getPolicyIdForUpgradeConfig() (*string, error) {
 }
 
 // Send a notification of state
-func (s *ocmNotifier) sendNotification(value NotifyState, description string, policyId string) error {
+func (s *ocmNotifier) sendNotification(value NotifyState, description string, policyId string, clusterId string) error {
+
 	policyState := upgradePolicyStateRequest{
 		Value:       string(value),
 		Description: description,
@@ -142,7 +138,7 @@ func (s *ocmNotifier) sendNotification(value NotifyState, description string, po
 	if err != nil {
 		return fmt.Errorf("can't read OCM API url: %v", err)
 	}
-	reqUrl.Path = path.Join(reqUrl.Path, CLUSTERS_V1_PATH, s.clusterID, UPGRADEPOLICIES_V1_PATH, policyId, STATE_V1_PATH)
+	reqUrl.Path = path.Join(reqUrl.Path, CLUSTERS_V1_PATH, clusterId, UPGRADEPOLICIES_V1_PATH, policyId, STATE_V1_PATH)
 
 	request, err := http.NewRequest("PATCH", reqUrl.String(), bytes.NewBuffer(body))
 	if err != nil {
@@ -163,13 +159,13 @@ func (s *ocmNotifier) sendNotification(value NotifyState, description string, po
 }
 
 // Queries and returns the Upgrade Policy from Cluster Services
-func (s *ocmNotifier) getClusterUpgradePolicies() (*upgradePolicyList, error) {
+func (s *ocmNotifier) getClusterUpgradePolicies(clusterId string) (*upgradePolicyList, error) {
 
 	upUrl, err := url.Parse(s.ocmBaseUrl.String())
 	if err != nil {
 		return nil, fmt.Errorf("can't read OCM API url: %v", err)
 	}
-	upUrl.Path = path.Join(upUrl.Path, CLUSTERS_V1_PATH, s.clusterID, UPGRADEPOLICIES_V1_PATH)
+	upUrl.Path = path.Join(upUrl.Path, CLUSTERS_V1_PATH, clusterId, UPGRADEPOLICIES_V1_PATH)
 
 	request := &http.Request{
 		Method: "GET",
@@ -201,13 +197,13 @@ func (s *ocmNotifier) getClusterUpgradePolicies() (*upgradePolicyList, error) {
 }
 
 // Queries and returns the Upgrade Policy state from Cluster Services
-func (s *ocmNotifier) getClusterUpgradePolicyState(policyId string) (*upgradePolicyState, error) {
+func (s *ocmNotifier) getClusterUpgradePolicyState(policyId string, clusterId string) (*upgradePolicyState, error) {
 
 	upUrl, err := url.Parse(s.ocmBaseUrl.String())
 	if err != nil {
 		return nil, fmt.Errorf("can't read OCM API url: %v", err)
 	}
-	upUrl.Path = path.Join(upUrl.Path, CLUSTERS_V1_PATH, s.clusterID, UPGRADEPOLICIES_V1_PATH, policyId, STATE_V1_PATH)
+	upUrl.Path = path.Join(upUrl.Path, CLUSTERS_V1_PATH, clusterId, UPGRADEPOLICIES_V1_PATH, policyId, STATE_V1_PATH)
 
 	request := &http.Request{
 		Method: "GET",
@@ -290,6 +286,14 @@ func getClusterFromOCMApi(kc client.Client, client *http.Client, ocmApi *url.URL
 	}
 
 	return &listResponse.Items[0], nil
+}
+
+func (s *ocmNotifier) getInternalClusterId() (*string, error) {
+	cluster, err := getClusterFromOCMApi(s.client, s.httpClient, s.ocmBaseUrl)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to retrieve internal ocm cluster ID")
+	}
+	return &cluster.Id, nil
 }
 
 // Everything below should eventually be replaced with OCM SDK calls

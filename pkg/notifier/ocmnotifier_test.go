@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/golang/mock/gomock"
+	configv1 "github.com/openshift/api/config/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
@@ -62,7 +63,6 @@ var _ = Describe("OCM Notifier", func() {
 		ocmServerUrl, _ := url.Parse(ocmServer.URL)
 
 		notifier = &ocmNotifier{
-			clusterID:            TEST_CLUSTER_ID,
 			client:               mockKubeClient,
 			ocmBaseUrl:           ocmServerUrl,
 			httpClient:           &http.Client{},
@@ -83,7 +83,6 @@ var _ = Describe("OCM Notifier", func() {
 				Namespace: ns,
 			}
 			_ = os.Setenv("OPERATOR_NAMESPACE", ns)
-			notifier.clusterID = TEST_CLUSTER_ID
 		})
 
 		Context("When an associated policy ID can't be found", func() {
@@ -92,10 +91,12 @@ var _ = Describe("OCM Notifier", func() {
 				uc = *testStructs.NewUpgradeConfigBuilder().WithNamespacedName(upgradeConfigName).WithPhase(upgradev1alpha1.UpgradePhasePending).GetUpgradeConfig()
 				uc.Spec.Desired.Version = TEST_UPGRADEPOLICY_VERSION
 				uc.Spec.UpgradeAt = TEST_UPGRADEPOLICY_TIME
-				notifier.clusterID = TEST_CLUSTER_ID_WITH_NO_POLICIES
 			})
 			It("returns an error", func() {
-				mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil)
+				gomock.InOrder(
+					mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, configv1.ClusterVersion{Spec: configv1.ClusterVersionSpec{ClusterID: TEST_CLUSTER_ID_WITH_NO_POLICIES}}),
+					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
+				)
 				err := notifier.NotifyState(TEST_STATE_VALUE, TEST_STATE_DESCRIPTION)
 				Expect(err).NotTo(BeNil())
 				Expect(err.Error()).To(ContainSubstring("can't determine policy ID"))
@@ -108,10 +109,12 @@ var _ = Describe("OCM Notifier", func() {
 				uc = *testStructs.NewUpgradeConfigBuilder().WithNamespacedName(upgradeConfigName).WithPhase(upgradev1alpha1.UpgradePhasePending).GetUpgradeConfig()
 				uc.Spec.Desired.Version = "not the same version"
 				uc.Spec.UpgradeAt = TEST_UPGRADEPOLICY_TIME
-				notifier.clusterID = TEST_CLUSTER_ID
 			})
 			It("returns an error", func() {
-				mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil)
+				gomock.InOrder(
+					mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, configv1.ClusterVersion{Spec: configv1.ClusterVersionSpec{ClusterID: TEST_CLUSTER_ID}}),
+					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
+				)
 				err := notifier.NotifyState(TEST_STATE_VALUE, TEST_STATE_DESCRIPTION)
 				Expect(err).NotTo(BeNil())
 				Expect(err.Error()).To(ContainSubstring("can't determine policy ID"))
@@ -124,10 +127,12 @@ var _ = Describe("OCM Notifier", func() {
 				uc = *testStructs.NewUpgradeConfigBuilder().WithNamespacedName(upgradeConfigName).WithPhase(upgradev1alpha1.UpgradePhasePending).GetUpgradeConfig()
 				uc.Spec.Desired.Version = TEST_UPGRADEPOLICY_VERSION
 				uc.Spec.UpgradeAt = "not the same time"
-				notifier.clusterID = TEST_CLUSTER_ID
 			})
 			It("returns an error", func() {
-				mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil)
+				gomock.InOrder(
+					mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, configv1.ClusterVersion{Spec: configv1.ClusterVersionSpec{ClusterID: TEST_CLUSTER_ID}}),
+					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
+				)
 				err := notifier.NotifyState(TEST_STATE_VALUE, TEST_STATE_DESCRIPTION)
 				Expect(err).NotTo(BeNil())
 				Expect(err.Error()).To(ContainSubstring("can't determine policy ID"))
@@ -142,10 +147,12 @@ var _ = Describe("OCM Notifier", func() {
 					uc = *testStructs.NewUpgradeConfigBuilder().WithNamespacedName(upgradeConfigName).WithPhase(upgradev1alpha1.UpgradePhasePending).GetUpgradeConfig()
 					uc.Spec.Desired.Version = TEST_UPGRADEPOLICY_VERSION
 					uc.Spec.UpgradeAt = TEST_UPGRADEPOLICY_TIME
-					notifier.clusterID = TEST_CLUSTER_ID_FOR_SAME_STATE
 				})
 				It("does not send a notification", func() {
-					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil)
+					gomock.InOrder(
+						mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, configv1.ClusterVersion{Spec: configv1.ClusterVersionSpec{ClusterID: TEST_CLUSTER_ID_FOR_SAME_STATE}}),
+						mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
+					)
 					err := notifier.NotifyState(TEST_STATE_VALUE, TEST_STATE_DESCRIPTION)
 					Expect(err).To(BeNil())
 				})
@@ -158,10 +165,12 @@ var _ = Describe("OCM Notifier", func() {
 					uc = *testStructs.NewUpgradeConfigBuilder().WithNamespacedName(upgradeConfigName).WithPhase(upgradev1alpha1.UpgradePhasePending).GetUpgradeConfig()
 					uc.Spec.Desired.Version = TEST_UPGRADEPOLICY_VERSION
 					uc.Spec.UpgradeAt = TEST_UPGRADEPOLICY_TIME
-					notifier.clusterID = TEST_CLUSTER_ID
 				})
 				It("sends a notification", func() {
-					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil)
+					gomock.InOrder(
+						mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, configv1.ClusterVersion{Spec: configv1.ClusterVersionSpec{ClusterID: TEST_CLUSTER_ID}}),
+						mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
+					)
 					err := notifier.NotifyState(TEST_STATE_VALUE, TEST_STATE_DESCRIPTION)
 					Expect(err).To(BeNil())
 				})
@@ -225,6 +234,10 @@ func clustersMock(w http.ResponseWriter, r *http.Request) {
 	// Return a cluster ID that'll have no upgrade policies
 	if strings.Contains(clusterSearch, TEST_CLUSTER_ID_FOR_BAD_REPLY) {
 		response.Items[0].Id = TEST_CLUSTER_ID_FOR_BAD_REPLY
+	}
+	// Return a cluster ID that'll have same state in the policy
+	if strings.Contains(clusterSearch, TEST_CLUSTER_ID_FOR_SAME_STATE) {
+		response.Items[0].Id = TEST_CLUSTER_ID_FOR_SAME_STATE
 	}
 
 	responseJson, _ := json.Marshal(response)
