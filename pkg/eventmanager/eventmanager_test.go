@@ -82,6 +82,7 @@ var _ = Describe("OCM Notifier", func() {
 			}
 			uc = *testStructs.NewUpgradeConfigBuilder().WithNamespacedName(upgradeConfigName).WithPhase(upgradev1alpha1.UpgradePhasePending).GetUpgradeConfig()
 			uc.Spec.Desired.Version = TEST_UPGRADE_VERSION
+			uc.Status.History[0].Version = TEST_UPGRADE_VERSION
 			uc.Spec.UpgradeAt = TEST_UPGRADE_TIME
 		})
 
@@ -91,8 +92,6 @@ var _ = Describe("OCM Notifier", func() {
 					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
 					mockMetricsClient.EXPECT().IsClusterVersionAtVersion(TEST_UPGRADE_VERSION).Return(true, nil),
 					mockMetricsClient.EXPECT().IsMetricNotificationEventSentSet(TEST_UPGRADECONFIG_CR, string(notifier.StateStarted), TEST_UPGRADE_VERSION).Return(true, nil),
-					mockMetricsClient.EXPECT().IsMetricNodeUpgradeEndTimeSet(TEST_UPGRADECONFIG_CR, TEST_UPGRADE_VERSION).Return(true, nil),
-					mockMetricsClient.EXPECT().IsMetricNotificationEventSentSet(TEST_UPGRADECONFIG_CR, string(notifier.StateCompleted), TEST_UPGRADE_VERSION).Return(true, nil),
 				)
 				err := manager.notificationRefresh()
 				Expect(err).To(BeNil())
@@ -106,8 +105,6 @@ var _ = Describe("OCM Notifier", func() {
 					mockMetricsClient.EXPECT().IsMetricNotificationEventSentSet(TEST_UPGRADECONFIG_CR, string(notifier.StateStarted), TEST_UPGRADE_VERSION).Return(false, nil),
 					mockNotifier.EXPECT().NotifyState(notifier.StateStarted, gomock.Any()),
 					mockMetricsClient.EXPECT().UpdateMetricNotificationEventSent(TEST_UPGRADECONFIG_CR, string(notifier.StateStarted), TEST_UPGRADE_VERSION),
-					mockMetricsClient.EXPECT().IsMetricNodeUpgradeEndTimeSet(TEST_UPGRADECONFIG_CR, TEST_UPGRADE_VERSION).Return(true, nil),
-					mockMetricsClient.EXPECT().IsMetricNotificationEventSentSet(TEST_UPGRADECONFIG_CR, string(notifier.StateCompleted), TEST_UPGRADE_VERSION).Return(true, nil),
 				)
 				err := manager.notificationRefresh()
 				Expect(err).To(BeNil())
@@ -122,8 +119,9 @@ var _ = Describe("OCM Notifier", func() {
 				Name:      TEST_UPGRADECONFIG_CR,
 				Namespace: TEST_OPERATOR_NAMESPACE,
 			}
-			uc = *testStructs.NewUpgradeConfigBuilder().WithNamespacedName(upgradeConfigName).WithPhase(upgradev1alpha1.UpgradePhasePending).GetUpgradeConfig()
+			uc = *testStructs.NewUpgradeConfigBuilder().WithNamespacedName(upgradeConfigName).WithPhase(upgradev1alpha1.UpgradePhaseUpgraded).GetUpgradeConfig()
 			uc.Spec.Desired.Version = TEST_UPGRADE_VERSION
+			uc.Status.History[0].Version = TEST_UPGRADE_VERSION
 			uc.Spec.UpgradeAt = TEST_UPGRADE_TIME
 		})
 
@@ -133,7 +131,6 @@ var _ = Describe("OCM Notifier", func() {
 					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
 					mockMetricsClient.EXPECT().IsClusterVersionAtVersion(TEST_UPGRADE_VERSION).Return(true, nil),
 					mockMetricsClient.EXPECT().IsMetricNotificationEventSentSet(TEST_UPGRADECONFIG_CR, string(notifier.StateStarted), TEST_UPGRADE_VERSION).Return(true, nil),
-					mockMetricsClient.EXPECT().IsMetricNodeUpgradeEndTimeSet(TEST_UPGRADECONFIG_CR, TEST_UPGRADE_VERSION).Return(true, nil),
 					mockMetricsClient.EXPECT().IsMetricNotificationEventSentSet(TEST_UPGRADECONFIG_CR, string(notifier.StateCompleted), TEST_UPGRADE_VERSION).Return(true, nil),
 				)
 				err := manager.notificationRefresh()
@@ -146,7 +143,6 @@ var _ = Describe("OCM Notifier", func() {
 					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
 					mockMetricsClient.EXPECT().IsClusterVersionAtVersion(TEST_UPGRADE_VERSION).Return(true, nil),
 					mockMetricsClient.EXPECT().IsMetricNotificationEventSentSet(TEST_UPGRADECONFIG_CR, string(notifier.StateStarted), TEST_UPGRADE_VERSION).Return(true, nil),
-					mockMetricsClient.EXPECT().IsMetricNodeUpgradeEndTimeSet(TEST_UPGRADECONFIG_CR, TEST_UPGRADE_VERSION).Return(true, nil),
 					mockMetricsClient.EXPECT().IsMetricNotificationEventSentSet(TEST_UPGRADECONFIG_CR, string(notifier.StateCompleted), TEST_UPGRADE_VERSION).Return(false, nil),
 					mockNotifier.EXPECT().NotifyState(notifier.StateCompleted, gomock.Any()),
 					mockMetricsClient.EXPECT().UpdateMetricNotificationEventSent(TEST_UPGRADECONFIG_CR, string(notifier.StateCompleted), TEST_UPGRADE_VERSION),
@@ -156,5 +152,4 @@ var _ = Describe("OCM Notifier", func() {
 			})
 		})
 	})
-
 })

@@ -164,20 +164,10 @@ func checkUpgradeEnd(mc metrics.Metrics, nc notifier.Notifier, uc *upgradev1alph
 
 	upgradeEnded := false
 
-	// Check metrics if the node upgrade end time metric has been set
-	isSet, err := mc.IsMetricNodeUpgradeEndTimeSet(uc.Name, uc.Spec.Desired.Version)
-	if err != nil {
-		log.Error(err, "could not check metrics for upgrade end time")
-	} else {
-	   upgradeEnded = isSet
-	}
-
-	// As a backup, check if upgradeConfig indicates the upgrade has completed
-	if !upgradeEnded {
-		upgradePhase, err := getUpgradePhase(uc)
-		if err == nil && *upgradePhase == upgradev1alpha1.UpgradePhaseUpgraded {
-			upgradeEnded = true
-		}
+	// Check if upgradeConfig indicates the upgrade has completed
+	upgradePhase, err := getUpgradePhase(uc)
+	if err == nil && *upgradePhase == upgradev1alpha1.UpgradePhaseUpgraded {
+		upgradeEnded = true
 	}
 
 	// If the upgrade hasn't ended, do nothing
