@@ -10,17 +10,17 @@ The following diagram illustrates the main resources that the Managed Upgrade Op
 
 The operator is primarily driven through an `UpgradeConfig` custom resource, which defines the version of OpenShift that the cluster should be running at.
 
-The `UpgradeConfig` can be created directly on the cluster for development/testing purposes. 
+The `UpgradeConfig` can be created directly on the cluster for development/testing purposes.
 
 For production OpenShift Dedicated deployments, the `UpgradeConfig` is distributed via a [Hive SelectorSyncSet](https://github.com/openshift/hive/blob/master/docs/syncset.md) and managed by OpenShift SRE.
 
-The process for SRE to manage the creation and distribution of `UpgradeConfig` custom resources is documented in [SOPs](https://github.com/openshift/ops-sop/blob/master/v4/howto/upgrade.md). 
- 
+The process for SRE to manage the creation and distribution of `UpgradeConfig` custom resources is documented in [SOPs](https://github.com/openshift/ops-sop/blob/master/v4/howto/upgrade.md).
+
 ## Custom Resource Definitions
 
 ### UpgradeConfig
 
-#### Configuration 
+#### Configuration
 
 The `UpgradeConfig` Custom Resource Definition (CRD) defines the version of OpenShift Container Platform that the cluster should be upgraded to, when conditions allow.
 
@@ -50,7 +50,7 @@ spec:
     version: "4.4.6"
 ```
 
-The CRD is available to [view in the repository](../deploy/crds/upgrade.managed.openshift.io_upgradeconfigs_crd.yaml). 
+The CRD is available to [view in the repository](../deploy/crds/upgrade.managed.openshift.io_upgradeconfigs_crd.yaml).
 
 #### Status
 
@@ -65,7 +65,7 @@ At the top level, the following fields are defined in a list, each list element 
 | `completeTime` | The ISO-8601 timestamp at which the upgrade completed. | `2020-07-05T01:35:36Z` |
 | `phase` | The current phase of the upgrade's application | `New`, `Pending`, `Upgrading`, `Upgraded`, `Failed`, `Unknown` |
 | `conditions` | Data pertaining to a particular upgrade step that the operator performs | - |
- 
+
 Within `conditions`, each upgrade step can record its own individual status. These conditions are similar to [Pod conditions](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/), but relate to upgrade steps.
 
 | Item | Definition | Example |
@@ -94,7 +94,7 @@ A fully-populated example of an `UpgradeConfig` status is included below:
         lastTransitionTime: "2020-07-05T03:15:36Z"                                             
         message: ScaleUpExtraNodes succeed                                                     
         reason: ScaleUpExtraNodes succeed  
-        startTime: "2020-07-05T03:15:36Z" 
+        startTime: "2020-07-05T03:15:36Z"
         status: "True"                   
         type: ScaleUpExtraNodes
       - completeTime: "2020-07-05T03:15:36Z"
@@ -109,10 +109,18 @@ A fully-populated example of an `UpgradeConfig` status is included below:
 
 ## Config Managers
 
-The `managed-upgrade-operator` provides a configurable mechanism for retrieving and storing an `UpgradeConfig` 
+The `managed-upgrade-operator` provides a configurable mechanism for retrieving and storing an `UpgradeConfig`
 Custom Resource that can be reconciled against by the `UpgradeConfig` controller.
 
 For more information, see the dedicated section on this topic: [UpgradeConfig Managers](configmanager.md)
+
+## Controllers
+
+The `managed upgrade operator` provided upgrade process revolves around multiple Controllers. Alongside the above mentioned `UpgradeConfig` controller, the `NodeKeeper` controller works simultaneously in an upgrade process towards the state of nodes in the cluster.
+
+The `NodeKeeper` controller keeps a track of state of all the nodes during an upgrade, making sure of any activities around the nodes and acts upon any action required towards maintaining the required state of any node.
+
+If a node is having any troubles while an ongoing upgrade, the `NodeKeeper` controller will perform necessary action towards the state of the node and upgrade continuation.
 
 ## Upgrade Process
 
@@ -132,7 +140,7 @@ When actively performing a cluster upgrade, the operator will follow the process
   - If the step returns `true` indicating it has successfully completed, move to the next step.
   - If the step returns `false` indicating it has not successfully completed, the operator will check again on the next reconcile loop.
   - If the step returns an error, the operator will log this, and try to execute the step again on the next reconcile loop.
-   
+
 Steps should generally be idempotent in nature; if they have already run and completed during an upgrade, they should return `true` for subsequent calls and not attempt to re-perform the same action. An example of this is the `ControlPlaneMaintWindow` step to create a maintenance window.
 
 This overall process of executing Upgrade Steps is illustrated below.
@@ -145,7 +153,7 @@ To define a new custom procedure for performing a cluster upgrade, a developer s
 
 ### Ready to upgrade criteria
 
-The Managed Upgrade Operator will only attempt to perform an upgrade if the current system time is later than, 
+The Managed Upgrade Operator will only attempt to perform an upgrade if the current system time is later than,
 but within _30 minutes_ of, the `upgradeAt` timestamp specified in the `UpgradeConfig` CR.
 
 For example:
@@ -159,7 +167,6 @@ For example:
 ### Validating upgrade versions
 
 The following checks are made against the desired version in the `UpgradeConfig` to assert that it is a valid version to upgrade to.
- 
-* The version to upgrade to is greater than the currently-installed version (rollbacks are not supported)
-* The [Cluster Version Operator](https://github.com/openshift/cluster-version-operator) reports it as an available version to upgrade to. 
 
+* The version to upgrade to is greater than the currently-installed version (rollbacks are not supported)
+* The [Cluster Version Operator](https://github.com/openshift/cluster-version-operator) reports it as an available version to upgrade to.
