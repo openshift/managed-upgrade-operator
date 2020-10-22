@@ -291,7 +291,7 @@ func getClusterFromOCMApi(kc client.Client, client *http.Client, ocmApi *url.URL
 func (s *ocmNotifier) getInternalClusterId() (*string, error) {
 	cluster, err := getClusterFromOCMApi(s.client, s.httpClient, s.ocmBaseUrl)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to retrieve internal ocm cluster ID")
+		return nil, fmt.Errorf("Failed to retrieve internal ocm cluster ID: %v", err)
 	}
 	return &cluster.Id, nil
 }
