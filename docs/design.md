@@ -118,9 +118,10 @@ For more information, see the dedicated section on this topic: [UpgradeConfig Ma
 
 The `managed upgrade operator` provided upgrade process revolves around multiple Controllers. Alongside the above mentioned `UpgradeConfig` controller, the `NodeKeeper` controller works simultaneously in an upgrade process towards the state of nodes in the cluster.
 
-The `NodeKeeper` controller keeps a track of state of all the nodes during an upgrade, making sure of any activities around the nodes and acts upon any action required towards maintaining the required state of any node.
+The `NodeKeeper` controller keeps a track of the upgrading worker nodes during an upgrade and seeks to ensure their timely and eventual upgrade.
 
-If a node is having any troubles while an ongoing upgrade, the `NodeKeeper` controller will perform necessary action towards the state of the node and upgrade continuation.
+If an upgrading worker node is experiencing difficulty draining due to conditions such as [Pod Disruption Budgets](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/#pod-disruption-budgets) or stuck finalizers, the `NodeKeeper` controller will perform remediation strategies to ensure the node's eventual drain and subsequent upgrade continuation.
+The `NodeKeeper` controller will flag through metrics any worker node that continue to unsuccessfully drain in spite of the remediation strategies.
 
 ## Upgrade Process
 
