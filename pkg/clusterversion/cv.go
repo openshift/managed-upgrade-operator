@@ -80,3 +80,14 @@ func (c *clusterVersionClient) HasUpgradeCommenced(uc *upgradev1alpha1.UpgradeCo
 
 	return true, nil
 }
+
+func GetHistory(clusterVersion *configv1.ClusterVersion, version string) *configv1.UpdateHistory {
+	var result *configv1.UpdateHistory
+	for _, history := range clusterVersion.Status.History {
+		if history.Version == version {
+			result = &history
+		}
+	}
+
+	return result
+}

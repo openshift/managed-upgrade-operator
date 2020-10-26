@@ -40,7 +40,8 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/openshift/managed-upgrade-operator/pkg/eventmanager"
 	"github.com/openshift/managed-upgrade-operator/pkg/notifier"
-
+	upgrademetrics "github.com/openshift/managed-upgrade-operator/pkg/metrics"
+	runtimemetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
 )
 
 // Change below variables to serve metrics on different host or port.
@@ -166,6 +167,18 @@ func main() {
 		log.Error(err, "Metrics service is not added.")
 		os.Exit(1)
 	}
+
+	metricsClient, err := client.New(cfg, client.Options{})
+	if err != nil {
+		log.Error(err, "unable to create k8s client for upgrade metrics")
+		os.Exit(1)
+	}
+	uCollector, err := upgrademetrics.NewUpgradeCollector(metricsClient)
+	if err != nil {
+		log.Error(err, "unable to create upgrade metrics collector")
+		os.Exit(1)
+	}
+	runtimemetrics.Registry.MustRegister(uCollector)
 
 	// Define stopCh which we'll use to notify the upgradeConfigManager (and any other routine)
 	// to stop work. This channel can also be used to signal routines to complete any cleanup
