@@ -199,18 +199,11 @@ func CommenceUpgrade(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scale
 
 	clusterVersion.Spec.Overrides = []configv1.ComponentOverride{}
 	clusterVersion.Spec.DesiredUpdate = &configv1.Update{Version: upgradeConfig.Spec.Desired.Version}
-	isSet, err := metricsClient.IsMetricUpgradeStartTimeSet(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
-	if err != nil {
-		return false, err
-	}
 	err = c.Update(context.TODO(), clusterVersion)
 	if err != nil {
 		return false, err
 	}
-	if !isSet {
-		//Record the timestamp when we start the upgrade
-		metricsClient.UpdateMetricUpgradeStartTime(time.Now(), upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
-	}
+
 	return true, nil
 }
 
@@ -301,13 +294,6 @@ func AllWorkersUpgraded(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Sc
 		return false, nil
 	}
 
-	isSet, err := metricsClient.IsMetricNodeUpgradeEndTimeSet(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
-	if err != nil {
-		return false, err
-	}
-	if !isSet {
-		metricsClient.UpdateMetricNodeUpgradeEndTime(time.Now(), upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
-	}
 	metricsClient.ResetMetricUpgradeWorkerTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
 	return true, nil
 }
@@ -497,13 +483,6 @@ func ControlPlaneUpgraded(c client.Client, cfg *osdUpgradeConfig, scaler scaler.
 	}
 
 	if isCompleted {
-		isSet, err := metricsClient.IsMetricControlPlaneEndTimeSet(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
-		if err != nil {
-			return false, err
-		}
-		if !isSet {
-			metricsClient.UpdateMetricControlPlaneEndTime(time.Now(), upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
-		}
 		metricsClient.ResetMetricUpgradeControlPlaneTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version)
 		return true, nil
 	}

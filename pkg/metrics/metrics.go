@@ -33,9 +33,6 @@ type Metrics interface {
 	UpdateMetricClusterCheckSucceeded(string)
 	UpdateMetricScalingFailed(string)
 	UpdateMetricScalingSucceeded(string)
-	UpdateMetricUpgradeStartTime(time.Time, string, string)
-	UpdateMetricControlPlaneEndTime(time.Time, string, string)
-	UpdateMetricNodeUpgradeEndTime(time.Time, string, string)
 	UpdateMetricClusterVerificationFailed(string)
 	UpdateMetricClusterVerificationSucceeded(string)
 	UpdateMetricUpgradeWindowNotBreached(string)
@@ -47,9 +44,6 @@ type Metrics interface {
 	UpdateMetricNodeDrainFailed(string)
 	ResetMetricNodeDrainFailed(string)
 	UpdateMetricNotificationEventSent(string, string, string)
-	IsMetricUpgradeStartTimeSet(upgradeConfigName string, version string) (bool, error)
-	IsMetricControlPlaneEndTimeSet(upgradeConfigName string, version string) (bool, error)
-	IsMetricNodeUpgradeEndTimeSet(upgradeConfigName string, version string) (bool, error)
 	IsAlertFiring(alert string, checkedNS, ignoredNS []string) (bool, error)
 	IsMetricNotificationEventSentSet(upgradeConfigName string, event string, version string) (bool, error)
 	IsClusterVersionAtVersion(version string) (bool, error)
@@ -123,21 +117,6 @@ var (
 		Name:      "scaling_failed",
 		Help:      "Failed to scale up extra workers",
 	}, []string{nameLabel})
-	metricUpgradeStartTime = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Subsystem: metricsTag,
-		Name:      "upgrade_start_timestamp",
-		Help:      "Timestamp for the real upgrade process is started",
-	}, []string{nameLabel, versionLabel})
-	metricControlPlaneUpgradeEndTime = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Subsystem: metricsTag,
-		Name:      "controlplane_upgrade_end_timestamp",
-		Help:      "Timestamp for the control plane upgrade is finished",
-	}, []string{nameLabel, versionLabel})
-	metricNodeUpgradeEndTime = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Subsystem: metricsTag,
-		Name:      "node_upgrade_end_timestamp",
-		Help:      "Timestamp for the node upgrade is finished",
-	}, []string{nameLabel, versionLabel})
 	metricClusterVerificationFailed = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Subsystem: metricsTag,
 		Name:      "cluster_verification_failed",
@@ -173,9 +152,6 @@ var (
 		metricValidationFailed,
 		metricClusterCheckFailed,
 		metricScalingFailed,
-		metricUpgradeStartTime,
-		metricControlPlaneUpgradeEndTime,
-		metricNodeUpgradeEndTime,
 		metricClusterVerificationFailed,
 		metricUpgradeWindowBreached,
 		metricUpgradeControlPlaneTimeout,
@@ -227,20 +203,6 @@ func (c *Counter) UpdateMetricScalingSucceeded(upgradeConfigName string) {
 		float64(0))
 }
 
-func (c *Counter) UpdateMetricUpgradeStartTime(time time.Time, upgradeConfigName string, version string) {
-	metricUpgradeStartTime.With(prometheus.Labels{
-		versionLabel: version,
-		nameLabel:    upgradeConfigName}).Set(
-		float64(time.Unix()))
-}
-
-func (c *Counter) UpdateMetricControlPlaneEndTime(time time.Time, upgradeConfigName string, version string) {
-	metricControlPlaneUpgradeEndTime.With(prometheus.Labels{
-		versionLabel: version,
-		nameLabel:    upgradeConfigName}).Set(
-		float64(time.Unix()))
-}
-
 func (c *Counter) UpdateMetricUpgradeControlPlaneTimeout(upgradeConfigName, version string) {
 	metricUpgradeControlPlaneTimeout.With(prometheus.Labels{
 		versionLabel: version,
@@ -279,52 +241,6 @@ func (c *Counter) ResetMetricNodeDrainFailed(nodeName string) {
 	metricNodeDrainFailed.With(prometheus.Labels{
 		nodeLabel: nodeName}).Set(
 		float64(0))
-}
-
-func (c *Counter) IsMetricUpgradeStartTimeSet(upgradeConfigName string, version string) (bool, error) {
-	cpMetrics, err := c.Query(fmt.Sprintf("%s_upgrade_start_timestamp{%s=\"%s\",%s=\"%s\"}", metricsTag, nameLabel, upgradeConfigName, versionLabel, version))
-	if err != nil {
-		return false, err
-	}
-
-	if len(cpMetrics.Data.Result) > 0 {
-		return true, nil
-	}
-
-	return false, nil
-}
-
-func (c *Counter) IsMetricControlPlaneEndTimeSet(upgradeConfigName string, version string) (bool, error) {
-	cpMetrics, err := c.Query(fmt.Sprintf("%s_controlplane_upgrade_end_timestamp{%s=\"%s\",%s=\"%s\"}", metricsTag, nameLabel, upgradeConfigName, versionLabel, version))
-	if err != nil {
-		return false, err
-	}
-
-	if len(cpMetrics.Data.Result) > 0 {
-		return true, nil
-	}
-
-	return false, nil
-}
-
-func (c *Counter) IsMetricNodeUpgradeEndTimeSet(upgradeConfigName string, version string) (bool, error) {
-	cpMetrics, err := c.Query(fmt.Sprintf("%s_node_upgrade_end_timestamp{%s=\"%s\",%s=\"%s\"}", metricsTag, nameLabel, upgradeConfigName, versionLabel, version))
-	if err != nil {
-		return false, err
-	}
-
-	if len(cpMetrics.Data.Result) > 0 {
-		return true, nil
-	}
-
-	return false, nil
-}
-
-func (c *Counter) UpdateMetricNodeUpgradeEndTime(time time.Time, upgradeConfigName string, version string) {
-	metricNodeUpgradeEndTime.With(prometheus.Labels{
-		versionLabel: version,
-		nameLabel:    upgradeConfigName}).Set(
-		float64(time.Unix()))
 }
 
 func (c *Counter) UpdateMetricClusterVerificationFailed(upgradeConfigName string) {

@@ -114,8 +114,6 @@ var _ = Describe("ClusterUpgrader", func() {
 			It("Flags the control plane as upgraded", func() {
 				gomock.InOrder(
 					mockCVClient.EXPECT().GetClusterVersion().Return(clusterVersion, nil),
-					mockMetricsClient.EXPECT().IsMetricControlPlaneEndTimeSet(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version),
-					mockMetricsClient.EXPECT().UpdateMetricControlPlaneEndTime(gomock.Any(), upgradeConfig.Name, upgradeConfig.Spec.Desired.Version),
 					mockMetricsClient.EXPECT().ResetMetricUpgradeControlPlaneTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version),
 				)
 				result, err := ControlPlaneUpgraded(mockKubeClient, config, mockScalerClient, mockDrainStrategyBuilder, mockMetricsClient, mockMaintClient, mockCVClient, upgradeConfig, mockMachineryClient, logger)
@@ -230,14 +228,12 @@ var _ = Describe("ClusterUpgrader", func() {
 				gomock.InOrder(
 					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
 					mockCVClient.EXPECT().GetClusterVersion().Return(clusterVersion, nil),
-					mockMetricsClient.EXPECT().IsMetricUpgradeStartTimeSet(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version),
 					mockKubeClient.EXPECT().Update(gomock.Any(), gomock.Any()).DoAndReturn(
 						func(ctx context.Context, cv *configv1.ClusterVersion) error {
 							Expect(cv.Spec.DesiredUpdate.Version).To(Equal(upgradeConfig.Spec.Desired.Version))
 							Expect(cv.Spec.Channel).To(Equal(upgradeConfig.Spec.Desired.Channel))
 							return nil
 						}),
-					mockMetricsClient.EXPECT().UpdateMetricUpgradeStartTime(gomock.Any(), upgradeConfig.Name, upgradeConfig.Spec.Desired.Version),
 				)
 				result, err := CommenceUpgrade(mockKubeClient, config, mockScalerClient, mockDrainStrategyBuilder, mockMetricsClient, mockMaintClient, mockCVClient, upgradeConfig, mockMachineryClient, logger)
 				Expect(err).NotTo(HaveOccurred())
@@ -267,14 +263,12 @@ var _ = Describe("ClusterUpgrader", func() {
 				gomock.InOrder(
 					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
 					mockCVClient.EXPECT().GetClusterVersion().Return(clusterVersion, nil),
-					mockMetricsClient.EXPECT().IsMetricUpgradeStartTimeSet(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version),
 					mockKubeClient.EXPECT().Update(gomock.Any(), gomock.Any()).DoAndReturn(
 						func(ctx context.Context, cv *configv1.ClusterVersion) error {
 							Expect(cv.Spec.DesiredUpdate.Version).To(Equal(upgradeConfig.Spec.Desired.Version))
 							Expect(cv.Spec.Channel).To(Equal(upgradeConfig.Spec.Desired.Channel))
 							return nil
 						}),
-					mockMetricsClient.EXPECT().UpdateMetricUpgradeStartTime(gomock.Any(), upgradeConfig.Name, upgradeConfig.Spec.Desired.Version),
 				)
 				result, err := CommenceUpgrade(mockKubeClient, config, mockScalerClient, mockDrainStrategyBuilder, mockMetricsClient, mockMaintClient, mockCVClient, upgradeConfig, mockMachineryClient, logger)
 				Expect(err).NotTo(HaveOccurred())
@@ -308,7 +302,6 @@ var _ = Describe("ClusterUpgrader", func() {
 				gomock.InOrder(
 					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
 					mockCVClient.EXPECT().GetClusterVersion().Return(clusterVersion, nil),
-					mockMetricsClient.EXPECT().IsMetricUpgradeStartTimeSet(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version),
 					mockKubeClient.EXPECT().Update(gomock.Any(), gomock.Any()).Return(fakeError),
 				)
 				result, err := CommenceUpgrade(mockKubeClient, config, mockScalerClient, mockDrainStrategyBuilder, mockMetricsClient, mockMaintClient, mockCVClient, upgradeConfig, mockMachineryClient, logger)
@@ -326,8 +319,6 @@ var _ = Describe("ClusterUpgrader", func() {
 				gomock.InOrder(
 					mockMachineryClient.EXPECT().IsUpgrading(gomock.Any(), "worker").Return(&machinery.UpgradingResult{IsUpgrading: false}, nil),
 					mockMaintClient.EXPECT().IsActive(),
-					mockMetricsClient.EXPECT().IsMetricNodeUpgradeEndTimeSet(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version),
-					mockMetricsClient.EXPECT().UpdateMetricNodeUpgradeEndTime(gomock.Any(), upgradeConfig.Name, upgradeConfig.Spec.Desired.Version),
 					mockMetricsClient.EXPECT().ResetMetricUpgradeWorkerTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version),
 				)
 				result, err := AllWorkersUpgraded(mockKubeClient, config, mockScalerClient, mockDrainStrategyBuilder, mockMetricsClient, mockMaintClient, mockCVClient, upgradeConfig, mockMachineryClient, logger)
