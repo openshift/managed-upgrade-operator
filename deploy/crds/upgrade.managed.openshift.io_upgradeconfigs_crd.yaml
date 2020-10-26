@@ -116,7 +116,28 @@ spec:
               items:
                 description: UpgradeHistory record history of upgrade
                 properties:
+                  version:
+                    description: Desired version of this upgrade
+                    type: string
+                  phase:
+                    description: This describe the status of the upgrade process
+                    enum:
+                      - New
+                      - Pending
+                      - Upgrading
+                      - Upgraded
+                      - Failed
+                    type: string
+                  startTime:
+                    format: date-time
+                    type: string
                   completeTime:
+                    format: date-time
+                    type: string
+                  workerStartTime:
+                    format: date-time
+                    type: string
+                  workerCompleteTime:
                     format: date-time
                     type: string
                   conditions:
@@ -160,21 +181,6 @@ spec:
                       - type
                       type: object
                     type: array
-                  phase:
-                    description: This describe the status of the upgrade process
-                    enum:
-                    - New
-                    - Pending
-                    - Upgrading
-                    - Upgraded
-                    - Failed
-                    type: string
-                  startTime:
-                    format: date-time
-                    type: string
-                  version:
-                    description: Desired version of this upgrade
-                    type: string
                 required:
                 - phase
                 type: object
