@@ -219,7 +219,7 @@ var _ = Describe("UpgradeConfigManager", func() {
 			Expect(err).To(Equal(ErrRetrievingUpgradeConfigs))
 		})
 
-		It("should not proceed if an upgrade is occuring", func() {
+		It("should not proceed if an upgrade is occurring", func() {
 			upgradeConfig.Status.History = []upgradev1alpha1.UpgradeHistory{
 				{
 					Version: TEST_UPGRADE_VERSION,

@@ -3,15 +3,16 @@ package ocmprovider
 import (
 	"encoding/json"
 	"fmt"
-	configv1 "github.com/openshift/api/config/v1"
-	"github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
-	"k8s.io/apimachinery/pkg/types"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"os"
 	"path"
 	"strings"
+
+	configv1 "github.com/openshift/api/config/v1"
+	"github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
@@ -21,17 +22,20 @@ import (
 
 const (
 	TEST_CLUSTER_ID                  = "111111-2222222-3333333-4444444"
-	TEST_POLICY_ID                   = "aaaaaa-bbbbbb-cccccc-dddddd"
+	TEST_CLUSTER_ID_MULTI_POLICIES   = "444444-333333-222222-111111"
+	TEST_POLICY_ID_MANUAL            = "aaaaaa-bbbbbb-cccccc-dddddd"
+	TEST_POLICY_ID_AUTOMATIC         = "aaaaaa-bbbbbb-cccccc-dddddd"
 	TEST_CLUSTER_ID_WITH_NO_POLICIES = "555555-666666-777777-888888"
-	TEST_CLUSTER_ID_FOR_BAD_REPLY = "999999-aaaaaa-bbbbbb-cccccc"
+	TEST_CLUSTER_ID_FOR_BAD_REPLY    = "999999-aaaaaa-bbbbbb-cccccc"
 
 	// Upgrade policy constants
-	TEST_OPERATOR_NAMESPACE         = "test-managed-upgrade-operator"
-	TEST_UPGRADEPOLICY_UPGRADETYPE  = "OSD"
-	TEST_UPGRADEPOLICY_TIME         = "2020-06-20T00:00:00Z"
-	TEST_UPGRADEPOLICY_VERSION      = "4.4.5"
-	TEST_UPGRADEPOLICY_CHANNELGROUP = "fast"
-	TEST_UPGRADEPOLICY_PDB_TIME     = 60
+	TEST_OPERATOR_NAMESPACE                = "test-managed-upgrade-operator"
+	TEST_UPGRADEPOLICY_UPGRADETYPE         = "OSD"
+	TEST_UPGRADEPOLICY_TIME                = "2020-06-20T00:00:00Z"
+	TEST_UPGRADEPOLICY_TIME_NEXT_OCCURRING = "2020-05-20T00:00:00Z"
+	TEST_UPGRADEPOLICY_VERSION             = "4.4.5"
+	TEST_UPGRADEPOLICY_CHANNELGROUP        = "fast"
+	TEST_UPGRADEPOLICY_PDB_TIME            = 60
 )
 
 var _ = Describe("OCM Provider", func() {
@@ -91,7 +95,7 @@ var _ = Describe("OCM Provider", func() {
 
 		It("Returns specs if they exist", func() {
 			expectedSpec := v1alpha1.UpgradeConfigSpec{
-				Desired:              v1alpha1.Update{
+				Desired: v1alpha1.Update{
 					Version: TEST_UPGRADEPOLICY_VERSION,
 					Channel: TEST_UPGRADEPOLICY_CHANNELGROUP + "-4.4",
 				},
@@ -102,6 +106,30 @@ var _ = Describe("OCM Provider", func() {
 
 			gomock.InOrder(
 				mockKubeClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Name: "version"}, gomock.Any()).SetArg(2, *clusterVersion).Return(nil),
+			)
+			specs, err := provider.Get()
+			Expect(err).To(BeNil())
+			Expect(specs).To(ContainElement(expectedSpec))
+		})
+
+		It("Returns next occurring spec if multiple exist", func() {
+			multiPolicyClusterVersion := &configv1.ClusterVersion{
+				Spec: configv1.ClusterVersionSpec{
+					ClusterID: TEST_CLUSTER_ID_MULTI_POLICIES,
+				},
+			}
+			expectedSpec := v1alpha1.UpgradeConfigSpec{
+				Desired: v1alpha1.Update{
+					Version: TEST_UPGRADEPOLICY_VERSION,
+					Channel: TEST_UPGRADEPOLICY_CHANNELGROUP + "-4.4",
+				},
+				UpgradeAt:            TEST_UPGRADEPOLICY_TIME_NEXT_OCCURRING,
+				PDBForceDrainTimeout: TEST_UPGRADEPOLICY_PDB_TIME,
+				Type:                 TEST_UPGRADEPOLICY_UPGRADETYPE,
+			}
+
+			gomock.InOrder(
+				mockKubeClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Name: "version"}, gomock.Any()).SetArg(2, *multiPolicyClusterVersion).Return(nil),
 			)
 			specs, err := provider.Get()
 			Expect(err).To(BeNil())
@@ -185,6 +213,9 @@ func ocmServerMock() *httptest.Server {
 	upPolicyPath := path.Join(CLUSTERS_V1_PATH, TEST_CLUSTER_ID, UPGRADEPOLICIES_V1_PATH)
 	handler.HandleFunc(upPolicyPath, policyMock)
 
+	multiUpPolicyPath := path.Join(CLUSTERS_V1_PATH, TEST_CLUSTER_ID_MULTI_POLICIES, UPGRADEPOLICIES_V1_PATH)
+	handler.HandleFunc(multiUpPolicyPath, multiPolicyMock)
+
 	noPolicyPath := path.Join(CLUSTERS_V1_PATH, TEST_CLUSTER_ID_WITH_NO_POLICIES, UPGRADEPOLICIES_V1_PATH)
 	handler.HandleFunc(noPolicyPath, noPolicyMock)
 
@@ -215,9 +246,13 @@ func clustersMock(w http.ResponseWriter, r *http.Request) {
 	// Return different responses based on the cluster ID searched for
 	clusterSearch := r.URL.Query().Get("search")
 
-	// Return a cluster ID that'll have some upgrade policies
+	// Return a cluster ID that'll have one upgrade policy
 	if strings.Contains(clusterSearch, TEST_CLUSTER_ID) {
 		response.Items[0].Id = TEST_CLUSTER_ID
+	}
+	// Return a cluster ID that'll have multiple upgrade policies
+	if strings.Contains(clusterSearch, TEST_CLUSTER_ID_MULTI_POLICIES) {
+		response.Items[0].Id = TEST_CLUSTER_ID_MULTI_POLICIES
 	}
 	// Return a cluster ID that'll have no upgrade policies
 	if strings.Contains(clusterSearch, TEST_CLUSTER_ID_WITH_NO_POLICIES) {
@@ -241,7 +276,7 @@ func policyMock(w http.ResponseWriter, r *http.Request) {
 		Total: 1,
 		Items: []upgradePolicy{
 			{
-				Id:           TEST_POLICY_ID,
+				Id:           TEST_POLICY_ID_MANUAL,
 				Kind:         "UpgradePolicy",
 				Href:         "test",
 				Schedule:     "test",
@@ -254,6 +289,50 @@ func policyMock(w http.ResponseWriter, r *http.Request) {
 					Unit:  "minutes",
 				},
 				ClusterId: TEST_CLUSTER_ID,
+			},
+		},
+	}
+	responseJson, _ := json.Marshal(response)
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintln(w, string(responseJson))
+}
+
+func multiPolicyMock(w http.ResponseWriter, r *http.Request) {
+	response := upgradePolicyList{
+		Kind:  "UpgradePolicyList",
+		Page:  1,
+		Size:  2,
+		Total: 2,
+		Items: []upgradePolicy{
+			{
+				Id:           TEST_POLICY_ID_MANUAL,
+				Kind:         "UpgradePolicy",
+				Href:         "test",
+				Schedule:     "test",
+				ScheduleType: "manual",
+				UpgradeType:  TEST_UPGRADEPOLICY_UPGRADETYPE,
+				Version:      TEST_UPGRADEPOLICY_VERSION,
+				NextRun:      TEST_UPGRADEPOLICY_TIME,
+				NodeDrainGracePeriod: nodeDrainGracePeriod{
+					Value: TEST_UPGRADEPOLICY_PDB_TIME,
+					Unit:  "minutes",
+				},
+				ClusterId: TEST_CLUSTER_ID_MULTI_POLICIES,
+			},
+			{
+				Id:           TEST_POLICY_ID_AUTOMATIC,
+				Kind:         "UpgradePolicy",
+				Href:         "test",
+				Schedule:     "3 5 5 * *",
+				ScheduleType: "automatic",
+				UpgradeType:  TEST_UPGRADEPOLICY_UPGRADETYPE,
+				Version:      TEST_UPGRADEPOLICY_VERSION,
+				NextRun:      TEST_UPGRADEPOLICY_TIME_NEXT_OCCURRING,
+				NodeDrainGracePeriod: nodeDrainGracePeriod{
+					Value: TEST_UPGRADEPOLICY_PDB_TIME,
+					Unit:  "minutes",
+				},
+				ClusterId: TEST_CLUSTER_ID_MULTI_POLICIES,
 			},
 		},
 	}
@@ -279,4 +358,3 @@ func garbageMock(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintln(w, "this is not json at all {")
 }
-
