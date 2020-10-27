@@ -5,37 +5,36 @@
 package mocks
 
 import (
-	reflect "reflect"
-
 	gomock "github.com/golang/mock/gomock"
 	v1 "github.com/openshift/api/config/v1"
 	v1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
+	reflect "reflect"
 )
 
-// MockClusterVersion is a mock of ClusterVersion interface.
+// MockClusterVersion is a mock of ClusterVersion interface
 type MockClusterVersion struct {
 	ctrl     *gomock.Controller
 	recorder *MockClusterVersionMockRecorder
 }
 
-// MockClusterVersionMockRecorder is the mock recorder for MockClusterVersion.
+// MockClusterVersionMockRecorder is the mock recorder for MockClusterVersion
 type MockClusterVersionMockRecorder struct {
 	mock *MockClusterVersion
 }
 
-// NewMockClusterVersion creates a new mock instance.
+// NewMockClusterVersion creates a new mock instance
 func NewMockClusterVersion(ctrl *gomock.Controller) *MockClusterVersion {
 	mock := &MockClusterVersion{ctrl: ctrl}
 	mock.recorder = &MockClusterVersionMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use.
+// EXPECT returns an object that allows the caller to indicate expected use
 func (m *MockClusterVersion) EXPECT() *MockClusterVersionMockRecorder {
 	return m.recorder
 }
 
-// GetClusterVersion mocks base method.
+// GetClusterVersion mocks base method
 func (m *MockClusterVersion) GetClusterVersion() (*v1.ClusterVersion, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetClusterVersion")
@@ -44,13 +43,13 @@ func (m *MockClusterVersion) GetClusterVersion() (*v1.ClusterVersion, error) {
 	return ret0, ret1
 }
 
-// GetClusterVersion indicates an expected call of GetClusterVersion.
+// GetClusterVersion indicates an expected call of GetClusterVersion
 func (mr *MockClusterVersionMockRecorder) GetClusterVersion() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClusterVersion", reflect.TypeOf((*MockClusterVersion)(nil).GetClusterVersion))
 }
 
-// HasUpgradeCommenced mocks base method.
+// HasUpgradeCommenced mocks base method
 func (m *MockClusterVersion) HasUpgradeCommenced(arg0 *v1alpha1.UpgradeConfig) (bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "HasUpgradeCommenced", arg0)
@@ -59,7 +58,7 @@ func (m *MockClusterVersion) HasUpgradeCommenced(arg0 *v1alpha1.UpgradeConfig) (
 	return ret0, ret1
 }
 
-// HasUpgradeCommenced indicates an expected call of HasUpgradeCommenced.
+// HasUpgradeCommenced indicates an expected call of HasUpgradeCommenced
 func (mr *MockClusterVersionMockRecorder) HasUpgradeCommenced(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasUpgradeCommenced", reflect.TypeOf((*MockClusterVersion)(nil).HasUpgradeCommenced), arg0)

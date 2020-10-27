@@ -5,41 +5,40 @@
 package mocks
 
 import (
-	reflect "reflect"
-
 	gomock "github.com/golang/mock/gomock"
+	reflect "reflect"
 )
 
-// MockEventManager is a mock of EventManager interface.
+// MockEventManager is a mock of EventManager interface
 type MockEventManager struct {
 	ctrl     *gomock.Controller
 	recorder *MockEventManagerMockRecorder
 }
 
-// MockEventManagerMockRecorder is the mock recorder for MockEventManager.
+// MockEventManagerMockRecorder is the mock recorder for MockEventManager
 type MockEventManagerMockRecorder struct {
 	mock *MockEventManager
 }
 
-// NewMockEventManager creates a new mock instance.
+// NewMockEventManager creates a new mock instance
 func NewMockEventManager(ctrl *gomock.Controller) *MockEventManager {
 	mock := &MockEventManager{ctrl: ctrl}
 	mock.recorder = &MockEventManagerMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use.
+// EXPECT returns an object that allows the caller to indicate expected use
 func (m *MockEventManager) EXPECT() *MockEventManagerMockRecorder {
 	return m.recorder
 }
 
-// Start mocks base method.
+// Start mocks base method
 func (m *MockEventManager) Start(arg0 <-chan struct{}) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Start", arg0)
 }
 
-// Start indicates an expected call of Start.
+// Start indicates an expected call of Start
 func (mr *MockEventManagerMockRecorder) Start(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockEventManager)(nil).Start), arg0)
