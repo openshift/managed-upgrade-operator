@@ -218,6 +218,14 @@ func (in *UpgradeHistory) DeepCopyInto(out *UpgradeHistory) {
 		in, out := &in.CompleteTime, &out.CompleteTime
 		*out = (*in).DeepCopy()
 	}
+	if in.WorkerStartTime != nil {
+		in, out := &in.WorkerStartTime, &out.WorkerStartTime
+		*out = (*in).DeepCopy()
+	}
+	if in.WorkerCompleteTime != nil {
+		in, out := &in.WorkerCompleteTime, &out.WorkerCompleteTime
+		*out = (*in).DeepCopy()
+	}
 	return
 }
 
