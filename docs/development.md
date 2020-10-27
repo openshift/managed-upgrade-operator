@@ -31,7 +31,7 @@ operator-sdk version: "v0.17.0", commit: "2fd7019f856cdb6f6618e2c3c80d15c3c79d1b
 
 [`GoMock`](https://github.com/golang/mock) is used for building or re-building mock interfaces used in [testing](./testing.md). If you are undertaking development which may involve the (re-)creation of mocked interfaces, it will be required.
 
-`GO111MODULE=on go get github.com/golang/mock/mockgen@latest`
+`GO111MODULE=on go get github.com/golang/mock/mockgen@v1.4.4`
 
 ## How to run
 
