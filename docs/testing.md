@@ -38,7 +38,7 @@ This project makes use of [`GoMock`](https://github.com/golang/mock) to mock ser
 
 Mocking can be performed using the `mockgen` utility, which is installed via:
 
-`GO111MODULE=on go get github.com/golang/mock/mockgen@latest`
+`GO111MODULE=on go get github.com/golang/mock/mockgen@v1.4.4`
 
 Once installed, an interface can be mocked by running: 
 
