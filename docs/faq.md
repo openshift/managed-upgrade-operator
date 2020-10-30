@@ -27,3 +27,41 @@ There is a configurable duration that sets how long MUO should respect a PodDisr
 **What happens to a node that is failing to drain NOT due a PodDisruptionBudget?**
 
 MUO will forcefully drain these nodes at [this](https://github.com/openshift/managed-cluster-config/blob/master/deploy/managed-upgrade-operator-config/10-managed-upgrade-operator-configmap.yaml#L26) duration that is set by RedHat SRE.
+
+**How to know the usage details for specifying fields in `UpgradeConfig` custom resource?**
+
+The `oc explain` CLI command can be used to easily understand what each field is meant to do.
+
+Example: To understand the API specification `(.spec)` for `UpgradeConfig`, the following command can be used:
+
+```
+$ oc explain upgradeconfig.spec
+KIND:     UpgradeConfig
+VERSION:  upgrade.managed.openshift.io/v1alpha1
+
+RESOURCE: spec <Object>
+
+DESCRIPTION:
+     UpgradeConfigSpec defines the desired state of UpgradeConfig and upgrade
+     window and freeze window
+
+FIELDS:
+   PDBForceDrainTimeout	<integer> -required-
+     The maximum grace period granted to a node whose drain is blocked by a Pod
+     Disruption Budget, before that drain is forced. Measured in minutes.
+
+   desired	<Object> -required-
+     Specify the desired OpenShift release
+
+   subscriptionUpdates	<[]Object>
+     This defines the 3rd party operator subscriptions upgrade
+
+   type	<string> -required-
+     Type indicates the ClusterUpgrader implementation to use to perform an
+     upgrade of the cluster
+
+   upgradeAt	<string> -required-
+     Specify the upgrade start time
+```
+
+Likewise, the command can be extended to navigate across any of the fields for the custom resource.
