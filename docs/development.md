@@ -18,11 +18,11 @@ $ export GO111MODULE=on
 The Operator is being developed based on the [Operators SDK](https://github.com/operator-framework/operator-sdk). 
 Ensure this is installed and available in your `$PATH`.  
 
-Presently, `v0.17.0` is being used as the baseline for `managed-upgrade-operator` development.  
+Presently, `v0.18.2` is being used as the baseline for `managed-upgrade-operator` development.
 
 ```
 # operator-sdk version
-operator-sdk version: "v0.17.0", commit: "2fd7019f856cdb6f6618e2c3c80d15c3c79d1b6c", kubernetes version: "unknown", go version: "go1.13.10 linux/amd64"
+operator-sdk version: "v0.18.2", commit: "f059b5e17447b0bbcef50846859519340c17ffad", kubernetes version: "v1.18.2", go version: "go1.13.10 linux/amd64"
 ```
 
 ## Dependencies
@@ -56,7 +56,7 @@ $ oc new-project managed-upgrade-operator
 * Run the operator via the Operator SDK:
 
 ```
-$ OPERATOR_NAMESPACE=managed-upgrade-operator operator-sdk run --local --watch-namespace=""
+$ OPERATOR_NAMESPACE=managed-upgrade-operator operator-sdk run local
 ``` 
 
 (`make run` will also work here)

@@ -19,8 +19,8 @@ require (
 	github.com/openshift/cluster-version-operator v3.11.1-0.20190629164025-08cac1c02538+incompatible
 	github.com/openshift/machine-api-operator v0.2.1-0.20200226185612-9b0170a1ba07
 	github.com/openshift/machine-config-operator v4.2.0-alpha.0.0.20190917115525-033375cbe820+incompatible
-	github.com/operator-framework/api v0.3.6
-	github.com/operator-framework/operator-sdk v0.17.0
+	github.com/operator-framework/api v0.3.8
+	github.com/operator-framework/operator-sdk v0.18.2
 	github.com/prometheus/alertmanager v0.20.0
 	github.com/prometheus/client_golang v1.5.1
 	github.com/prometheus/common v0.9.1
@@ -30,10 +30,10 @@ require (
 	golang.org/x/sys v0.0.0-20200509044756-6aff5f38e54f // indirect
 	golang.org/x/tools v0.0.0-20200522201501-cb1345f3a375 // indirect
 	gopkg.in/yaml.v2 v2.2.8
-	k8s.io/api v0.18.5
-	k8s.io/apimachinery v0.18.5
+	k8s.io/api v0.18.3
+	k8s.io/apimachinery v0.18.3
 	k8s.io/client-go v12.0.0+incompatible
-	k8s.io/kube-openapi v0.0.0-20191107075043-30be4d16710a
+	k8s.io/kube-openapi v0.0.0-20200410145947-61e04a5be9a6
 	sigs.k8s.io/controller-runtime v0.6.0
 )
 
@@ -43,12 +43,12 @@ replace (
 	github.com/go-log/log => github.com/go-log/log v0.1.1-0.20181211034820-a514cf01a3eb
 	github.com/openshift/cluster-version-operator => github.com/openshift/cluster-version-operator v1.0.1-0.20200601145814-7cb7909ed945
 	github.com/openshift/machine-config-operator => github.com/openshift/machine-config-operator v4.2.0-alpha.0+incompatible
-	k8s.io/api => k8s.io/api v0.0.0-20191016110408-35e52d86657a
-	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.0.0-20191016113550-5357c4baaf65
-	k8s.io/apimachinery => k8s.io/apimachinery v0.0.0-20191004115801-a2eda9f80ab8
+	k8s.io/api => k8s.io/api v0.18.3
+	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.18.3
+	k8s.io/apimachinery => k8s.io/apimachinery v0.18.3
 	k8s.io/apiserver => k8s.io/apiserver v0.0.0-20191016112112-5190913f932d
 	k8s.io/cli-runtime => k8s.io/cli-runtime v0.0.0-20191016114015-74ad18325ed5
-	k8s.io/client-go => k8s.io/client-go v0.0.0-20191016111102-bec269661e48
+	k8s.io/client-go => k8s.io/client-go v0.18.3
 	k8s.io/cloud-provider => k8s.io/cloud-provider v0.0.0-20191016115326-20453efc2458
 	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.0.0-20191016115129-c07a134afb42
 	k8s.io/code-generator => k8s.io/code-generator v0.0.0-20191004115455-8e001e5d1894
@@ -65,5 +65,5 @@ replace (
 	k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.0.0-20191016115753-cf0698c3a16b
 	k8s.io/metrics => k8s.io/metrics v0.0.0-20191016113814-3b1a734dba6e
 	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.0.0-20191016112829-06bb3c9d77c9
-	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.5.2
+	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.6.0
 )
