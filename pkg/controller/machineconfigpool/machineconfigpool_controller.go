@@ -46,7 +46,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource MachineConfigPool
-	err = c.Watch(&source.Kind{Type: &machineconfigapi.MachineConfigPool{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(&source.Kind{Type: &machineconfigapi.MachineConfigPool{}}, &handler.EnqueueRequestForObject{}, isWorkerPredicate)
 	if err != nil {
 		return err
 	}
@@ -82,10 +82,6 @@ func (r *ReconcileMachineConfigPool) Reconcile(request reconcile.Request) (recon
 		}
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
-	}
-
-	if instance.Name != "worker" {
-		return reconcile.Result{}, nil
 	}
 
 	ucManager, err := r.upgradeConfigManagerBuilder.NewManager(r.client)
