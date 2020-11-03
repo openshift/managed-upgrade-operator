@@ -11,6 +11,7 @@ require (
 	github.com/go-openapi/strfmt v0.19.3
 	github.com/golang/mock v1.4.4
 	github.com/golang/protobuf v1.4.1 // indirect
+	github.com/golangci/golangci-lint v1.27.0
 	github.com/google/uuid v1.1.1
 	github.com/hashicorp/go-multierror v1.1.0
 	github.com/onsi/ginkgo v1.12.0
@@ -33,6 +34,7 @@ require (
 	k8s.io/api v0.18.5
 	k8s.io/apimachinery v0.18.5
 	k8s.io/client-go v12.0.0+incompatible
+	k8s.io/code-generator v0.18.3
 	k8s.io/kube-openapi v0.0.0-20191107075043-30be4d16710a
 	sigs.k8s.io/controller-runtime v0.6.0
 )
