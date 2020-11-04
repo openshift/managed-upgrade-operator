@@ -2,17 +2,18 @@ package upgradeconfig
 
 import (
 	"context"
+	"time"
+
 	"github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-multierror"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime"
+	controllerruntime "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -191,6 +192,20 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 		reqLogger.Info("Checking if cluster can commence upgrade.")
 		schedulerResult := r.scheduler.IsReadyToUpgrade(instance, cfg.GetUpgradeWindowTimeOutDuration())
 		if schedulerResult.IsReady {
+			upCoMan, err := upgradeconfigmanager.NewBuilder().NewManager(r.client)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+
+			remoteChanged, err := upCoMan.Refresh()
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+			if remoteChanged {
+				reqLogger.Info("The remote upgrade policy does not match the local upgrade config, applying the new upgrade policy")
+				return reconcile.Result{}, nil
+			}
+
 			upgrader, err := r.clusterUpgraderBuilder.NewClient(r.client, cfm, metricsClient, instance.Spec.Type)
 			if err != nil {
 				return reconcile.Result{}, err
@@ -259,7 +274,6 @@ func (r *ReconcileUpgradeConfig) upgradeCluster(upgrader cub.ClusterUpgrader, uc
 
 	return reconcile.Result{RequeueAfter: 1 * time.Minute}, me.ErrorOrNil()
 }
-
 
 var OSDUpgradePredicate = predicate.Funcs{
 	UpdateFunc: func(e event.UpdateEvent) bool {
