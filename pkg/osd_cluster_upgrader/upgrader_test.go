@@ -3,6 +3,7 @@ package osd_cluster_upgrader
 import (
 	"context"
 	"fmt"
+	"github.com/openshift/managed-upgrade-operator/pkg/notifier"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -395,6 +396,46 @@ var _ = Describe("ClusterUpgrader", func() {
 			result, err := CommenceUpgrade(mockKubeClient, config, mockScalerClient, mockDrainStrategyBuilder, mockMetricsClient, mockMaintClient, mockCVClient, mockEMClient, upgradeConfig, mockMachineryClient, logger)
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(Equal(fakeError))
+			Expect(result).To(BeFalse())
+		})
+	})
+
+	Context("When running the send-started-notification phase", func() {
+		It("will send the correct notification", func() {
+			gomock.InOrder(
+				mockEMClient.EXPECT().Notify(notifier.StateStarted),
+			)
+			result, err := SendStartedNotification(mockKubeClient, config, mockScalerClient, mockDrainStrategyBuilder, mockMetricsClient, mockMaintClient, mockCVClient, mockEMClient, upgradeConfig, mockMachineryClient, logger)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(BeTrue())
+		})
+		It("will not succeed if it can't send the notification", func() {
+			fakeErr := fmt.Errorf("fake error")
+			gomock.InOrder(
+				mockEMClient.EXPECT().Notify(notifier.StateStarted).Return(fakeErr),
+			)
+			result, err := SendStartedNotification(mockKubeClient, config, mockScalerClient, mockDrainStrategyBuilder, mockMetricsClient, mockMaintClient, mockCVClient, mockEMClient, upgradeConfig, mockMachineryClient, logger)
+			Expect(err).To(HaveOccurred())
+			Expect(result).To(BeFalse())
+		})
+	})
+
+	Context("When running the send-completed-notification phase", func() {
+		It("will send the notification", func() {
+			gomock.InOrder(
+				mockEMClient.EXPECT().Notify(notifier.StateCompleted),
+			)
+			result, err := SendCompletedNotification(mockKubeClient, config, mockScalerClient, mockDrainStrategyBuilder, mockMetricsClient, mockMaintClient, mockCVClient, mockEMClient, upgradeConfig, mockMachineryClient, logger)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(BeTrue())
+		})
+		It("will not succeed if it can't send the notification", func() {
+			fakeErr := fmt.Errorf("fake error")
+			gomock.InOrder(
+				mockEMClient.EXPECT().Notify(notifier.StateCompleted).Return(fakeErr),
+			)
+			result, err := SendCompletedNotification(mockKubeClient, config, mockScalerClient, mockDrainStrategyBuilder, mockMetricsClient, mockMaintClient, mockCVClient, mockEMClient, upgradeConfig, mockMachineryClient, logger)
+			Expect(err).To(HaveOccurred())
 			Expect(result).To(BeFalse())
 		})
 	})
