@@ -3,7 +3,6 @@ package upgradeconfig
 import (
 	"context"
 	"github.com/openshift/managed-upgrade-operator/pkg/eventmanager"
-	"github.com/openshift/managed-upgrade-operator/pkg/notifier"
 	"github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -202,12 +201,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 		schedulerResult := r.scheduler.IsReadyToUpgrade(instance, cfg.GetUpgradeWindowTimeOutDuration())
 		if schedulerResult.IsReady {
 
-			err = eventClient.Notify(notifier.StateStarted)
-			if err != nil {
-				return reconcile.Result{}, err
-			}
-
-			upgrader, err := r.clusterUpgraderBuilder.NewClient(r.client, cfm, metricsClient, instance.Spec.Type)
+			upgrader, err := r.clusterUpgraderBuilder.NewClient(r.client, cfm, metricsClient, eventClient, instance.Spec.Type)
 			if err != nil {
 				return reconcile.Result{}, err
 			}
@@ -242,16 +236,12 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 	case upgradev1alpha1.UpgradePhaseUpgrading:
 		reqLogger.Info("Cluster detected as already upgrading.")
 		cfm := r.configManagerBuilder.New(r.client, request.Namespace)
-		upgrader, err := r.clusterUpgraderBuilder.NewClient(r.client, cfm, metricsClient, instance.Spec.Type)
+		upgrader, err := r.clusterUpgraderBuilder.NewClient(r.client, cfm, metricsClient, eventClient, instance.Spec.Type)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
 		return r.upgradeCluster(upgrader, instance, reqLogger)
 	case upgradev1alpha1.UpgradePhaseUpgraded:
-		err = eventClient.Notify(notifier.StateCompleted)
-		if err != nil {
-			return reconcile.Result{}, err
-		}
 		reqLogger.Info("Cluster is already upgraded")
 		return reconcile.Result{}, nil
 
