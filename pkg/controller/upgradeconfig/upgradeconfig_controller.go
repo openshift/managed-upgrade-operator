@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager"
+	ucmgr "github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
@@ -57,6 +57,7 @@ func newReconciler(mgr manager.Manager, client client.Client) reconcile.Reconcil
 		configManagerBuilder:   configmanager.NewBuilder(),
 		scheduler:              scheduler.NewScheduler(),
 		cvClientBuilder:        cv.NewBuilder(),
+		ucMgrBuilder:           ucmgr.NewBuilder(),
 	}
 }
 
@@ -92,6 +93,7 @@ type ReconcileUpgradeConfig struct {
 	configManagerBuilder   configmanager.ConfigManagerBuilder
 	scheduler              scheduler.Scheduler
 	cvClientBuilder        cv.ClusterVersionBuilder
+	ucMgrBuilder           ucmgr.UpgradeConfigManagerBuilder
 }
 
 // Reconcile reads that state of the cluster for a UpgradeConfig object and makes changes based on the state read
@@ -192,12 +194,12 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 		reqLogger.Info("Checking if cluster can commence upgrade.")
 		schedulerResult := r.scheduler.IsReadyToUpgrade(instance, cfg.GetUpgradeWindowTimeOutDuration())
 		if schedulerResult.IsReady {
-			upCoMan, err := upgradeconfigmanager.NewBuilder().NewManager(r.client)
+			ucMgr, err := r.ucMgrBuilder.NewManager(r.client)
 			if err != nil {
 				return reconcile.Result{}, err
 			}
 
-			remoteChanged, err := upCoMan.Refresh()
+			remoteChanged, err := ucMgr.Refresh()
 			if err != nil {
 				return reconcile.Result{}, err
 			}
@@ -292,5 +294,5 @@ var OSDUpgradePredicate = predicate.Funcs{
 }
 
 func isOsdUpgrade(name string) bool {
-	return name == upgradeconfigmanager.UPGRADECONFIG_CR_NAME
+	return name == ucmgr.UPGRADECONFIG_CR_NAME
 }
