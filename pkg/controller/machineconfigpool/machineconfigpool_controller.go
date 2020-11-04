@@ -101,7 +101,7 @@ func (r *ReconcileMachineConfigPool) Reconcile(request reconcile.Request) (recon
 	if uc.Status.History != nil {
 		history := uc.Status.History.GetHistory(uc.Spec.Desired.Version)
 		if history != nil && history.Phase == upgradev1alpha1.UpgradePhaseUpgrading {
-			if instance.Status.MachineCount != instance.Status.UpdatedMachineCount {
+			if instance.Status.UpdatedMachineCount == 0 {
 				if history.WorkerStartTime == nil {
 					history.WorkerStartTime = &metav1.Time{Time: time.Now()}
 				}
@@ -112,12 +112,11 @@ func (r *ReconcileMachineConfigPool) Reconcile(request reconcile.Request) (recon
 					history.WorkerCompleteTime = &metav1.Time{Time: time.Now()}
 				}
 			}
-		}
-
-		uc.Status.History.SetHistory(*history)
-		err = r.client.Status().Update(context.TODO(), uc)
-		if err != nil {
-			return reconcile.Result{}, err
+			uc.Status.History.SetHistory(*history)
+			err = r.client.Status().Update(context.TODO(), uc)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
 		}
 	}
 

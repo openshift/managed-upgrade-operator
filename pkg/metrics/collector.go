@@ -147,30 +147,30 @@ func (uc *UpgradeCollector) collectUpgradeMetrics(ch chan<- prometheus.Metric) {
 					upgradeConfig.Spec.Desired.Version,
 				)
 			}
-		}
-	}
 
-	clusterVersion, err := uc.cvClient.GetClusterVersion()
-	if err != nil {
-		return
-	}
+			clusterVersion, err := uc.cvClient.GetClusterVersion()
+			if err != nil {
+				return
+			}
 
-	cvHistory := cv.GetHistory(clusterVersion, upgradeConfig.Spec.Desired.Version)
-	if cvHistory != nil {
-		ch <- prometheus.MustNewConstMetric(
-			UpgradeControlPlaneStartDesc,
-			prometheus.GaugeValue,
-			float64(cvHistory.StartedTime.Time.Unix()),
-			upgradeConfig.Spec.Desired.Version,
-		)
+			cvHistory := cv.GetHistory(clusterVersion, upgradeConfig.Spec.Desired.Version)
+			if cvHistory != nil {
+				ch <- prometheus.MustNewConstMetric(
+					UpgradeControlPlaneStartDesc,
+					prometheus.GaugeValue,
+					float64(cvHistory.StartedTime.Time.Unix()),
+					upgradeConfig.Spec.Desired.Version,
+				)
 
-		if cvHistory.CompletionTime != nil {
-			ch <- prometheus.MustNewConstMetric(
-				UpgradeControlPlaneCompletionDesc,
-				prometheus.GaugeValue,
-				float64(cvHistory.CompletionTime.Time.Unix()),
-				upgradeConfig.Spec.Desired.Version,
-			)
+				if cvHistory.CompletionTime != nil {
+					ch <- prometheus.MustNewConstMetric(
+						UpgradeControlPlaneCompletionDesc,
+						prometheus.GaugeValue,
+						float64(cvHistory.CompletionTime.Time.Unix()),
+						upgradeConfig.Spec.Desired.Version,
+					)
+				}
+			}
 		}
 	}
 }
