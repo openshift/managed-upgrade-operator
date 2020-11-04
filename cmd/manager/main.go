@@ -27,10 +27,6 @@ import (
 	routev1 "github.com/openshift/api/route/v1"
 	machineapi "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
 	machineconfigapi "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
-	"github.com/openshift/managed-upgrade-operator/pkg/apis"
-	"github.com/openshift/managed-upgrade-operator/pkg/controller"
-	"github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager"
-	"github.com/openshift/managed-upgrade-operator/version"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	kubemetrics "github.com/operator-framework/operator-sdk/pkg/kube-metrics"
 	"github.com/operator-framework/operator-sdk/pkg/leader"
@@ -38,9 +34,11 @@ import (
 	"github.com/operator-framework/operator-sdk/pkg/metrics"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
 	"github.com/spf13/pflag"
-	"github.com/openshift/managed-upgrade-operator/pkg/eventmanager"
-	"github.com/openshift/managed-upgrade-operator/pkg/notifier"
 
+	"github.com/openshift/managed-upgrade-operator/pkg/apis"
+	"github.com/openshift/managed-upgrade-operator/pkg/controller"
+	"github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager"
+	"github.com/openshift/managed-upgrade-operator/version"
 )
 
 // Change below variables to serve metrics on different host or port.
@@ -185,30 +183,7 @@ func main() {
 	log.Info("Starting UpgradeConfig manager")
 	go ucMgr.StartSync(stopCh)
 
-	// Create the event manager
-	eventManagerClient, err := client.New(cfg, client.Options{})
-	if err != nil {
-		log.Error(err, "unable to create eventmanager client")
-		os.Exit(1)
-	}
-	runEventManager := true
-	eventMgr, err := eventmanager.NewBuilder().NewManager(eventManagerClient)
-	if err != nil {
-		if err == notifier.ErrNoNotifierConfigured {
-			// No notifier client has been configured, so don't run an event manager
-			log.Info("No notifier client configured, event manager will not run.")
-			runEventManager = false
-		} else {
-			log.Error(err, "unable to create eventmanager")
-			os.Exit(1)
-		}
-	}
-	if runEventManager {
-		log.Info("Starting Event manager")
-		go eventMgr.Start(stopCh)
-	}
-
-	// Start the Cmd
+	// Watch the Cmd
 	if err := mgr.Start(stopCh); err != nil {
 		log.Error(err, "Manager exited non-zero")
 		os.Exit(1)

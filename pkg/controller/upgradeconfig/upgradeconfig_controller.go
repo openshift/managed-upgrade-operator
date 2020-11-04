@@ -2,6 +2,8 @@ package upgradeconfig
 
 import (
 	"context"
+	"github.com/openshift/managed-upgrade-operator/pkg/eventmanager"
+	"github.com/openshift/managed-upgrade-operator/pkg/notifier"
 	"github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -56,6 +58,7 @@ func newReconciler(mgr manager.Manager, client client.Client) reconcile.Reconcil
 		configManagerBuilder:   configmanager.NewBuilder(),
 		scheduler:              scheduler.NewScheduler(),
 		cvClientBuilder:        cv.NewBuilder(),
+		eventManagerBuilder:    eventmanager.NewBuilder(),
 	}
 }
 
@@ -91,6 +94,7 @@ type ReconcileUpgradeConfig struct {
 	configManagerBuilder   configmanager.ConfigManagerBuilder
 	scheduler              scheduler.Scheduler
 	cvClientBuilder        cv.ClusterVersionBuilder
+	eventManagerBuilder    eventmanager.EventManagerBuilder
 }
 
 // Reconcile reads that state of the cluster for a UpgradeConfig object and makes changes based on the state read
@@ -104,6 +108,12 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 
 	// Initialise metrics
 	metricsClient, err := r.metricsClientBuilder.NewClient(r.client)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	// Initialise event manager
+	eventClient, err := r.eventManagerBuilder.NewManager(r.client)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -191,6 +201,12 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 		reqLogger.Info("Checking if cluster can commence upgrade.")
 		schedulerResult := r.scheduler.IsReadyToUpgrade(instance, cfg.GetUpgradeWindowTimeOutDuration())
 		if schedulerResult.IsReady {
+
+			err = eventClient.Notify(notifier.StateStarted)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+
 			upgrader, err := r.clusterUpgraderBuilder.NewClient(r.client, cfm, metricsClient, instance.Spec.Type)
 			if err != nil {
 				return reconcile.Result{}, err
@@ -232,8 +248,13 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 		}
 		return r.upgradeCluster(upgrader, instance, reqLogger)
 	case upgradev1alpha1.UpgradePhaseUpgraded:
+		err = eventClient.Notify(notifier.StateCompleted)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
 		reqLogger.Info("Cluster is already upgraded")
 		return reconcile.Result{}, nil
+
 	default:
 		reqLogger.Info("Unknown status")
 	}

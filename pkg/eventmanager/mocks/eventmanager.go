@@ -6,6 +6,7 @@ package mocks
 
 import (
 	gomock "github.com/golang/mock/gomock"
+	notifier "github.com/openshift/managed-upgrade-operator/pkg/notifier"
 	reflect "reflect"
 )
 
@@ -32,14 +33,28 @@ func (m *MockEventManager) EXPECT() *MockEventManagerMockRecorder {
 	return m.recorder
 }
 
-// Start mocks base method
-func (m *MockEventManager) Start(arg0 <-chan struct{}) {
+// Notify mocks base method
+func (m *MockEventManager) Notify(arg0 notifier.NotifyState) error {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Start", arg0)
+	ret := m.ctrl.Call(m, "Notify", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
-// Start indicates an expected call of Start
-func (mr *MockEventManagerMockRecorder) Start(arg0 interface{}) *gomock.Call {
+// Notify indicates an expected call of Notify
+func (mr *MockEventManagerMockRecorder) Notify(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockEventManager)(nil).Start), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Notify", reflect.TypeOf((*MockEventManager)(nil).Notify), arg0)
+}
+
+// WatchAndNotify mocks base method
+func (m *MockEventManager) WatchAndNotify(arg0 <-chan struct{}) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "WatchAndNotify", arg0)
+}
+
+// WatchAndNotify indicates an expected call of WatchAndNotify
+func (mr *MockEventManagerMockRecorder) WatchAndNotify(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WatchAndNotify", reflect.TypeOf((*MockEventManager)(nil).WatchAndNotify), arg0)
 }

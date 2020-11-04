@@ -28,7 +28,7 @@ const (
 	STATE_V1_PATH = "state"
 )
 
-func New(client client.Client, ocmBaseUrl *url.URL, upgradeConfigManager upgradeconfigmanager.UpgradeConfigManager) (*ocmNotifier, error) {
+func NewOCMNotifier(client client.Client, ocmBaseUrl *url.URL, upgradeConfigManager upgradeconfigmanager.UpgradeConfigManager) (*ocmNotifier, error) {
 
 	// Fetch the cluster AccessToken
 	accessToken, err := util.GetAccessToken(client)
