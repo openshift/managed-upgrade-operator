@@ -47,3 +47,7 @@ run:
 .PHONY: lint
 lint:
 	golangci-lint run
+
+.PHONY: tools
+tools:
+	cat tools.go | grep _ | awk -F'"' '{print $$2}' | xargs -tI % go install %

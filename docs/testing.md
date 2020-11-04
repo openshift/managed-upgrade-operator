@@ -7,12 +7,9 @@ To contribute you need to be familiar with:
 * [Ginkgo](https://github.com/onsi/ginkgo) - BDD Testing Framework for Go
 * [Gomega](https://onsi.github.io/gomega/) - Matcher/assertion library
 
-## Ginkgo
+## Prerequisites
 
-```zsh
-go get -u github.com/onsi/ginkgo/ginkgo  # installs the ginkgo CLI
-go get -u github.com/onsi/gomega/...     # fetches the Matcher/Assertion library
-```
+Make sure that the [tool dependencies](https://github.com/openshift/managed-upgrade-operator/blob/master/docs/development.md#dependencies) are already in place. The `ginkgo` and `mockgen` binaries that are required for testing will be installed as part of tool dependencies.
 
 ## Bootstrapping the tests
 ```
@@ -36,13 +33,11 @@ find .
 
 This project makes use of [`GoMock`](https://github.com/golang/mock) to mock service interfaces. This comes with the `mockgen` utility which can be used to generate or re-generate mock interfaces that can be used to simulate the behaviour of an external dependency.
 
-Mocking can be performed using the `mockgen` utility, which is installed via:
-
-`GO111MODULE=on go get github.com/golang/mock/mockgen@v1.4.4`
-
 Once installed, an interface can be mocked by running: 
 
-`mockgen -s=/path/to/file_containing_interface.go > /path/to/output_mock_file.go`
+```
+mockgen -s=/path/to/file_containing_interface.go > /path/to/output_mock_file.go
+```
 
 However, it is considered good practice to include a [go generate](https://golang.org/pkg/cmd/go/internal/generate/) directive above the interface which defines the specific `mockgen` command that will generate your mocked interface. 
 
