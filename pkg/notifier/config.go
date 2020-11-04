@@ -15,6 +15,11 @@ type NotifierConfigManager struct {
 }
 
 func (cfg *NotifierConfig) IsValid() error {
+	// the source can be missing. if it's not empty, validate it is a supported value
+	if cfg.ConfigManager.Source == "" {
+		return nil
+	}
+
 	switch cfg.ConfigManager.Source {
 	case string(OCM):
 		return nil
