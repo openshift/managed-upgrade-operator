@@ -10,7 +10,8 @@ A recent Go distribution (>=1.13) with enabled Go modules.
 
 ```
 $ go version
-$ export GO111MODULE=on
+go version go1.13.15 linux/amd64
+$
 ```
 
 ### operator-sdk
@@ -27,11 +28,15 @@ operator-sdk version: "v0.17.0", commit: "2fd7019f856cdb6f6618e2c3c80d15c3c79d1b
 
 ## Dependencies
 
-### GoMock
+The tool dependencies that are required locally to be present are all part of [tools.go](https://github.com/openshift/managed-upgrade-operator/blob/master/tools.go) file. This file will refer the version of the required module from [go.mod](https://github.com/openshift/managed-upgrade-operator/blob/master/go.mod) file.
 
-[`GoMock`](https://github.com/golang/mock) is used for building or re-building mock interfaces used in [testing](./testing.md). If you are undertaking development which may involve the (re-)creation of mocked interfaces, it will be required.
+In order to install the tool dependencies locally, simply run the below command which will fetch the tools for you and install the binaries at location `$GOPATH/bin` by default:
 
-`GO111MODULE=on go get github.com/golang/mock/mockgen@v1.4.4`
+```
+$ make tools
+```
+
+This will make sure that the installed binaries are always as per the required version mentioned in `go.mod` file. If the version of the module is changed, need to run the command again locally to have new version of tools.
 
 ## How to run
 

@@ -2,18 +2,17 @@ package upgradeconfig
 
 import (
 	"context"
-	"github.com/openshift/managed-upgrade-operator/pkg/eventmanager"
-	"github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager"
+	"time"
+
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-multierror"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime"
+	controllerruntime "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -28,6 +27,8 @@ import (
 	"github.com/openshift/managed-upgrade-operator/pkg/configmanager"
 	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
 	"github.com/openshift/managed-upgrade-operator/pkg/scheduler"
+	"github.com/openshift/managed-upgrade-operator/pkg/eventmanager"
+	ucmgr "github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager"
 	"github.com/openshift/managed-upgrade-operator/pkg/validation"
 )
 
@@ -58,6 +59,7 @@ func newReconciler(mgr manager.Manager, client client.Client) reconcile.Reconcil
 		scheduler:              scheduler.NewScheduler(),
 		cvClientBuilder:        cv.NewBuilder(),
 		eventManagerBuilder:    eventmanager.NewBuilder(),
+		ucMgrBuilder:           ucmgr.NewBuilder(),
 	}
 }
 
@@ -94,6 +96,7 @@ type ReconcileUpgradeConfig struct {
 	scheduler              scheduler.Scheduler
 	cvClientBuilder        cv.ClusterVersionBuilder
 	eventManagerBuilder    eventmanager.EventManagerBuilder
+	ucMgrBuilder           ucmgr.UpgradeConfigManagerBuilder
 }
 
 // Reconcile reads that state of the cluster for a UpgradeConfig object and makes changes based on the state read
@@ -200,8 +203,22 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 		reqLogger.Info("Checking if cluster can commence upgrade.")
 		schedulerResult := r.scheduler.IsReadyToUpgrade(instance, cfg.GetUpgradeWindowTimeOutDuration())
 		if schedulerResult.IsReady {
+			ucMgr, err := r.ucMgrBuilder.NewManager(r.client)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+
+			remoteChanged, err := ucMgr.Refresh()
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+			if remoteChanged {
+				reqLogger.Info("The remote upgrade policy does not match the local upgrade config, applying the new upgrade policy")
+				return reconcile.Result{}, nil
+			}
 
 			upgrader, err := r.clusterUpgraderBuilder.NewClient(r.client, cfm, metricsClient, eventClient, instance.Spec.Type)
+
 			if err != nil {
 				return reconcile.Result{}, err
 			}
@@ -271,7 +288,6 @@ func (r *ReconcileUpgradeConfig) upgradeCluster(upgrader cub.ClusterUpgrader, uc
 	return reconcile.Result{RequeueAfter: 1 * time.Minute}, me.ErrorOrNil()
 }
 
-
 var OSDUpgradePredicate = predicate.Funcs{
 	UpdateFunc: func(e event.UpdateEvent) bool {
 		return isOsdUpgrade(e.MetaNew.GetName())
@@ -289,5 +305,5 @@ var OSDUpgradePredicate = predicate.Funcs{
 }
 
 func isOsdUpgrade(name string) bool {
-	return name == upgradeconfigmanager.UPGRADECONFIG_CR_NAME
+	return name == ucmgr.UPGRADECONFIG_CR_NAME
 }
