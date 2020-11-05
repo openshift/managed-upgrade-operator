@@ -210,8 +210,13 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 
 			remoteChanged, err := ucMgr.Refresh()
 			if err != nil {
-				return reconcile.Result{}, err
+				// If no config manager is configured, we don't need to enforce a kill switch
+				if err != ucmgr.ErrNotConfigured {
+					return reconcile.Result{}, err
+				}
+				reqLogger.Info("No UpgradeConfig manager configured, kill-switch ignored")
 			}
+
 			if remoteChanged {
 				reqLogger.Info("The remote upgrade policy does not match the local upgrade config, applying the new upgrade policy")
 				return reconcile.Result{}, nil

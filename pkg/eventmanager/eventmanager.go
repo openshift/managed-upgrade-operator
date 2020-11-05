@@ -21,7 +21,6 @@ var log = logf.Log.WithName("event-manager")
 
 //go:generate mockgen -destination=mocks/eventmanager.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/eventmanager EventManager
 type EventManager interface {
-	WatchAndNotify(stopCh <-chan struct{}) // Marked for deprecation
 	Notify(state notifier.NotifyState) error
 }
 
@@ -69,29 +68,6 @@ func (emb *eventManagerBuilder) NewManager(client client.Client) (EventManager, 
 	}, nil
 }
 
-// Passively check for notifiable events and then do so
-func (s *eventManager) WatchAndNotify(stopCh <-chan struct{}) {
-	log.Info("Starting the eventManager")
-
-	err := s.notificationRefresh()
-	if err != nil {
-		log.Error(err, "error during notification refresh")
-	}
-
-	for {
-		select {
-		case <-time.After(REFRESH_INTERVAL):
-			err = s.notificationRefresh()
-			if err != nil {
-				log.Error(err, "error during notification refresh")
-			}
-		case <-stopCh:
-			log.Info("Stopping the eventManager")
-			break
-		}
-	}
-}
-
 func (s *eventManager) Notify(state notifier.NotifyState) error {
 	// Get the current UpgradeConfig
 	uc, err := s.upgradeConfigManager.Get()
@@ -132,10 +108,5 @@ func (s *eventManager) Notify(state notifier.NotifyState) error {
 	}
 	s.metrics.UpdateMetricNotificationEventSent(uc.Name, string(state), uc.Spec.Desired.Version)
 
-	return nil
-}
-
-func (s *eventManager) notificationRefresh() error {
-	// Currently a no-op as there's no passive events for us to look for
 	return nil
 }

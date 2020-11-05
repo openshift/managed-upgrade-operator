@@ -46,15 +46,3 @@ func (mr *MockEventManagerMockRecorder) Notify(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Notify", reflect.TypeOf((*MockEventManager)(nil).Notify), arg0)
 }
-
-// WatchAndNotify mocks base method
-func (m *MockEventManager) WatchAndNotify(arg0 <-chan struct{}) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "WatchAndNotify", arg0)
-}
-
-// WatchAndNotify indicates an expected call of WatchAndNotify
-func (mr *MockEventManagerMockRecorder) WatchAndNotify(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WatchAndNotify", reflect.TypeOf((*MockEventManager)(nil).WatchAndNotify), arg0)
-}
