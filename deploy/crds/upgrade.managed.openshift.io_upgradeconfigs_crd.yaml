@@ -175,6 +175,12 @@ spec:
                   version:
                     description: Desired version of this upgrade
                     type: string
+                  workerCompleteTime:
+                    format: date-time
+                    type: string
+                  workerStartTime:
+                    format: date-time
+                    type: string
                 required:
                 - phase
                 type: object

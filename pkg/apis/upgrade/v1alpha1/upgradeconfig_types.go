@@ -59,6 +59,10 @@ type UpgradeHistory struct {
 
 	// +kubebuilder:validation:Optional
 	CompleteTime *metav1.Time `json:"completeTime,omitempty"`
+
+	WorkerStartTime *metav1.Time `json:"workerStartTime,omitempty"`
+
+	WorkerCompleteTime *metav1.Time `json:"workerCompleteTime,omitempty"`
 }
 
 // UpgradeConditionType is a Go string type.
