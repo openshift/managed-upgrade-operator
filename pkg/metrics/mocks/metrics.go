@@ -8,7 +8,6 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	metrics "github.com/openshift/managed-upgrade-operator/pkg/metrics"
 	reflect "reflect"
-	time "time"
 )
 
 // MockMetrics is a mock of Metrics interface
@@ -64,36 +63,6 @@ func (mr *MockMetricsMockRecorder) IsClusterVersionAtVersion(arg0 interface{}) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsClusterVersionAtVersion", reflect.TypeOf((*MockMetrics)(nil).IsClusterVersionAtVersion), arg0)
 }
 
-// IsMetricControlPlaneEndTimeSet mocks base method
-func (m *MockMetrics) IsMetricControlPlaneEndTimeSet(arg0, arg1 string) (bool, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsMetricControlPlaneEndTimeSet", arg0, arg1)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// IsMetricControlPlaneEndTimeSet indicates an expected call of IsMetricControlPlaneEndTimeSet
-func (mr *MockMetricsMockRecorder) IsMetricControlPlaneEndTimeSet(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsMetricControlPlaneEndTimeSet", reflect.TypeOf((*MockMetrics)(nil).IsMetricControlPlaneEndTimeSet), arg0, arg1)
-}
-
-// IsMetricNodeUpgradeEndTimeSet mocks base method
-func (m *MockMetrics) IsMetricNodeUpgradeEndTimeSet(arg0, arg1 string) (bool, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsMetricNodeUpgradeEndTimeSet", arg0, arg1)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// IsMetricNodeUpgradeEndTimeSet indicates an expected call of IsMetricNodeUpgradeEndTimeSet
-func (mr *MockMetricsMockRecorder) IsMetricNodeUpgradeEndTimeSet(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsMetricNodeUpgradeEndTimeSet", reflect.TypeOf((*MockMetrics)(nil).IsMetricNodeUpgradeEndTimeSet), arg0, arg1)
-}
-
 // IsMetricNotificationEventSentSet mocks base method
 func (m *MockMetrics) IsMetricNotificationEventSentSet(arg0, arg1, arg2 string) (bool, error) {
 	m.ctrl.T.Helper()
@@ -107,21 +76,6 @@ func (m *MockMetrics) IsMetricNotificationEventSentSet(arg0, arg1, arg2 string) 
 func (mr *MockMetricsMockRecorder) IsMetricNotificationEventSentSet(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsMetricNotificationEventSentSet", reflect.TypeOf((*MockMetrics)(nil).IsMetricNotificationEventSentSet), arg0, arg1, arg2)
-}
-
-// IsMetricUpgradeStartTimeSet mocks base method
-func (m *MockMetrics) IsMetricUpgradeStartTimeSet(arg0, arg1 string) (bool, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsMetricUpgradeStartTimeSet", arg0, arg1)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// IsMetricUpgradeStartTimeSet indicates an expected call of IsMetricUpgradeStartTimeSet
-func (mr *MockMetricsMockRecorder) IsMetricUpgradeStartTimeSet(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsMetricUpgradeStartTimeSet", reflect.TypeOf((*MockMetrics)(nil).IsMetricUpgradeStartTimeSet), arg0, arg1)
 }
 
 // Query mocks base method
@@ -247,18 +201,6 @@ func (mr *MockMetricsMockRecorder) UpdateMetricClusterVerificationSucceeded(arg0
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricClusterVerificationSucceeded", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricClusterVerificationSucceeded), arg0)
 }
 
-// UpdateMetricControlPlaneEndTime mocks base method
-func (m *MockMetrics) UpdateMetricControlPlaneEndTime(arg0 time.Time, arg1, arg2 string) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "UpdateMetricControlPlaneEndTime", arg0, arg1, arg2)
-}
-
-// UpdateMetricControlPlaneEndTime indicates an expected call of UpdateMetricControlPlaneEndTime
-func (mr *MockMetricsMockRecorder) UpdateMetricControlPlaneEndTime(arg0, arg1, arg2 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricControlPlaneEndTime", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricControlPlaneEndTime), arg0, arg1, arg2)
-}
-
 // UpdateMetricNodeDrainFailed mocks base method
 func (m *MockMetrics) UpdateMetricNodeDrainFailed(arg0 string) {
 	m.ctrl.T.Helper()
@@ -269,18 +211,6 @@ func (m *MockMetrics) UpdateMetricNodeDrainFailed(arg0 string) {
 func (mr *MockMetricsMockRecorder) UpdateMetricNodeDrainFailed(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricNodeDrainFailed", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricNodeDrainFailed), arg0)
-}
-
-// UpdateMetricNodeUpgradeEndTime mocks base method
-func (m *MockMetrics) UpdateMetricNodeUpgradeEndTime(arg0 time.Time, arg1, arg2 string) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "UpdateMetricNodeUpgradeEndTime", arg0, arg1, arg2)
-}
-
-// UpdateMetricNodeUpgradeEndTime indicates an expected call of UpdateMetricNodeUpgradeEndTime
-func (mr *MockMetricsMockRecorder) UpdateMetricNodeUpgradeEndTime(arg0, arg1, arg2 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricNodeUpgradeEndTime", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricNodeUpgradeEndTime), arg0, arg1, arg2)
 }
 
 // UpdateMetricNotificationEventSent mocks base method
@@ -329,18 +259,6 @@ func (m *MockMetrics) UpdateMetricUpgradeControlPlaneTimeout(arg0, arg1 string) 
 func (mr *MockMetricsMockRecorder) UpdateMetricUpgradeControlPlaneTimeout(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricUpgradeControlPlaneTimeout", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricUpgradeControlPlaneTimeout), arg0, arg1)
-}
-
-// UpdateMetricUpgradeStartTime mocks base method
-func (m *MockMetrics) UpdateMetricUpgradeStartTime(arg0 time.Time, arg1, arg2 string) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "UpdateMetricUpgradeStartTime", arg0, arg1, arg2)
-}
-
-// UpdateMetricUpgradeStartTime indicates an expected call of UpdateMetricUpgradeStartTime
-func (mr *MockMetricsMockRecorder) UpdateMetricUpgradeStartTime(arg0, arg1, arg2 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricUpgradeStartTime", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricUpgradeStartTime), arg0, arg1, arg2)
 }
 
 // UpdateMetricUpgradeWindowBreached mocks base method

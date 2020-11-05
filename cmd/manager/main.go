@@ -27,6 +27,11 @@ import (
 	routev1 "github.com/openshift/api/route/v1"
 	machineapi "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
 	machineconfigapi "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
+	"github.com/openshift/managed-upgrade-operator/pkg/apis"
+	"github.com/openshift/managed-upgrade-operator/pkg/controller"
+	upgrademetrics "github.com/openshift/managed-upgrade-operator/pkg/metrics"
+	"github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager"
+	"github.com/openshift/managed-upgrade-operator/version"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	kubemetrics "github.com/operator-framework/operator-sdk/pkg/kube-metrics"
 	"github.com/operator-framework/operator-sdk/pkg/leader"
@@ -34,11 +39,7 @@ import (
 	"github.com/operator-framework/operator-sdk/pkg/metrics"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
 	"github.com/spf13/pflag"
-
-	"github.com/openshift/managed-upgrade-operator/pkg/apis"
-	"github.com/openshift/managed-upgrade-operator/pkg/controller"
-	"github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager"
-	"github.com/openshift/managed-upgrade-operator/version"
+	runtimemetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
 )
 
 // Change below variables to serve metrics on different host or port.
@@ -164,6 +165,18 @@ func main() {
 		log.Error(err, "Metrics service is not added.")
 		os.Exit(1)
 	}
+
+	metricsClient, err := client.New(cfg, client.Options{})
+	if err != nil {
+		log.Error(err, "unable to create k8s client for upgrade metrics")
+		os.Exit(1)
+	}
+	uCollector, err := upgrademetrics.NewUpgradeCollector(metricsClient)
+	if err != nil {
+		log.Error(err, "unable to create upgrade metrics collector")
+		os.Exit(1)
+	}
+	runtimemetrics.Registry.MustRegister(uCollector)
 
 	// Define stopCh which we'll use to notify the upgradeConfigManager (and any other routine)
 	// to stop work. This channel can also be used to signal routines to complete any cleanup
