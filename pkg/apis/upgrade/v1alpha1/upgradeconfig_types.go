@@ -95,6 +95,7 @@ type UpgradeCondition struct {
 }
 
 const (
+	SendStartedNotification       UpgradeConditionType = "SendStartedNotification"
 	UpgradeValidated              UpgradeConditionType = "Validation"
 	UpgradePreHealthCheck         UpgradeConditionType = "PreHealthCheck"
 	UpgradeScaleUpExtraNodes      UpgradeConditionType = "ScaleUpExtraNodes"
@@ -109,6 +110,7 @@ const (
 	PostUpgradeVerification       UpgradeConditionType = "PostUpgradeVerification"
 	RemoveMaintWindow             UpgradeConditionType = "RemoveMaintWindow"
 	PostClusterHealthCheck        UpgradeConditionType = "PostClusterHealthCheck"
+	SendCompletedNotification     UpgradeConditionType = "SendCompletedNotification"
 )
 
 // UpgradePhase is a Go string type.

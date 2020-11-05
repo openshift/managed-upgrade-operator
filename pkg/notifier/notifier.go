@@ -62,13 +62,16 @@ func (nb *notifierBuilder) New(client client.Client, cfgBuilder configmanager.Co
 		if err != nil {
 			return nil, err
 		}
-		mgr, err := New(client, cfg.GetOCMBaseURL(), upgradeConfigManager)
+		mgr, err := NewOCMNotifier(client, cfg.GetOCMBaseURL(), upgradeConfigManager)
 		if err != nil {
 			return nil, err
 		}
 		return mgr, nil
+	default:
+		// Create a log notifier as a fallback
+		mgr, err := NewLogNotifier()
+		return mgr, err
 	}
-	return nil, ErrNoNotifierConfigured
 }
 
 // Read notifier configuration

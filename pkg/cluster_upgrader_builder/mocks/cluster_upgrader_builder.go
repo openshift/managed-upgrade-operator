@@ -9,6 +9,7 @@ import (
 	v1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 	cluster_upgrader_builder "github.com/openshift/managed-upgrade-operator/pkg/cluster_upgrader_builder"
 	configmanager "github.com/openshift/managed-upgrade-operator/pkg/configmanager"
+	eventmanager "github.com/openshift/managed-upgrade-operator/pkg/eventmanager"
 	metrics "github.com/openshift/managed-upgrade-operator/pkg/metrics"
 	reflect "reflect"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
@@ -38,16 +39,16 @@ func (m *MockClusterUpgraderBuilder) EXPECT() *MockClusterUpgraderBuilderMockRec
 }
 
 // NewClient mocks base method
-func (m *MockClusterUpgraderBuilder) NewClient(arg0 client.Client, arg1 configmanager.ConfigManager, arg2 metrics.Metrics, arg3 v1alpha1.UpgradeType) (cluster_upgrader_builder.ClusterUpgrader, error) {
+func (m *MockClusterUpgraderBuilder) NewClient(arg0 client.Client, arg1 configmanager.ConfigManager, arg2 metrics.Metrics, arg3 eventmanager.EventManager, arg4 v1alpha1.UpgradeType) (cluster_upgrader_builder.ClusterUpgrader, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "NewClient", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "NewClient", arg0, arg1, arg2, arg3, arg4)
 	ret0, _ := ret[0].(cluster_upgrader_builder.ClusterUpgrader)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // NewClient indicates an expected call of NewClient
-func (mr *MockClusterUpgraderBuilderMockRecorder) NewClient(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+func (mr *MockClusterUpgraderBuilderMockRecorder) NewClient(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewClient", reflect.TypeOf((*MockClusterUpgraderBuilder)(nil).NewClient), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewClient", reflect.TypeOf((*MockClusterUpgraderBuilder)(nil).NewClient), arg0, arg1, arg2, arg3, arg4)
 }

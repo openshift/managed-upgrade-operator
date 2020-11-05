@@ -1,8 +1,6 @@
 package specprovider
 
 import (
-	"fmt"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
@@ -27,6 +25,10 @@ func NewBuilder() SpecProviderBuilder {
 
 type specProviderBuilder struct{}
 
+// Errors
+var (
+)
+
 func (ppb *specProviderBuilder) New(client client.Client, builder configmanager.ConfigManagerBuilder) (SpecProvider, error) {
 	cfg, err := readSpecProviderConfig(client, builder)
 	if err != nil {
@@ -45,7 +47,7 @@ func (ppb *specProviderBuilder) New(client client.Client, builder configmanager.
 		}
 		return mgr, nil
 	}
-	return nil, fmt.Errorf("no valid configured spec provider")
+	return nil, ErrInvalidSpecProvider
 }
 
 // Read spec provider configuration

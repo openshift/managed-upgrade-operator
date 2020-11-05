@@ -40,6 +40,7 @@ var (
 	ErrRemovingUpgradeConfig    = fmt.Errorf("unable to remove existing UpgradeConfig")
 	ErrCreatingUpgradeConfig    = fmt.Errorf("unable to create new UpgradeConfig")
 	ErrUpgradeConfigNotFound    = fmt.Errorf("upgrade config not found")
+	ErrNotConfigured			= fmt.Errorf("no upgrade config manager configured")
 )
 
 //go:generate mockgen -destination=mocks/upgradeconfigmanager.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager UpgradeConfigManager
@@ -172,7 +173,11 @@ func (s *upgradeConfigManager) Refresh() (bool, error) {
 	// Get the latest config specs from the provider
 	pp, err := s.specProviderBuilder.New(s.client, s.configManagerBuilder)
 	if err != nil {
-		return false, fmt.Errorf("unable to create spec provider: %v", err)
+		// If the spec provider config doesn't exist, return indicatively that no UC Mgr is configured
+		if err == specprovider.ErrNoSpecProviderConfig {
+			return false, ErrNotConfigured
+		}
+		return false, err
 	}
 	configSpecs, err := pp.Get()
 	if err != nil {

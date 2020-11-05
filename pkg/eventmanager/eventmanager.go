@@ -4,25 +4,20 @@ import (
 	"fmt"
 	"time"
 
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
-
-	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 	"github.com/openshift/managed-upgrade-operator/pkg/configmanager"
 	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
 	"github.com/openshift/managed-upgrade-operator/pkg/notifier"
 	"github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
 	REFRESH_INTERVAL = 5 * time.Minute
 )
 
-var log = logf.Log.WithName("event-manager")
-
 //go:generate mockgen -destination=mocks/eventmanager.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/eventmanager EventManager
 type EventManager interface {
-	Start(stopCh <-chan struct{})
+	Notify(state notifier.NotifyState) error
 }
 
 //go:generate mockgen -destination=mocks/eventmanager_builder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/eventmanager EventManagerBuilder
@@ -69,31 +64,7 @@ func (emb *eventManagerBuilder) NewManager(client client.Client) (EventManager, 
 	}, nil
 }
 
-// Syncs UpgradeConfigs from the spec provider periodically until the operator is killed or a message is sent on the stopCh
-func (s *eventManager) Start(stopCh <-chan struct{}) {
-	log.Info("Starting the eventManager")
-
-	err := s.notificationRefresh()
-	if err != nil {
-		log.Error(err, "error during notification refresh")
-	}
-
-	for {
-		select {
-		case <-time.After(REFRESH_INTERVAL):
-			err = s.notificationRefresh()
-			if err != nil {
-				log.Error(err, "error during notification refresh")
-			}
-		case <-stopCh:
-			log.Info("Stopping the eventManager")
-			break
-		}
-	}
-}
-
-func (s *eventManager) notificationRefresh() error {
-
+func (s *eventManager) Notify(state notifier.NotifyState) error {
 	// Get the current UpgradeConfig
 	uc, err := s.upgradeConfigManager.Get()
 	if err != nil {
@@ -104,44 +75,8 @@ func (s *eventManager) notificationRefresh() error {
 		}
 	}
 
-	// Check all the types of notifications we can send
-	err = checkUpgradeStart(s.metrics, s.notifier, uc)
-	if err != nil {
-		return err
-	}
-	err = checkUpgradeEnd(s.metrics, s.notifier, uc)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func checkUpgradeStart(mc metrics.Metrics, nc notifier.Notifier, uc *upgradev1alpha1.UpgradeConfig) error {
-
-	upgradeStarted := false
-
-	// Check if the cluster is at the version in the UpgradeConfig
-	isSet, err := mc.IsClusterVersionAtVersion(uc.Spec.Desired.Version)
-	if err != nil {
-		return fmt.Errorf("can't check cluster metric ClusterVersion: %v", err)
-	} else {
-		upgradeStarted = isSet
-	}
-
-	// As a backup if metrics is unavailable, check if upgradeConfig indicates the upgrade has completed
-	if !upgradeStarted {
-		upgradePhase, err := getUpgradePhase(uc)
-		if err == nil && *upgradePhase == upgradev1alpha1.UpgradePhaseUpgraded {
-			upgradeStarted = true
-		}
-	}
-
-	if !upgradeStarted {
-		return nil
-	}
-
-	// Check if a notification for it has already been sent successfully
-	isNotified, err := mc.IsMetricNotificationEventSentSet(uc.Name, string(notifier.StateStarted), uc.Spec.Desired.Version)
+	// Check if a notification for it has been sent successfully - if so, nothing to do
+	isNotified, err := s.metrics.IsMetricNotificationEventSentSet(uc.Name, string(state), uc.Spec.Desired.Version)
 	if err != nil {
 		return fmt.Errorf("can't check cluster metric NotificationSent: %v", err)
 	}
@@ -149,66 +84,25 @@ func checkUpgradeStart(mc metrics.Metrics, nc notifier.Notifier, uc *upgradev1al
 		return nil
 	}
 
-	// Send the notification and indicate it has been sent
-	description := fmt.Sprintf("Cluster is currently being upgraded to version %s", uc.Spec.Desired.Version)
-	err = nc.NotifyState(notifier.StateStarted, description)
-	if err != nil {
-		return fmt.Errorf("can't send notification '%s': %v", notifier.StateStarted, err)
+	// Customize the state description
+	var description string
+	switch state {
+	case notifier.StateStarted:
+		description = fmt.Sprintf("Cluster is currently being upgraded to version %s", uc.Spec.Desired.Version)
+	case notifier.StateDelayed:
+		description = fmt.Sprintf("Cluster upgrade to version %s is currently delayed", uc.Spec.Desired.Version)
+	case notifier.StateCompleted:
+		description = fmt.Sprintf("Cluster has been successfully upgraded to version %s", uc.Spec.Desired.Version)
+	default:
+		return fmt.Errorf("state %v not yet implemented", state)
 	}
-	mc.UpdateMetricNotificationEventSent(uc.Name, string(notifier.StateStarted), uc.Spec.Desired.Version)
+
+	// Send the notification
+	err = s.notifier.NotifyState(state, description)
+	if err != nil {
+		return fmt.Errorf("can't send notification '%s': %v", state, err)
+	}
+	s.metrics.UpdateMetricNotificationEventSent(uc.Name, string(state), uc.Spec.Desired.Version)
 
 	return nil
-}
-
-func checkUpgradeEnd(mc metrics.Metrics, nc notifier.Notifier, uc *upgradev1alpha1.UpgradeConfig) error {
-
-	upgradeEnded := false
-
-	// Check if upgradeConfig indicates the upgrade has completed
-	upgradePhase, err := getUpgradePhase(uc)
-	if err == nil && *upgradePhase == upgradev1alpha1.UpgradePhaseUpgraded {
-		upgradeEnded = true
-	}
-
-	// If the upgrade hasn't ended, do nothing
-	if !upgradeEnded {
-		return nil
-	}
-
-	// Check if a notification for it has been sent successfully
-	isNotified, err := mc.IsMetricNotificationEventSentSet(uc.Name, string(notifier.StateCompleted), uc.Spec.Desired.Version)
-	if err != nil {
-		return fmt.Errorf("can't check cluster metric NotificationSent: %v", err)
-	}
-	if isNotified {
-		return nil
-	}
-
-	// Send the notification and indicate it has been sent
-	description := fmt.Sprintf("Cluster has been successfully upgraded to version %s", uc.Spec.Desired.Version)
-	err = nc.NotifyState(notifier.StateCompleted, description)
-	if err != nil {
-		return fmt.Errorf("can't send notification '%s': %v", notifier.StateCompleted, err)
-	}
-	mc.UpdateMetricNotificationEventSent(uc.Name, string(notifier.StateCompleted), uc.Spec.Desired.Version)
-
-	return nil
-}
-
-// Returns the phase of the currently executing upgrade or error if no phase can be found
-func getUpgradePhase(uc *upgradev1alpha1.UpgradeConfig) (*upgradev1alpha1.UpgradePhase, error) {
-	// Check if upgradeConfig indicates the upgrade has completed
-	var history upgradev1alpha1.UpgradeHistory
-	found := false
-	for _, h := range uc.Status.History {
-		if h.Version == uc.Spec.Desired.Version {
-			history = h
-			found = true
-		}
-	}
-	if !found {
-		return nil, fmt.Errorf("no history found")
-	}
-
-	return &history.Phase, nil
 }

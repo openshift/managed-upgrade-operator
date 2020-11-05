@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	ucmgr "github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
@@ -28,6 +27,8 @@ import (
 	"github.com/openshift/managed-upgrade-operator/pkg/configmanager"
 	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
 	"github.com/openshift/managed-upgrade-operator/pkg/scheduler"
+	"github.com/openshift/managed-upgrade-operator/pkg/eventmanager"
+	ucmgr "github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager"
 	"github.com/openshift/managed-upgrade-operator/pkg/validation"
 )
 
@@ -57,6 +58,7 @@ func newReconciler(mgr manager.Manager, client client.Client) reconcile.Reconcil
 		configManagerBuilder:   configmanager.NewBuilder(),
 		scheduler:              scheduler.NewScheduler(),
 		cvClientBuilder:        cv.NewBuilder(),
+		eventManagerBuilder:    eventmanager.NewBuilder(),
 		ucMgrBuilder:           ucmgr.NewBuilder(),
 	}
 }
@@ -93,6 +95,7 @@ type ReconcileUpgradeConfig struct {
 	configManagerBuilder   configmanager.ConfigManagerBuilder
 	scheduler              scheduler.Scheduler
 	cvClientBuilder        cv.ClusterVersionBuilder
+	eventManagerBuilder    eventmanager.EventManagerBuilder
 	ucMgrBuilder           ucmgr.UpgradeConfigManagerBuilder
 }
 
@@ -107,6 +110,12 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 
 	// Initialise metrics
 	metricsClient, err := r.metricsClientBuilder.NewClient(r.client)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	// Initialise event manager
+	eventClient, err := r.eventManagerBuilder.NewManager(r.client)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -201,14 +210,20 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 
 			remoteChanged, err := ucMgr.Refresh()
 			if err != nil {
-				return reconcile.Result{}, err
+				// If no config manager is configured, we don't need to enforce a kill switch
+				if err != ucmgr.ErrNotConfigured {
+					return reconcile.Result{}, err
+				}
+				reqLogger.Info("No UpgradeConfig manager configured, kill-switch ignored")
 			}
+
 			if remoteChanged {
 				reqLogger.Info("The remote upgrade policy does not match the local upgrade config, applying the new upgrade policy")
 				return reconcile.Result{}, nil
 			}
 
-			upgrader, err := r.clusterUpgraderBuilder.NewClient(r.client, cfm, metricsClient, instance.Spec.Type)
+			upgrader, err := r.clusterUpgraderBuilder.NewClient(r.client, cfm, metricsClient, eventClient, instance.Spec.Type)
+
 			if err != nil {
 				return reconcile.Result{}, err
 			}
@@ -243,7 +258,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 	case upgradev1alpha1.UpgradePhaseUpgrading:
 		reqLogger.Info("Cluster detected as already upgrading.")
 		cfm := r.configManagerBuilder.New(r.client, request.Namespace)
-		upgrader, err := r.clusterUpgraderBuilder.NewClient(r.client, cfm, metricsClient, instance.Spec.Type)
+		upgrader, err := r.clusterUpgraderBuilder.NewClient(r.client, cfm, metricsClient, eventClient, instance.Spec.Type)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -251,6 +266,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 	case upgradev1alpha1.UpgradePhaseUpgraded:
 		reqLogger.Info("Cluster is already upgraded")
 		return reconcile.Result{}, nil
+
 	default:
 		reqLogger.Info("Unknown status")
 	}

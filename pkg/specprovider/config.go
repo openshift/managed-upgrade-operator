@@ -18,13 +18,22 @@ type ConfigManager struct {
 	Source string `yaml:"source"`
 }
 
-var ErrNoSpecProviderDefined = fmt.Errorf("no configManager spec provider defined in configuration")
+var (
+	ErrInvalidSpecProvider = fmt.Errorf("invalid configManager spec provider type defined")
+	ErrNoSpecProviderConfig     = fmt.Errorf("no configManager spec provider configured")
+
+)
 
 func (cfg *SpecProviderConfig) IsValid() error {
+	// the source can be missing. if it's not empty, validate it is a supported value
+	if cfg.ConfigManager.Source == "" {
+		return ErrNoSpecProviderConfig
+	}
+
 	switch cfg.ConfigManager.Source {
 	case string(OCM):
 		return nil
 	default:
-		return ErrNoSpecProviderDefined
+		return ErrInvalidSpecProvider
 	}
 }
