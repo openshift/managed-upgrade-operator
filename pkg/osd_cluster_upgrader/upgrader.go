@@ -3,17 +3,14 @@ package osd_cluster_upgrader
 import (
 	"context"
 	"fmt"
-	"github.com/openshift/managed-upgrade-operator/pkg/notifier"
 	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
-	configv1 "github.com/openshift/api/config/v1"
 	operatorv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -25,6 +22,7 @@ import (
 	"github.com/openshift/managed-upgrade-operator/pkg/machinery"
 	"github.com/openshift/managed-upgrade-operator/pkg/maintenance"
 	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
+	"github.com/openshift/managed-upgrade-operator/pkg/notifier"
 	"github.com/openshift/managed-upgrade-operator/pkg/scaler"
 )
 
@@ -130,7 +128,7 @@ func PreClusterHealthCheck(c client.Client, cfg *osdUpgradeConfig, scaler scaler
 		return true, nil
 	}
 
-	ok, err := performClusterHealthCheck(c, metricsClient, cfg, logger)
+	ok, err := performClusterHealthCheck(c, metricsClient, cvClient, cfg, logger)
 	if err != nil || !ok {
 		metricsClient.UpdateMetricClusterCheckFailed(upgradeConfig.Name)
 		return false, err
@@ -179,40 +177,13 @@ func CommenceUpgrade(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scale
 		return true, nil
 	}
 
-	clusterVersion, err := cvClient.GetClusterVersion()
+	logger.Info(fmt.Sprintf("Setting ClusterVersion to Channel %s, version %s", desired.Channel, desired.Version))
+	isComplete, err := cvClient.EnsureDesiredVersion(upgradeConfig)
 	if err != nil {
 		return false, err
 	}
 
-	// Move the cluster to the same channel first
-	if clusterVersion.Spec.Channel != desired.Channel {
-		logger.Info(fmt.Sprintf("Moving cluster from Channel %s to Channel %s", clusterVersion.Spec.Channel, desired.Channel))
-		clusterVersion.Spec.Channel = desired.Channel
-		err = c.Update(context.TODO(), clusterVersion)
-		// Always give a chance for re-reconcile and a CVO sync to occur
-		return false, err
-	}
-
-	// The CVO may need time sync the version before launching the upgrade
-	updateAvailable := false
-	for _, update := range clusterVersion.Status.AvailableUpdates {
-		if update.Version == desired.Version && update.Image != "" {
-			updateAvailable = true
-		}
-	}
-	if !updateAvailable {
-		logger.Info(fmt.Sprintf("Waiting for CVO to sync Channel %s Version %s", desired.Channel, desired.Version))
-		return false, nil
-	}
-
-	clusterVersion.Spec.Overrides = []configv1.ComponentOverride{}
-	clusterVersion.Spec.DesiredUpdate = &configv1.Update{Version: upgradeConfig.Spec.Desired.Version}
-	err = c.Update(context.TODO(), clusterVersion)
-	if err != nil {
-		return false, err
-	}
-
-	return true, nil
+	return isComplete, nil
 }
 
 // CreateControlPlaneMaintWindow creates the maintenance window for control plane
@@ -242,6 +213,7 @@ func CreateWorkerMaintWindow(c client.Client, cfg *osdUpgradeConfig, scaler scal
 	if err != nil {
 		return false, err
 	}
+
 	// Depending on how long the Control Plane takes all workers may be already upgraded.
 	if !upgradingResult.IsUpgrading {
 		logger.Info(fmt.Sprintf("Worker nodes are already upgraded. Skipping worker maintenace for %s", upgradeConfig.Spec.Desired.Version))
@@ -454,7 +426,7 @@ func RemoveMaintWindow(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Sca
 
 // PostClusterHealthCheck performs cluster health check after upgrade
 func PostClusterHealthCheck(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, dsb drain.NodeDrainStrategyBuilder, metricsClient metrics.Metrics, m maintenance.Maintenance, cvClient cv.ClusterVersion, nc eventmanager.EventManager, upgradeConfig *upgradev1alpha1.UpgradeConfig, machinery machinery.Machinery, logger logr.Logger) (bool, error) {
-	ok, err := performClusterHealthCheck(c, metricsClient, cfg, logger)
+	ok, err := performClusterHealthCheck(c, metricsClient, cvClient, cfg, logger)
 	if err != nil || !ok {
 		metricsClient.UpdateMetricClusterCheckFailed(upgradeConfig.Name)
 		return false, err
@@ -471,19 +443,14 @@ func ControlPlaneUpgraded(c client.Client, cfg *osdUpgradeConfig, scaler scaler.
 		return false, err
 	}
 
-	isCompleted := false
-	var upgradeStartTime metav1.Time
-	var controlPlaneCompleteTime *metav1.Time
-	for _, c := range clusterVersion.Status.History {
-		if c.Version == upgradeConfig.Spec.Desired.Version {
-			upgradeStartTime = c.StartedTime
-			if c.State == configv1.CompletedUpdate {
-				isCompleted = true
-				controlPlaneCompleteTime = c.CompletionTime
-			}
-		}
+	isCompleted := cvClient.HasUpgradeCompleted(clusterVersion, upgradeConfig)
+	history := cv.GetHistory(clusterVersion, upgradeConfig.Spec.Desired.Version)
+	if history == nil {
+		return false, err
 	}
 
+	upgradeStartTime := history.StartedTime
+	controlPlaneCompleteTime := history.CompletionTime
 	upgradeTimeout := cfg.Maintenance.GetControlPlaneDuration()
 	if !upgradeStartTime.IsZero() && controlPlaneCompleteTime == nil && time.Now().After(upgradeStartTime.Add(upgradeTimeout)) {
 		logger.Info("Control plane upgrade timeout")
@@ -546,7 +513,7 @@ func (cu osdClusterUpgrader) UpgradeCluster(upgradeConfig *upgradev1alpha1.Upgra
 // check several things about the cluster and report problems
 // * critical alerts
 // * degraded operators (if there are critical alerts only)
-func performClusterHealthCheck(c client.Client, metricsClient metrics.Metrics, cfg *osdUpgradeConfig, logger logr.Logger) (bool, error) {
+func performClusterHealthCheck(c client.Client, metricsClient metrics.Metrics, cvClient cv.ClusterVersion, cfg *osdUpgradeConfig, logger logr.Logger) (bool, error) {
 	ic := cfg.HealthCheck.IgnoredCriticals
 	icQuery := ""
 	if len(ic) > 0 {
@@ -563,49 +530,17 @@ func performClusterHealthCheck(c client.Client, metricsClient metrics.Metrics, c
 		return false, fmt.Errorf("There are %d critical alerts", len(alerts.Data.Result))
 	}
 
-	//check co status
-
-	operatorList := &configv1.ClusterOperatorList{}
-	err = c.List(context.TODO(), operatorList, []client.ListOption{}...)
+	result, err := cvClient.HasDegradedOperators()
 	if err != nil {
 		return false, err
 	}
-
-	degradedOperators := []string{}
-	for _, co := range operatorList.Items {
-		for _, condition := range co.Status.Conditions {
-			if (condition.Type == configv1.OperatorDegraded && condition.Status == configv1.ConditionTrue) || (condition.Type == configv1.OperatorAvailable && condition.Status == configv1.ConditionFalse) {
-				degradedOperators = append(degradedOperators, co.Name)
-			}
-		}
-	}
-
-	if len(degradedOperators) > 0 {
-		logger.Info(fmt.Sprintf("degraded operators :%s", strings.Join(degradedOperators, ",")))
+	if len(result.Degraded) > 0 {
+		logger.Info(fmt.Sprintf("degraded operators :%s", strings.Join(result.Degraded, ",")))
 		// Send the metrics for the cluster check failed if we have degraded operators
-		return false, fmt.Errorf("degraded operators :%s", strings.Join(degradedOperators, ","))
+		return false, fmt.Errorf("degraded operators :%s", strings.Join(result.Degraded, ","))
 	}
+
 	return true, nil
-
-}
-
-func GetCurrentVersion(clusterVersion *configv1.ClusterVersion) (string, error) {
-	var gotVersion string
-	var latestCompletionTime *metav1.Time = nil
-	for _, history := range clusterVersion.Status.History {
-		if history.State == configv1.CompletedUpdate {
-			if latestCompletionTime == nil || history.CompletionTime.After(latestCompletionTime.Time) {
-				gotVersion = history.Version
-				latestCompletionTime = history.CompletionTime
-			}
-		}
-	}
-
-	if len(gotVersion) == 0 {
-		return gotVersion, fmt.Errorf("Failed to get current version")
-	}
-
-	return gotVersion, nil
 }
 
 func newUpgradeCondition(reason, msg string, conditionType upgradev1alpha1.UpgradeConditionType, s corev1.ConditionStatus) *upgradev1alpha1.UpgradeCondition {

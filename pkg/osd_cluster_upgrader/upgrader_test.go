@@ -1,9 +1,7 @@
 package osd_cluster_upgrader
 
 import (
-	"context"
 	"fmt"
-	"github.com/openshift/managed-upgrade-operator/pkg/notifier"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -30,6 +28,7 @@ import (
 	mockMaintenance "github.com/openshift/managed-upgrade-operator/pkg/maintenance/mocks"
 	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
 	mockMetrics "github.com/openshift/managed-upgrade-operator/pkg/metrics/mocks"
+	"github.com/openshift/managed-upgrade-operator/pkg/notifier"
 	"github.com/openshift/managed-upgrade-operator/pkg/scaler"
 	mockScaler "github.com/openshift/managed-upgrade-operator/pkg/scaler/mocks"
 	"github.com/openshift/managed-upgrade-operator/util/mocks"
@@ -119,6 +118,7 @@ var _ = Describe("ClusterUpgrader", func() {
 			It("Flags the control plane as upgraded", func() {
 				gomock.InOrder(
 					mockCVClient.EXPECT().GetClusterVersion().Return(clusterVersion, nil),
+					mockCVClient.EXPECT().HasUpgradeCompleted(gomock.Any(), gomock.Any()).Return(true),
 					mockMetricsClient.EXPECT().ResetMetricUpgradeControlPlaneTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version),
 				)
 				result, err := ControlPlaneUpgraded(mockKubeClient, config, mockScalerClient, mockDrainStrategyBuilder, mockMetricsClient, mockMaintClient, mockCVClient, mockEMClient, upgradeConfig, mockMachineryClient, logger)
@@ -142,6 +142,7 @@ var _ = Describe("ClusterUpgrader", func() {
 			It("Sets the appropriate metric", func() {
 				gomock.InOrder(
 					mockCVClient.EXPECT().GetClusterVersion().Return(clusterVersion, nil),
+					mockCVClient.EXPECT().HasUpgradeCompleted(gomock.Any(), gomock.Any()).Return(false),
 					mockMetricsClient.EXPECT().UpdateMetricUpgradeControlPlaneTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version),
 				)
 				result, err := ControlPlaneUpgraded(mockKubeClient, config, mockScalerClient, mockDrainStrategyBuilder, mockMetricsClient, mockMaintClient, mockCVClient, mockEMClient, upgradeConfig, mockMachineryClient, logger)
@@ -190,130 +191,17 @@ var _ = Describe("ClusterUpgrader", func() {
 			})
 		})
 
-		Context("When the cluster is not on the same channel as the UpgradeConfig", func() {
-			It("Updates the cluster's update channel", func() {
-				clusterVersion := &configv1.ClusterVersion{
-					Spec: configv1.ClusterVersionSpec{
-						Channel:       upgradeConfig.Spec.Desired.Channel + "not-the-same",
-						DesiredUpdate: nil,
-					},
-				}
-				gomock.InOrder(
-					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
-					mockCVClient.EXPECT().GetClusterVersion().Return(clusterVersion, nil),
-					mockKubeClient.EXPECT().Update(gomock.Any(), gomock.Any()).DoAndReturn(
-						func(ctx context.Context, cv *configv1.ClusterVersion) error {
-							Expect(cv.Spec.Channel).To(Equal(upgradeConfig.Spec.Desired.Channel))
-							return nil
-						}),
-				)
-				result, err := CommenceUpgrade(mockKubeClient, config, mockScalerClient, mockDrainStrategyBuilder, mockMetricsClient, mockMaintClient, mockCVClient, mockEMClient, upgradeConfig, mockMachineryClient, logger)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(result).To(BeFalse())
-			})
-		})
-
-		Context("When the cluster's desired version is missing", func() {
-			It("Sets the desired version to that of the UpgradeConfig's", func() {
-				clusterVersion := &configv1.ClusterVersion{
-					Spec: configv1.ClusterVersionSpec{
-						Channel:       upgradeConfig.Spec.Desired.Channel,
-						DesiredUpdate: nil,
-					},
-					Status: configv1.ClusterVersionStatus{
-						AvailableUpdates: []configv1.Update{
-							{
-								Version: upgradeConfig.Spec.Desired.Version,
-								Image:   "quay.io/dummy-image-for-test",
-								Force:   false,
-							},
-						},
-					},
-				}
-				gomock.InOrder(
-					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
-					mockCVClient.EXPECT().GetClusterVersion().Return(clusterVersion, nil),
-					mockKubeClient.EXPECT().Update(gomock.Any(), gomock.Any()).DoAndReturn(
-						func(ctx context.Context, cv *configv1.ClusterVersion) error {
-							Expect(cv.Spec.DesiredUpdate.Version).To(Equal(upgradeConfig.Spec.Desired.Version))
-							Expect(cv.Spec.Channel).To(Equal(upgradeConfig.Spec.Desired.Channel))
-							return nil
-						}),
-				)
-				result, err := CommenceUpgrade(mockKubeClient, config, mockScalerClient, mockDrainStrategyBuilder, mockMetricsClient, mockMaintClient, mockCVClient, mockEMClient, upgradeConfig, mockMachineryClient, logger)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(result).To(BeTrue())
-			})
-		})
-
-		Context("When the cluster's desired version does not match the UpgradeConfig's", func() {
-			It("Sets the desired version to that of the UpgradeConfig's", func() {
-				clusterVersion := &configv1.ClusterVersion{
-					Spec: configv1.ClusterVersionSpec{
-						Channel: upgradeConfig.Spec.Desired.Channel,
-						DesiredUpdate: &configv1.Update{
-							Version: "something different",
-						},
-					},
-					Status: configv1.ClusterVersionStatus{
-						AvailableUpdates: []configv1.Update{
-							{
-								Version: upgradeConfig.Spec.Desired.Version,
-								Image:   "quay.io/dummy-image-for-test",
-								Force:   false,
-							},
-						},
-					},
-				}
-				gomock.InOrder(
-					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
-					mockCVClient.EXPECT().GetClusterVersion().Return(clusterVersion, nil),
-					mockKubeClient.EXPECT().Update(gomock.Any(), gomock.Any()).DoAndReturn(
-						func(ctx context.Context, cv *configv1.ClusterVersion) error {
-							Expect(cv.Spec.DesiredUpdate.Version).To(Equal(upgradeConfig.Spec.Desired.Version))
-							Expect(cv.Spec.Channel).To(Equal(upgradeConfig.Spec.Desired.Channel))
-							return nil
-						}),
-				)
-				result, err := CommenceUpgrade(mockKubeClient, config, mockScalerClient, mockDrainStrategyBuilder, mockMetricsClient, mockMaintClient, mockCVClient, mockEMClient, upgradeConfig, mockMachineryClient, logger)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(result).To(BeTrue())
-			})
-		})
-
-		Context("When updating the clusterversion fails", func() {
+		Context("When setting the desired version fails", func() {
 			It("Indicates an error", func() {
 				fakeError := fmt.Errorf("fake error")
-				clusterVersion := &configv1.ClusterVersion{
-					Spec: configv1.ClusterVersionSpec{
-						Channel:       upgradeConfig.Spec.Desired.Channel,
-						DesiredUpdate: &configv1.Update{Version: upgradeConfig.Spec.Desired.Version},
-					},
-					Status: configv1.ClusterVersionStatus{
-						Conditions: []configv1.ClusterOperatorStatusCondition{
-							{
-								Type:   configv1.OperatorAvailable,
-								Status: configv1.ConditionTrue,
-							},
-						},
-						AvailableUpdates: []configv1.Update{
-							{
-								Version: upgradeConfig.Spec.Desired.Version,
-								Image:   "quay.io/this-doesnt-exist",
-								Force:   false,
-							},
-						},
-					}}
 				gomock.InOrder(
 					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
-					mockCVClient.EXPECT().GetClusterVersion().Return(clusterVersion, nil),
-					mockKubeClient.EXPECT().Update(gomock.Any(), gomock.Any()).Return(fakeError),
+					mockCVClient.EXPECT().EnsureDesiredVersion(gomock.Any()).Return(false, fakeError),
 				)
 				result, err := CommenceUpgrade(mockKubeClient, config, mockScalerClient, mockDrainStrategyBuilder, mockMetricsClient, mockMaintClient, mockCVClient, mockEMClient, upgradeConfig, mockMachineryClient, logger)
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(Equal(fakeError))
 				Expect(result).To(BeFalse())
-
 			})
 		})
 	})
@@ -541,39 +429,6 @@ var _ = Describe("ClusterUpgrader", func() {
 				Expect(uc.Type).To(Equal(ucon))
 			})
 		})
-
-		Context("When getting the cluster's current version", func() {
-			Context("When a completed update exists in the clusterversion history", func() {
-				It("Returns that version", func() {
-					version := "matchme"
-					clusterVersion := &configv1.ClusterVersion{
-						Status: configv1.ClusterVersionStatus{
-							History: []configv1.UpdateHistory{
-								{State: configv1.PartialUpdate, Version: "notmatch"},
-								{State: configv1.CompletedUpdate, Version: version},
-							},
-						},
-					}
-					result, _ := GetCurrentVersion(clusterVersion)
-					Expect(result).To(Equal(version))
-				})
-			})
-			Context("When a completed update does not exist in the clusterversion history", func() {
-				It("Returns an empty string", func() {
-					clusterVersion := &configv1.ClusterVersion{
-						Status: configv1.ClusterVersionStatus{
-							History: []configv1.UpdateHistory{
-								{State: configv1.PartialUpdate, Version: "notmatch"},
-								{State: configv1.PartialUpdate, Version: "notmatch2"},
-							},
-						},
-					}
-					result, _ := GetCurrentVersion(clusterVersion)
-					Expect(result).To(BeEmpty())
-				})
-			})
-		})
-
 	})
 
 })

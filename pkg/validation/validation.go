@@ -8,13 +8,13 @@ import (
 	"time"
 
 	"github.com/blang/semver"
+	"github.com/go-logr/logr"
 	"github.com/google/uuid"
 	configv1 "github.com/openshift/api/config/v1"
 	"github.com/openshift/cluster-version-operator/pkg/cincinnati"
-	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
-	"github.com/openshift/managed-upgrade-operator/pkg/osd_cluster_upgrader"
 
-	"github.com/go-logr/logr"
+	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
+	cv "github.com/openshift/managed-upgrade-operator/pkg/clusterversion"
 )
 
 // NewBuilder returns a validationBuilder object that implements the ValidationBuilder interface.
@@ -61,7 +61,7 @@ func (v *validator) IsValidUpgradeConfig(uC *upgradev1alpha1.UpgradeConfig, cV *
 
 	// Validate desired version.
 	dv := uC.Spec.Desired.Version
-	cv, err := osd_cluster_upgrader.GetCurrentVersion(cV)
+	version, err := cv.GetCurrentVersion(cV)
 	if err != nil {
 		return ValidatorResult{
 			IsValid:           false,
@@ -79,12 +79,12 @@ func (v *validator) IsValidUpgradeConfig(uC *upgradev1alpha1.UpgradeConfig, cV *
 			Message:           fmt.Sprintf("Failed to parse desired version %s as semver", dv),
 		}, nil
 	}
-	currentVersion, err := semver.Parse(cv)
+	currentVersion, err := semver.Parse(version)
 	if err != nil {
 		return ValidatorResult{
 			IsValid:           false,
 			IsAvailableUpdate: false,
-			Message:           fmt.Sprintf("Failed to parse desired version %s as semver", cv),
+			Message:           fmt.Sprintf("Failed to parse desired version %s as semver", version),
 		}, nil
 	}
 
