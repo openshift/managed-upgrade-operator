@@ -120,6 +120,7 @@ func (c *clusterVersionClient) HasDegradedOperators() (*HasDegradedOperatorsResu
 		for _, condition := range co.Status.Conditions {
 			if (condition.Type == configv1.OperatorDegraded && condition.Status == configv1.ConditionTrue) || (condition.Type == configv1.OperatorAvailable && condition.Status == configv1.ConditionFalse) {
 				degradedOperators = append(degradedOperators, co.Name)
+				break
 			}
 		}
 	}
