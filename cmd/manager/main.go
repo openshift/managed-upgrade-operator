@@ -15,7 +15,6 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
-
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -27,6 +26,7 @@ import (
 	routev1 "github.com/openshift/api/route/v1"
 	machineapi "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
 	machineconfigapi "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
+	muocfg "github.com/openshift/managed-upgrade-operator/config"
 	"github.com/openshift/managed-upgrade-operator/pkg/apis"
 	"github.com/openshift/managed-upgrade-operator/pkg/controller"
 	upgrademetrics "github.com/openshift/managed-upgrade-operator/pkg/metrics"
@@ -102,7 +102,7 @@ func main() {
 	}
 
 	// This set the sync period to 5m
-	syncPeriod := time.Duration(5 * time.Minute)
+	syncPeriod := time.Duration(muocfg.SyncPeriodDefault)
 
 	// Set default manager options
 	options := manager.Options{
