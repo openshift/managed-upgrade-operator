@@ -610,9 +610,9 @@ var _ = Describe("UpgradeConfigController", func() {
 						mockConfigManagerBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockConfigManager),
 						mockConfigManager.EXPECT().Into(gomock.Any()).SetArg(0, cfg),
 						mockScheduler.EXPECT().IsReadyToUpgrade(gomock.Any(), gomock.Any()).Return(scheduler.SchedulerResult{IsReady: false, IsBreached: true}),
-						mockMetricsClient.EXPECT().UpdateMetricUpgradeWindowBreached(upgradeConfig.Name),
 						mockKubeClient.EXPECT().Status().Return(mockUpdater),
 						mockUpdater.EXPECT().Update(gomock.Any(), gomock.Any()),
+						mockMetricsClient.EXPECT().UpdateMetricUpgradeWindowBreached(upgradeConfig.Name),
 					)
 					result, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
 					Expect(err).NotTo(HaveOccurred())

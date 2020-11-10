@@ -27,6 +27,7 @@ import (
 	"github.com/openshift/managed-upgrade-operator/pkg/configmanager"
 	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
 	"github.com/openshift/managed-upgrade-operator/pkg/scheduler"
+	muocfg "github.com/openshift/managed-upgrade-operator/config"
 	"github.com/openshift/managed-upgrade-operator/pkg/eventmanager"
 	ucmgr "github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager"
 	"github.com/openshift/managed-upgrade-operator/pkg/validation"
@@ -240,21 +241,31 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 			reqLogger.Info("Cluster is commencing upgrade.", "time", now)
 			metricsClient.UpdateMetricUpgradeWindowNotBreached(instance.Name)
 			return r.upgradeCluster(upgrader, instance, reqLogger)
-		} else {
-			if schedulerResult.IsBreached {
-				// We are past the maximum allowed time to commence upgrading
-				log.Error(nil, "field spec.upgradeAt cannot have backdated time")
-				metricsClient.UpdateMetricUpgradeWindowBreached(instance.Name)
-			}
+		}
 
-			history.Phase = upgradev1alpha1.UpgradePhasePending
-			instance.Status.History.SetHistory(history)
-			err = r.client.Status().Update(context.TODO(), instance)
-			if err != nil {
-				return reconcile.Result{}, err
-			}
+		history.Phase = upgradev1alpha1.UpgradePhasePending
+		instance.Status.History.SetHistory(history)
+		err = r.client.Status().Update(context.TODO(), instance)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+
+		if schedulerResult.IsBreached {
+			// We are past the maximum allowed time to commence upgrading
+			log.Error(nil, "field spec.upgradeAt cannot have backdated time")
+			metricsClient.UpdateMetricUpgradeWindowBreached(instance.Name)
 			return reconcile.Result{}, nil
 		}
+
+		// If we approach the time of the upgrade before the next reconcile,
+		// reconcile closer to that point
+		if schedulerResult.TimeUntilUpgrade.Seconds() > 0 &&
+			schedulerResult.TimeUntilUpgrade < time.Duration(muocfg.SyncPeriodDefault) {
+			return reconcile.Result{RequeueAfter: schedulerResult.TimeUntilUpgrade}, nil
+		}
+
+		return reconcile.Result{}, nil
+
 	case upgradev1alpha1.UpgradePhaseUpgrading:
 		reqLogger.Info("Cluster detected as already upgrading.")
 		cfm := r.configManagerBuilder.New(r.client, request.Namespace)
