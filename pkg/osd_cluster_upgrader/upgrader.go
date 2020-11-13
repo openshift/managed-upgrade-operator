@@ -30,6 +30,7 @@ var (
 	steps                  UpgradeSteps
 	osdUpgradeStepOrdering = []upgradev1alpha1.UpgradeConditionType{
 		upgradev1alpha1.SendStartedNotification,
+		upgradev1alpha1.SendDelayedNotification,
 		upgradev1alpha1.UpgradePreHealthCheck,
 		upgradev1alpha1.UpgradeScaleUpExtraNodes,
 		upgradev1alpha1.ControlPlaneMaintWindow,
@@ -70,6 +71,7 @@ func NewClient(c client.Client, cfm configmanager.ConfigManager, mc metrics.Metr
 
 	steps = map[upgradev1alpha1.UpgradeConditionType]UpgradeStep{
 		upgradev1alpha1.SendStartedNotification:       SendStartedNotification,
+		upgradev1alpha1.SendDelayedNotification:       SendDelayedNotification,
 		upgradev1alpha1.UpgradePreHealthCheck:         PreClusterHealthCheck,
 		upgradev1alpha1.UpgradeScaleUpExtraNodes:      EnsureExtraUpgradeWorkers,
 		upgradev1alpha1.ControlPlaneMaintWindow:       CreateControlPlaneMaintWindow,
@@ -470,6 +472,33 @@ func SendStartedNotification(c client.Client, cfg *osdUpgradeConfig, scaler scal
 	err := nc.Notify(notifier.StateStarted)
 	if err != nil {
 		return false, err
+	}
+	return true, nil
+}
+
+// SendDelayedNotification sends a notification on a delay to upgrade commencement
+func SendDelayedNotification(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, dsb drain.NodeDrainStrategyBuilder, metricsClient metrics.Metrics, m maintenance.Maintenance, cvClient cv.ClusterVersion, nc eventmanager.EventManager, upgradeConfig *upgradev1alpha1.UpgradeConfig, machinery machinery.Machinery, logger logr.Logger) (bool, error) {
+
+	upgradeCommenced, err := cvClient.HasUpgradeCommenced(upgradeConfig)
+	if err != nil {
+		return false, err
+	}
+
+	// No need to send delayed notifications if we're in the upgrading phase
+	if upgradeCommenced {
+		return true, nil
+	}
+
+	startTime, err := time.Parse(time.RFC3339, upgradeConfig.Spec.UpgradeAt)
+	if err != nil {
+		return false, err
+	}
+	delayTimeoutTrigger := cfg.UpgradeWindow.GetUpgradeDelayedTriggerDuration()
+	if !startTime.IsZero() && time.Now().After(startTime.Add(delayTimeoutTrigger)) {
+		err := nc.Notify(notifier.StateDelayed)
+		if err != nil {
+			return false, err
+		}
 	}
 	return true, nil
 }

@@ -16,7 +16,8 @@ data:
     scale:
       timeOut: 30
     upgradeWindow:
-      timeOut: 60
+      delayTrigger: 30
+      timeOut: 120
     nodeDrain:
       timeOut: 45
       expectedNodeDrainTime: 8

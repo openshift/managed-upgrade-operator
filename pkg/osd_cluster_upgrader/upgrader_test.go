@@ -83,6 +83,9 @@ var _ = Describe("ClusterUpgrader", func() {
 			NodeDrain: drain.NodeDrain{
 				ExpectedNodeDrainTime: 8,
 			},
+			UpgradeWindow: upgradeWindow{
+				DelayTrigger: 30,
+			},
 		}
 	})
 
@@ -317,6 +320,56 @@ var _ = Describe("ClusterUpgrader", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(result).To(BeFalse())
 		})
+	})
+
+	Context("When running the send-delayed-notification phase", func() {
+		Context("when the upgrade hasn't yet started", func() {
+			Context("when the upgrade is delayed", func() {
+				BeforeEach(func() {
+					upgradeConfig.Spec.UpgradeAt = time.Now().Add(-1 * time.Hour).Format(time.RFC3339)
+				})
+				It("will send a notification", func() {
+					gomock.InOrder(
+						mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
+						mockEMClient.EXPECT().Notify(notifier.StateDelayed).Return(nil),
+					)
+
+					result, err := SendDelayedNotification(mockKubeClient, config, mockScalerClient, mockDrainStrategyBuilder, mockMetricsClient, mockMaintClient, mockCVClient, mockEMClient, upgradeConfig, mockMachineryClient, logger)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(result).To(BeTrue())
+				})
+				It("will fail if a notification can't be sent", func() {
+					fakeError := fmt.Errorf("fake error")
+					gomock.InOrder(
+						mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
+						mockEMClient.EXPECT().Notify(notifier.StateDelayed).Return(fakeError),
+					)
+					result, err := SendDelayedNotification(mockKubeClient, config, mockScalerClient, mockDrainStrategyBuilder, mockMetricsClient, mockMaintClient, mockCVClient, mockEMClient, upgradeConfig, mockMachineryClient, logger)
+					Expect(err).To(HaveOccurred())
+					Expect(result).To(BeFalse())
+				})
+			})
+			Context("when the upgrade is not delayed", func() {
+				It("will not send a notification", func() {
+					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil)
+					result, err := SendDelayedNotification(mockKubeClient, config, mockScalerClient, mockDrainStrategyBuilder, mockMetricsClient, mockMaintClient, mockCVClient, mockEMClient, upgradeConfig, mockMachineryClient, logger)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(result).To(BeTrue())
+				})
+			})
+		})
+		Context("when the upgrade has started", func() {
+			BeforeEach(func() {
+				upgradeConfig.Spec.UpgradeAt = time.Now().Add(-1 * time.Hour).Format(time.RFC3339)
+			})
+			It("will not send a notification", func() {
+				mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(true, nil)
+				result, err := SendDelayedNotification(mockKubeClient, config, mockScalerClient, mockDrainStrategyBuilder, mockMetricsClient, mockMaintClient, mockCVClient, mockEMClient, upgradeConfig, mockMachineryClient, logger)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(BeTrue())
+			})
+		})
+
 	})
 
 	Context("When performing Cluster Upgrade steps", func() {

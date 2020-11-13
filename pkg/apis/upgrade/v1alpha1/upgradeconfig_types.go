@@ -96,6 +96,7 @@ type UpgradeCondition struct {
 
 const (
 	SendStartedNotification       UpgradeConditionType = "SendStartedNotification"
+	SendDelayedNotification       UpgradeConditionType = "SendDelayedNotification"
 	UpgradeValidated              UpgradeConditionType = "Validation"
 	UpgradePreHealthCheck         UpgradeConditionType = "PreHealthCheck"
 	UpgradeScaleUpExtraNodes      UpgradeConditionType = "ScaleUpExtraNodes"

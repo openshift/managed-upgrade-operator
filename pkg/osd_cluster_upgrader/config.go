@@ -8,11 +8,12 @@ import (
 )
 
 type osdUpgradeConfig struct {
-	Maintenance  maintenanceConfig `yaml:"maintenance"`
-	Scale        scaleConfig       `yaml:"scale"`
-	NodeDrain    drain.NodeDrain   `yaml:"nodeDrain"`
-	HealthCheck  healthCheck       `yaml:"healthCheck"`
-	Verification verification      `yaml:"verification"`
+	Maintenance   maintenanceConfig `yaml:"maintenance"`
+	Scale         scaleConfig       `yaml:"scale"`
+	NodeDrain     drain.NodeDrain   `yaml:"nodeDrain"`
+	HealthCheck   healthCheck       `yaml:"healthCheck"`
+	Verification  verification      `yaml:"verification"`
+	UpgradeWindow upgradeWindow     `yaml:"upgradeWindow"`
 }
 
 type maintenanceConfig struct {
@@ -37,6 +38,14 @@ func (cfg *maintenanceConfig) IsValid() error {
 
 func (cfg *maintenanceConfig) GetControlPlaneDuration() time.Duration {
 	return time.Duration(cfg.ControlPlaneTime) * time.Minute
+}
+
+type upgradeWindow struct {
+	DelayTrigger int `yaml:"delayTrigger" default:"30"`
+}
+
+func (cfg *upgradeWindow) GetUpgradeDelayedTriggerDuration() time.Duration {
+	return time.Duration(cfg.DelayTrigger) * time.Minute
 }
 
 type scaleConfig struct {
@@ -65,7 +74,9 @@ func (cfg *osdUpgradeConfig) IsValid() error {
 	if cfg.NodeDrain.ExpectedNodeDrainTime <= 0 {
 		return fmt.Errorf("Config nodeDrain expectedNodeDrainTime is invalid")
 	}
-
+	if cfg.UpgradeWindow.DelayTrigger <= 0 {
+		return fmt.Errorf("Config upgrade window delay trigger is invalid")
+	}
 	return nil
 }
 
