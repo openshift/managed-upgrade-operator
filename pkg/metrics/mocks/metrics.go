@@ -8,6 +8,7 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	metrics "github.com/openshift/managed-upgrade-operator/pkg/metrics"
 	reflect "reflect"
+	time "time"
 )
 
 // MockMetrics is a mock of Metrics interface
@@ -115,6 +116,18 @@ func (m *MockMetrics) ResetMetricNodeDrainFailed(arg0 string) {
 func (mr *MockMetricsMockRecorder) ResetMetricNodeDrainFailed(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResetMetricNodeDrainFailed", reflect.TypeOf((*MockMetrics)(nil).ResetMetricNodeDrainFailed), arg0)
+}
+
+// ResetMetricUpgradeConfigSynced mocks base method
+func (m *MockMetrics) ResetMetricUpgradeConfigSynced(arg0 string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "ResetMetricUpgradeConfigSynced", arg0)
+}
+
+// ResetMetricUpgradeConfigSynced indicates an expected call of ResetMetricUpgradeConfigSynced
+func (mr *MockMetricsMockRecorder) ResetMetricUpgradeConfigSynced(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResetMetricUpgradeConfigSynced", reflect.TypeOf((*MockMetrics)(nil).ResetMetricUpgradeConfigSynced), arg0)
 }
 
 // ResetMetricUpgradeControlPlaneTimeout mocks base method
@@ -247,6 +260,18 @@ func (m *MockMetrics) UpdateMetricScalingSucceeded(arg0 string) {
 func (mr *MockMetricsMockRecorder) UpdateMetricScalingSucceeded(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricScalingSucceeded", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricScalingSucceeded), arg0)
+}
+
+// UpdateMetricUpgradeConfigSynced mocks base method
+func (m *MockMetrics) UpdateMetricUpgradeConfigSynced(arg0 string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "UpdateMetricUpgradeConfigSynced", arg0)
+}
+
+// UpdateMetricUpgradeConfigSynced indicates an expected call of UpdateMetricUpgradeConfigSynced
+func (mr *MockMetricsMockRecorder) UpdateMetricUpgradeConfigSynced(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricUpgradeConfigSynced", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricUpgradeConfigSynced), arg0)
 }
 
 // UpdateMetricUpgradeControlPlaneTimeout mocks base method
