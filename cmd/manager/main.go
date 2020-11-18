@@ -29,7 +29,7 @@ import (
 	muocfg "github.com/openshift/managed-upgrade-operator/config"
 	"github.com/openshift/managed-upgrade-operator/pkg/apis"
 	"github.com/openshift/managed-upgrade-operator/pkg/controller"
-	upgrademetrics "github.com/openshift/managed-upgrade-operator/pkg/metrics"
+	"github.com/openshift/managed-upgrade-operator/pkg/metrics/collector"
 	"github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager"
 	"github.com/openshift/managed-upgrade-operator/version"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
@@ -171,7 +171,7 @@ func main() {
 		log.Error(err, "unable to create k8s client for upgrade metrics")
 		os.Exit(1)
 	}
-	uCollector, err := upgrademetrics.NewUpgradeCollector(metricsClient)
+	uCollector, err := collector.NewUpgradeCollector(metricsClient)
 	if err != nil {
 		log.Error(err, "unable to create upgrade metrics collector")
 		os.Exit(1)

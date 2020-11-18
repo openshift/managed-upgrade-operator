@@ -16,6 +16,7 @@ require (
 	github.com/google/uuid v1.1.1
 	github.com/hashicorp/go-multierror v1.1.0
 	github.com/jarcoal/httpmock v1.0.6
+	github.com/jpillora/backoff v1.0.0
 	github.com/onsi/ginkgo v1.12.0
 	github.com/onsi/gomega v1.10.0
 	github.com/openshift/api v0.0.0-20200522173408-17ada6e4245b
