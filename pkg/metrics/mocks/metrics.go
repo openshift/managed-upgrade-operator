@@ -8,7 +8,6 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	metrics "github.com/openshift/managed-upgrade-operator/pkg/metrics"
 	reflect "reflect"
-	time "time"
 )
 
 // MockMetrics is a mock of Metrics interface

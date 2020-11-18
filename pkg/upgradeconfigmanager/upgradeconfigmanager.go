@@ -3,6 +3,7 @@ package upgradeconfigmanager
 import (
 	"context"
 	"fmt"
+	"github.com/jpillora/backoff"
 	"math"
 	"math/rand"
 	"reflect"
@@ -43,7 +44,7 @@ var (
 	ErrRemovingUpgradeConfig    = fmt.Errorf("unable to remove existing UpgradeConfig")
 	ErrCreatingUpgradeConfig    = fmt.Errorf("unable to create new UpgradeConfig")
 	ErrUpgradeConfigNotFound    = fmt.Errorf("upgrade config not found")
-	ErrNotConfigured			= fmt.Errorf("no upgrade config manager configured")
+	ErrNotConfigured            = fmt.Errorf("no upgrade config manager configured")
 )
 
 //go:generate mockgen -destination=mocks/upgradeconfigmanager.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager UpgradeConfigManager
@@ -69,7 +70,8 @@ type upgradeConfigManager struct {
 	cvClientBuilder      cv.ClusterVersionBuilder
 	specProviderBuilder  specprovider.SpecProviderBuilder
 	configManagerBuilder configmanager.ConfigManagerBuilder
-	metricsClient        metrics.Metrics
+	metricsBuilder       metrics.MetricsBuilder
+	backoffCounter       *backoff.Backoff
 }
 
 func (ucb *upgradeConfigManagerBuilder) NewManager(client client.Client) (UpgradeConfigManager, error) {
@@ -78,9 +80,11 @@ func (ucb *upgradeConfigManagerBuilder) NewManager(client client.Client) (Upgrad
 	cvBuilder := cv.NewBuilder()
 	cmBuilder := configmanager.NewBuilder()
 	mBuilder := metrics.NewBuilder()
-	mClient, err := mBuilder.NewClient(client)
-	if err != nil {
-		return nil, err
+	b := &backoff.Backoff{
+		Min:    1 * time.Minute,
+		Max:    1 * time.Hour,
+		Factor: 2,
+		Jitter: false,
 	}
 
 	return &upgradeConfigManager{
@@ -88,7 +92,8 @@ func (ucb *upgradeConfigManagerBuilder) NewManager(client client.Client) (Upgrad
 		cvClientBuilder:      cvBuilder,
 		specProviderBuilder:  spBuilder,
 		configManagerBuilder: cmBuilder,
-		metricsClient:        mClient,
+		metricsBuilder:       mBuilder,
+		backoffCounter:       b,
 	}, nil
 }
 
@@ -124,17 +129,25 @@ func (s *upgradeConfigManager) StartSync(stopCh <-chan struct{}) {
 		return
 	}
 
+	metricsClient, err := s.metricsBuilder.NewClient(s.client)
+	if err != nil {
+		log.Error(err, "can't create metrics client")
+		return
+	}
+
 	duration := durationWithJitter(INITIAL_SYNC_DURATION, JITTER_FACTOR)
 	for {
 		select {
 		case <-time.After(duration):
 			_, err := s.Refresh()
 			if err != nil {
-				log.Error(err, "unable to refresh upgrade config")
-				s.metricsClient.UpdateMetricUpgradeConfigSynced(UPGRADECONFIG_CR_NAME)
-				duration = durationWithJitter(ERROR_RETRY_DURATION, JITTER_FACTOR)
+				waitDuration := s.backoffCounter.Duration()
+				log.Error(err, fmt.Sprintf("unable to refresh upgrade config, retrying in %v", waitDuration))
+				metricsClient.UpdateMetricUpgradeConfigSynced(UPGRADECONFIG_CR_NAME)
+				duration = durationWithJitter(waitDuration, JITTER_FACTOR)
 			} else {
-				s.metricsClient.ResetMetricUpgradeConfigSynced(UPGRADECONFIG_CR_NAME)
+				s.backoffCounter.Reset()
+				metricsClient.ResetMetricUpgradeConfigSynced(UPGRADECONFIG_CR_NAME)
 				duration = durationWithJitter(cfg.GetWatchInterval(), JITTER_FACTOR)
 			}
 		case <-stopCh:
