@@ -15,10 +15,10 @@ type upgradeWindow struct {
 }
 
 func (cfg *config) IsValid() error {
-	if cfg.UpgradeWindow.TimeOut <= 0 {
+	if cfg.UpgradeWindow.TimeOut < 0 {
 		return fmt.Errorf("Config upgrade window time out is invalid")
 	}
-	if cfg.UpgradeWindow.DelayTrigger <= 0 {
+	if cfg.UpgradeWindow.DelayTrigger < 0 {
 		return fmt.Errorf("Config upgrade window delay trigger is invalid")
 	}
 	return nil

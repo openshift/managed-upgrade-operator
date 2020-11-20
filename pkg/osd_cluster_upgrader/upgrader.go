@@ -30,7 +30,7 @@ var (
 	steps                  UpgradeSteps
 	osdUpgradeStepOrdering = []upgradev1alpha1.UpgradeConditionType{
 		upgradev1alpha1.SendStartedNotification,
-		upgradev1alpha1.SendDelayedNotification,
+		upgradev1alpha1.UpgradeDelayedCheck,
 		upgradev1alpha1.UpgradePreHealthCheck,
 		upgradev1alpha1.UpgradeScaleUpExtraNodes,
 		upgradev1alpha1.ControlPlaneMaintWindow,
@@ -71,7 +71,7 @@ func NewClient(c client.Client, cfm configmanager.ConfigManager, mc metrics.Metr
 
 	steps = map[upgradev1alpha1.UpgradeConditionType]UpgradeStep{
 		upgradev1alpha1.SendStartedNotification:       SendStartedNotification,
-		upgradev1alpha1.SendDelayedNotification:       SendDelayedNotification,
+		upgradev1alpha1.UpgradeDelayedCheck:       UpgradeDelayedCheck,
 		upgradev1alpha1.UpgradePreHealthCheck:         PreClusterHealthCheck,
 		upgradev1alpha1.UpgradeScaleUpExtraNodes:      EnsureExtraUpgradeWorkers,
 		upgradev1alpha1.ControlPlaneMaintWindow:       CreateControlPlaneMaintWindow,
@@ -169,6 +169,10 @@ func EnsureExtraUpgradeWorkers(c client.Client, cfg *osdUpgradeConfig, s scaler.
 
 // CommenceUpgrade will update the clusterversion object to apply the desired version to trigger real OCP upgrade
 func CommenceUpgrade(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, dsb drain.NodeDrainStrategyBuilder, metricsClient metrics.Metrics, m maintenance.Maintenance, cvClient cv.ClusterVersion, nc eventmanager.EventManager, upgradeConfig *upgradev1alpha1.UpgradeConfig, machinery machinery.Machinery, logger logr.Logger) (bool, error) {
+
+	// We can reset the window breached metric if we're commencing
+	metricsClient.UpdateMetricUpgradeWindowNotBreached(upgradeConfig.Name)
+
 	upgradeCommenced, err := cvClient.HasUpgradeCommenced(upgradeConfig)
 	if err != nil {
 		return false, err
@@ -477,7 +481,7 @@ func SendStartedNotification(c client.Client, cfg *osdUpgradeConfig, scaler scal
 }
 
 // SendDelayedNotification sends a notification on a delay to upgrade commencement
-func SendDelayedNotification(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, dsb drain.NodeDrainStrategyBuilder, metricsClient metrics.Metrics, m maintenance.Maintenance, cvClient cv.ClusterVersion, nc eventmanager.EventManager, upgradeConfig *upgradev1alpha1.UpgradeConfig, machinery machinery.Machinery, logger logr.Logger) (bool, error) {
+func UpgradeDelayedCheck(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, dsb drain.NodeDrainStrategyBuilder, metricsClient metrics.Metrics, m maintenance.Maintenance, cvClient cv.ClusterVersion, nc eventmanager.EventManager, upgradeConfig *upgradev1alpha1.UpgradeConfig, machinery machinery.Machinery, logger logr.Logger) (bool, error) {
 
 	upgradeCommenced, err := cvClient.HasUpgradeCommenced(upgradeConfig)
 	if err != nil {
@@ -494,7 +498,7 @@ func SendDelayedNotification(c client.Client, cfg *osdUpgradeConfig, scaler scal
 		return false, err
 	}
 	delayTimeoutTrigger := cfg.UpgradeWindow.GetUpgradeDelayedTriggerDuration()
-	if !startTime.IsZero() && time.Now().After(startTime.Add(delayTimeoutTrigger)) {
+	if !startTime.IsZero() && delayTimeoutTrigger > 0 && time.Now().After(startTime.Add(delayTimeoutTrigger)) {
 		err := nc.Notify(notifier.StateDelayed)
 		if err != nil {
 			return false, err
@@ -512,14 +516,55 @@ func SendCompletedNotification(c client.Client, cfg *osdUpgradeConfig, scaler sc
 	return true, nil
 }
 
+// Flags if the cluster has reached a condition during upgrade where it should be treated as failed
+func shouldFailUpgrade(cvClient cv.ClusterVersion, cfg *osdUpgradeConfig, upgradeConfig *upgradev1alpha1.UpgradeConfig) (bool, error) {
+	commenced, err := cvClient.HasUpgradeCommenced(upgradeConfig)
+	if err != nil {
+		return false, err
+	}
+	// If the upgrade has commenced, there's no going back
+	if commenced {
+		return false, nil
+	}
+
+	startTime, err := time.Parse(time.RFC3339, upgradeConfig.Spec.UpgradeAt)
+	if err != nil {
+		return false, err
+	}
+
+	upgradeWindowDuration := cfg.UpgradeWindow.GetUpgradeWindowTimeOutDuration()
+	if !startTime.IsZero() && upgradeWindowDuration > 0 && time.Now().After(startTime.Add(upgradeWindowDuration)) {
+		return true, nil
+	}
+	return false, nil
+}
+
 // This trigger the upgrade process
 func (cu osdClusterUpgrader) UpgradeCluster(upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (upgradev1alpha1.UpgradePhase, *upgradev1alpha1.UpgradeCondition, error) {
 	logger.Info("Upgrading cluster")
 
+	// Determine if the upgrade has reached conditions warranting failure
+	cancelUpgrade, _ := shouldFailUpgrade(cu.cvClient, cu.cfg, upgradeConfig)
+	if cancelUpgrade {
+
+		// Perform whatever actions are needed in the event of an upgrade failure
+		err := performUpgradeFailure(cu.metrics, cu.notifier, upgradeConfig)
+
+		// If we couldn't notify of failure - do nothing, return the existing phase, try again next time
+		if err != nil {
+			h := upgradeConfig.Status.History.GetHistory(upgradeConfig.Spec.Desired.Version)
+			condition := newUpgradeCondition("Upgrade failed", "FailedUpgrade notification sent", "FailedUpgrade", corev1.ConditionFalse)
+			return h.Phase, condition, nil
+		}
+
+		logger.Info("Failing upgrade")
+		condition := newUpgradeCondition("Upgrade failed", "FailedUpgrade notification sent", "FailedUpgrade", corev1.ConditionTrue)
+		return upgradev1alpha1.UpgradePhaseFailed, condition, nil
+	}
+
 	for _, key := range cu.Ordering {
 
 		logger.Info(fmt.Sprintf("Performing %s", key))
-
 		result, err := cu.Steps[key](cu.client, cu.cfg, cu.scaler, cu.drainstrategyBuilder, cu.metrics, cu.maintenance, cu.cvClient, cu.notifier, upgradeConfig, cu.machinery, logger)
 
 		if err != nil {
@@ -537,6 +582,21 @@ func (cu osdClusterUpgrader) UpgradeCluster(upgradeConfig *upgradev1alpha1.Upgra
 	key := cu.Ordering[len(cu.Ordering)-1]
 	condition := newUpgradeCondition(fmt.Sprintf("%s done", key), fmt.Sprintf("%s is completed", key), key, corev1.ConditionTrue)
 	return upgradev1alpha1.UpgradePhaseUpgraded, condition, nil
+}
+
+// Carry out routines related to moving to an upgrade-failed state
+func performUpgradeFailure(metricsClient metrics.Metrics, nc eventmanager.EventManager, upgradeConfig *upgradev1alpha1.UpgradeConfig) error {
+
+	// Notify of failure
+	err := nc.Notify(notifier.StateFailed)
+	if err != nil {
+		return err
+	}
+
+	// flag window breached metric
+	metricsClient.UpdateMetricUpgradeWindowBreached(upgradeConfig.Name)
+
+	return nil
 }
 
 // check several things about the cluster and report problems

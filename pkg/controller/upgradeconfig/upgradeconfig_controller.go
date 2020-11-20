@@ -137,18 +137,11 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 		return reconcile.Result{}, err
 	}
 
-	var history upgradev1alpha1.UpgradeHistory
-	found := false
-	for _, h := range instance.Status.History {
-		if h.Version == instance.Spec.Desired.Version {
-			history = h
-			found = true
-		}
-	}
-	if !found {
-		history = upgradev1alpha1.UpgradeHistory{Version: instance.Spec.Desired.Version, Phase: upgradev1alpha1.UpgradePhaseNew}
+	history := instance.Status.History.GetHistory(instance.Spec.Desired.Version)
+	if history == nil {
+		history = &upgradev1alpha1.UpgradeHistory{Version: instance.Spec.Desired.Version, Phase: upgradev1alpha1.UpgradePhaseNew}
 		history.Conditions = upgradev1alpha1.NewConditions()
-		instance.Status.History = append([]upgradev1alpha1.UpgradeHistory{history}, instance.Status.History...)
+		instance.Status.History = append([]upgradev1alpha1.UpgradeHistory{*history}, instance.Status.History...)
 		err := r.client.Status().Update(context.TODO(), instance)
 		if err != nil {
 			return reconcile.Result{}, err
@@ -156,9 +149,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 	}
 
 	status := history.Phase
-
 	reqLogger.Info("Current cluster status", "status", status)
-
 	switch status {
 	case upgradev1alpha1.UpgradePhaseNew, upgradev1alpha1.UpgradePhasePending:
 		reqLogger.Info("Validating UpgradeConfig")
@@ -232,29 +223,21 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 			now := time.Now()
 			history.Phase = upgradev1alpha1.UpgradePhaseUpgrading
 			history.StartTime = &metav1.Time{Time: now}
-			instance.Status.History.SetHistory(history)
+			instance.Status.History.SetHistory(*history)
 			err = r.client.Status().Update(context.TODO(), instance)
 			if err != nil {
 				return reconcile.Result{}, err
 			}
 
 			reqLogger.Info("Cluster is commencing upgrade.", "time", now)
-			metricsClient.UpdateMetricUpgradeWindowNotBreached(instance.Name)
 			return r.upgradeCluster(upgrader, instance, reqLogger)
 		}
 
 		history.Phase = upgradev1alpha1.UpgradePhasePending
-		instance.Status.History.SetHistory(history)
+		instance.Status.History.SetHistory(*history)
 		err = r.client.Status().Update(context.TODO(), instance)
 		if err != nil {
 			return reconcile.Result{}, err
-		}
-
-		if schedulerResult.IsBreached {
-			// We are past the maximum allowed time to commence upgrading
-			log.Error(nil, "field spec.upgradeAt cannot have backdated time")
-			metricsClient.UpdateMetricUpgradeWindowBreached(instance.Name)
-			return reconcile.Result{}, nil
 		}
 
 		// If we approach the time of the upgrade before the next reconcile,
@@ -277,7 +260,9 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 	case upgradev1alpha1.UpgradePhaseUpgraded:
 		reqLogger.Info("Cluster is already upgraded")
 		return reconcile.Result{}, nil
-
+	case upgradev1alpha1.UpgradePhaseFailed:
+		reqLogger.Info("Cluster has failed to upgrade")
+		return reconcile.Result{}, nil
 	default:
 		reqLogger.Info("Unknown status")
 	}

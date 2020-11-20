@@ -27,6 +27,7 @@ const (
 	StateCompleted NotifyState = "completed"
 	StateDelayed   NotifyState = "delayed"
 	StateFailed    NotifyState = "failed"
+	StateCancelled NotifyState = "cancelled"
 )
 
 type NotifyState string
