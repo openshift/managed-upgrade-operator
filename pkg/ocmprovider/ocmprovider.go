@@ -2,8 +2,8 @@ package ocmprovider
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	"github.com/go-resty/resty/v2"
 	"net/http"
 	"net/url"
 	"path"
@@ -46,12 +46,9 @@ func New(client client.Client, ocmBaseUrl *url.URL) (*ocmProvider, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve cluster access token")
 	}
+
 	// Set up the HTTP client using the token
-	httpClient := &http.Client{
-		Transport: &ocmRoundTripper{
-			authorization: *accessToken,
-		},
-	}
+	httpClient := resty.New().SetTransport(&ocmRoundTripper{authorization:*accessToken})
 
 	return &ocmProvider{
 		client:     client,
@@ -66,7 +63,7 @@ type ocmProvider struct {
 	// Base OCM API Url
 	ocmBaseUrl *url.URL
 	// HTTP client used for API queries (TODO: remove in favour of OCM SDK)
-	httpClient *http.Client
+	httpClient *resty.Client
 }
 
 // Represents an unmarshalled Upgrade Policy response from Cluster Services
@@ -140,8 +137,13 @@ func (s *ocmProvider) Get() ([]upgradev1alpha1.UpgradeConfigSpec, error) {
 	cluster, err := getClusterFromOCMApi(s.client, s.httpClient, s.ocmBaseUrl)
 	if err != nil {
 		log.Error(err, "cannot obtain internal cluster ID")
+		// Pass the error up the chain if the cluster ID couldn't be found
+		if err == ErrClusterIdNotFound {
+			return nil, err
+		}
 		return nil, ErrProviderUnavailable
 	}
+	// In case a response was returned that has no cluster ID
 	if cluster.Id == "" {
 		return nil, ErrClusterIdNotFound
 	}
@@ -179,7 +181,7 @@ func (s *ocmProvider) Get() ([]upgradev1alpha1.UpgradeConfigSpec, error) {
 }
 
 // Queries and returns the Upgrade Policy from Cluster Services
-func getClusterUpgradePolicies(cluster *clusterInfo, client *http.Client, ocmBaseUrl *url.URL) (*upgradePolicyList, error) {
+func getClusterUpgradePolicies(cluster *clusterInfo, client *resty.Client, ocmBaseUrl *url.URL) (*upgradePolicyList, error) {
 
 	upUrl, err := url.Parse(ocmBaseUrl.String())
 	if err != nil {
@@ -187,33 +189,22 @@ func getClusterUpgradePolicies(cluster *clusterInfo, client *http.Client, ocmBas
 	}
 	upUrl.Path = path.Join(upUrl.Path, CLUSTERS_V1_PATH, cluster.Id, UPGRADEPOLICIES_V1_PATH)
 
-	request := &http.Request{
-		Method: "GET",
-		URL:    upUrl,
-	}
-	response, err := client.Do(request)
+	response, err := client.R().
+		SetResult(&upgradePolicyList{}).
+		ExpectContentType("application/json").
+		Get(upUrl.String())
+
 	if err != nil {
 		return nil, fmt.Errorf("can't query upgrade service: %v", err)
 	}
-	operationId := response.Header[OPERATION_ID_HEADER]
-
-	if response.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("received error code '%v' from OCM upgrade policy service, operation id '%v'", response.StatusCode, operationId)
+	operationId := response.Header().Get(OPERATION_ID_HEADER)
+	if response.IsError() {
+		return nil, fmt.Errorf("received error code %v, operation id '%v'", response.StatusCode(), operationId)
 	}
 
-	if response.Body != nil {
-		defer response.Body.Close()
-	}
+	upgradeResponses := response.Result().(*upgradePolicyList)
 
-	var upgradeResponses upgradePolicyList
-	decoder := json.NewDecoder(response.Body)
-	decoder.DisallowUnknownFields()
-	err = decoder.Decode(&upgradeResponses)
-	if err != nil {
-		return nil, fmt.Errorf("unable to decode OCM upgrade policy response, operation id '%v'", operationId)
-	}
-
-	return &upgradeResponses, nil
+	return upgradeResponses, nil
 }
 
 // getNextOccurringUpgradePolicy returns the next occurring upgradepolicy from a list of upgrade
@@ -279,7 +270,7 @@ func inferUpgradeChannelFromChannelGroup(channelGroup string, toVersion string) 
 }
 
 // Read cluster info from OCM
-func getClusterFromOCMApi(kc client.Client, client *http.Client, ocmApi *url.URL) (*clusterInfo, error) {
+func getClusterFromOCMApi(kc client.Client, client *resty.Client, ocmApi *url.URL) (*clusterInfo, error) {
 
 	// fetch the clusterversion, which contains the internal ID
 	cv := &configv1.ClusterVersion{}
@@ -289,44 +280,34 @@ func getClusterFromOCMApi(kc client.Client, client *http.Client, ocmApi *url.URL
 	}
 	externalID := cv.Spec.ClusterID
 
-	search := fmt.Sprintf("external_id = '%s'", externalID)
-	query := make(url.Values)
-	query.Add("page", "1")
-	query.Add("size", "1")
-	query.Add("search", search)
-
 	csUrl, err := url.Parse(ocmApi.String())
 	if err != nil {
 		return nil, fmt.Errorf("can't parse OCM API url: %v", err)
 	}
 	csUrl.Path = path.Join(csUrl.Path, CLUSTERS_V1_PATH)
-	csUrl.RawQuery = query.Encode()
-	request := &http.Request{
-		Method: "GET",
-		URL:    csUrl,
-	}
 
-	response, err := client.Do(request)
+	response, err := client.R().
+		SetQueryParams(map[string]string {
+			"page": "1",
+			"size": "1",
+			"search": fmt.Sprintf("external_id = '%s'", externalID),
+		}).
+		SetResult(&clusterList{}).
+		ExpectContentType("application/json").
+		Get(csUrl.String())
+
 	if err != nil {
 		return nil, fmt.Errorf("can't query OCM cluster service: %v", err)
 	}
-	operationId := response.Header[OPERATION_ID_HEADER]
-	if response.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("received error code %v, operation id '%v'", response.StatusCode, operationId)
+
+	operationId := response.Header().Get(OPERATION_ID_HEADER)
+	if response.IsError() {
+		return nil, fmt.Errorf("received error code %v, operation id '%v'", response.StatusCode(), operationId)
 	}
 
-	if response.Body != nil {
-		defer response.Body.Close()
-	}
-
-	var listResponse clusterList
-	decoder := json.NewDecoder(response.Body)
-	err = decoder.Decode(&listResponse)
-	if err != nil {
-		return nil, fmt.Errorf("unable to decode OCM cluster response, operation id '%v'", operationId)
-	}
+	listResponse := response.Result().(*clusterList)
 	if listResponse.Size != 1 || len(listResponse.Items) != 1 {
-		return nil, fmt.Errorf("no items returned from OCM cluster service, operation id '%v'", operationId)
+		return nil, ErrClusterIdNotFound
 	}
 
 	return &listResponse.Items[0], nil
