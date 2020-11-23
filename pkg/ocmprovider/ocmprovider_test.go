@@ -109,6 +109,10 @@ var _ = Describe("OCM Provider", func() {
 							Id:           "4.4.4",
 							ChannelGroup: TEST_UPGRADEPOLICY_CHANNELGROUP,
 						},
+						NodeDrainGracePeriod: nodeDrainGracePeriod{
+							Value: TEST_UPGRADEPOLICY_PDB_TIME,
+							Unit:  "minutes",
+						},
 					},
 				},
 			}
@@ -127,10 +131,6 @@ var _ = Describe("OCM Provider", func() {
 						UpgradeType:  TEST_UPGRADEPOLICY_UPGRADETYPE,
 						Version:      TEST_UPGRADEPOLICY_VERSION,
 						NextRun:      TEST_UPGRADEPOLICY_TIME,
-						NodeDrainGracePeriod: nodeDrainGracePeriod{
-							Value: TEST_UPGRADEPOLICY_PDB_TIME,
-							Unit:  "minutes",
-						},
 						ClusterId: TEST_CLUSTER_ID,
 					},
 				},
@@ -191,10 +191,6 @@ var _ = Describe("OCM Provider", func() {
 						UpgradeType:  TEST_UPGRADEPOLICY_UPGRADETYPE,
 						Version:      TEST_UPGRADEPOLICY_VERSION,
 						NextRun:      TEST_UPGRADEPOLICY_TIME,
-						NodeDrainGracePeriod: nodeDrainGracePeriod{
-							Value: TEST_UPGRADEPOLICY_PDB_TIME,
-							Unit:  "minutes",
-						},
 						ClusterId: TEST_CLUSTER_ID_MULTI_POLICIES,
 					},
 					{
@@ -206,10 +202,6 @@ var _ = Describe("OCM Provider", func() {
 						UpgradeType:  TEST_UPGRADEPOLICY_UPGRADETYPE,
 						Version:      TEST_UPGRADEPOLICY_VERSION,
 						NextRun:      TEST_UPGRADEPOLICY_TIME_NEXT_OCCURRING,
-						NodeDrainGracePeriod: nodeDrainGracePeriod{
-							Value: TEST_UPGRADEPOLICY_PDB_TIME,
-							Unit:  "minutes",
-						},
 						ClusterId: TEST_CLUSTER_ID_MULTI_POLICIES,
 					},
 				},
