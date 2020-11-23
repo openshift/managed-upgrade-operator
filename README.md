@@ -56,7 +56,7 @@ If you like to contribute to the Managed Upgrade Operator, please read our [Cont
 apiVersion: upgrade.managed.openshift.io/v1alpha1
 kind: UpgradeConfig
 metadata:
-  name: example-upgrade-config
+  name: osd-upgrade-config
 spec:
   type: "OSD"
   upgradeAt: "2020-01-01T00:00:00Z"
