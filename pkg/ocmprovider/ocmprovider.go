@@ -89,13 +89,7 @@ type upgradePolicy struct {
 	Version              string               `json:"version"`
 	NextRun              string               `json:"next_run"`
 	PrevRun              string               `json:"prev_run"`
-	NodeDrainGracePeriod nodeDrainGracePeriod `json:"node_drain_grace_period"`
 	ClusterId            string               `json:"cluster_id"`
-}
-
-type nodeDrainGracePeriod struct {
-	Value int64  `json:"value"`
-	Unit  string `json:"unit"`
 }
 
 // Represents an unmarshalled Cluster List response from Cluster Services
@@ -111,6 +105,12 @@ type clusterList struct {
 type clusterInfo struct {
 	Id      string         `json:"id"`
 	Version clusterVersion `json:"version"`
+	NodeDrainGracePeriod nodeDrainGracePeriod `json:"node_drain_grace_period"`
+}
+
+type nodeDrainGracePeriod struct {
+	Value int64  `json:"value"`
+	Unit  string `json:"unit"`
 }
 
 type clusterVersion struct {
@@ -258,7 +258,7 @@ func buildUpgradeConfigSpecs(upgradePolicy *upgradePolicy, cluster *clusterInfo,
 			Channel: *upgradeChannel,
 		},
 		UpgradeAt:            upgradePolicy.NextRun,
-		PDBForceDrainTimeout: int32(upgradePolicy.NodeDrainGracePeriod.Value),
+		PDBForceDrainTimeout: int32(cluster.NodeDrainGracePeriod.Value),
 		Type:                 upgradev1alpha1.UpgradeType(upgradePolicy.UpgradeType),
 	}
 	upgradeConfigSpecs = append(upgradeConfigSpecs, upgradeConfigSpec)

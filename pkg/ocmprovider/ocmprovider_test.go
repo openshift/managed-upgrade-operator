@@ -239,6 +239,10 @@ func clustersMock(w http.ResponseWriter, r *http.Request) {
 					Id:           "4.4.4",
 					ChannelGroup: TEST_UPGRADEPOLICY_CHANNELGROUP,
 				},
+				NodeDrainGracePeriod: nodeDrainGracePeriod{
+					Value: TEST_UPGRADEPOLICY_PDB_TIME,
+					Unit:  "minutes",
+				},
 			},
 		},
 	}
@@ -284,10 +288,6 @@ func policyMock(w http.ResponseWriter, r *http.Request) {
 				UpgradeType:  TEST_UPGRADEPOLICY_UPGRADETYPE,
 				Version:      TEST_UPGRADEPOLICY_VERSION,
 				NextRun:      TEST_UPGRADEPOLICY_TIME,
-				NodeDrainGracePeriod: nodeDrainGracePeriod{
-					Value: TEST_UPGRADEPOLICY_PDB_TIME,
-					Unit:  "minutes",
-				},
 				ClusterId: TEST_CLUSTER_ID,
 			},
 		},
@@ -313,10 +313,6 @@ func multiPolicyMock(w http.ResponseWriter, r *http.Request) {
 				UpgradeType:  TEST_UPGRADEPOLICY_UPGRADETYPE,
 				Version:      TEST_UPGRADEPOLICY_VERSION,
 				NextRun:      TEST_UPGRADEPOLICY_TIME,
-				NodeDrainGracePeriod: nodeDrainGracePeriod{
-					Value: TEST_UPGRADEPOLICY_PDB_TIME,
-					Unit:  "minutes",
-				},
 				ClusterId: TEST_CLUSTER_ID_MULTI_POLICIES,
 			},
 			{
@@ -328,10 +324,6 @@ func multiPolicyMock(w http.ResponseWriter, r *http.Request) {
 				UpgradeType:  TEST_UPGRADEPOLICY_UPGRADETYPE,
 				Version:      TEST_UPGRADEPOLICY_VERSION,
 				NextRun:      TEST_UPGRADEPOLICY_TIME_NEXT_OCCURRING,
-				NodeDrainGracePeriod: nodeDrainGracePeriod{
-					Value: TEST_UPGRADEPOLICY_PDB_TIME,
-					Unit:  "minutes",
-				},
 				ClusterId: TEST_CLUSTER_ID_MULTI_POLICIES,
 			},
 		},
