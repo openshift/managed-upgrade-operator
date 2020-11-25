@@ -1,6 +1,7 @@
 package collector
 
 import (
+	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -11,6 +12,13 @@ import (
 )
 
 var (
+	UpgradeValidationFailedDesc = prometheus.NewDesc(
+		"validate_result",
+		"Failed to validate the upgrade config",
+		[]string{
+			"version",
+		}, nil)
+
 	UpgradeSchedulingDesc = prometheus.NewDesc(
 		"upgrade_at",
 		"The desired start time of the upgrade",
@@ -94,6 +102,8 @@ func (uc *UpgradeCollector) Collect(ch chan<- prometheus.Metric) {
 	uc.collectUpgradeMetrics(ch)
 }
 
+var history upgradev1alpha1.UpgradeHistory
+
 func (uc *UpgradeCollector) collectUpgradeMetrics(ch chan<- prometheus.Metric) {
 	upgradeConfig, err := uc.upgradeConfigManager.Get()
 	if err != nil {
@@ -115,6 +125,15 @@ func (uc *UpgradeCollector) collectUpgradeMetrics(ch chan<- prometheus.Metric) {
 	if upgradeConfig.Status.History != nil {
 		history := upgradeConfig.Status.History.GetHistory(upgradeConfig.Spec.Desired.Version)
 		if history != nil {
+			if history.Conditions.GetCondition(upgradev1alpha1.UpgradeValidated) != nil {
+				ch <- prometheus.MustNewConstMetric(
+					UpgradeValidationFailedDesc,
+					prometheus.GaugeValue,
+					float64(1),
+					upgradeConfig.Spec.Desired.Version,
+				)
+			}
+
 			if history.StartTime != nil {
 				ch <- prometheus.MustNewConstMetric(
 					UpgradeStartDesc,

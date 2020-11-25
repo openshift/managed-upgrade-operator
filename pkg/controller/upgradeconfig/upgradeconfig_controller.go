@@ -184,10 +184,40 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 		}
 		if !validatorResult.IsValid {
 			reqLogger.Info(validatorResult.Message)
-			metricsClient.UpdateMetricValidationFailed(instance.Name)
+
+			ValidationCondition := history.Conditions.GetCondition(upgradev1alpha1.UpgradeValidated)
+			if ValidationCondition != nil {
+				//update
+				ValidationCondition.Status = "False"
+				//msg = validatorResult.Message, reason
+				ValidationCondition.Message = validatorResult.Message
+				ValidationCondition.Reason = "Upgrade config validation failed"
+				history.Conditions.SetCondition(*ValidationCondition)
+				// instance.Status.History = history
+				instance.Status.History.SetHistory(history)
+			} else {
+				//new, msg, reason
+				newCond := upgradev1alpha1.UpgradeCondition{
+					Type: upgradev1alpha1.UpgradeValidated, Status: "False",
+					Message: validatorResult.Message, Reason: "Upgrade config validation failed"}
+				history.Conditions.SetCondition(newCond)
+				instance.Status.History.SetHistory(history)
+			}
+
+			err := r.client.Status().Update(context.TODO(), instance)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+
+			// need to set metrics outside controller -> collector
+			// metricsClient.UpdateMetricValidationFailed(instance.Name)
+
 			return reconcile.Result{}, nil
 		}
+
+		// need to set metrics outside controller -> collector
 		metricsClient.UpdateMetricValidationSucceeded(instance.Name)
+
 		if !validatorResult.IsAvailableUpdate {
 			reqLogger.Info(validatorResult.Message)
 			return reconcile.Result{}, nil
