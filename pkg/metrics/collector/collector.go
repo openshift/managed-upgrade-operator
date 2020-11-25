@@ -102,8 +102,6 @@ func (uc *UpgradeCollector) Collect(ch chan<- prometheus.Metric) {
 	uc.collectUpgradeMetrics(ch)
 }
 
-var history upgradev1alpha1.UpgradeHistory
-
 func (uc *UpgradeCollector) collectUpgradeMetrics(ch chan<- prometheus.Metric) {
 	upgradeConfig, err := uc.upgradeConfigManager.Get()
 	if err != nil {
