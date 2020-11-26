@@ -74,7 +74,9 @@ func (s *ocmNotifier) NotifyState(value NotifyState, description string) error {
 	}
 
 	// Don't notify if the state is already at the same value
-	if currentState.Value == string(value) {
+	// Only notify if it's a valid transition
+	shouldNotify := validateStateTransition(NotifyState(currentState.Value), value)
+	if !shouldNotify {
 		return nil
 	}
 
@@ -146,6 +148,50 @@ func (s *ocmNotifier) sendNotification(value NotifyState, description string, po
 	}
 
 	return nil
+}
+
+// Validates that a state transition can be made from the supplied from/to states
+func validateStateTransition(from NotifyState, to NotifyState) bool {
+
+	switch from {
+	case StatePending:
+		// Can only go to a started state
+		switch to {
+		case StateStarted:
+			return true
+		default:
+			return false
+		}
+	case StateStarted:
+		// Can go to a delayed, completed or failed state
+		switch to {
+		case StateDelayed:
+			return true
+		case StateCompleted:
+			return true
+		case StateFailed:
+			return true
+		default: return false
+		}
+	case StateDelayed:
+		// can go to completed or failed state
+		switch to {
+		case StateCompleted:
+			return true
+		case StateFailed:
+			return true
+		default:
+			return false
+		}
+	case StateCompleted:
+		// can't go anywhere
+		return false
+	case StateFailed:
+		// can't go anywhere
+		return false
+	default:
+		return false
+	}
 }
 
 // Queries and returns the Upgrade Policy from Cluster Services

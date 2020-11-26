@@ -93,6 +93,8 @@ func (s *eventManager) Notify(state notifier.NotifyState) error {
 		description = fmt.Sprintf("Cluster upgrade to version %s is currently delayed", uc.Spec.Desired.Version)
 	case notifier.StateCompleted:
 		description = fmt.Sprintf("Cluster has been successfully upgraded to version %s", uc.Spec.Desired.Version)
+	case notifier.StateFailed:
+		description = "Cluster did not pass its pre-upgrade verification checks"
 	default:
 		return fmt.Errorf("state %v not yet implemented", state)
 	}

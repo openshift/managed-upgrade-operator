@@ -37,7 +37,7 @@ func (s *scheduler) IsReadyToUpgrade(upgradeConfig *upgradev1alpha1.UpgradeConfi
 			return SchedulerResult{IsReady: true, IsBreached: false, TimeUntilUpgrade: 0}
 		}
 
-		return SchedulerResult{IsReady: false, IsBreached: true, TimeUntilUpgrade: 0}
+		return SchedulerResult{IsReady: true, IsBreached: true, TimeUntilUpgrade: 0}
 	}
 
 	// It hasn't reached the upgrade window yet
