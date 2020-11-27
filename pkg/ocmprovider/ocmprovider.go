@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"strings"
 	"time"
 
 	"github.com/blang/semver"
@@ -26,6 +27,8 @@ const (
 	CLUSTERS_V1_PATH = "/api/clusters_mgmt/v1/clusters"
 	// Sub-path to the OCM upgrade policies service
 	UPGRADEPOLICIES_V1_PATH = "upgrade_policies"
+	// Sub-path to the policy state service
+	STATE_V1_PATH = "state"
 )
 
 var log = logf.Log.WithName("ocm-config-getter")
@@ -87,6 +90,14 @@ type upgradePolicy struct {
 	NextRun              string               `json:"next_run"`
 	PrevRun              string               `json:"prev_run"`
 	ClusterId            string               `json:"cluster_id"`
+}
+
+// Represents an Upgrade Policy state for notifications
+type upgradePolicyState struct {
+	Kind        string `json:"kind"`
+	Href        string `json:"href"`
+	Value       string `json:"value"`
+	Description string `json:"description"`
 }
 
 // Represents an unmarshalled Cluster List response from Cluster Services
@@ -167,6 +178,16 @@ func (s *ocmProvider) Get() ([]upgradev1alpha1.UpgradeConfigSpec, error) {
 		}
 		log.Info(fmt.Sprintf("Detected upgrade policy %s as next occurring.", nextOccurringUpgradePolicy.Id))
 
+		policyState, err := getUpgradePolicyState(cluster, nextOccurringUpgradePolicy, s.httpClient, s.ocmBaseUrl)
+		if err != nil {
+			log.Error(err, "error getting policy's state")
+			return nil, err
+		}
+
+		if !isActionableUpgradePolicy(nextOccurringUpgradePolicy, policyState) {
+			return nil, nil
+		}
+
 		// Apply the next occurring Upgrade policy to the clusters UpgradeConfig CR.
 		specs, err := buildUpgradeConfigSpecs(nextOccurringUpgradePolicy, cluster, s.client)
 		if err != nil {
@@ -178,6 +199,30 @@ func (s *ocmProvider) Get() ([]upgradev1alpha1.UpgradeConfigSpec, error) {
 	}
 	log.Info("No upgrade policies available")
 	return nil, nil
+}
+
+func getUpgradePolicyState(cluster *clusterInfo, up *upgradePolicy, client *resty.Client, ocmBaseUrl *url.URL) (*upgradePolicyState, error) {
+
+	upUrl, err := url.Parse(ocmBaseUrl.String())
+	if err != nil {
+		return nil, fmt.Errorf("can't read OCM API url: %v", err)
+	}
+	upUrl.Path = path.Join(upUrl.Path, CLUSTERS_V1_PATH, cluster.Id, UPGRADEPOLICIES_V1_PATH, up.Id, STATE_V1_PATH)
+
+	response, err := client.R().
+		SetResult(&upgradePolicyState{}).
+		ExpectContentType("application/json").
+		Get(upUrl.String())
+	if err != nil {
+		return nil, fmt.Errorf("can't send notification: %v", err)
+	}
+	operationId := response.Header().Get(OPERATION_ID_HEADER)
+	if response.IsError() {
+		return nil, fmt.Errorf("received error code '%v' from OCM upgrade policy service, operation id '%v'", response.StatusCode(), operationId)
+	}
+
+	stateResponse := response.Result().(*upgradePolicyState)
+	return stateResponse, nil
 }
 
 // Queries and returns the Upgrade Policy from Cluster Services
@@ -230,6 +275,24 @@ func getNextOccurringUpgradePolicy(uPs *upgradePolicyList) (*upgradePolicy, erro
 	}
 
 	return &nextOccurringUpgradePolicy, nil
+}
+
+// Checks if the supplied upgrade policy is one which warrants turning into an
+// UpgradeConfig
+func isActionableUpgradePolicy(up *upgradePolicy, state *upgradePolicyState) bool {
+
+	// Policies that aren't in a PENDING state should be ignored
+	if strings.ToLower(state.Value) != "pending" {
+		return false
+	}
+
+	// Automatic upgrade policies will have an empty version if the cluster is up to date
+	if len(up.Version) == 0 {
+		log.Info(fmt.Sprintf("Upgrade policy %v has an empty version, will ignore.", up.Id))
+		return false
+	}
+
+	return true
 }
 
 // Applies the supplied Upgrade Policy to the cluster in the form of an UpgradeConfig
