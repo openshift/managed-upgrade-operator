@@ -3,6 +3,7 @@ package ocmprovider
 import (
 	"fmt"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/blang/semver"
@@ -82,6 +83,16 @@ func (s *ocmProvider) Get() ([]upgradev1alpha1.UpgradeConfigSpec, error) {
 		}
 		log.Info(fmt.Sprintf("Detected upgrade policy %s as next occurring.", nextOccurringUpgradePolicy.Id))
 
+		policyState, err := s.ocmClient.GetClusterUpgradePolicyState(nextOccurringUpgradePolicy.Id, cluster.Id)
+		if err != nil {
+			log.Error(err, "error getting policy's state")
+			return nil, err
+		}
+
+		if !isActionableUpgradePolicy(nextOccurringUpgradePolicy, policyState) {
+			return nil, nil
+		}
+
 		// Apply the next occurring Upgrade policy to the clusters UpgradeConfig CR.
 		specs, err := buildUpgradeConfigSpecs(nextOccurringUpgradePolicy, cluster, s.client)
 		if err != nil {
@@ -118,6 +129,24 @@ func getNextOccurringUpgradePolicy(uPs *ocm.UpgradePolicyList) (*ocm.UpgradePoli
 	}
 
 	return &nextOccurringUpgradePolicy, nil
+}
+
+// Checks if the supplied upgrade policy is one which warrants turning into an
+// UpgradeConfig
+func isActionableUpgradePolicy(up *ocm.UpgradePolicy, state *ocm.UpgradePolicyState) bool {
+
+	// Policies that aren't in a PENDING state should be ignored
+	if strings.ToLower(state.Value) != "pending" {
+		return false
+	}
+
+	// Automatic upgrade policies will have an empty version if the cluster is up to date
+	if len(up.Version) == 0 {
+		log.Info(fmt.Sprintf("Upgrade policy %v has an empty version, will ignore.", up.Id))
+		return false
+	}
+
+	return true
 }
 
 // Applies the supplied Upgrade Policy to the cluster in the form of an UpgradeConfig

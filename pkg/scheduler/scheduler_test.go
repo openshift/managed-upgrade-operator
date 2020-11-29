@@ -31,7 +31,7 @@ var _ = Describe("Scheduler", func() {
 		s := &scheduler{}
 		upgradeConfig = testUpgradeConfig(true, time.Now().Add(-10*time.Minute).Format(time.RFC3339))
 		result := s.IsReadyToUpgrade(upgradeConfig, 5 * time.Minute)
-		Expect(result.IsReady).To(BeFalse())
+		Expect(result.IsReady).To(BeTrue())
 		Expect(result.IsBreached).To(BeTrue())
 	})
 })

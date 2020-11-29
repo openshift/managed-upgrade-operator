@@ -4,13 +4,14 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/golang/mock/gomock"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	"github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 	"github.com/openshift/managed-upgrade-operator/pkg/ocm"
 	mockOcm "github.com/openshift/managed-upgrade-operator/pkg/ocm/mocks"
 	"github.com/openshift/managed-upgrade-operator/util/mocks"
+
+	"github.com/golang/mock/gomock"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 const (
@@ -31,10 +32,12 @@ const (
 
 var _ = Describe("OCM Provider", func() {
 	var (
-		mockCtrl       *gomock.Controller
-		mockKubeClient *mocks.MockClient
-		mockOcmClient  *mockOcm.MockOcmClient
-		provider       *ocmProvider
+		mockCtrl                   *gomock.Controller
+		mockKubeClient             *mocks.MockClient
+		mockOcmClient              *mockOcm.MockOcmClient
+		provider                   *ocmProvider
+		upgradePolicyListResponse  ocm.UpgradePolicyList
+		upgradePolicyStateResponse ocm.UpgradePolicyState
 	)
 
 	BeforeEach(func() {
@@ -44,6 +47,31 @@ var _ = Describe("OCM Provider", func() {
 		provider = &ocmProvider{
 			client:    mockKubeClient,
 			ocmClient: mockOcmClient,
+		}
+		upgradePolicyListResponse = ocm.UpgradePolicyList{
+			Kind:  "UpgradePolicyList",
+			Page:  1,
+			Size:  1,
+			Total: 1,
+			Items: []ocm.UpgradePolicy{
+				{
+					Id:           TEST_POLICY_ID_MANUAL,
+					Kind:         "UpgradePolicy",
+					Href:         "test",
+					Schedule:     "test",
+					ScheduleType: "manual",
+					UpgradeType:  TEST_UPGRADEPOLICY_UPGRADETYPE,
+					Version:      TEST_UPGRADEPOLICY_VERSION,
+					NextRun:      TEST_UPGRADEPOLICY_TIME,
+					ClusterId:    TEST_CLUSTER_ID,
+				},
+			},
+		}
+		upgradePolicyStateResponse = ocm.UpgradePolicyState{
+			Kind:        "UpgradePolicyState",
+			Href:        "test",
+			Value:       "pending",
+			Description: "Upgrade is pending",
 		}
 	})
 
@@ -124,6 +152,7 @@ var _ = Describe("OCM Provider", func() {
 			gomock.InOrder(
 				mockOcmClient.EXPECT().GetCluster().Return(&cluster, nil),
 				mockOcmClient.EXPECT().GetClusterUpgradePolicies(cluster.Id).Return(&upgradePolicyListResponse, nil),
+				mockOcmClient.EXPECT().GetClusterUpgradePolicyState(TEST_POLICY_ID_MANUAL, TEST_CLUSTER_ID).Return(&upgradePolicyStateResponse, nil),
 			)
 			specs, err := provider.Get()
 			Expect(err).To(BeNil())
@@ -175,6 +204,7 @@ var _ = Describe("OCM Provider", func() {
 			gomock.InOrder(
 				mockOcmClient.EXPECT().GetCluster().Return(&cluster, nil),
 				mockOcmClient.EXPECT().GetClusterUpgradePolicies(cluster.Id).Return(&multiPolicyResponse, nil),
+				mockOcmClient.EXPECT().GetClusterUpgradePolicyState(TEST_POLICY_ID_MANUAL, TEST_CLUSTER_ID).Return(&upgradePolicyStateResponse, nil),
 			)
 			specs, err := provider.Get()
 			Expect(err).To(BeNil())
@@ -225,5 +255,27 @@ var _ = Describe("OCM Provider", func() {
 			Expect(err).To(Equal(ErrRetrievingPolicies))
 			Expect(specs).To(BeNil())
 		})
+	})
+
+	Context("Checking if an upgrade policy is actionable", func() {
+		It("Will action a normal manual policy", func() {
+			u := upgradePolicyListResponse.Items[0]
+			result := isActionableUpgradePolicy(&u, &upgradePolicyStateResponse)
+			Expect(result).To(BeTrue())
+		})
+		It("Will not action a policy with no version", func() {
+			u := upgradePolicyListResponse.Items[0]
+			u.Version = ""
+			result := isActionableUpgradePolicy(&u, &upgradePolicyStateResponse)
+			Expect(result).To(BeFalse())
+		})
+		It("Will not action a policy not in a pending state", func() {
+			u := upgradePolicyListResponse.Items[0]
+			u.Version = ""
+			upgradePolicyStateResponse.Value = "somethingelse"
+			result := isActionableUpgradePolicy(&u, &upgradePolicyStateResponse)
+			Expect(result).To(BeFalse())
+		})
+
 	})
 })
