@@ -2,27 +2,22 @@ package ocmprovider
 
 import (
 	"fmt"
-	"github.com/go-resty/resty/v2"
-	"github.com/jarcoal/httpmock"
-	configv1 "github.com/openshift/api/config/v1"
-	"github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
-	"k8s.io/apimachinery/pkg/types"
-	"net/http"
-	"net/url"
 	"os"
-	"path"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
+	"github.com/openshift/managed-upgrade-operator/pkg/ocm"
+	mockOcm "github.com/openshift/managed-upgrade-operator/pkg/ocm/mocks"
 	"github.com/openshift/managed-upgrade-operator/util/mocks"
 )
 
 const (
-	TEST_CLUSTER_ID                  = "111111-2222222-3333333-4444444"
-	TEST_CLUSTER_ID_MULTI_POLICIES   = "444444-333333-222222-111111"
-	TEST_POLICY_ID_MANUAL            = "aaaaaa-bbbbbb-cccccc-dddddd"
-	TEST_POLICY_ID_AUTOMATIC         = "aaaaaa-bbbbbb-cccccc-dddddd"
+	TEST_CLUSTER_ID                = "111111-2222222-3333333-4444444"
+	TEST_CLUSTER_ID_MULTI_POLICIES = "444444-333333-222222-111111"
+	TEST_POLICY_ID_MANUAL          = "aaaaaa-bbbbbb-cccccc-dddddd"
+	TEST_POLICY_ID_AUTOMATIC       = "aaaaaa-bbbbbb-cccccc-dddddd"
 
 	// Upgrade policy constants
 	TEST_OPERATOR_NAMESPACE                = "test-managed-upgrade-operator"
@@ -32,39 +27,28 @@ const (
 	TEST_UPGRADEPOLICY_VERSION             = "4.4.5"
 	TEST_UPGRADEPOLICY_CHANNELGROUP        = "fast"
 	TEST_UPGRADEPOLICY_PDB_TIME            = 60
-
-	// OCM test constants
-	TEST_OCM_SERVER_URL = "https://fakeapi.openshift.com"
 )
 
 var _ = Describe("OCM Provider", func() {
 	var (
 		mockCtrl       *gomock.Controller
 		mockKubeClient *mocks.MockClient
+		mockOcmClient  *mockOcm.MockOcmClient
 		provider       *ocmProvider
-		httpClient				 *resty.Client
 	)
-
-	BeforeSuite(func() {
-		httpClient = resty.New()
-		httpmock.ActivateNonDefault(httpClient.GetClient())
-	})
 
 	BeforeEach(func() {
 		mockCtrl = gomock.NewController(GinkgoT())
 		mockKubeClient = mocks.NewMockClient(mockCtrl)
-		ocmServerUrl, _ := url.Parse(TEST_OCM_SERVER_URL)
-
+		mockOcmClient = mockOcm.NewMockOcmClient(mockCtrl)
 		provider = &ocmProvider{
-			client:     mockKubeClient,
-			ocmBaseUrl: ocmServerUrl,
-			httpClient: httpClient,
+			client:    mockKubeClient,
+			ocmClient: mockOcmClient,
 		}
 	})
 
 	AfterEach(func() {
 		mockCtrl.Finish()
-		httpmock.Reset()
 	})
 
 	Context("Inferring the upgrade channel", func() {
@@ -86,42 +70,30 @@ var _ = Describe("OCM Provider", func() {
 
 	Context("Getting upgrade policies", func() {
 		var (
-			cv                        *configv1.ClusterVersion
-			clusterListResponse       clusterList
-			upgradePolicyListResponse upgradePolicyList
+			cluster                   ocm.ClusterInfo
+			upgradePolicyListResponse ocm.UpgradePolicyList
 		)
 
 		BeforeEach(func() {
-			cv = &configv1.ClusterVersion{
-				Spec: configv1.ClusterVersionSpec{
-					ClusterID: TEST_CLUSTER_ID,
+			cluster = ocm.ClusterInfo{
+
+				Id: TEST_CLUSTER_ID,
+				Version: ocm.ClusterVersion{
+					Id:           "4.4.4",
+					ChannelGroup: TEST_UPGRADEPOLICY_CHANNELGROUP,
+				},
+				NodeDrainGracePeriod: ocm.NodeDrainGracePeriod{
+					Value: TEST_UPGRADEPOLICY_PDB_TIME,
+					Unit:  "minutes",
 				},
 			}
-			clusterListResponse = clusterList{
-				Kind:  "ClusterList",
-				Page:  1,
-				Size:  1,
-				Total: 1,
-				Items: []clusterInfo{
-					{
-						Id: TEST_CLUSTER_ID,
-						Version: clusterVersion{
-							Id:           "4.4.4",
-							ChannelGroup: TEST_UPGRADEPOLICY_CHANNELGROUP,
-						},
-						NodeDrainGracePeriod: nodeDrainGracePeriod{
-							Value: TEST_UPGRADEPOLICY_PDB_TIME,
-							Unit:  "minutes",
-						},
-					},
-				},
-			}
-			upgradePolicyListResponse = upgradePolicyList{
+
+			upgradePolicyListResponse = ocm.UpgradePolicyList{
 				Kind:  "UpgradePolicyList",
 				Page:  1,
 				Size:  1,
 				Total: 1,
-				Items: []upgradePolicy{
+				Items: []ocm.UpgradePolicy{
 					{
 						Id:           TEST_POLICY_ID_MANUAL,
 						Kind:         "UpgradePolicy",
@@ -131,7 +103,7 @@ var _ = Describe("OCM Provider", func() {
 						UpgradeType:  TEST_UPGRADEPOLICY_UPGRADETYPE,
 						Version:      TEST_UPGRADEPOLICY_VERSION,
 						NextRun:      TEST_UPGRADEPOLICY_TIME,
-						ClusterId: TEST_CLUSTER_ID,
+						ClusterId:    TEST_CLUSTER_ID,
 					},
 				},
 			}
@@ -149,16 +121,9 @@ var _ = Describe("OCM Provider", func() {
 				Type:                 TEST_UPGRADEPOLICY_UPGRADETYPE,
 			}
 
-			clResponder, _ := httpmock.NewJsonResponder(http.StatusOK, clusterListResponse)
-			clUrl := path.Join(CLUSTERS_V1_PATH)
-			httpmock.RegisterResponder(http.MethodGet, clUrl, clResponder)
-
-			upResponder, _ := httpmock.NewJsonResponder(http.StatusOK, upgradePolicyListResponse)
-			upUrl := path.Join(CLUSTERS_V1_PATH, TEST_CLUSTER_ID, UPGRADEPOLICIES_V1_PATH)
-			httpmock.RegisterResponder(http.MethodGet, upUrl, upResponder)
-
 			gomock.InOrder(
-				mockKubeClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Name: "version"}, gomock.Any()).SetArg(2, *cv).Return(nil),
+				mockOcmClient.EXPECT().GetCluster().Return(&cluster, nil),
+				mockOcmClient.EXPECT().GetClusterUpgradePolicies(cluster.Id).Return(&upgradePolicyListResponse, nil),
 			)
 			specs, err := provider.Get()
 			Expect(err).To(BeNil())
@@ -176,12 +141,12 @@ var _ = Describe("OCM Provider", func() {
 				Type:                 TEST_UPGRADEPOLICY_UPGRADETYPE,
 			}
 
-			multiPolicyResponse := upgradePolicyList{
+			multiPolicyResponse := ocm.UpgradePolicyList{
 				Kind:  "UpgradePolicyList",
 				Page:  1,
 				Size:  2,
 				Total: 2,
-				Items: []upgradePolicy{
+				Items: []ocm.UpgradePolicy{
 					{
 						Id:           TEST_POLICY_ID_MANUAL,
 						Kind:         "UpgradePolicy",
@@ -191,7 +156,7 @@ var _ = Describe("OCM Provider", func() {
 						UpgradeType:  TEST_UPGRADEPOLICY_UPGRADETYPE,
 						Version:      TEST_UPGRADEPOLICY_VERSION,
 						NextRun:      TEST_UPGRADEPOLICY_TIME,
-						ClusterId: TEST_CLUSTER_ID_MULTI_POLICIES,
+						ClusterId:    TEST_CLUSTER_ID_MULTI_POLICIES,
 					},
 					{
 						Id:           TEST_POLICY_ID_AUTOMATIC,
@@ -202,21 +167,14 @@ var _ = Describe("OCM Provider", func() {
 						UpgradeType:  TEST_UPGRADEPOLICY_UPGRADETYPE,
 						Version:      TEST_UPGRADEPOLICY_VERSION,
 						NextRun:      TEST_UPGRADEPOLICY_TIME_NEXT_OCCURRING,
-						ClusterId: TEST_CLUSTER_ID_MULTI_POLICIES,
+						ClusterId:    TEST_CLUSTER_ID_MULTI_POLICIES,
 					},
 				},
 			}
 
-			clResponder, _ := httpmock.NewJsonResponder(http.StatusOK, clusterListResponse)
-			clUrl := path.Join(CLUSTERS_V1_PATH)
-			httpmock.RegisterResponder(http.MethodGet, clUrl, clResponder)
-
-			upResponder, _ := httpmock.NewJsonResponder(http.StatusOK, multiPolicyResponse)
-			upUrl := path.Join(CLUSTERS_V1_PATH, TEST_CLUSTER_ID, UPGRADEPOLICIES_V1_PATH)
-			httpmock.RegisterResponder(http.MethodGet, upUrl, upResponder)
-
 			gomock.InOrder(
-				mockKubeClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Name: "version"}, gomock.Any()).SetArg(2, *cv).Return(nil),
+				mockOcmClient.EXPECT().GetCluster().Return(&cluster, nil),
+				mockOcmClient.EXPECT().GetClusterUpgradePolicies(cluster.Id).Return(&multiPolicyResponse, nil),
 			)
 			specs, err := provider.Get()
 			Expect(err).To(BeNil())
@@ -224,23 +182,15 @@ var _ = Describe("OCM Provider", func() {
 		})
 
 		It("Returns no specs if there are no policies", func() {
-			clResponder, _ := httpmock.NewJsonResponder(http.StatusOK, clusterListResponse)
-			clUrl := path.Join(CLUSTERS_V1_PATH)
-			httpmock.RegisterResponder(http.MethodGet, clUrl, clResponder)
-
-			upResponse := upgradePolicyList{
-				Kind:  "UpgradePolicyList",
-				Page:  1,
+			emptyResponse := ocm.UpgradePolicyList{
+				Page:  0,
 				Size:  0,
 				Total: 0,
-				Items: []upgradePolicy{},
+				Items: []ocm.UpgradePolicy{},
 			}
-			upResponder, _ := httpmock.NewJsonResponder(http.StatusOK, upResponse)
-			upUrl := path.Join(CLUSTERS_V1_PATH, TEST_CLUSTER_ID, UPGRADEPOLICIES_V1_PATH)
-			httpmock.RegisterResponder(http.MethodGet, upUrl, upResponder)
-
 			gomock.InOrder(
-				mockKubeClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Name: "version"}, gomock.Any()).SetArg(2, *cv).Return(nil),
+				mockOcmClient.EXPECT().GetCluster().Return(&cluster, nil),
+				mockOcmClient.EXPECT().GetClusterUpgradePolicies(cluster.Id).Return(&emptyResponse, nil),
 			)
 			specs, err := provider.Get()
 			Expect(err).To(BeNil())
@@ -248,13 +198,8 @@ var _ = Describe("OCM Provider", func() {
 		})
 
 		It("Errors if the provider is unavailable", func() {
-
-			clResponder := httpmock.NewErrorResponder(fmt.Errorf("fake error"))
-			clUrl := path.Join(CLUSTERS_V1_PATH)
-			httpmock.RegisterResponder(http.MethodGet, clUrl, clResponder)
-
 			gomock.InOrder(
-				mockKubeClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Name: "version"}, gomock.Any()).SetArg(2, *cv).Return(nil),
+				mockOcmClient.EXPECT().GetCluster().Return(nil, fmt.Errorf("fake error")),
 			)
 			specs, err := provider.Get()
 			Expect(err).To(Equal(ErrProviderUnavailable))
@@ -263,43 +208,22 @@ var _ = Describe("OCM Provider", func() {
 
 		It("Errors if the internal cluster ID can't be retrieved", func() {
 
-			noClustersResponse := clusterList{
-				Kind:  "ClusterList",
-				Page:  1,
-				Size:  0,
-				Total: 0,
-				Items: []clusterInfo{},
-			}
-			clResponder, _ := httpmock.NewJsonResponder(http.StatusOK, noClustersResponse)
-			clUrl := path.Join(CLUSTERS_V1_PATH)
-			httpmock.RegisterResponder(http.MethodGet, clUrl, clResponder)
-
 			gomock.InOrder(
-				mockKubeClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Name: "version"}, gomock.Any()).SetArg(2, *cv).Return(nil),
+				mockOcmClient.EXPECT().GetCluster().Return(nil, ocm.ErrClusterIdNotFound),
 			)
 			specs, err := provider.Get()
 			Expect(err).To(Equal(ErrClusterIdNotFound))
 			Expect(specs).To(BeNil())
 		})
 
-
-		It("Errors if the policy response can't be parsed", func() {
-
-			clResponder, _ := httpmock.NewJsonResponder(http.StatusOK, clusterListResponse)
-			clUrl := path.Join(CLUSTERS_V1_PATH)
-			httpmock.RegisterResponder(http.MethodGet, clUrl, clResponder)
-
-			upResponder := httpmock.NewStringResponder(http.StatusOK, "this isnt a policy response")
-			upUrl := path.Join(CLUSTERS_V1_PATH, TEST_CLUSTER_ID, UPGRADEPOLICIES_V1_PATH)
-			httpmock.RegisterResponder(http.MethodGet, upUrl, upResponder)
-
+		It("Errors if the policy response can't be retrieved", func() {
 			gomock.InOrder(
-				mockKubeClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Name: "version"}, gomock.Any()).SetArg(2, *cv).Return(nil),
+				mockOcmClient.EXPECT().GetCluster().Return(&cluster, nil),
+				mockOcmClient.EXPECT().GetClusterUpgradePolicies(cluster.Id).Return(nil, fmt.Errorf("fake error")),
 			)
 			specs, err := provider.Get()
 			Expect(err).To(Equal(ErrRetrievingPolicies))
 			Expect(specs).To(BeNil())
 		})
-
 	})
 })

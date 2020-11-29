@@ -1,18 +1,15 @@
 package notifier
 
 import (
-	"net/http"
-	"net/url"
+	"fmt"
 	"os"
-	"path"
 
-	"github.com/go-resty/resty/v2"
 	"github.com/golang/mock/gomock"
-	"github.com/jarcoal/httpmock"
-	configv1 "github.com/openshift/api/config/v1"
+	"github.com/openshift/managed-upgrade-operator/pkg/ocm"
 	"k8s.io/apimachinery/pkg/types"
 
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
+	mockOcm "github.com/openshift/managed-upgrade-operator/pkg/ocm/mocks"
 	mockUCMgr "github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager/mocks"
 	"github.com/openshift/managed-upgrade-operator/util/mocks"
 	testStructs "github.com/openshift/managed-upgrade-operator/util/mocks/structs"
@@ -22,8 +19,8 @@ import (
 )
 
 const (
-	TEST_CLUSTER_ID                  = "111111-2222222-3333333-4444444"
-	TEST_POLICY_ID                   = "aaaaaa-bbbbbb-cccccc-dddddd"
+	TEST_CLUSTER_ID = "111111-2222222-3333333-4444444"
+	TEST_POLICY_ID  = "aaaaaa-bbbbbb-cccccc-dddddd"
 
 	// Upgrade policy constants
 	TEST_OPERATOR_NAMESPACE        = "openshift-managed-upgrade-operator"
@@ -37,9 +34,6 @@ const (
 	// State constants
 	TEST_STATE_VALUE       = "test-value"
 	TEST_STATE_DESCRIPTION = "test-description"
-
-	// OCM test constants
-	TEST_OCM_SERVER_URL = "https://fakeapi.openshift.com"
 )
 
 var _ = Describe("OCM Notifier", func() {
@@ -47,39 +41,33 @@ var _ = Describe("OCM Notifier", func() {
 		mockCtrl                 *gomock.Controller
 		mockKubeClient           *mocks.MockClient
 		mockUpgradeConfigManager *mockUCMgr.MockUpgradeConfigManager
-		httpClient				 *resty.Client
+		mockOcmClient            *mockOcm.MockOcmClient
 		notifier                 *ocmNotifier
 		upgradeConfigName        types.NamespacedName
 	)
 
-	BeforeSuite(func() {
-		httpClient = resty.New()
-		httpmock.ActivateNonDefault(httpClient.GetClient())
-	})
-
 	BeforeEach(func() {
 		mockCtrl = gomock.NewController(GinkgoT())
 		mockKubeClient = mocks.NewMockClient(mockCtrl)
+		mockOcmClient = mockOcm.NewMockOcmClient(mockCtrl)
 		mockUpgradeConfigManager = mockUCMgr.NewMockUpgradeConfigManager(mockCtrl)
-		ocmServerUrl, _ := url.Parse(TEST_OCM_SERVER_URL)
 		notifier = &ocmNotifier{
 			client:               mockKubeClient,
-			ocmBaseUrl:           ocmServerUrl,
-			httpClient:           httpClient,
+			ocmClient:            mockOcmClient,
 			upgradeConfigManager: mockUpgradeConfigManager,
 		}
 	})
 
 	AfterEach(func() {
 		mockCtrl.Finish()
-		httpmock.Reset()
 	})
 
 	Context("Notify state", func() {
 
 		var (
-			clusterListResponse clusterList
-			upgradePolicyListResponse upgradePolicyList
+			cluster                   ocm.ClusterInfo
+			upgradePolicyListResponse ocm.UpgradePolicyList
+			upgradePolicyState ocm.UpgradePolicyState
 		)
 
 		BeforeEach(func() {
@@ -88,27 +76,19 @@ var _ = Describe("OCM Notifier", func() {
 				Name:      "test-upgradeconfig",
 				Namespace: ns,
 			}
-			clusterListResponse = clusterList{
-				Kind:  "ClusterList",
-				Page:  1,
-				Size:  1,
-				Total: 1,
-				Items: []clusterInfo{
-					{
-						Id: TEST_CLUSTER_ID,
-						Version: clusterVersion{
-							Id:           "4.4.4",
-							ChannelGroup: TEST_UPGRADEPOLICY_CHANNELGROUP,
-						},
-					},
+			cluster = ocm.ClusterInfo{
+				Id: TEST_CLUSTER_ID,
+				Version: ocm.ClusterVersion{
+					Id:           "4.4.4",
+					ChannelGroup: TEST_UPGRADEPOLICY_CHANNELGROUP,
 				},
 			}
-			upgradePolicyListResponse = upgradePolicyList{
+			upgradePolicyListResponse = ocm.UpgradePolicyList{
 				Kind:  "UpgradePolicyList",
 				Page:  1,
 				Size:  1,
 				Total: 1,
-				Items: []upgradePolicy{
+				Items: []ocm.UpgradePolicy{
 					{
 						Id:           TEST_POLICY_ID,
 						Kind:         "UpgradePolicy",
@@ -118,13 +98,13 @@ var _ = Describe("OCM Notifier", func() {
 						UpgradeType:  TEST_UPGRADEPOLICY_UPGRADETYPE,
 						Version:      TEST_UPGRADEPOLICY_VERSION,
 						NextRun:      TEST_UPGRADEPOLICY_TIME,
-						NodeDrainGracePeriod: nodeDrainGracePeriod{
-							Value: TEST_UPGRADEPOLICY_PDB_TIME,
-							Unit:  "minutes",
-						},
-						ClusterId: TEST_CLUSTER_ID,
+						ClusterId:    TEST_CLUSTER_ID,
 					},
 				},
+			}
+			upgradePolicyState = ocm.UpgradePolicyState{
+				Value:       TEST_STATE_VALUE,
+				Description: TEST_STATE_DESCRIPTION,
 			}
 
 			_ = os.Setenv("OPERATOR_NAMESPACE", ns)
@@ -136,26 +116,13 @@ var _ = Describe("OCM Notifier", func() {
 				uc = *testStructs.NewUpgradeConfigBuilder().WithNamespacedName(upgradeConfigName).WithPhase(upgradev1alpha1.UpgradePhasePending).GetUpgradeConfig()
 				uc.Spec.Desired.Version = TEST_UPGRADEPOLICY_VERSION
 				uc.Spec.UpgradeAt = TEST_UPGRADEPOLICY_TIME
+
 			})
 			It("returns an error", func() {
-				clResponder, _ := httpmock.NewJsonResponder(http.StatusOK, clusterListResponse)
-				clUrl := path.Join(CLUSTERS_V1_PATH)
-				httpmock.RegisterResponder(http.MethodGet, clUrl, clResponder)
-
-				upResponse := upgradePolicyList{
-					Kind:  "UpgradePolicyList",
-					Page:  1,
-					Size:  0,
-					Total: 0,
-					Items: []upgradePolicy{},
-				}
-				upResponder, _ := httpmock.NewJsonResponder(http.StatusOK, upResponse)
-				upUrl := path.Join(CLUSTERS_V1_PATH, TEST_CLUSTER_ID, UPGRADEPOLICIES_V1_PATH)
-				httpmock.RegisterResponder(http.MethodGet, upUrl, upResponder)
-
 				gomock.InOrder(
-					mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, configv1.ClusterVersion{Spec: configv1.ClusterVersionSpec{ClusterID: TEST_CLUSTER_ID}}),
+					mockOcmClient.EXPECT().GetCluster().Return(&cluster, nil),
 					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
+					mockOcmClient.EXPECT().GetClusterUpgradePolicies(cluster.Id).Return(nil, fmt.Errorf("fake error")),
 				)
 				err := notifier.NotifyState(TEST_STATE_VALUE, TEST_STATE_DESCRIPTION)
 				Expect(err).NotTo(BeNil())
@@ -169,19 +136,13 @@ var _ = Describe("OCM Notifier", func() {
 				uc = *testStructs.NewUpgradeConfigBuilder().WithNamespacedName(upgradeConfigName).WithPhase(upgradev1alpha1.UpgradePhasePending).GetUpgradeConfig()
 				uc.Spec.Desired.Version = "not the same version"
 				uc.Spec.UpgradeAt = TEST_UPGRADEPOLICY_TIME
+				upgradePolicyListResponse.Items[0].Version = "different"
 			})
 			It("returns an error", func() {
-				clResponder, _ := httpmock.NewJsonResponder(http.StatusOK, clusterListResponse)
-				clUrl := path.Join(CLUSTERS_V1_PATH)
-				httpmock.RegisterResponder(http.MethodGet, clUrl, clResponder)
-
-				upResponder, _ := httpmock.NewJsonResponder(http.StatusOK, upgradePolicyListResponse)
-				upUrl := path.Join(CLUSTERS_V1_PATH, TEST_CLUSTER_ID, UPGRADEPOLICIES_V1_PATH)
-				httpmock.RegisterResponder(http.MethodGet, upUrl, upResponder)
-
 				gomock.InOrder(
-					mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, configv1.ClusterVersion{Spec: configv1.ClusterVersionSpec{ClusterID: TEST_CLUSTER_ID}}),
+					mockOcmClient.EXPECT().GetCluster().Return(&cluster, nil),
 					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
+					mockOcmClient.EXPECT().GetClusterUpgradePolicies(TEST_CLUSTER_ID).Return(&upgradePolicyListResponse, nil),
 				)
 				err := notifier.NotifyState(TEST_STATE_VALUE, TEST_STATE_DESCRIPTION)
 				Expect(err).NotTo(BeNil())
@@ -189,26 +150,19 @@ var _ = Describe("OCM Notifier", func() {
 			})
 		})
 
-
 		Context("When a policy exists but doesn't match upgrade time", func() {
 			var uc upgradev1alpha1.UpgradeConfig
 			BeforeEach(func() {
 				uc = *testStructs.NewUpgradeConfigBuilder().WithNamespacedName(upgradeConfigName).WithPhase(upgradev1alpha1.UpgradePhasePending).GetUpgradeConfig()
 				uc.Spec.Desired.Version = TEST_UPGRADEPOLICY_VERSION
 				uc.Spec.UpgradeAt = "not the same time"
+				upgradePolicyListResponse.Items[0].NextRun = "different"
 			})
 			It("returns an error", func() {
-				clResponder, _ := httpmock.NewJsonResponder(http.StatusOK, clusterListResponse)
-				clUrl := path.Join(CLUSTERS_V1_PATH)
-				httpmock.RegisterResponder(http.MethodGet, clUrl, clResponder)
-
-				upResponder, _ := httpmock.NewJsonResponder(http.StatusOK, upgradePolicyListResponse)
-				upUrl := path.Join(CLUSTERS_V1_PATH, TEST_CLUSTER_ID, UPGRADEPOLICIES_V1_PATH)
-				httpmock.RegisterResponder(http.MethodGet, upUrl, upResponder)
-
 				gomock.InOrder(
-					mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, configv1.ClusterVersion{Spec: configv1.ClusterVersionSpec{ClusterID: TEST_CLUSTER_ID}}),
+					mockOcmClient.EXPECT().GetCluster().Return(&cluster, nil),
 					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
+					mockOcmClient.EXPECT().GetClusterUpgradePolicies(TEST_CLUSTER_ID).Return(&upgradePolicyListResponse, nil),
 				)
 				err := notifier.NotifyState(TEST_STATE_VALUE, TEST_STATE_DESCRIPTION)
 				Expect(err).NotTo(BeNil())
@@ -226,27 +180,11 @@ var _ = Describe("OCM Notifier", func() {
 					uc.Spec.UpgradeAt = TEST_UPGRADEPOLICY_TIME
 				})
 				It("does not send a notification", func() {
-					clResponder, _ := httpmock.NewJsonResponder(http.StatusOK, clusterListResponse)
-					clUrl := path.Join(CLUSTERS_V1_PATH)
-					httpmock.RegisterResponder(http.MethodGet, clUrl, clResponder)
-
-					upResponder, _ := httpmock.NewJsonResponder(http.StatusOK, upgradePolicyListResponse)
-					upUrl := path.Join(CLUSTERS_V1_PATH, TEST_CLUSTER_ID, UPGRADEPOLICIES_V1_PATH)
-					httpmock.RegisterResponder(http.MethodGet, upUrl, upResponder)
-
-					stateResponse := upgradePolicyState{
-						Kind:        "UpgradePolicyState",
-						Href:        "test",
-						Value:       TEST_STATE_VALUE,
-						Description: TEST_STATE_DESCRIPTION,
-					}
-					stateResponder, _ := httpmock.NewJsonResponder(http.StatusOK, stateResponse)
-					stateUrl := path.Join(CLUSTERS_V1_PATH, TEST_CLUSTER_ID, UPGRADEPOLICIES_V1_PATH, TEST_POLICY_ID, STATE_V1_PATH)
-					httpmock.RegisterResponder(http.MethodGet, stateUrl, stateResponder)
-
 					gomock.InOrder(
-						mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, configv1.ClusterVersion{Spec: configv1.ClusterVersionSpec{ClusterID: TEST_CLUSTER_ID}}),
+						mockOcmClient.EXPECT().GetCluster().Return(&cluster, nil),
 						mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
+						mockOcmClient.EXPECT().GetClusterUpgradePolicies(TEST_CLUSTER_ID).Return(&upgradePolicyListResponse, nil),
+						mockOcmClient.EXPECT().GetClusterUpgradePolicyState(TEST_POLICY_ID, TEST_CLUSTER_ID).Return(&upgradePolicyState, nil),
 					)
 					err := notifier.NotifyState(TEST_STATE_VALUE, TEST_STATE_DESCRIPTION)
 					Expect(err).To(BeNil())
@@ -259,32 +197,15 @@ var _ = Describe("OCM Notifier", func() {
 					uc = *testStructs.NewUpgradeConfigBuilder().WithNamespacedName(upgradeConfigName).WithPhase(upgradev1alpha1.UpgradePhasePending).GetUpgradeConfig()
 					uc.Spec.Desired.Version = TEST_UPGRADEPOLICY_VERSION
 					uc.Spec.UpgradeAt = TEST_UPGRADEPOLICY_TIME
+					upgradePolicyState.Value  = "different"
 				})
 				It("sends a notification", func() {
-
-					clResponder, _ := httpmock.NewJsonResponder(http.StatusOK, clusterListResponse)
-					clUrl := path.Join(CLUSTERS_V1_PATH)
-					httpmock.RegisterResponder(http.MethodGet, clUrl, clResponder)
-
-					upResponder, _ := httpmock.NewJsonResponder(http.StatusOK, upgradePolicyListResponse)
-					upUrl := path.Join(CLUSTERS_V1_PATH, TEST_CLUSTER_ID, UPGRADEPOLICIES_V1_PATH)
-					httpmock.RegisterResponder(http.MethodGet, upUrl, upResponder)
-
-					stateResponse := upgradePolicyState{
-						Kind:        "UpgradePolicyState",
-						Href:        "test",
-						Value:       "different value",
-						Description: "different desc",
-					}
-					stateResponder, _ := httpmock.NewJsonResponder(http.StatusOK, stateResponse)
-					stateUrl := path.Join(CLUSTERS_V1_PATH, TEST_CLUSTER_ID, UPGRADEPOLICIES_V1_PATH, TEST_POLICY_ID, STATE_V1_PATH)
-					httpmock.RegisterResponder(http.MethodGet, stateUrl, stateResponder)
-					statePatchResponder, _ := httpmock.NewJsonResponder(http.StatusOK, stateResponse)
-					httpmock.RegisterResponder(http.MethodPatch,stateUrl, statePatchResponder)
-
 					gomock.InOrder(
-						mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, configv1.ClusterVersion{Spec: configv1.ClusterVersionSpec{ClusterID: TEST_CLUSTER_ID}}),
+						mockOcmClient.EXPECT().GetCluster().Return(&cluster, nil),
 						mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
+						mockOcmClient.EXPECT().GetClusterUpgradePolicies(TEST_CLUSTER_ID).Return(&upgradePolicyListResponse, nil),
+						mockOcmClient.EXPECT().GetClusterUpgradePolicyState(TEST_POLICY_ID, TEST_CLUSTER_ID).Return(&upgradePolicyState, nil),
+						mockOcmClient.EXPECT().SetState(TEST_STATE_VALUE, TEST_STATE_DESCRIPTION, TEST_POLICY_ID, TEST_CLUSTER_ID),
 					)
 					err := notifier.NotifyState(TEST_STATE_VALUE, TEST_STATE_DESCRIPTION)
 					Expect(err).To(BeNil())

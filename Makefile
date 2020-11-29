@@ -39,6 +39,8 @@ generate:
 	go generate pkg/drain/strategy.go
 	go generate pkg/eventmanager/eventmanager.go
 	go generate pkg/notifier/notifier.go
+	go generate pkg/ocm/builder.go
+	go generate pkg/ocm/client.go
 
 .PHONY: run
 run: 
