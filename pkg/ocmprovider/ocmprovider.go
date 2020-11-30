@@ -51,7 +51,7 @@ func New(client client.Client, ocmBaseUrl *url.URL) (*ocmProvider, error) {
 	}
 
 	// Set up the HTTP client using the token
-	httpClient := resty.New().SetTransport(&ocmRoundTripper{authorization:*accessToken})
+	httpClient := resty.New().SetTransport(&ocmRoundTripper{authorization: *accessToken})
 
 	return &ocmProvider{
 		client:     client,
@@ -80,16 +80,16 @@ type upgradePolicyList struct {
 
 // Represents an unmarshalled individual Upgrade Policy response from Cluster Services
 type upgradePolicy struct {
-	Id                   string               `json:"id"`
-	Kind                 string               `json:"kind"`
-	Href                 string               `json:"href"`
-	Schedule             string               `json:"schedule"`
-	ScheduleType         string               `json:"schedule_type"`
-	UpgradeType          string               `json:"upgrade_type"`
-	Version              string               `json:"version"`
-	NextRun              string               `json:"next_run"`
-	PrevRun              string               `json:"prev_run"`
-	ClusterId            string               `json:"cluster_id"`
+	Id           string `json:"id"`
+	Kind         string `json:"kind"`
+	Href         string `json:"href"`
+	Schedule     string `json:"schedule"`
+	ScheduleType string `json:"schedule_type"`
+	UpgradeType  string `json:"upgrade_type"`
+	Version      string `json:"version"`
+	NextRun      string `json:"next_run"`
+	PrevRun      string `json:"prev_run"`
+	ClusterId    string `json:"cluster_id"`
 }
 
 // Represents an Upgrade Policy state for notifications
@@ -111,8 +111,8 @@ type clusterList struct {
 
 // Represents a partial unmarshalled Cluster response from Cluster Services
 type clusterInfo struct {
-	Id      string         `json:"id"`
-	Version clusterVersion `json:"version"`
+	Id                   string               `json:"id"`
+	Version              clusterVersion       `json:"version"`
 	NodeDrainGracePeriod nodeDrainGracePeriod `json:"node_drain_grace_period"`
 }
 
@@ -281,8 +281,8 @@ func getNextOccurringUpgradePolicy(uPs *upgradePolicyList) (*upgradePolicy, erro
 // UpgradeConfig
 func isActionableUpgradePolicy(up *upgradePolicy, state *upgradePolicyState) bool {
 
-	// Policies that aren't in a PENDING state should be ignored
-	if strings.ToLower(state.Value) != "pending" {
+	// Policies that aren't in a SCHEDULED state should be ignored
+	if strings.ToLower(state.Value) != "scheduled" {
 		return false
 	}
 
@@ -350,9 +350,9 @@ func getClusterFromOCMApi(kc client.Client, client *resty.Client, ocmApi *url.UR
 	csUrl.Path = path.Join(csUrl.Path, CLUSTERS_V1_PATH)
 
 	response, err := client.R().
-		SetQueryParams(map[string]string {
-			"page": "1",
-			"size": "1",
+		SetQueryParams(map[string]string{
+			"page":   "1",
+			"size":   "1",
 			"search": fmt.Sprintf("external_id = '%s'", externalID),
 		}).
 		SetResult(&clusterList{}).

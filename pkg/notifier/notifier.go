@@ -28,6 +28,7 @@ const (
 	StateDelayed   NotifyState = "delayed"
 	StateFailed    NotifyState = "failed"
 	StateCancelled NotifyState = "cancelled"
+	StateScheduled NotifyState = "scheduled"
 )
 
 type NotifyState string
