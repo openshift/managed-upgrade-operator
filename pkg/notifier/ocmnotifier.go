@@ -97,6 +97,9 @@ func validateStateTransition(from NotifyState, to NotifyState) bool {
 
 	switch from {
 	case StatePending:
+		// We shouldn't even be in this state to transition from
+		return false
+	case StateScheduled:
 		// Can only go to a started state
 		switch to {
 		case StateStarted:

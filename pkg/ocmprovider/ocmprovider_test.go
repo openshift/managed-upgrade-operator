@@ -70,8 +70,8 @@ var _ = Describe("OCM Provider", func() {
 		upgradePolicyStateResponse = ocm.UpgradePolicyState{
 			Kind:        "UpgradePolicyState",
 			Href:        "test",
-			Value:       "pending",
-			Description: "Upgrade is pending",
+			Value:       "scheduled",
+			Description: "Upgrade is scheduled",
 		}
 	})
 
