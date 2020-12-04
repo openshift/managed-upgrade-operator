@@ -3,11 +3,12 @@ package upgradeconfigmanager
 import (
 	"context"
 	"fmt"
-	"github.com/jpillora/backoff"
 	"math"
 	"math/rand"
 	"reflect"
 	"time"
+
+	"github.com/jpillora/backoff"
 
 	v1 "github.com/openshift/api/config/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -211,7 +212,7 @@ func (s *upgradeConfigManager) Refresh() (bool, error) {
 			log.Info(fmt.Sprintf("Removing expired UpgradeConfig %s", currentUpgradeConfig.Name))
 			err = s.client.Delete(context.TODO(), currentUpgradeConfig)
 			if err != nil {
-				log.Error(err, "can't remove UpgradeConfig")
+				log.Error(err, "can't remove UpgradeConfig after finding no upgrade_policy")
 				return false, ErrRemovingUpgradeConfig
 			}
 			return true, nil
@@ -245,18 +246,22 @@ func (s *upgradeConfigManager) Refresh() (bool, error) {
 	// is there a difference between the original and replacement?
 	changed := !reflect.DeepEqual(replacementUpgradeConfig.Spec, currentUpgradeConfig.Spec)
 	if changed {
-		// Apply the resource
-		log.Info("cluster upgrade spec has changed, will update")
-		err = s.client.Update(context.TODO(), &replacementUpgradeConfig)
-		if err != nil {
-			if errors.IsNotFound(err) {
-				// couldn't update because it didn't exist - create it instead.
-				err = s.client.Create(context.TODO(), &replacementUpgradeConfig)
+		if foundUpgradeConfig {
+			// Delete and re-create the resource
+			log.Info("cluster upgrade spec has changed, will delete and re-create.")
+			err = s.client.Delete(context.TODO(), currentUpgradeConfig)
+			if err != nil {
+				log.Error(err, "can't remove UpgradeConfig during re-create")
+				return false, ErrRemovingUpgradeConfig
 			}
 		}
+		replacementUpgradeConfig.SetResourceVersion("")
+
+		err = s.client.Create(context.TODO(), &replacementUpgradeConfig)
 		if err != nil {
 			return false, fmt.Errorf("unable to apply UpgradeConfig changes: %v", err)
 		}
+		log.Info("Successfully create new UpgradeConfig")
 	} else {
 		log.Info(fmt.Sprintf("no change in spec from existing UpgradeConfig %v, won't update", currentUpgradeConfig.Name))
 	}
