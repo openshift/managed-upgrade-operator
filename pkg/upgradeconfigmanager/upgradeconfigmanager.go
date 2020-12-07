@@ -12,6 +12,7 @@ import (
 
 	v1 "github.com/openshift/api/config/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -249,12 +250,40 @@ func (s *upgradeConfigManager) Refresh() (bool, error) {
 		if foundUpgradeConfig {
 			// Delete and re-create the resource
 			log.Info("cluster upgrade spec has changed, will delete and re-create.")
-			err = s.client.Delete(context.TODO(), currentUpgradeConfig)
+			confirmDeletedUpgrade := false
+			gracePeriod := int64(0)
+			deleteOptions := &client.DeleteOptions{
+				GracePeriodSeconds: &gracePeriod,
+			}
+
+			err = s.client.Delete(context.TODO(), currentUpgradeConfig, deleteOptions)
 			if err != nil {
-				log.Error(err, "can't remove UpgradeConfig during re-create")
-				return false, ErrRemovingUpgradeConfig
+				if err == ErrUpgradeConfigNotFound {
+					log.Info("UpgradeConfig already delete")
+					confirmDeletedUpgrade = true
+				} else {
+					log.Error(err, "can't remove UpgradeConfig during re-create")
+					return false, ErrRemovingUpgradeConfig
+				}
+			}
+
+			// Confirm object is deleted prior to creating
+			if !confirmDeletedUpgrade {
+				wait.PollImmediate(5*time.Second, 60*time.Second, func() (bool, error) {
+					_, err := s.Get()
+					if err != nil {
+						if err == ErrUpgradeConfigNotFound {
+							log.Info("UpgradeConfig deletion confirmed")
+							return true, nil
+						} else {
+							return false, err
+						}
+					}
+					return false, nil
+				})
 			}
 		}
+
 		replacementUpgradeConfig.SetResourceVersion("")
 
 		err = s.client.Create(context.TODO(), &replacementUpgradeConfig)
