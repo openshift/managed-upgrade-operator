@@ -337,7 +337,10 @@ var _ = Describe("UpgradeConfigManager", func() {
 					Type:                 "old type",
 				},
 			}
-			ErrUpgradeConfigNotFound := fmt.Errorf("upgrade config not found")
+			notFound := errors.NewNotFound(schema.GroupResource{
+				Group:    "test",
+				Resource: "test",
+			}, "test")
 
 			gomock.InOrder(
 				mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, *oldUpgradeConfig).Return(nil),
@@ -345,8 +348,8 @@ var _ = Describe("UpgradeConfigManager", func() {
 				mockCVClient.EXPECT().GetClusterVersion().Return(cv, nil),
 				mockSPClientBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockSPClient, nil),
 				mockSPClient.EXPECT().Get().Return(upgradeConfigSpecs, nil),
-				mockKubeClient.EXPECT().Delete(gomock.Any(), gomock.Any(), gomock.Any()),
-				mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, *oldUpgradeConfig).Return(ErrUpgradeConfigNotFound),
+				mockKubeClient.EXPECT().Delete(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil),
+				mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(notFound),
 				mockKubeClient.EXPECT().Create(gomock.Any(), gomock.Any()).DoAndReturn(
 					func(ctx context.Context, uc *upgradev1alpha1.UpgradeConfig) error {
 						Expect(uc.Name).To(Equal(TEST_UPGRADECONFIG_CR))

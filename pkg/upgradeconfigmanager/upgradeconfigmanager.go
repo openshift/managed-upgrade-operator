@@ -259,7 +259,7 @@ func (s *upgradeConfigManager) Refresh() (bool, error) {
 			err = s.client.Delete(context.TODO(), currentUpgradeConfig, deleteOptions)
 			if err != nil {
 				if err == ErrUpgradeConfigNotFound {
-					log.Info("UpgradeConfig already delete")
+					log.Info("UpgradeConfig already deleted")
 					confirmDeletedUpgrade = true
 				} else {
 					log.Error(err, "can't remove UpgradeConfig during re-create")
@@ -282,7 +282,7 @@ func (s *upgradeConfigManager) Refresh() (bool, error) {
 					return false, nil
 				})
 				if err != nil {
-					return false, fmt.Errorf("Unable to confirm deletion of current UpgradeConfig")
+					return false, fmt.Errorf("Unable to confirm deletion of current UpgradeConfig: %v", err)
 				}
 			}
 		}
