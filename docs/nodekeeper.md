@@ -3,27 +3,37 @@
 ## About
 The `managed-upgrade-operator` provides a mechanism for keeping track of upgrading worker nodes and seeks to ensure their timely and eventual upgrade.
 
-The `Nodekeeper` controller makes sure that if an upgrading worker node is facing difficulty draining due to conditions such as [Pod Disruption Budgets](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/#pod-disruption-budgets) or stuck finalizers, then `Nodekeeper` controller will perform strategies for draining the nodes properly and subsequent upgrade continuation.
-The `Nodekeeper` controller will set the `metricNodeDrainFailed` metric in prometheus for alert-manager to generate approproiate alerts to SRE-P team on-call that any worker node continue to unsuccessfully drain in spite of `NodeDrain` strategies.
+The `Nodekeeper` controller makes sure that if an upgrading worker node is facing difficulty draining due to conditions such as [Pod Disruption Budgets](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/#pod-disruption-budgets) or stuck finalizers, the `Nodekeeper` controller will perform strategies for draining the nodes properly and ensuring subsequent upgrade continuation.
+The `Nodekeeper` controller will set the `upgradeoperator_node_drain_timeout` metric in Prometheus in the event that any worker node continues to unsuccessfully drain in spite of `NodeDrain` strategies.
 
 ## Inside the Nodekeeper Controller
-- The `Nodekeeper` controller mechanism starts with setting the controller with [Add](https://github.com/openshift/managed-upgrade-operator/blob/master/pkg/controller/nodekeeper/nodekeeper_controller.go#L33) function which add sets up the controller for the operator manager - setting up a watch on the resource. For the `Nodekeeper` controller the mechanism is setting up a watch on the resource of Node.
+- The `Nodekeeper` controller mechanism starts with setting the controller with `Add()` function which add sets up the controller for the operator manager - setting up a watch on the resource. For the `Nodekeeper` controller the mechanism is setting up a watch on the resource of `Node`.
 
-- Now as already specified, the `Nodekeeper` controller works only towards the worker nodes so for keeping the master nodes aside, an [IgnoreMasterPredicate](https://github.com/openshift/managed-upgrade-operator/blob/master/pkg/controller/nodekeeper/ignoremaster_predicate.go) is used which makes sure that the controller only targets worker nodes in it's mechanism.
+- Now as already specified, the `Nodekeeper` controller works only towards the worker nodes, so for excluding the master nodes an [IgnoreMasterPredicate](https://github.com/openshift/managed-upgrade-operator/blob/master/pkg/controller/nodekeeper/ignoremaster_predicate.go) is used, which makes sure that the controller only targets worker nodes in it's mechanism.
 The `IgnoreMasterPredicate` works on the basis of cache, so it considers all the nodes at first run and re-reconciles  at the next run and starts ignoring the Master nodes.
 
-- The function [Reconcile](https://github.com/openshift/managed-upgrade-operator/blob/master/pkg/controller/nodekeeper/nodekeeper_controller.go#L94) is the main and most important part of the controller, it starts with creating `UpgradeConfigManager` to check if we are in an upgrading stage by specifically checking the `MachineConfig` through [IsUpgrading](https://github.com/openshift/managed-upgrade-operator/blob/master/pkg/controller/nodekeeper/nodekeeper_controller.go#L109) and also checks the history using [GetHistory](https://github.com/openshift/managed-upgrade-operator/blob/master/pkg/controller/nodekeeper/nodekeeper_controller.go#L114) based on the `UpgradeConfig` and get all the nodes from the `Kube-Client`.
+- The `Reconcile()` function is the main and most important part of the controller, it starts with creating `UpgradeConfigManager` to check if we are in an upgrading stage by specifically checking the `MachineConfig` through `IsUpgrading()` and also checks the history using `GetHistory()` based on the `UpgradeConfig` and get all the nodes from the `Kube-Client`. If the cluster is not detected as currently upgrading, the reconciler does not proceed further.
 
-- The controller mechanism checks for if a node is cordoned inside the `Reconcile` function at [IsNodeCordoned](https://github.com/openshift/managed-upgrade-operator/blob/master/pkg/controller/nodekeeper/nodekeeper_controller.go#L130) based on [node.go/IsNodeCordoned](https://github.com/openshift/managed-upgrade-operator/blob/367c5754bd0267f3b6dfd782f30f52a3dc94a3c8/pkg/machinery/node.go#L13). The [node.go/IsNodeCordoned](https://github.com/openshift/managed-upgrade-operator/blob/367c5754bd0267f3b6dfd782f30f52a3dc94a3c8/pkg/machinery/node.go#L13) function checks for an `Unschedulable` and `Tainted` node specifically for `TaintEffectNoSchedule` node and if it's matched then sets the node as cordoned and also saves the timestamp at which the node was found cordoned.
-If the node is found to be cordoned, the controller acts on the `drainStrategy` for the node and if it fails to fix the node then sets `metricNodeDrainFailed` metric and alerts SRE-P and then if the node is no longer cordoned then resets the metric using `ResetMetricNodeDrainFailed`.
+- For each reconciled node, the controller checks if it is cordoned using `IsNodeCordoned()`, which checks for `Unschedulable` and `Tainted` nodes (specifically for nodes with the `TaintEffectNoSchedule` taint). If the node is found to be cordoned, the controller performs a series of [drain strategies](##drain-strategies)  for the node and - if those strategies have failed to fix the node within a timeout period - sets the `upgradeoperator_node_drain_timeout` gauge metric. If however, the node is no longer cordoned, the reconciler assumes the drain and subsequent upgrade has succeeded, and so resets the metric.
 
-- Next the controller is looking at the nodes in the state of upgrading and running workloads disrupting the upgrade such as [Pod Disruption Budgets](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/#pod-disruption-budgets) or `finalizers` as the nodes should drain the workloads to continue the upgrade. In the controller mechanism, if a node does not drain during a specific time the controller will proceed by applying the `drainStrategy`. The specific time period for node draining is monitored using the `NodeDrain.Timeout`, if a node drain time period exceeds `NodeDrain.Timeout` then the cotroller will proceed with the `drainStrategy`.
+## Drain strategies
 
-- The [NewNodeDrainStrategy](https://github.com/openshift/managed-upgrade-operator/blob/master/pkg/controller/nodekeeper/nodekeeper_controller.go#L151) function takes care of all the nodes with workloads disrupting the upgrade, it drains the node by taking care of those workloads. The `NodeDrainStrategy` consists of a set of predicates just similar to the `IgnoreMasterPredicate` and a set of timed drain strategies. Each predicate is matched with a timed drain strategy where a duration period is specified for waiting and then acting on the strategy.
-  - Following is the list of predicates used in this mechanism :
-    - `defaultOsdPodPrediate` : Used for any pod but not a `DaemonSet`.
-    - `isNotPdbPod` : If there's not a pdb associated with the concerned pod.
-    - `isPdbPod` : If there's a pdb associated with the concerned pod.
-  - Based on the predicates and their associated timed drain strategies containing a specified duration for each predicate, the `NodeDrainStrategy` is carried out by the [Execute](https://github.com/openshift/managed-upgrade-operator/blob/master/pkg/controller/nodekeeper/nodekeeper_controller.go#L156) function consisting of [podDeletionStrategy](https://github.com/openshift/managed-upgrade-operator/blob/367c5754bd0267f3b6dfd782f30f52a3dc94a3c8/pkg/drain/podDeleteStrategy.go#L17) and [removeFinalizersStrategy](https://github.com/openshift/managed-upgrade-operator/blob/367c5754bd0267f3b6dfd782f30f52a3dc94a3c8/pkg/drain/removeFinalizersStrategy.go#L17).
+The `NodeDrainStrategy` consists of:
+- a set of predicates which define the conditions that a pod must be in in order to be considered for a node drain strategy; and
+- a set of timed drain strategies, which perform the steps to address the detected conditions. The `timed` nature of the strategy means that the strategy is only initiated after a set period of time (measured from when the node was first detected as cordoned) has elapsed.
 
-- A continuous reconciliation is always on-going around the strategies are successful or failed and if it has reset the `metricNodeDrainFailed`.
+Following is the list of predicates used in this mechanism :
+- `defaultOsdPodPrediate` : Used for any pod but not a `DaemonSet`.
+- `isNotPdbPod` : If there's not a Pod Disruption Budget associated with the concerned pod.
+- `isPdbPod` : If there's a Pod Disruption Budget associated with the concerned pod.
+
+### Pod Disruption Budgets (PDBs)
+This strategy handles workloads which are disrupting a node drain due to [Pod Disruption Budgets](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/#pod-disruption-budgets), which would be violated if the pod were to be evicted.
+
+Pods which are protected by Pod Disruption Budgets are respected until the `pdbNodeDrainTimeout` period of the `UpgradeConfig` has elapsed. At that point, if a pod is still not draining due to the presence of a PDB, the pods will be forcefully deleted in order to progress the worker node drain.
+
+### Finalizers 
+This strategy handles workloads which are disrupting a node drain due to a finalizer which may be preventing the pod from deleting. Pods are given until `NodeDrain.Timeout` to drain from the node before this strategy is considered. At that point, if a pod is still running on the node due to the presence of a finalizer, the finalizers will be removed from the Pod spec.
+
+### Stuck pods
+This strategy handles workloads which are disrupting a node drain for any reason. Pods are given until `NodeDrain.Timeout` to drain from the node before this strategy is considered. At that point, if a pod is still running on the node, it is forcefully deleted.
