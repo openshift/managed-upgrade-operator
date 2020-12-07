@@ -269,7 +269,7 @@ func (s *upgradeConfigManager) Refresh() (bool, error) {
 
 			// Confirm object is deleted prior to creating
 			if !confirmDeletedUpgrade {
-				wait.PollImmediate(5*time.Second, 60*time.Second, func() (bool, error) {
+				err = wait.PollImmediate(5*time.Second, 60*time.Second, func() (bool, error) {
 					_, err := s.Get()
 					if err != nil {
 						if err == ErrUpgradeConfigNotFound {
@@ -281,6 +281,9 @@ func (s *upgradeConfigManager) Refresh() (bool, error) {
 					}
 					return false, nil
 				})
+				if err != nil {
+					return false, fmt.Errorf("Unable to confirm deletion of current UpgradeConfig")
+				}
 			}
 		}
 
