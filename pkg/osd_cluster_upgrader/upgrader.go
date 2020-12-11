@@ -203,7 +203,6 @@ func ExternalDependencyAvailabilityCheck(c client.Client, cfg *osdUpgradeConfig,
 		}
 		logger.Info(fmt.Sprintf("Availability check complete for %T", check))
 	}
-	logger.Info("Returning false so upgrade does not commence")
 	return true, nil
 }
 
