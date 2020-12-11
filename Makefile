@@ -41,6 +41,7 @@ generate:
 	go generate pkg/notifier/notifier.go
 	go generate pkg/ocm/builder.go
 	go generate pkg/ocm/client.go
+	go generate pkg/availabilitychecks/availabilitychecks.go
 
 .PHONY: run
 run: 

@@ -99,6 +99,7 @@ const (
 	UpgradeDelayedCheck           UpgradeConditionType = "UpgradeDelayedCheck"
 	UpgradeValidated              UpgradeConditionType = "Validation"
 	UpgradePreHealthCheck         UpgradeConditionType = "PreHealthCheck"
+	ExtDepAvailabilityCheck       UpgradeConditionType = "ExternalDependencyAvailabilityCheck"
 	UpgradeScaleUpExtraNodes      UpgradeConditionType = "ScaleUpExtraNodes"
 	ControlPlaneMaintWindow       UpgradeConditionType = "ControlPlaneMaintWindow"
 	CommenceUpgrade               UpgradeConditionType = "CommenceUpgrade"

@@ -4,16 +4,18 @@ import (
 	"fmt"
 	"time"
 
+	ac "github.com/openshift/managed-upgrade-operator/pkg/availabilitychecks"
 	"github.com/openshift/managed-upgrade-operator/pkg/drain"
 )
 
 type osdUpgradeConfig struct {
-	Maintenance   maintenanceConfig `yaml:"maintenance"`
-	Scale         scaleConfig       `yaml:"scale"`
-	NodeDrain     drain.NodeDrain   `yaml:"nodeDrain"`
-	HealthCheck   healthCheck       `yaml:"healthCheck"`
-	Verification  verification      `yaml:"verification"`
-	UpgradeWindow upgradeWindow     `yaml:"upgradeWindow"`
+	Maintenance                    maintenanceConfig                 `yaml:"maintenance"`
+	Scale                          scaleConfig                       `yaml:"scale"`
+	NodeDrain                      drain.NodeDrain                   `yaml:"nodeDrain"`
+	HealthCheck                    healthCheck                       `yaml:"healthCheck"`
+	ExtDependencyAvailabilityCheck ac.ExtDependencyAvailabilityCheck `yaml:"extDependencyAvailabilityChecks"`
+	Verification                   verification                      `yaml:"verification"`
+	UpgradeWindow                  upgradeWindow                     `yaml:"upgradeWindow"`
 }
 
 type maintenanceConfig struct {
@@ -41,7 +43,7 @@ func (cfg *maintenanceConfig) GetControlPlaneDuration() time.Duration {
 }
 
 type upgradeWindow struct {
-	TimeOut int `yaml:"timeOut" default:"120"`
+	TimeOut      int `yaml:"timeOut" default:"120"`
 	DelayTrigger int `yaml:"delayTrigger" default:"30"`
 }
 
@@ -84,6 +86,9 @@ func (cfg *osdUpgradeConfig) IsValid() error {
 	}
 	if cfg.UpgradeWindow.TimeOut < 0 {
 		return fmt.Errorf("Config upgrade window time out is invalid")
+	}
+	if cfg.ExtDependencyAvailabilityCheck.HTTP.Timeout <= 0 || cfg.ExtDependencyAvailabilityCheck.HTTP.Timeout > 60 {
+		return fmt.Errorf("Config HTTP timeout is invalid (Requires int between 1 - 60 inclusive)")
 	}
 	return nil
 }
