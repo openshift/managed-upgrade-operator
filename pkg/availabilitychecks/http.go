@@ -17,20 +17,6 @@ type HTTPConfig struct {
 	Timeout time.Duration
 }
 
-// NewHTTPAvailabilityChecker accepts a Config and attempts to ascert its type
-// as HTTPConfig. If ascertation is true a HTTPAvailabilityChecker is returned.
-// Else, an error is returned advising failed ascertation.
-//func NewHTTPAvailabilityChecker(c Config) (*HTTPAvailabilityChecker, error) {
-//	// its ok to return 0 length data
-//	if data, ok := c.(HTTPConfig); ok {
-//		return &HTTPAvailabilityChecker{
-//			Targets: data.Targets,
-//			Timeout: data.Timeout,
-//		}, nil
-//	}
-//	return &HTTPAvailabilityChecker{}, fmt.Errorf("Attempt to get HTTP implementation failed ascertation as HTTPConfig")
-//}
-
 // GetHTTPAvailabilityChecker returns a HTTP implementation of the
 // AvailabilityChecker interface.
 func GetHTTPAvailabilityChecker(c Config) (AvailabilityChecker, error) {
