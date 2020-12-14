@@ -185,7 +185,7 @@ func ExternalDependencyAvailabilityCheck(c client.Client, cfg *osdUpgradeConfig,
 	}
 	desired := upgradeConfig.Spec.Desired
 	if upgradeCommenced {
-		logger.Info(fmt.Sprintf("ClusterVersion is already set to Channel %s Version %s, skipping %s", desired.Channel, desired.Version, upgradev1alpha1.UpgradeScaleUpExtraNodes))
+		logger.Info(fmt.Sprintf("ClusterVersion is already set to Channel %s Version %s, skipping %s", desired.Channel, desired.Version, upgradev1alpha1.ExtDepAvailabilityCheck))
 		return true, nil
 	}
 
