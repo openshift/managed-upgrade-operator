@@ -87,7 +87,7 @@ func (cfg *osdUpgradeConfig) IsValid() error {
 	if cfg.UpgradeWindow.TimeOut < 0 {
 		return fmt.Errorf("Config upgrade window time out is invalid")
 	}
-	if cfg.ExtDependencyAvailabilityCheck.HTTP.Timeout <= 0 || cfg.ExtDependencyAvailabilityCheck.HTTP.Timeout > 60 {
+	if len(cfg.ExtDependencyAvailabilityCheck.HTTP.URLS) > 0 && cfg.ExtDependencyAvailabilityCheck.HTTP.Timeout <= 0 || cfg.ExtDependencyAvailabilityCheck.HTTP.Timeout > 60 {
 		return fmt.Errorf("Config HTTP timeout is invalid (Requires int between 1 - 60 inclusive)")
 	}
 	return nil
