@@ -7,8 +7,10 @@ type AvailabilityChecker interface {
 	AvailabilityCheck() error
 }
 
-func GetAvailabilityCheckers(availCfg *ExtDependencyAvailabilityCheck) ([]AvailabilityChecker, error) {
-	AvailabilityCheckers := []AvailabilityChecker{}
+type AvailabilityCheckers []AvailabilityChecker
+
+func GetAvailabilityCheckers(availCfg *ExtDependencyAvailabilityCheck) (AvailabilityCheckers, error) {
+	var aCs AvailabilityCheckers
 
 	if len(availCfg.HTTP.URLS) > 0 {
 		httpConfig := HTTPConfig{
@@ -17,10 +19,10 @@ func GetAvailabilityCheckers(availCfg *ExtDependencyAvailabilityCheck) ([]Availa
 		}
 		HTTPChecker, err := GetHTTPAvailabilityChecker(httpConfig)
 		if err != nil {
-			return AvailabilityCheckers, err
+			return aCs, err
 		}
-		AvailabilityCheckers = append(AvailabilityCheckers, HTTPChecker)
+		aCs = append(aCs, HTTPChecker)
 	}
 
-	return AvailabilityCheckers, nil
+	return aCs, nil
 }
