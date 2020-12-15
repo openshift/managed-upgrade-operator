@@ -34,6 +34,13 @@ spec:
           command:
           - managed-upgrade-operator
           imagePullPolicy: Always
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - OK=$(curl http://localhost:8686/healthz); if [ "$OK" != "ok"
+                  ]; then exit 1;fi
           env:
             - name: WATCH_NAMESPACE
               valueFrom:
