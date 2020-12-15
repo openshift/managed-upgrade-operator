@@ -35,12 +35,14 @@ spec:
           - managed-upgrade-operator
           imagePullPolicy: Always
           livenessProbe:
-            exec:
-              command:
-                - sh
-                - -c
-                - OK=$(curl http://localhost:8686/healthz); if [ "$OK" != "ok"
-                  ]; then exit 1;fi
+            failureThreshold: 6
+            httpGet:
+              path: /healthz
+              port: 8686
+            initialDelaySeconds: 20
+            periodSeconds: 5
+            successThreshold: 1
+            timeoutSeconds: 3
           env:
             - name: WATCH_NAMESPACE
               valueFrom:
