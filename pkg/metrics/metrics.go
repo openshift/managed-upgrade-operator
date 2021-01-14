@@ -31,8 +31,10 @@ type Metrics interface {
 	UpdateMetricValidationSucceeded(string)
 	UpdateMetricClusterCheckFailed(string)
 	UpdateMetricClusterCheckSucceeded(string)
+	ResetMetricClusterCheck(string)
 	UpdateMetricScalingFailed(string)
 	UpdateMetricScalingSucceeded(string)
+	ResetMetricScaling(string)
 	UpdateMetricClusterVerificationFailed(string)
 	UpdateMetricClusterVerificationSucceeded(string)
 	UpdateMetricUpgradeWindowNotBreached(string)
@@ -199,6 +201,12 @@ func (c *Counter) UpdateMetricClusterCheckSucceeded(upgradeConfigName string) {
 		float64(0))
 }
 
+func (c *Counter) ResetMetricClusterCheck(upgradeConfigName string) {
+	metricClusterCheckFailed.With(prometheus.Labels{
+		nameLabel: upgradeConfigName}).Set(
+		float64(0))
+}
+
 func (c *Counter) UpdateMetricScalingFailed(upgradeConfigName string) {
 	metricScalingFailed.With(prometheus.Labels{
 		nameLabel: upgradeConfigName}).Set(
@@ -206,6 +214,12 @@ func (c *Counter) UpdateMetricScalingFailed(upgradeConfigName string) {
 }
 
 func (c *Counter) UpdateMetricScalingSucceeded(upgradeConfigName string) {
+	metricScalingFailed.With(prometheus.Labels{
+		nameLabel: upgradeConfigName}).Set(
+		float64(0))
+}
+
+func (c *Counter) ResetMetricScaling(upgradeConfigName string) {
 	metricScalingFailed.With(prometheus.Labels{
 		nameLabel: upgradeConfigName}).Set(
 		float64(0))
