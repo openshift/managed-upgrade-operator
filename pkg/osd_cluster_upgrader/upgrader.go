@@ -635,6 +635,10 @@ func performUpgradeFailure(metricsClient metrics.Metrics, nc eventmanager.EventM
 	// flag window breached metric
 	metricsClient.UpdateMetricUpgradeWindowBreached(upgradeConfig.Name)
 
+	// cancel previously triggered metrics
+	metricsClient.ResetMetricScaling(upgradeConfig.Name)
+	metricsClient.ResetMetricClusterCheck(upgradeConfig.Name)
+
 	return nil
 }
 
