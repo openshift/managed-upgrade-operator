@@ -14,11 +14,18 @@ parameters:
   - name: REPO_NAME
     value: managed-upgrade-operator
     required: true
+  - name: OPERATOR_NAME
+    value: managed-upgrade-operator
+    required: true
 
 objects:
   - apiVersion: hive.openshift.io/v1
     kind: SelectorSyncSet
     metadata:
+    annotations:
+      component-display-name: Managed Upgrade Operator
+      component-name: ${OPERATOR_NAME}
+      telemeter-query: csv_succeeded{_id="$CLUSTER_ID",name=~"${OPERATOR_NAME}.*",exported_namespace=~"openshift-.*",namespace="openshift-operator-lifecycle-manager"} == 1
       labels:
         managed.openshift.io/gitHash: ${IMAGE_TAG}
         managed.openshift.io/gitRepoName: ${REPO_NAME}
