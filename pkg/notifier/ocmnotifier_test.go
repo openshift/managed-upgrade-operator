@@ -78,9 +78,9 @@ var _ = Describe("OCM Notifier", func() {
 			}
 			cluster = ocm.ClusterInfo{
 				Id: TEST_CLUSTER_ID,
+				UpgradeChannelGroup: TEST_UPGRADEPOLICY_CHANNELGROUP,
 				Version: ocm.ClusterVersion{
 					Id:           "4.4.4",
-					ChannelGroup: TEST_UPGRADEPOLICY_CHANNELGROUP,
 				},
 			}
 			upgradePolicyListResponse = ocm.UpgradePolicyList{
