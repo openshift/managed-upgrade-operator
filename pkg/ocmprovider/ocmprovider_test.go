@@ -104,11 +104,10 @@ var _ = Describe("OCM Provider", func() {
 
 		BeforeEach(func() {
 			cluster = ocm.ClusterInfo{
-
 				Id: TEST_CLUSTER_ID,
+				UpgradeChannelGroup: TEST_UPGRADEPOLICY_CHANNELGROUP,
 				Version: ocm.ClusterVersion{
 					Id:           "4.4.4",
-					ChannelGroup: TEST_UPGRADEPOLICY_CHANNELGROUP,
 				},
 				NodeDrainGracePeriod: ocm.NodeDrainGracePeriod{
 					Value: TEST_UPGRADEPOLICY_PDB_TIME,
