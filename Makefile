@@ -1,3 +1,5 @@
+include boilerplate/generated-includes.mk
+
 SHELL := /usr/bin/env bash
 
 OPERATOR_DOCKERFILE = ./build/Dockerfile
@@ -54,3 +56,7 @@ lint:
 .PHONY: tools
 tools:
 	cat tools.go | grep _ | awk -F'"' '{print $$2}' | xargs -tI % go install %
+
+.PHONY: boilerplate-update
+boilerplate-update:
+	@boilerplate/update
