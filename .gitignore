@@ -72,6 +72,8 @@ Session.vim
 .netrwhist
 # auto-generated tag files
 tags
+# backups
+*.orig
 ### VisualStudioCode ###
 .vscode/*
 .history
@@ -84,3 +86,8 @@ tags
 # Local manifest creation
 manifests
 LocalRegistryDockerfile
+
+### Boilerplate ###
+.operator-sdk/*
+.venv/*
+
