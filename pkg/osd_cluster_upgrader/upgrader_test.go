@@ -375,7 +375,13 @@ var _ = Describe("ClusterUpgrader", func() {
 		Context("when the upgrade hasn't yet started", func() {
 			Context("when the upgrade is delayed", func() {
 				BeforeEach(func() {
-					upgradeConfig.Spec.UpgradeAt = time.Now().Add(-1 * time.Hour).Format(time.RFC3339)
+					upgradeConfig.Status.History = []upgradev1alpha1.UpgradeHistory{
+						{
+							Version:   upgradeConfig.Spec.Desired.Version,
+							Phase:     upgradev1alpha1.UpgradePhaseUpgrading,
+							StartTime: &metav1.Time{Time: time.Now().Add(-1 * time.Hour)},
+						},
+					}
 				})
 				Context("when the delay trigger is 0", func() {
 					BeforeEach(func() {
@@ -390,7 +396,6 @@ var _ = Describe("ClusterUpgrader", func() {
 						Expect(result).To(BeTrue())
 					})
 				})
-
 				It("will send a notification", func() {
 					gomock.InOrder(
 						mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
@@ -413,6 +418,15 @@ var _ = Describe("ClusterUpgrader", func() {
 				})
 			})
 			Context("when the upgrade is not delayed", func() {
+				BeforeEach(func() {
+					upgradeConfig.Status.History = []upgradev1alpha1.UpgradeHistory{
+						{
+							Version:   upgradeConfig.Spec.Desired.Version,
+							Phase:     upgradev1alpha1.UpgradePhaseUpgrading,
+							StartTime: &metav1.Time{Time: time.Now()},
+						},
+					}
+				})
 				It("will not send a notification", func() {
 					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil)
 					result, err := UpgradeDelayedCheck(mockKubeClient, config, mockScalerClient, mockDrainStrategyBuilder, mockMetricsClient, mockMaintClient, mockCVClient, mockEMClient, upgradeConfig, mockMachineryClient, []ac.AvailabilityChecker{mockAC}, logger)
@@ -539,11 +553,12 @@ var _ = Describe("ClusterUpgrader", func() {
 		Context("When the cluster is in a possible failed state", func() {
 			Context("When the upgrade hasn't started in its window", func() {
 				BeforeEach(func() {
-					upgradeConfig.Spec.UpgradeAt = time.Now().Add(time.Duration(-2*config.UpgradeWindow.TimeOut) * time.Minute).Format(time.RFC3339)
+					upgradeStartTime := time.Now().Add(time.Duration(-2*config.UpgradeWindow.TimeOut) * time.Minute)
 					upgradeConfig.Status.History = []upgradev1alpha1.UpgradeHistory{
 						{
-							Version: upgradeConfig.Spec.Desired.Version,
-							Phase:   upgradev1alpha1.UpgradePhaseUpgrading,
+							Version:   upgradeConfig.Spec.Desired.Version,
+							Phase:     upgradev1alpha1.UpgradePhaseUpgrading,
+							StartTime: &metav1.Time{Time: upgradeStartTime},
 							Conditions: []upgradev1alpha1.UpgradeCondition{
 								{
 									Type:    step1,
