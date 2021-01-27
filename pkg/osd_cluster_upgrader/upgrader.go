@@ -346,7 +346,7 @@ func RemoveExtraScaledNodes(c client.Client, cfg *osdUpgradeConfig, s scaler.Sca
 	return isScaledDown, nil
 }
 
-// UpgradeSubscriptions will update the subscriptions for the 3rd party components, like logging
+// UpdateSubscriptions will update the subscriptions for the 3rd party components, like logging
 func UpdateSubscriptions(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, dsb drain.NodeDrainStrategyBuilder, metricsClient metrics.Metrics, m maintenance.Maintenance, cvClient cv.ClusterVersion, nc eventmanager.EventManager, upgradeConfig *upgradev1alpha1.UpgradeConfig, machinery machinery.Machinery, availabilityCheckers ac.AvailabilityCheckers, logger logr.Logger) (bool, error) {
 	for _, item := range upgradeConfig.Spec.SubscriptionUpdates {
 		sub := &operatorv1alpha1.Subscription{}
@@ -459,7 +459,7 @@ func performUpgradeVerification(c client.Client, cfg *osdUpgradeConfig, metricsC
 	return true, nil
 }
 
-// RemoveMaintWindows removes all the maintenance windows we created during the upgrade
+// RemoveMaintWindow removes all the maintenance windows we created during the upgrade
 func RemoveMaintWindow(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, dsb drain.NodeDrainStrategyBuilder, metricsClient metrics.Metrics, m maintenance.Maintenance, cvClient cv.ClusterVersion, nc eventmanager.EventManager, upgradeConfig *upgradev1alpha1.UpgradeConfig, machinery machinery.Machinery, availabilityCheckers ac.AvailabilityCheckers, logger logr.Logger) (bool, error) {
 	err := m.EndWorker()
 	if err != nil {
@@ -519,7 +519,7 @@ func SendStartedNotification(c client.Client, cfg *osdUpgradeConfig, scaler scal
 	return true, nil
 }
 
-// SendDelayedNotification sends a notification on a delay to upgrade commencement
+// UpgradeDelayedCheck checks and sends a notification on a delay to upgrade commencement
 func UpgradeDelayedCheck(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, dsb drain.NodeDrainStrategyBuilder, metricsClient metrics.Metrics, m maintenance.Maintenance, cvClient cv.ClusterVersion, nc eventmanager.EventManager, upgradeConfig *upgradev1alpha1.UpgradeConfig, machinery machinery.Machinery, availabilityCheckers ac.AvailabilityCheckers, logger logr.Logger) (bool, error) {
 
 	upgradeCommenced, err := cvClient.HasUpgradeCommenced(upgradeConfig)
@@ -532,11 +532,15 @@ func UpgradeDelayedCheck(c client.Client, cfg *osdUpgradeConfig, scaler scaler.S
 		return true, nil
 	}
 
-	startTime, err := time.Parse(time.RFC3339, upgradeConfig.Spec.UpgradeAt)
-	if err != nil {
-		return false, err
+	// Get the managed upgrade start time from the upgrade config history
+	h := upgradeConfig.Status.History.GetHistory(upgradeConfig.Spec.Desired.Version)
+	if h == nil {
+		return false, nil
 	}
+	startTime := h.StartTime.Time
+
 	delayTimeoutTrigger := cfg.UpgradeWindow.GetUpgradeDelayedTriggerDuration()
+	// Send notification if the managed upgrade started but did not hit the controlplane upgrade phase in delayTimeoutTrigger minutes
 	if !startTime.IsZero() && delayTimeoutTrigger > 0 && time.Now().After(startTime.Add(delayTimeoutTrigger)) {
 		err := nc.Notify(notifier.StateDelayed)
 		if err != nil {
@@ -566,10 +570,12 @@ func shouldFailUpgrade(cvClient cv.ClusterVersion, cfg *osdUpgradeConfig, upgrad
 		return false, nil
 	}
 
-	startTime, err := time.Parse(time.RFC3339, upgradeConfig.Spec.UpgradeAt)
-	if err != nil {
-		return false, err
+	// Get the managed upgrade start time from upgrade config history
+	h := upgradeConfig.Status.History.GetHistory(upgradeConfig.Spec.Desired.Version)
+	if h == nil {
+		return false, nil
 	}
+	startTime := h.StartTime.Time
 
 	upgradeWindowDuration := cfg.UpgradeWindow.GetUpgradeWindowTimeOutDuration()
 	if !startTime.IsZero() && upgradeWindowDuration > 0 && time.Now().After(startTime.Add(upgradeWindowDuration)) {
