@@ -6,10 +6,10 @@ set -o pipefail
 
 REPO_ROOT=$(git rev-parse --show-toplevel)
 CI_SERVER_URL=https://prow.svc.ci.openshift.org/view/gcs/origin-ci-test
-COVER_PROFILE="coverage.out"
+COVER_PROFILE=${COVER_PROFILE:-coverage.out}
 JOB_TYPE=${JOB_TYPE:-"local"}
 
-make -C "${REPO_ROOT}" gotest TESTOPTS="-coverprofile=${COVER_PROFILE}.tmp -covermode=atomic -coverpkg=./..."
+make -C "${REPO_ROOT}" go-test TESTOPTS="-coverprofile=${COVER_PROFILE}.tmp -covermode=atomic -coverpkg=./..."
 
 # Remove generated files from coverage profile
 grep -v "zz_generated" "${COVER_PROFILE}.tmp" > "${COVER_PROFILE}"
