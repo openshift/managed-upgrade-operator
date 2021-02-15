@@ -146,8 +146,7 @@ func (c *clusterVersionClient) HasUpgradeCompleted(cv *configv1.ClusterVersion, 
 // isEqualVersion compare the upgrade version state for cv and uc
 func isEqualVersion(cv *configv1.ClusterVersion, uc *upgradev1alpha1.UpgradeConfig) bool {
 	if cv.Spec.DesiredUpdate != nil &&
-		cv.Spec.DesiredUpdate.Version == uc.Spec.Desired.Version &&
-		cv.Spec.Channel == uc.Spec.Desired.Channel {
+		cv.Spec.DesiredUpdate.Version == uc.Spec.Desired.Version {
 		return true
 	}
 
