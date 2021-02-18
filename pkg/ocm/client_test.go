@@ -70,9 +70,9 @@ var _ = Describe("OCM Client", func() {
 			Items: []ClusterInfo{
 				{
 					Id: TEST_CLUSTER_ID,
-					UpgradeChannelGroup: TEST_UPGRADEPOLICY_CHANNELGROUP,
 					Version: ClusterVersion{
 						Id:           "4.4.4",
+						ChannelGroup: TEST_UPGRADEPOLICY_CHANNELGROUP,
 					},
 					NodeDrainGracePeriod: NodeDrainGracePeriod{
 						Value: TEST_UPGRADEPOLICY_PDB_TIME,

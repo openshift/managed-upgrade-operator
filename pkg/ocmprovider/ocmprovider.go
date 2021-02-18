@@ -63,7 +63,7 @@ func (s *ocmProvider) Get() ([]upgradev1alpha1.UpgradeConfigSpec, error) {
 	if cluster.Id == "" {
 		return nil, ErrClusterIdNotFound
 	}
-	if cluster.UpgradeChannelGroup == "" {
+	if cluster.Version.ChannelGroup == "" {
 		return nil, ErrMissingChannelGroup
 	}
 
@@ -156,9 +156,9 @@ func buildUpgradeConfigSpecs(upgradePolicy *ocm.UpgradePolicy, cluster *ocm.Clus
 
 	upgradeConfigSpecs := make([]upgradev1alpha1.UpgradeConfigSpec, 0)
 
-	upgradeChannel, err := inferUpgradeChannelFromChannelGroup(cluster.UpgradeChannelGroup, upgradePolicy.Version)
+	upgradeChannel, err := inferUpgradeChannelFromChannelGroup(cluster.Version.ChannelGroup, upgradePolicy.Version)
 	if err != nil {
-		return nil, fmt.Errorf("unable to determine channel from channel group '%v' and version '%v' for policy ID '%v'", cluster.UpgradeChannelGroup, upgradePolicy.Version, upgradePolicy.Id)
+		return nil, fmt.Errorf("unable to determine channel from channel group '%v' and version '%v' for policy ID '%v'", cluster.Version.ChannelGroup, upgradePolicy.Version, upgradePolicy.Id)
 	}
 	upgradeConfigSpec := upgradev1alpha1.UpgradeConfigSpec{
 		Desired: upgradev1alpha1.Update{
