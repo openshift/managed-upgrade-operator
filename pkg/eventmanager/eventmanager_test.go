@@ -63,7 +63,7 @@ var _ = Describe("OCM Notifier", func() {
 		mockCtrl.Finish()
 	})
 
-	Context("When notifying a state", func() {
+	Context("When notifying a completed state", func() {
 		var uc upgradev1alpha1.UpgradeConfig
 		var testState = notifier.StateCompleted
 		BeforeEach(func() {
@@ -113,4 +113,105 @@ var _ = Describe("OCM Notifier", func() {
 		})
 
 	})
+
+	Context("When notifying a failed state", func() {
+		var uc upgradev1alpha1.UpgradeConfig
+		var testState = notifier.StateFailed
+		BeforeEach(func() {
+			upgradeConfigName = types.NamespacedName{
+				Name:      TEST_UPGRADECONFIG_CR,
+				Namespace: TEST_OPERATOR_NAMESPACE,
+			}
+			uc = *testStructs.NewUpgradeConfigBuilder().WithNamespacedName(upgradeConfigName).WithPhase(upgradev1alpha1.UpgradePhaseUpgrading).GetUpgradeConfig()
+			uc.Spec.Desired.Version = TEST_UPGRADE_VERSION
+			uc.Status.History[0].Version = TEST_UPGRADE_VERSION
+			uc.Spec.UpgradeAt = TEST_UPGRADE_TIME
+		})
+
+		Context("when the pre-health-check failed", func() {
+			It("sends a correct notification and description", func() {
+				uc.Status.History[0].Conditions = []upgradev1alpha1.UpgradeCondition{
+					{
+						Type:               upgradev1alpha1.UpgradePreHealthCheck,
+						Status:             "False",
+						Reason:             "PreHealthCheck not done",
+						Message:            "There are 2 critical alerts",
+					},
+				}
+				gomock.InOrder(
+					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
+					mockMetricsClient.EXPECT().IsMetricNotificationEventSentSet(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION).Return(false, nil),
+					mockNotifier.EXPECT().NotifyState(testState, UPGRADE_PREHEALTHCHECK_FAILED_DESC),
+					mockMetricsClient.EXPECT().UpdateMetricNotificationEventSent(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION),
+				)
+				err := manager.Notify(testState)
+				Expect(err).To(BeNil())
+			})
+		})
+
+		Context("when the external dependency check failed", func() {
+			It("sends a correct notification and description", func() {
+				uc.Status.History[0].Conditions = []upgradev1alpha1.UpgradeCondition{
+					{
+						Type:               upgradev1alpha1.ExtDepAvailabilityCheck,
+						Status:             "False",
+						Reason:             "ExtDepAvailabilityCheck not done",
+						Message:            "An external dependency is down.",
+					},
+				}
+				gomock.InOrder(
+					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
+					mockMetricsClient.EXPECT().IsMetricNotificationEventSentSet(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION).Return(false, nil),
+					mockNotifier.EXPECT().NotifyState(testState, UPGRADE_EXTDEPCHECK_FAILED_DESC),
+					mockMetricsClient.EXPECT().UpdateMetricNotificationEventSent(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION),
+				)
+				err := manager.Notify(testState)
+				Expect(err).To(BeNil())
+			})
+		})
+
+		Context("when the scale up fails", func() {
+			It("sends a correct notification and description", func() {
+				uc.Status.History[0].Conditions = []upgradev1alpha1.UpgradeCondition{
+					{
+						Type:               upgradev1alpha1.UpgradeScaleUpExtraNodes,
+						Status:             "False",
+						Reason:             "UpgradeScaleUpExtraNodes not done",
+						Message:            "Cannot scale nodes.",
+					},
+				}
+				gomock.InOrder(
+					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
+					mockMetricsClient.EXPECT().IsMetricNotificationEventSentSet(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION).Return(false, nil),
+					mockNotifier.EXPECT().NotifyState(testState, UPGRADE_SCALE_FAILED_DESC),
+					mockMetricsClient.EXPECT().UpdateMetricNotificationEventSent(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION),
+				)
+				err := manager.Notify(testState)
+				Expect(err).To(BeNil())
+			})
+		})
+
+		Context("when an indeterminate failure occurs", func() {
+			It("sends a correct default notification and description", func() {
+				uc.Status.History[0].Conditions = []upgradev1alpha1.UpgradeCondition{
+					{
+						Type:               upgradev1alpha1.CommenceUpgrade,
+						Status:             "False",
+						Reason:             "something strange",
+						Message:            "in your neighbourhood",
+					},
+				}
+				gomock.InOrder(
+					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
+					mockMetricsClient.EXPECT().IsMetricNotificationEventSentSet(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION).Return(false, nil),
+					mockNotifier.EXPECT().NotifyState(testState, UPGRADE_PRECHECK_FAILED_DESC),
+					mockMetricsClient.EXPECT().UpdateMetricNotificationEventSent(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION),
+				)
+				err := manager.Notify(testState)
+				Expect(err).To(BeNil())
+			})
+		})
+
+	})
+
 })
