@@ -127,7 +127,7 @@ The `NodeKeeper` controller will flag through metrics any worker node that conti
 
 ### Cluster Upgrader
 
-The steps performed by the Managed Upgrade Operator are carried out by implementations of the [ClusterUpgrader](../pkg/cluster_upgrader/cluster_upgrader.go) interface.
+The steps performed by the Managed Upgrade Operator are carried out by implementations of the [ClusterUpgrader](../pkg/osd_cluster_upgrader/upgrader.go) interface.
 
 Each `ClusterUpgrader` implementation must define an ordered series of `UpgradeSteps`, which represents the runbook of the implementation when conducting a cluster upgrade.
 
