@@ -14,7 +14,7 @@ The `UpgradeConfig` can be created directly on the cluster for development/testi
 
 For production OpenShift Dedicated deployments, the `UpgradeConfig` is distributed via a [Hive SelectorSyncSet](https://github.com/openshift/hive/blob/master/docs/syncset.md) and managed by OpenShift SRE.
 
-The process for SRE to manage the creation and distribution of `UpgradeConfig` custom resources is documented in [SOPs](https://github.com/openshift/ops-sop/blob/master/v4/howto/upgrade.md).
+The process for SRE to manage the creation and distribution of `UpgradeConfig` custom resources is documented in [SOPs](https://github.com/openshift/ops-sop/blob/master/v4/howto/managed-upgrade.md).
 
 ## Custom Resource Definitions
 
@@ -127,7 +127,7 @@ The `NodeKeeper` controller will flag through metrics any worker node that conti
 
 ### Cluster Upgrader
 
-The steps performed by the Managed Upgrade Operator are carried out by implementations of the [ClusterUpgrader](../pkg/cluster_upgrader/cluster_upgrader.go) interface.
+The steps performed by the Managed Upgrade Operator are carried out by implementations of the [ClusterUpgrader](../pkg/osd_cluster_upgrader/upgrader.go) interface.
 
 Each `ClusterUpgrader` implementation must define an ordered series of `UpgradeSteps`, which represents the runbook of the implementation when conducting a cluster upgrade.
 
