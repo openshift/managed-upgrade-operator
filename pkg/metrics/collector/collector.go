@@ -7,86 +7,50 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	cv "github.com/openshift/managed-upgrade-operator/pkg/clusterversion"
+	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
 	ucm "github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager"
 )
 
-var (
-	UpgradeSchedulingDesc = prometheus.NewDesc(
-		"upgrade_at",
-		"The desired start time of the upgrade",
-		[]string{
-			"version",
-		}, nil)
-
-	UpgradeStartDesc = prometheus.NewDesc(
-		"upgrade_start",
-		"The actual start time of the managed upgrade",
-		[]string{
-			"version",
-		}, nil)
-
-	UpgradeControlPlaneStartDesc = prometheus.NewDesc(
-		"upgrade_control_plane_start",
-		"The start time of control plane upgrades",
-		[]string{
-			"version",
-		}, nil)
-
-	UpgradeControlPlaneCompletionDesc = prometheus.NewDesc(
-		"upgrade_control_plane_completion",
-		"The completion time of control plane upgrades",
-		[]string{
-			"version",
-		}, nil)
-
-	UpgradeWorkerStartDesc = prometheus.NewDesc(
-		"upgrade_worker_start",
-		"The start time of the worker upgrades",
-		[]string{
-			"version",
-		}, nil)
-
-	UpgradeWorkerCompleteDesc = prometheus.NewDesc(
-		"upgrade_worker_completion",
-		"The completion time of the worker upgrades",
-		[]string{
-			"version",
-		}, nil)
-
-	UpgradeCompleteDesc = prometheus.NewDesc(
-		"upgrade_complete",
-		"The completion time of the managed upgrade",
-		[]string{
-			"version",
-		}, nil)
-)
+// UpgradeMetrics holds fields that contain upgrade metrics required to
+// report during an upgrade.
+type UpgradeMetrics struct {
+	upgradeState *prometheus.Desc
+}
 
 // UpgradeCollector is implementing prometheus.Collector interface.
 type UpgradeCollector struct {
 	upgradeConfigManager ucm.UpgradeConfigManager
 	cvClient             cv.ClusterVersion
+	upgradeMetrics       *UpgradeMetrics
 }
 
+// Consturct a new UpgradeCollector and return to caller.
 func NewUpgradeCollector(c client.Client) (prometheus.Collector, error) {
 	upgradeConfigManager, err := ucm.NewBuilder().NewManager(c)
 	if err != nil {
 		return nil, err
 	}
+
+	uMetrics := &UpgradeMetrics{
+		upgradeState: prometheus.NewDesc(
+			prometheus.BuildFQName(metrics.Namespace, metrics.Subsystem, "state_timestamp"),
+			"Timestamps of upgrade state",
+			[]string{
+				metrics.VersionLabel,
+				metrics.StateLabel,
+			}, nil),
+	}
+
 	return &UpgradeCollector{
 		upgradeConfigManager,
 		cv.NewCVClient(c),
+		uMetrics,
 	}, nil
 }
 
 // Describe implements the prometheus.Collector interface.
 func (uc *UpgradeCollector) Describe(ch chan<- *prometheus.Desc) {
-	ch <- UpgradeSchedulingDesc
-	ch <- UpgradeStartDesc
-	ch <- UpgradeControlPlaneStartDesc
-	ch <- UpgradeControlPlaneCompletionDesc
-	ch <- UpgradeWorkerStartDesc
-	ch <- UpgradeWorkerCompleteDesc
-	ch <- UpgradeCompleteDesc
+	ch <- uc.upgradeMetrics.upgradeState
 }
 
 // Collect is method required to implement the prometheus.Collector(prometheus/client_golang/prometheus/collector.go) interface.
@@ -105,46 +69,56 @@ func (uc *UpgradeCollector) collectUpgradeMetrics(ch chan<- prometheus.Metric) {
 		return
 	}
 
+	// Set scheduled state value
 	ch <- prometheus.MustNewConstMetric(
-		UpgradeSchedulingDesc,
+		uc.upgradeMetrics.upgradeState,
 		prometheus.GaugeValue,
 		float64(upgradeTime.Unix()),
 		upgradeConfig.Spec.Desired.Version,
+		metrics.ScheduledStateValue,
 	)
 
 	if upgradeConfig.Status.History != nil {
 		history := upgradeConfig.Status.History.GetHistory(upgradeConfig.Spec.Desired.Version)
 		if history != nil {
 			if history.StartTime != nil {
+				// Set started state value
 				ch <- prometheus.MustNewConstMetric(
-					UpgradeStartDesc,
+					uc.upgradeMetrics.upgradeState,
 					prometheus.GaugeValue,
 					float64(history.StartTime.Time.Unix()),
 					upgradeConfig.Spec.Desired.Version,
+					metrics.StartedStateValue,
 				)
 			}
 			if history.WorkerStartTime != nil {
+				// Set workers started state value
 				ch <- prometheus.MustNewConstMetric(
-					UpgradeWorkerStartDesc,
+					uc.upgradeMetrics.upgradeState,
 					prometheus.GaugeValue,
 					float64(history.WorkerStartTime.Time.Unix()),
 					upgradeConfig.Spec.Desired.Version,
+					metrics.WorkersStartedStateValue,
 				)
 			}
 			if history.WorkerCompleteTime != nil {
+				// Set workers completed state value
 				ch <- prometheus.MustNewConstMetric(
-					UpgradeWorkerCompleteDesc,
+					uc.upgradeMetrics.upgradeState,
 					prometheus.GaugeValue,
 					float64(history.WorkerCompleteTime.Time.Unix()),
 					upgradeConfig.Spec.Desired.Version,
+					metrics.WorkersCompletedStateValue,
 				)
 			}
 			if history.CompleteTime != nil {
+				// Set finished state value
 				ch <- prometheus.MustNewConstMetric(
-					UpgradeCompleteDesc,
+					uc.upgradeMetrics.upgradeState,
 					prometheus.GaugeValue,
 					float64(history.CompleteTime.Time.Unix()),
 					upgradeConfig.Spec.Desired.Version,
+					metrics.FinishedStateValue,
 				)
 			}
 
@@ -155,22 +129,27 @@ func (uc *UpgradeCollector) collectUpgradeMetrics(ch chan<- prometheus.Metric) {
 
 			cvHistory := cv.GetHistory(clusterVersion, upgradeConfig.Spec.Desired.Version)
 			if cvHistory != nil {
+				// Set control plane started state value
 				ch <- prometheus.MustNewConstMetric(
-					UpgradeControlPlaneStartDesc,
+					uc.upgradeMetrics.upgradeState,
 					prometheus.GaugeValue,
 					float64(cvHistory.StartedTime.Time.Unix()),
 					upgradeConfig.Spec.Desired.Version,
+					metrics.ControlPlaneStartedStateValue,
 				)
 
 				if cvHistory.CompletionTime != nil {
+					// Set control plane completed state value
 					ch <- prometheus.MustNewConstMetric(
-						UpgradeControlPlaneCompletionDesc,
+						uc.upgradeMetrics.upgradeState,
 						prometheus.GaugeValue,
 						float64(cvHistory.CompletionTime.Time.Unix()),
 						upgradeConfig.Spec.Desired.Version,
+						metrics.ControlPlaneCompletedStateValue,
 					)
 				}
 			}
 		}
 	}
+	return
 }
