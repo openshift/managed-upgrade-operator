@@ -15,6 +15,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
+
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -22,6 +23,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 
+	monitoringv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 	configv1 "github.com/openshift/api/config/v1"
 	routev1 "github.com/openshift/api/route/v1"
 	machineapi "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
@@ -31,7 +33,9 @@ import (
 	"github.com/openshift/managed-upgrade-operator/pkg/controller"
 	"github.com/openshift/managed-upgrade-operator/pkg/metrics/collector"
 	"github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager"
+	"github.com/openshift/managed-upgrade-operator/util"
 	"github.com/openshift/managed-upgrade-operator/version"
+	opmetrics "github.com/openshift/operator-custom-metrics/pkg/metrics"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	kubemetrics "github.com/operator-framework/operator-sdk/pkg/kube-metrics"
 	"github.com/operator-framework/operator-sdk/pkg/leader"
@@ -39,7 +43,6 @@ import (
 	"github.com/operator-framework/operator-sdk/pkg/metrics"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
 	"github.com/spf13/pflag"
-	runtimemetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
 )
 
 // Change below variables to serve metrics on different host or port.
@@ -47,6 +50,7 @@ var (
 	metricsHost               = "0.0.0.0"
 	metricsPort         int32 = 8383
 	operatorMetricsPort int32 = 8686
+	customMetricsPath         = "/metrics"
 )
 var log = logf.Log.WithName("cmd")
 
@@ -154,6 +158,11 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err := monitoringv1.AddToScheme(mgr.GetScheme()); err != nil {
+		log.Error(err, "error registering prometheus monitoring objects")
+		os.Exit(1)
+	}
+
 	// Setup all Controllers
 	if err := controller.AddToManager(mgr); err != nil {
 		log.Error(err, "")
@@ -166,17 +175,35 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Add the custom Metrics Service
 	metricsClient, err := client.New(cfg, client.Options{})
 	if err != nil {
 		log.Error(err, "unable to create k8s client for upgrade metrics")
 		os.Exit(1)
 	}
+
 	uCollector, err := collector.NewUpgradeCollector(metricsClient)
 	if err != nil {
 		log.Error(err, "unable to create upgrade metrics collector")
 		os.Exit(1)
 	}
-	runtimemetrics.Registry.MustRegister(uCollector)
+
+	ns, err := util.GetOperatorNamespace()
+	if err != nil {
+		os.Exit(1)
+	}
+
+	customMetrics := opmetrics.NewBuilder(ns, "managed-upgrade-operator-custom-metrics").
+		WithPath(customMetricsPath).
+		WithCollector(uCollector).
+		WithServiceMonitor().
+		WithServiceLabel(map[string]string{"name": muocfg.OperatorName}).
+		GetConfig()
+
+	if err = opmetrics.ConfigureMetrics(context.TODO(), *customMetrics); err != nil {
+		log.Error(err, "Failed to configure custom metrics")
+		os.Exit(1)
+	}
 
 	// Define stopCh which we'll use to notify the upgradeConfigManager (and any other routine)
 	// to stop work. This channel can also be used to signal routines to complete any cleanup
