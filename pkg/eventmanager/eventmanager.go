@@ -11,10 +11,15 @@ import (
 )
 
 const (
-	UPGRADE_PRECHECK_FAILED_DESC = "Upgrade failed as the cluster did not pass its pre-upgrade verification checks."
-	UPGRADE_PREHEALTHCHECK_FAILED_DESC = "Upgrade failed on the Pre-Health Check step. Health alerts are firing in the cluster which could impact the upgrade's operation, so the upgrade did not proceed."
-	UPGRADE_EXTDEPCHECK_FAILED_DESC = "Upgrade failed on the External Dependency Availability Check step. A dependency of the upgrade was deemed un-available, so the upgrade did not proceed."
-	UPGRADE_SCALE_FAILED_DESC = "Upgrade failed on the Scale-Up Worker Node step. A temporary additional worker node was unable to be created to temporarily house workloads, so the upgrade did not proceed."
+	UPGRADE_PRECHECK_FAILED_DESC       = "Cluster upgrade to version %s failed as the cluster did not pass its pre-upgrade verification checks."
+	UPGRADE_PREHEALTHCHECK_FAILED_DESC = "Cluster upgrade to version %s failed on the Pre-Health Check step. Health alerts are firing in the cluster which could impact the upgrade's operation, so the upgrade did not proceed."
+	UPGRADE_EXTDEPCHECK_FAILED_DESC    = "Cluster upgrade to version %s failed on the External Dependency Availability Check step. A dependency of the upgrade was deemed un-available, so the upgrade did not proceed."
+	UPGRADE_SCALE_FAILED_DESC          = "Cluster upgrade to version %s failed on the Scale-Up Worker Node step. A temporary additional worker node was unable to be created to temporarily house workloads, so the upgrade did not proceed."
+
+	UPGRADE_DEFAULT_DELAY_DESC        = "Cluster upgrade to version %s is currently delayed"
+	UPGRADE_PREHEALTHCHECK_DELAY_DESC = "Cluster upgrade to version %s is currently delayed as health alerts are firing in the cluster which could impact the upgrade's operation."
+	UPGRADE_EXTDEPCHECK_DELAY_DESC    = "Cluster upgrade to version %s is currently delayed as an external dependency of the upgrade is currently un-available."
+	UPGRADE_SCALE_DELAY_DESC          = "Cluster upgrade to version %s is currently delayed attempting to scale up an additional worker node."
 )
 
 //go:generate mockgen -destination=mocks/eventmanager.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/eventmanager EventManager
@@ -92,7 +97,7 @@ func (s *eventManager) Notify(state notifier.NotifyState) error {
 	case notifier.StateStarted:
 		description = fmt.Sprintf("Cluster is currently being upgraded to version %s", uc.Spec.Desired.Version)
 	case notifier.StateDelayed:
-		description = fmt.Sprintf("Cluster upgrade to version %s is currently delayed", uc.Spec.Desired.Version)
+		description = createDelayedDescription(uc)
 	case notifier.StateCompleted:
 		description = fmt.Sprintf("Cluster has been successfully upgraded to version %s", uc.Spec.Desired.Version)
 	case notifier.StateFailed:
@@ -114,7 +119,7 @@ func (s *eventManager) Notify(state notifier.NotifyState) error {
 // Generates a Failure notification description based on the UpgradeConfig's last failed state
 func createFailureDescription(uc *v1alpha1.UpgradeConfig) string {
 	// Default failure message
-	var description = UPGRADE_PRECHECK_FAILED_DESC
+	var description = fmt.Sprintf(UPGRADE_PRECHECK_FAILED_DESC, uc.Spec.Desired.Version)
 
 	history := uc.Status.History.GetHistory(uc.Spec.Desired.Version)
 	// Handle a missing history
@@ -145,11 +150,55 @@ func createFailureDescription(uc *v1alpha1.UpgradeConfig) string {
 
 	switch failedCondition.Type {
 	case v1alpha1.UpgradePreHealthCheck:
-		description = UPGRADE_PREHEALTHCHECK_FAILED_DESC
+		description = fmt.Sprintf(UPGRADE_PREHEALTHCHECK_FAILED_DESC, uc.Spec.Desired.Version)
 	case v1alpha1.ExtDepAvailabilityCheck:
-		description = UPGRADE_EXTDEPCHECK_FAILED_DESC
+		description = fmt.Sprintf(UPGRADE_EXTDEPCHECK_FAILED_DESC, uc.Spec.Desired.Version)
 	case v1alpha1.UpgradeScaleUpExtraNodes:
-		description = UPGRADE_SCALE_FAILED_DESC
+		description = fmt.Sprintf(UPGRADE_SCALE_FAILED_DESC, uc.Spec.Desired.Version)
+	}
+
+	return description
+}
+
+// Generates a Delayed notification description based on the UpgradeConfig's last state
+func createDelayedDescription(uc *v1alpha1.UpgradeConfig) string {
+	// Default delayed message
+	var description = fmt.Sprintf(UPGRADE_DEFAULT_DELAY_DESC, uc.Spec.Desired.Version)
+
+	history := uc.Status.History.GetHistory(uc.Spec.Desired.Version)
+	// Handle a missing history
+	if history == nil {
+		return description
+	}
+	// Handle no conditions available
+	if len(history.Conditions) == 0 {
+		return description
+	}
+
+	// Find the condition which will describe what step the upgrade got to
+	var delayedCondition v1alpha1.UpgradeCondition
+	foundDelayedCondition := false
+	for _, condition := range history.Conditions {
+		// Find the first incomplete condition (should only be one)
+		if condition.IsFalse() {
+			delayedCondition = condition
+			foundDelayedCondition = true
+			break
+		}
+	}
+
+	// No incomplete condition? Just return default
+	if !foundDelayedCondition {
+		return description
+	}
+
+	switch delayedCondition.Type {
+	case v1alpha1.UpgradePreHealthCheck:
+		description = fmt.Sprintf(UPGRADE_PREHEALTHCHECK_DELAY_DESC, uc.Spec.Desired.Version)
+	case v1alpha1.ExtDepAvailabilityCheck:
+		description = fmt.Sprintf(UPGRADE_EXTDEPCHECK_DELAY_DESC, uc.Spec.Desired.Version)
+	case v1alpha1.UpgradeScaleUpExtraNodes:
+		description = fmt.Sprintf(UPGRADE_SCALE_DELAY_DESC, uc.Spec.Desired.Version)
 	}
 
 	return description
