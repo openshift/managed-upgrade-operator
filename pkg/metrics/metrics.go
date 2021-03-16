@@ -18,24 +18,11 @@ import (
 )
 
 const (
-	eventLabel = "event"
-	metricsTag = "upgradeoperator"
-	nameLabel  = "upgradeconfig_name"
-	nodeLabel  = "node_name"
-
-	Namespace = "upgradeoperator"
-	Subsystem = "upgrade"
-
-	StateLabel   = "state"
-	VersionLabel = "version"
-
-	ScheduledStateValue             = "scheduled"
-	StartedStateValue               = "started"
-	FinishedStateValue              = "finished"
-	ControlPlaneStartedStateValue   = "control_plane_started"
-	ControlPlaneCompletedStateValue = "control_plane_completed"
-	WorkersStartedStateValue        = "workers_started"
-	WorkersCompletedStateValue      = "workers_completed"
+	metricsTag   = "upgradeoperator"
+	nameLabel    = "upgradeconfig_name"
+	eventLabel   = "event"
+	versionLabel = "version"
+	nodeLabel    = "node_name"
 )
 
 //go:generate mockgen -destination=mocks/metrics.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/metrics Metrics
@@ -153,12 +140,12 @@ var (
 		Subsystem: metricsTag,
 		Name:      "controlplane_timeout",
 		Help:      "Control plane upgrade timeout",
-	}, []string{nameLabel, VersionLabel})
+	}, []string{nameLabel, versionLabel})
 	metricUpgradeWorkerTimeout = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Subsystem: metricsTag,
 		Name:      "worker_timeout",
 		Help:      "Worker nodes upgrade timeout",
-	}, []string{nameLabel, VersionLabel})
+	}, []string{nameLabel, versionLabel})
 	metricNodeDrainFailed = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Subsystem: metricsTag,
 		Name:      "node_drain_timeout",
@@ -168,7 +155,7 @@ var (
 		Subsystem: metricsTag,
 		Name:      "upgrade_notification",
 		Help:      "Notification event raised",
-	}, []string{nameLabel, eventLabel, VersionLabel})
+	}, []string{nameLabel, eventLabel, versionLabel})
 
 	metricsList = []*prometheus.GaugeVec{
 		metricValidationFailed,
@@ -248,28 +235,28 @@ func (c *Counter) ResetMetricUpgradeConfigSynced(name string) {
 
 func (c *Counter) UpdateMetricUpgradeControlPlaneTimeout(upgradeConfigName, version string) {
 	metricUpgradeControlPlaneTimeout.With(prometheus.Labels{
-		VersionLabel: version,
+		versionLabel: version,
 		nameLabel:    upgradeConfigName}).Set(
 		float64(1))
 }
 
 func (c *Counter) ResetMetricUpgradeControlPlaneTimeout(upgradeConfigName, version string) {
 	metricUpgradeControlPlaneTimeout.With(prometheus.Labels{
-		VersionLabel: version,
+		versionLabel: version,
 		nameLabel:    upgradeConfigName}).Set(
 		float64(0))
 }
 
 func (c *Counter) UpdateMetricUpgradeWorkerTimeout(upgradeConfigName, version string) {
 	metricUpgradeWorkerTimeout.With(prometheus.Labels{
-		VersionLabel: version,
+		versionLabel: version,
 		nameLabel:    upgradeConfigName}).Set(
 		float64(1))
 }
 
 func (c *Counter) ResetMetricUpgradeWorkerTimeout(upgradeConfigName, version string) {
 	metricUpgradeWorkerTimeout.With(prometheus.Labels{
-		VersionLabel: version,
+		versionLabel: version,
 		nameLabel:    upgradeConfigName}).Set(
 		float64(0))
 }
@@ -312,14 +299,14 @@ func (c *Counter) UpdateMetricUpgradeWindowBreached(upgradeConfigName string) {
 
 func (c *Counter) UpdateMetricNotificationEventSent(upgradeConfigName string, event string, version string) {
 	metricUpgradeNotification.With(prometheus.Labels{
-		VersionLabel: version,
+		versionLabel: version,
 		eventLabel:   event,
 		nameLabel:    upgradeConfigName}).Set(
 		float64(1))
 }
 
 func (c *Counter) IsMetricNotificationEventSentSet(upgradeConfigName string, event string, version string) (bool, error) {
-	cpMetrics, err := c.Query(fmt.Sprintf("%s_upgrade_notification{%s=\"%s\",%s=\"%s\",%s=\"%s\"}", metricsTag, nameLabel, upgradeConfigName, eventLabel, event, VersionLabel, version))
+	cpMetrics, err := c.Query(fmt.Sprintf("%s_upgrade_notification{%s=\"%s\",%s=\"%s\",%s=\"%s\"}", metricsTag, nameLabel, upgradeConfigName, eventLabel, event, versionLabel, version))
 	if err != nil {
 		return false, err
 	}
