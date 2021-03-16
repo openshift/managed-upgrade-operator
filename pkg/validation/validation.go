@@ -3,11 +3,16 @@ package validation
 
 import (
 	"fmt"
+	"net/url"
+	"runtime"
 	"time"
 
 	"github.com/blang/semver"
 	"github.com/go-logr/logr"
+	"github.com/google/uuid"
 	configv1 "github.com/openshift/api/config/v1"
+	"github.com/openshift/cluster-version-operator/pkg/cincinnati"
+
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 	cv "github.com/openshift/managed-upgrade-operator/pkg/clusterversion"
 )
@@ -116,18 +121,52 @@ func (v *validator) IsValidUpgradeConfig(uC *upgradev1alpha1.UpgradeConfig, cV *
 		logger.Info(fmt.Sprintf("Desired version %s validated as greater then current version %s", desiredVersion, currentVersion))
 	}
 
-	// Validate available version is in CVO's availableUpdates
-	foundAvailableUpdate := false
-	for _, update := range cV.Status.AvailableUpdates {
-		// Ensure version exists
-		if update.Version == dv {
-			foundAvailableUpdate = true
-		}
-		// We can't check channel here yet, it's not present in OCP 4.5
+	// Validate available version is in Cincinnati.
+	desiredChannel := uC.Spec.Desired.Channel
+	clusterId, err := uuid.Parse(string(cV.Spec.ClusterID))
+	if err != nil {
+		return ValidatorResult{
+			IsValid:           false,
+			IsAvailableUpdate: false,
+			Message:           "",
+		}, nil
+	}
+	upstreamURI, err := url.Parse(string(cV.Spec.Upstream))
+	if err != nil {
+		return ValidatorResult{
+			IsValid:           false,
+			IsAvailableUpdate: false,
+			Message:           "",
+		}, nil
 	}
 
-	if !foundAvailableUpdate {
-		logger.Info(fmt.Sprintf("Failed to find the desired version %s in clusterversion's availableUpdates", desiredVersion))
+	updates, err := cincinnati.NewClient(clusterId, nil, nil).GetUpdates(upstreamURI, runtime.GOARCH, desiredChannel, currentVersion)
+	if err != nil {
+		return ValidatorResult{
+			IsValid:           false,
+			IsAvailableUpdate: false,
+			Message:           "",
+		}, err
+	}
+
+	var cvoUpdates []configv1.Update
+	for _, update := range updates {
+		cvoUpdates = append(cvoUpdates, configv1.Update{
+			Version: update.Version.String(),
+			Image:   update.Image,
+		})
+	}
+
+	// Check whether the desired version exists in availableUpdates
+	found := false
+	for _, v := range cvoUpdates {
+		if v.Version == dv && !v.Force {
+			found = true
+		}
+	}
+
+	if !found {
+		logger.Info(fmt.Sprintf("Failed to find the desired version %s in channel %s", desiredVersion, desiredChannel))
 		return ValidatorResult{
 			IsValid:           false,
 			IsAvailableUpdate: false,

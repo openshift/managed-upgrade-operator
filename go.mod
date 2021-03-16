@@ -13,12 +13,14 @@ require (
 	github.com/golang/mock v1.4.4
 	github.com/golang/protobuf v1.4.1 // indirect
 	github.com/golangci/golangci-lint v1.27.0
+	github.com/google/uuid v1.1.1
 	github.com/hashicorp/go-multierror v1.1.0
 	github.com/jarcoal/httpmock v1.0.6
 	github.com/jpillora/backoff v1.0.0
 	github.com/onsi/ginkgo v1.12.0
 	github.com/onsi/gomega v1.10.0
 	github.com/openshift/api v0.0.0-20200522173408-17ada6e4245b
+	github.com/openshift/cluster-version-operator v3.11.1-0.20190629164025-08cac1c02538+incompatible
 	github.com/openshift/machine-api-operator v0.2.1-0.20200226185612-9b0170a1ba07
 	github.com/openshift/machine-config-operator v4.2.0-alpha.0.0.20190917115525-033375cbe820+incompatible
 	github.com/operator-framework/api v0.3.6
