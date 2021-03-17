@@ -1,12 +1,13 @@
 package validation
 
 import (
+	"time"
+
 	"github.com/blang/semver"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"time"
 
 	configv1 "github.com/openshift/api/config/v1"
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
@@ -56,26 +57,26 @@ var _ = Describe("Validation of UpgradeConfig CR", func() {
 				},
 				History: []configv1.UpdateHistory{
 					{
-						State:          testCompletedUpdate,
-						StartedTime:    v1.Time{
+						State: testCompletedUpdate,
+						StartedTime: v1.Time{
 							Time: time.Now().UTC().Add(-60 * time.Minute),
 						},
 						CompletionTime: &v1.Time{
 							Time: time.Now().UTC().Add(-60 * time.Minute),
 						},
-						Version:        "some bad version",
-						Verified:       false,
+						Version:  "some bad version",
+						Verified: false,
 					},
 					{
-						State:          testCompletedUpdate,
-						StartedTime:    v1.Time{
+						State: testCompletedUpdate,
+						StartedTime: v1.Time{
 							Time: time.Now().UTC(),
 						},
 						CompletionTime: &v1.Time{
 							Time: time.Now().UTC(),
 						},
-						Version:        testUpgradeConfig.Spec.Desired.Version,
-						Verified:       false,
+						Version:  testUpgradeConfig.Spec.Desired.Version,
+						Verified: false,
 					},
 				},
 			},
@@ -93,71 +94,85 @@ var _ = Describe("Validation of UpgradeConfig CR", func() {
 				Expect(result.IsValid).Should(BeFalse())
 			})
 		})
-		Context("Validating UpgradeConfig desired version", func() {
-			Context("When getting the current cluster version fails", func() {
-				It("Validation is false and error is returned", func() {
-					// Set version as empty string
-					// It shouldn't pick the first element, as it's older
-					testClusterVersion.Status.History[1].Version = ""
-					result, err := testValidator.IsValidUpgradeConfig(testUpgradeConfig, testClusterVersion, testLogger)
-					Expect(err).ShouldNot(BeNil())
-					Expect(result.IsValid).Should(BeFalse())
-				})
+	})
+	Context("Validating UpgradeConfig desired version", func() {
+		Context("When getting the current cluster version fails", func() {
+			It("Validation is false and error is returned", func() {
+				// Set version as empty string
+				// It shouldn't pick the first element, as it's older
+				testClusterVersion.Status.History[1].Version = ""
+				result, err := testValidator.IsValidUpgradeConfig(testUpgradeConfig, testClusterVersion, testLogger)
+				Expect(err).ShouldNot(BeNil())
+				Expect(result.IsValid).Should(BeFalse())
 			})
 		})
-		Context("Validating versions are semver", func() {
-			Context("When the UpgradeConfig version is NOT valid", func() {
-				It("Validation is false and error is returned as NOT nil", func() {
-					// Set version as non semver
-					testUpgradeConfig.Spec.Desired.Version = "not a correct semver"
-					result, err := testValidator.IsValidUpgradeConfig(testUpgradeConfig, testClusterVersion, testLogger)
-					Expect(err).Should(BeNil())
-					Expect(result.IsValid).Should(BeFalse())
-				})
-			})
-			Context("When the ClusterVersion version is NOT valid", func() {
-				It("Validation is false and error is returned as NOT nil", func() {
-					// Set version as non semver
-					testUpgradeConfig.Spec.Desired.Version = "4.4.4"
-					testClusterVersion.Status.History[0].Version = "not a correct semver"
-					result, err := testValidator.IsValidUpgradeConfig(testUpgradeConfig, testClusterVersion, testLogger)
-					Expect(err).Should(BeNil())
-					Expect(result.IsValid).Should(BeFalse())
-				})
+	})
+	Context("Validating versions are semver", func() {
+		Context("When the UpgradeConfig version is NOT valid", func() {
+			It("Validation is false and error is returned as NOT nil", func() {
+				// Set version as non semver
+				testUpgradeConfig.Spec.Desired.Version = "not a correct semver"
+				result, err := testValidator.IsValidUpgradeConfig(testUpgradeConfig, testClusterVersion, testLogger)
+				Expect(err).Should(BeNil())
+				Expect(result.IsValid).Should(BeFalse())
 			})
 		})
-		Context("Comparing versions", func() {
-			Context("When desired version is less then current version", func() {
-				It("Indicates a downgrade", func() {
-					// Set desired < current
-					desiredVersion, _ := semver.Parse("4.4.4")
-					currentVersion, _ := semver.Parse("4.4.5")
-					versionCompare, err := compareVersions(desiredVersion, currentVersion, testLogger)
-					Expect(versionCompare).Should(Equal(VersionDowngrade))
-					Expect(err).Should(BeNil())
-				})
+		Context("When the ClusterVersion version is NOT valid", func() {
+			It("Validation is false and error is returned as NOT nil", func() {
+				// Set version as non semver
+				testUpgradeConfig.Spec.Desired.Version = "4.4.4"
+				testClusterVersion.Status.History[0].Version = "not a correct semver"
+				result, err := testValidator.IsValidUpgradeConfig(testUpgradeConfig, testClusterVersion, testLogger)
+				Expect(err).Should(BeNil())
+				Expect(result.IsValid).Should(BeFalse())
 			})
-			Context("When desired version is equal to current version", func() {
-				It("Returns proceed as false", func() {
-					// Set desired == current
-					desiredVersion, _ := semver.Parse("4.4.4")
-					currentVersion, _ := semver.Parse("4.4.4")
-					versionCompare, err := compareVersions(desiredVersion, currentVersion, testLogger)
-					Expect(versionCompare).Should(Equal(VersionEqual))
-					Expect(err).Should(BeNil())
-				})
+		})
+	})
+	Context("Comparing versions", func() {
+		Context("When desired version is less then current version", func() {
+			It("Indicates a downgrade", func() {
+				// Set desired < current
+				desiredVersion, _ := semver.Parse("4.4.4")
+				currentVersion, _ := semver.Parse("4.4.5")
+				versionCompare, err := compareVersions(desiredVersion, currentVersion, testLogger)
+				Expect(versionCompare).Should(Equal(VersionDowngrade))
+				Expect(err).Should(BeNil())
 			})
-			Context("When desired version is greater then current version", func() {
-				It("Returns proceed as true", func() {
-					// Set desired == current
-					desiredVersion, _ := semver.Parse("4.4.5")
-					currentVersion, _ := semver.Parse("4.4.4")
-					versionCompare, err := compareVersions(desiredVersion, currentVersion, testLogger)
-					Expect(versionCompare).Should(Equal(VersionUpgrade))
-					Expect(err).Should(BeNil())
-				})
+		})
+		Context("When desired version is equal to current version", func() {
+			It("Returns proceed as false", func() {
+				// Set desired == current
+				desiredVersion, _ := semver.Parse("4.4.4")
+				currentVersion, _ := semver.Parse("4.4.4")
+				versionCompare, err := compareVersions(desiredVersion, currentVersion, testLogger)
+				Expect(versionCompare).Should(Equal(VersionEqual))
+				Expect(err).Should(BeNil())
 			})
-
+		})
+		Context("When desired version is greater then current version", func() {
+			It("Returns proceed as true", func() {
+				// Set desired == current
+				desiredVersion, _ := semver.Parse("4.4.5")
+				currentVersion, _ := semver.Parse("4.4.4")
+				versionCompare, err := compareVersions(desiredVersion, currentVersion, testLogger)
+				Expect(versionCompare).Should(Equal(VersionUpgrade))
+				Expect(err).Should(BeNil())
+			})
+		})
+	})
+	Context("Validating ClusterVersion Upstream configuration", func() {
+		Context("When ClusterVersion Upstream is defined explicitly", func() {
+			It("Explicit value is returned", func() {
+				testClusterVersion.Spec.Upstream = "http://example-server/"
+				result := getUpstreamURL(testClusterVersion)
+				Expect(result).Should(Equal(string(testClusterVersion.Spec.Upstream)))
+			})
+		})
+		Context("When the ClusterVersion Upstream is empty", func() {
+			It("Default value is returned", func() {
+				result := getUpstreamURL(testClusterVersion)
+				Expect(result).Should(Equal(defaultUpstreamServer))
+			})
 		})
 	})
 })
