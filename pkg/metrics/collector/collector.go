@@ -151,5 +151,4 @@ func (uc *UpgradeCollector) collectUpgradeMetrics(ch chan<- prometheus.Metric) {
 			}
 		}
 	}
-	return
 }
