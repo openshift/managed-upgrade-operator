@@ -17,6 +17,10 @@ import (
 	cv "github.com/openshift/managed-upgrade-operator/pkg/clusterversion"
 )
 
+const (
+	defaultUpstreamServer = "https://api.openshift.com/api/upgrades_info/v1/graph"
+)
+
 // NewBuilder returns a validationBuilder object that implements the ValidationBuilder interface.
 func NewBuilder() ValidationBuilder {
 	return &validationBuilder{}
@@ -131,7 +135,7 @@ func (v *validator) IsValidUpgradeConfig(uC *upgradev1alpha1.UpgradeConfig, cV *
 			Message:           "",
 		}, nil
 	}
-	upstreamURI, err := url.Parse(string(cV.Spec.Upstream))
+	upstreamURI, err := url.Parse(getUpstreamURL(cV))
 	if err != nil {
 		return ValidatorResult{
 			IsValid:           false,
@@ -199,6 +203,16 @@ func compareVersions(dV semver.Version, cV semver.Version, logger logr.Logger) (
 		return VersionUnknown, fmt.Errorf("Semver comparison failed for unknown reason. Versions %s & %s", dV, cV)
 	}
 
+}
+
+// getUpstreamURL retrieves the upstream URL from the ClusterVersion spec, defaulting to the default if not available
+func getUpstreamURL(cV *configv1.ClusterVersion) string {
+	upstream := string(cV.Spec.Upstream)
+	if len(upstream) == 0 {
+		upstream = defaultUpstreamServer
+	}
+
+	return upstream
 }
 
 //go:generate mockgen -destination=mocks/mockValidationBuilder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/validation ValidationBuilder
