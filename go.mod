@@ -6,23 +6,26 @@ require (
 	github.com/ajeddeloh/go-json v0.0.0-20200220154158-5ae607161559 // indirect
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/coreos/ignition v0.35.0 // indirect
+	github.com/coreos/prometheus-operator v0.38.0
 	github.com/go-logr/logr v0.1.0
 	github.com/go-openapi/runtime v0.19.4
 	github.com/go-openapi/strfmt v0.19.3
 	github.com/go-resty/resty/v2 v2.3.0
 	github.com/golang/mock v1.4.4
 	github.com/golang/protobuf v1.4.1 // indirect
-	github.com/golangci/golangci-lint v1.27.0
 	github.com/google/uuid v1.1.1
 	github.com/hashicorp/go-multierror v1.1.0
 	github.com/jarcoal/httpmock v1.0.6
 	github.com/jpillora/backoff v1.0.0
+	github.com/kr/text v0.2.0 // indirect
+	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
 	github.com/onsi/ginkgo v1.12.0
 	github.com/onsi/gomega v1.10.0
-	github.com/openshift/api v0.0.0-20200522173408-17ada6e4245b
+	github.com/openshift/api v3.9.1-0.20190424152011-77b8897ec79a+incompatible
 	github.com/openshift/cluster-version-operator v3.11.1-0.20190629164025-08cac1c02538+incompatible
 	github.com/openshift/machine-api-operator v0.2.1-0.20200226185612-9b0170a1ba07
 	github.com/openshift/machine-config-operator v4.2.0-alpha.0.0.20190917115525-033375cbe820+incompatible
+	github.com/openshift/operator-custom-metrics v0.4.1
 	github.com/operator-framework/api v0.3.6
 	github.com/operator-framework/operator-sdk v0.17.0
 	github.com/prometheus/alertmanager v0.20.0
@@ -32,11 +35,12 @@ require (
 	github.com/vincent-petithory/dataurl v0.0.0-20191104211930-d1553a71de50 // indirect
 	golang.org/x/sys v0.0.0-20200509044756-6aff5f38e54f // indirect
 	golang.org/x/tools v0.0.0-20200522201501-cb1345f3a375 // indirect
+	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 	gopkg.in/yaml.v2 v2.2.8
+	honnef.co/go/tools v0.0.1-2020.1.3 // indirect
 	k8s.io/api v0.18.5
 	k8s.io/apimachinery v0.18.5
 	k8s.io/client-go v12.0.0+incompatible
-	k8s.io/code-generator v0.18.3
 	k8s.io/kube-openapi v0.0.0-20191107075043-30be4d16710a
 	sigs.k8s.io/controller-runtime v0.6.0
 )
@@ -45,8 +49,10 @@ replace (
 	github.com/Azure/go-autorest => github.com/Azure/go-autorest v13.3.2+incompatible // Required by OLM
 	github.com/InVisionApp/go-health => github.com/InVisionApp/go-health v1.1.7-0.20190926150048-b5cab38233bb
 	github.com/go-log/log => github.com/go-log/log v0.1.1-0.20181211034820-a514cf01a3eb
+	github.com/openshift/api => github.com/openshift/api v0.0.0-20200522173408-17ada6e4245b
 	github.com/openshift/cluster-version-operator => github.com/openshift/cluster-version-operator v1.0.1-0.20200601145814-7cb7909ed945
 	github.com/openshift/machine-config-operator => github.com/openshift/machine-config-operator v4.2.0-alpha.0+incompatible
+	github.com/openshift/operator-custom-metrics => github.com/dofinn/operator-custom-metrics v0.4.2-0.20210310120513-5b83b9b1860c
 	k8s.io/api => k8s.io/api v0.0.0-20191016110408-35e52d86657a
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.0.0-20191016113550-5357c4baaf65
 	k8s.io/apimachinery => k8s.io/apimachinery v0.0.0-20191004115801-a2eda9f80ab8
