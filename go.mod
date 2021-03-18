@@ -25,7 +25,7 @@ require (
 	github.com/openshift/cluster-version-operator v3.11.1-0.20190629164025-08cac1c02538+incompatible
 	github.com/openshift/machine-api-operator v0.2.1-0.20200226185612-9b0170a1ba07
 	github.com/openshift/machine-config-operator v4.2.0-alpha.0.0.20190917115525-033375cbe820+incompatible
-	github.com/openshift/operator-custom-metrics v0.4.1
+	github.com/openshift/operator-custom-metrics v0.4.2
 	github.com/operator-framework/api v0.3.6
 	github.com/operator-framework/operator-sdk v0.17.0
 	github.com/prometheus/alertmanager v0.20.0
@@ -52,7 +52,6 @@ replace (
 	github.com/openshift/api => github.com/openshift/api v0.0.0-20200522173408-17ada6e4245b
 	github.com/openshift/cluster-version-operator => github.com/openshift/cluster-version-operator v1.0.1-0.20200601145814-7cb7909ed945
 	github.com/openshift/machine-config-operator => github.com/openshift/machine-config-operator v4.2.0-alpha.0+incompatible
-	github.com/openshift/operator-custom-metrics => github.com/dofinn/operator-custom-metrics v0.4.2-0.20210310120513-5b83b9b1860c
 	k8s.io/api => k8s.io/api v0.0.0-20191016110408-35e52d86657a
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.0.0-20191016113550-5357c4baaf65
 	k8s.io/apimachinery => k8s.io/apimachinery v0.0.0-20191004115801-a2eda9f80ab8
