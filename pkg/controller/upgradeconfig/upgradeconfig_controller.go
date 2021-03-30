@@ -21,14 +21,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	muocfg "github.com/openshift/managed-upgrade-operator/config"
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 	cub "github.com/openshift/managed-upgrade-operator/pkg/cluster_upgrader_builder"
 	cv "github.com/openshift/managed-upgrade-operator/pkg/clusterversion"
 	"github.com/openshift/managed-upgrade-operator/pkg/configmanager"
+	"github.com/openshift/managed-upgrade-operator/pkg/eventmanager"
 	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
 	"github.com/openshift/managed-upgrade-operator/pkg/scheduler"
-	muocfg "github.com/openshift/managed-upgrade-operator/config"
-	"github.com/openshift/managed-upgrade-operator/pkg/eventmanager"
 	ucmgr "github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager"
 	"github.com/openshift/managed-upgrade-operator/pkg/validation"
 )
@@ -129,7 +129,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
-			metricsClient.ResetMetrics()
+			metricsClient.ResetAllMetrics()
 			reqLogger.Info("Reset all the metrics due to no upgrade config present.")
 			return reconcile.Result{}, nil
 		}

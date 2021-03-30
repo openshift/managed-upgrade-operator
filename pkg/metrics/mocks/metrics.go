@@ -105,16 +105,28 @@ func (mr *MockMetricsMockRecorder) ResetAllMetricNodeDrainFailed() *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResetAllMetricNodeDrainFailed", reflect.TypeOf((*MockMetrics)(nil).ResetAllMetricNodeDrainFailed))
 }
 
-// ResetMetricClusterCheck mocks base method
-func (m *MockMetrics) ResetMetricClusterCheck(arg0 string) {
+// ResetAllMetrics mocks base method
+func (m *MockMetrics) ResetAllMetrics() {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "ResetMetricClusterCheck", arg0)
+	m.ctrl.Call(m, "ResetAllMetrics")
 }
 
-// ResetMetricClusterCheck indicates an expected call of ResetMetricClusterCheck
-func (mr *MockMetricsMockRecorder) ResetMetricClusterCheck(arg0 interface{}) *gomock.Call {
+// ResetAllMetrics indicates an expected call of ResetAllMetrics
+func (mr *MockMetricsMockRecorder) ResetAllMetrics() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResetMetricClusterCheck", reflect.TypeOf((*MockMetrics)(nil).ResetMetricClusterCheck), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResetAllMetrics", reflect.TypeOf((*MockMetrics)(nil).ResetAllMetrics))
+}
+
+// ResetFailureMetrics mocks base method
+func (m *MockMetrics) ResetFailureMetrics() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "ResetFailureMetrics")
+}
+
+// ResetFailureMetrics indicates an expected call of ResetFailureMetrics
+func (mr *MockMetricsMockRecorder) ResetFailureMetrics() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResetFailureMetrics", reflect.TypeOf((*MockMetrics)(nil).ResetFailureMetrics))
 }
 
 // ResetMetricNodeDrainFailed mocks base method
@@ -127,18 +139,6 @@ func (m *MockMetrics) ResetMetricNodeDrainFailed(arg0 string) {
 func (mr *MockMetricsMockRecorder) ResetMetricNodeDrainFailed(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResetMetricNodeDrainFailed", reflect.TypeOf((*MockMetrics)(nil).ResetMetricNodeDrainFailed), arg0)
-}
-
-// ResetMetricScaling mocks base method
-func (m *MockMetrics) ResetMetricScaling(arg0 string) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "ResetMetricScaling", arg0)
-}
-
-// ResetMetricScaling indicates an expected call of ResetMetricScaling
-func (mr *MockMetricsMockRecorder) ResetMetricScaling(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResetMetricScaling", reflect.TypeOf((*MockMetrics)(nil).ResetMetricScaling), arg0)
 }
 
 // ResetMetricUpgradeConfigSynced mocks base method
@@ -175,18 +175,6 @@ func (m *MockMetrics) ResetMetricUpgradeWorkerTimeout(arg0, arg1 string) {
 func (mr *MockMetricsMockRecorder) ResetMetricUpgradeWorkerTimeout(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResetMetricUpgradeWorkerTimeout", reflect.TypeOf((*MockMetrics)(nil).ResetMetricUpgradeWorkerTimeout), arg0, arg1)
-}
-
-// ResetMetrics mocks base method
-func (m *MockMetrics) ResetMetrics() {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "ResetMetrics")
-}
-
-// ResetMetrics indicates an expected call of ResetMetrics
-func (mr *MockMetricsMockRecorder) ResetMetrics() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResetMetrics", reflect.TypeOf((*MockMetrics)(nil).ResetMetrics))
 }
 
 // UpdateMetricClusterCheckFailed mocks base method

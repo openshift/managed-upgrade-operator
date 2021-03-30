@@ -126,7 +126,7 @@ var _ = Describe("UpgradeConfigController", func() {
 				gomock.InOrder(
 					mockEMBuilder.EXPECT().NewManager(gomock.Any()).Return(mockEMClient, nil),
 					mockKubeClient.EXPECT().Get(gomock.Any(), upgradeConfigName, gomock.Any()).SetArg(2, *upgradeConfig).Return(notFound),
-					mockMetricsClient.EXPECT().ResetMetrics(),
+					mockMetricsClient.EXPECT().ResetAllMetrics(),
 				)
 				result, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
 				Expect(err).NotTo(HaveOccurred())

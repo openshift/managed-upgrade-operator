@@ -593,7 +593,7 @@ func (cu osdClusterUpgrader) UpgradeCluster(upgradeConfig *upgradev1alpha1.Upgra
 	if cancelUpgrade {
 
 		// Perform whatever actions are needed in the event of an upgrade failure
-		err := performUpgradeFailure(cu.metrics, cu.notifier, upgradeConfig)
+		err := performUpgradeFailure(cu.client, cu.metrics, cu.scaler, cu.notifier, upgradeConfig, logger)
 
 		// If we couldn't notify of failure - do nothing, return the existing phase, try again next time
 		if err != nil {
@@ -630,10 +630,16 @@ func (cu osdClusterUpgrader) UpgradeCluster(upgradeConfig *upgradev1alpha1.Upgra
 }
 
 // Carry out routines related to moving to an upgrade-failed state
-func performUpgradeFailure(metricsClient metrics.Metrics, nc eventmanager.EventManager, upgradeConfig *upgradev1alpha1.UpgradeConfig) error {
+func performUpgradeFailure(c client.Client, metricsClient metrics.Metrics, s scaler.Scaler, nc eventmanager.EventManager, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) error {
+	// TearDown the extra machineset
+	_, err := s.EnsureScaleDownNodes(c, nil, logger)
+	if err != nil {
+		logger.Error(err, "Failed to scale down the temporary upgrade machine when upgrade failed")
+		return err
+	}
 
 	// Notify of failure
-	err := nc.Notify(notifier.StateFailed)
+	err = nc.Notify(notifier.StateFailed)
 	if err != nil {
 		return err
 	}
@@ -642,8 +648,7 @@ func performUpgradeFailure(metricsClient metrics.Metrics, nc eventmanager.EventM
 	metricsClient.UpdateMetricUpgradeWindowBreached(upgradeConfig.Name)
 
 	// cancel previously triggered metrics
-	metricsClient.ResetMetricScaling(upgradeConfig.Name)
-	metricsClient.ResetMetricClusterCheck(upgradeConfig.Name)
+	metricsClient.ResetFailureMetrics()
 
 	return nil
 }

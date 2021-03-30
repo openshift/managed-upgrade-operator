@@ -470,6 +470,7 @@ var _ = Describe("ClusterUpgrader", func() {
 				cvClient:    mockCVClient,
 				notifier:    mockEMClient,
 				cfg:         config,
+				scaler:      mockScalerClient,
 			}
 			upgradeConfig.Status.History = []upgradev1alpha1.UpgradeHistory{
 				{
@@ -573,10 +574,10 @@ var _ = Describe("ClusterUpgrader", func() {
 				It("flags the upgrade as failed", func() {
 					gomock.InOrder(
 						mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
+						mockScalerClient.EXPECT().EnsureScaleDownNodes(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil),
 						mockEMClient.EXPECT().Notify(notifier.StateFailed),
 						mockMetricsClient.EXPECT().UpdateMetricUpgradeWindowBreached(upgradeConfig.Name),
-						mockMetricsClient.EXPECT().ResetMetricScaling(upgradeConfig.Name),
-						mockMetricsClient.EXPECT().ResetMetricClusterCheck(upgradeConfig.Name),
+						mockMetricsClient.EXPECT().ResetFailureMetrics(),
 					)
 					phase, condition, err := cu.UpgradeCluster(upgradeConfig, logger)
 					Expect(phase).To(Equal(upgradev1alpha1.UpgradePhaseFailed))
