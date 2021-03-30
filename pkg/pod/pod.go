@@ -35,11 +35,11 @@ type DeleteResult struct {
 	NumMarkedForDeletion int
 }
 
-func DeletePods(c client.Client, pl *corev1.PodList, options ...client.DeleteOption) (*DeleteResult, error) {
+func DeletePods(c client.Client, pl *corev1.PodList, ignoreAlreadyDeleting bool, options ...client.DeleteOption) (*DeleteResult, error) {
 	me := &multierror.Error{}
 	var podsMarkedForDeletion []string
 	for _, p := range pl.Items {
-		if p.DeletionTimestamp == nil {
+		if !ignoreAlreadyDeleting || p.DeletionTimestamp == nil {
 			err := c.Delete(context.TODO(), &p, options...)
 			if err != nil {
 				me = multierror.Append(err, me)

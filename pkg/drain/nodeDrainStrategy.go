@@ -18,6 +18,7 @@ var (
 	pdbPodDeleteName               = "PDB-DELETE"
 	defaultPodFinalizerRemovalName = "DEFAULT-FINALIZER"
 	pdbPodFinalizerRemovalName     = "PDB-FINALIZER"
+	stuckTerminatingPodName        = "POD-STUCK-TERMINATING"
 )
 
 func NewNodeDrainStrategy(c client.Client, cfg *NodeDrain, ts []TimedDrainStrategy) (NodeDrainStrategy, error) {

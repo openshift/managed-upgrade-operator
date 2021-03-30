@@ -79,6 +79,10 @@ func (dsb *drainStrategyBuilder) NewNodeDrainStrategy(c client.Client, uc *upgra
 			client:  c,
 			filters: append(defaultOsdPodPredicates, isNotPdbPod),
 		}),
+		newTimedStrategy(stuckTerminatingPodName, "Pod stuck terminating removal", defaultDuration, &stuckTerminatingStrategy{
+			client:  c,
+			filters: append(defaultOsdPodPredicates, isNotPdbPod),
+		}),
 		newTimedStrategy(pdbPodDeleteName, "PDB pod deletion", pdbDuration, &podDeletionStrategy{
 			client:  c,
 			filters: append(defaultOsdPodPredicates, isPdbPod),

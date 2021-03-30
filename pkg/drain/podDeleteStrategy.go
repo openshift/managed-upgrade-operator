@@ -21,7 +21,7 @@ func (pds *podDeletionStrategy) Execute(node *corev1.Node) (*DrainStrategyResult
 	}
 
 	gp := int64(0)
-	res, err := pod.DeletePods(pds.client, podsToDelete, &client.DeleteOptions{GracePeriodSeconds: &gp})
+	res, err := pod.DeletePods(pds.client, podsToDelete, true, &client.DeleteOptions{GracePeriodSeconds: &gp})
 	if err != nil {
 		return nil, err
 	}
