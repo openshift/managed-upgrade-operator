@@ -1,4 +1,4 @@
-package osd_cluster_upgrader
+package osd
 
 import (
 	"testing"
