@@ -422,5 +422,28 @@ var _ = Describe("OSD Drain Strategy", func() {
 				Expect(len(filteredPods.Items)).To(Equal(0))
 			})
 		})
+		Context("Pods terminating", func() {
+			It("should return pods that are terminating", func() {
+				podList = &corev1.PodList{
+					Items: []corev1.Pod{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								DeletionTimestamp: &metav1.Time{Time: time.Now()},
+							},
+						},
+					},
+				}
+				filteredPods := pod.FilterPods(podList, isTerminating)
+				Expect(len(filteredPods.Items)).To(Equal(1))
+			})
+			It("should not return pods that are not terminating", func() {
+				podList = &corev1.PodList{
+					Items: []corev1.Pod{{}},
+				}
+				filteredPods := pod.FilterPods(podList, isTerminating)
+				Expect(len(filteredPods.Items)).To(Equal(0))
+			})
+		})
+
 	})
 })

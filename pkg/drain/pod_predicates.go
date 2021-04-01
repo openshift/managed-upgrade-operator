@@ -60,3 +60,12 @@ func containsMatchLabel(p corev1.Pod, pdbList *policyv1beta1.PodDisruptionBudget
 func hasFinalizers(p corev1.Pod) bool {
 	return len(p.ObjectMeta.GetFinalizers()) > 0
 }
+
+func hasNoFinalizers(p corev1.Pod) bool {
+	return len(p.ObjectMeta.GetFinalizers()) == 0
+}
+
+func isTerminating(p corev1.Pod) bool {
+	return p.DeletionTimestamp != nil
+}
+
