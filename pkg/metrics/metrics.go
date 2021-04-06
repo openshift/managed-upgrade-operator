@@ -44,10 +44,8 @@ type Metrics interface {
 	UpdateMetricValidationSucceeded(string)
 	UpdateMetricClusterCheckFailed(string)
 	UpdateMetricClusterCheckSucceeded(string)
-	ResetMetricClusterCheck(string)
 	UpdateMetricScalingFailed(string)
 	UpdateMetricScalingSucceeded(string)
-	ResetMetricScaling(string)
 	UpdateMetricClusterVerificationFailed(string)
 	UpdateMetricClusterVerificationSucceeded(string)
 	UpdateMetricUpgradeWindowNotBreached(string)
@@ -60,13 +58,14 @@ type Metrics interface {
 	ResetMetricUpgradeWorkerTimeout(string, string)
 	UpdateMetricNodeDrainFailed(string)
 	ResetMetricNodeDrainFailed(string)
+	ResetAllMetricNodeDrainFailed()
+	ResetFailureMetrics()
+	ResetAllMetrics()
 	UpdateMetricNotificationEventSent(string, string, string)
 	IsAlertFiring(alert string, checkedNS, ignoredNS []string) (bool, error)
 	IsMetricNotificationEventSentSet(upgradeConfigName string, event string, version string) (bool, error)
 	IsClusterVersionAtVersion(version string) (bool, error)
 	Query(query string) (*AlertResponse, error)
-	ResetMetrics()
-	ResetAllMetricNodeDrainFailed()
 }
 
 //go:generate mockgen -destination=mocks/metrics_builder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/metrics MetricsBuilder
@@ -214,12 +213,6 @@ func (c *Counter) UpdateMetricClusterCheckSucceeded(upgradeConfigName string) {
 		float64(0))
 }
 
-func (c *Counter) ResetMetricClusterCheck(upgradeConfigName string) {
-	metricClusterCheckFailed.With(prometheus.Labels{
-		nameLabel: upgradeConfigName}).Set(
-		float64(0))
-}
-
 func (c *Counter) UpdateMetricScalingFailed(upgradeConfigName string) {
 	metricScalingFailed.With(prometheus.Labels{
 		nameLabel: upgradeConfigName}).Set(
@@ -227,12 +220,6 @@ func (c *Counter) UpdateMetricScalingFailed(upgradeConfigName string) {
 }
 
 func (c *Counter) UpdateMetricScalingSucceeded(upgradeConfigName string) {
-	metricScalingFailed.With(prometheus.Labels{
-		nameLabel: upgradeConfigName}).Set(
-		float64(0))
-}
-
-func (c *Counter) ResetMetricScaling(upgradeConfigName string) {
 	metricScalingFailed.With(prometheus.Labels{
 		nameLabel: upgradeConfigName}).Set(
 		float64(0))
@@ -286,6 +273,10 @@ func (c *Counter) ResetMetricNodeDrainFailed(nodeName string) {
 		float64(0))
 }
 
+func (c *Counter) ResetAllMetricNodeDrainFailed() {
+	metricNodeDrainFailed.Reset()
+}
+
 func (c *Counter) UpdateMetricClusterVerificationFailed(upgradeConfigName string) {
 	metricClusterVerificationFailed.With(prometheus.Labels{
 		nameLabel: upgradeConfigName}).Set(
@@ -316,6 +307,29 @@ func (c *Counter) UpdateMetricNotificationEventSent(upgradeConfigName string, ev
 		eventLabel:   event,
 		nameLabel:    upgradeConfigName}).Set(
 		float64(1))
+}
+
+// ResetAllMetrics will reset all the metrics
+func (c *Counter) ResetAllMetrics() {
+	for _, m := range metricsList {
+		m.Reset()
+	}
+}
+
+// ResetFailureMetrics will reset the metric which indicates the upgrade failed
+func (c *Counter) ResetFailureMetrics() {
+	failureMetricsList := []*prometheus.GaugeVec{
+		metricValidationFailed,
+		metricClusterCheckFailed,
+		metricScalingFailed,
+		metricClusterVerificationFailed,
+		metricUpgradeControlPlaneTimeout,
+		metricUpgradeWorkerTimeout,
+		metricNodeDrainFailed,
+	}
+	for _, m := range failureMetricsList {
+		m.Reset()
+	}
 }
 
 func (c *Counter) IsMetricNotificationEventSentSet(upgradeConfigName string, event string, version string) (bool, error) {
@@ -438,14 +452,4 @@ type AlertData struct {
 type AlertResult struct {
 	Metric map[string]string `json:"metric"`
 	Value  []interface{}     `json:"value"`
-}
-
-func (c *Counter) ResetMetrics() {
-	for _, m := range metricsList {
-		m.Reset()
-	}
-}
-
-func (c *Counter) ResetAllMetricNodeDrainFailed() {
-	metricNodeDrainFailed.Reset()
 }
