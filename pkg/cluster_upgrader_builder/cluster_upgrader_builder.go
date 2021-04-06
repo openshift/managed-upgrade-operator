@@ -1,14 +1,14 @@
 package cluster_upgrader_builder
 
 import (
+	"github.com/go-logr/logr"
 	"github.com/openshift/managed-upgrade-operator/pkg/eventmanager"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"github.com/go-logr/logr"
 
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 	"github.com/openshift/managed-upgrade-operator/pkg/configmanager"
 	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
-	"github.com/openshift/managed-upgrade-operator/pkg/osd_cluster_upgrader"
+	"github.com/openshift/managed-upgrade-operator/pkg/upgraders/osd"
 )
 
 // Interface describing the functions of a cluster upgrader.
@@ -31,13 +31,13 @@ type clusterUpgraderBuilder struct{}
 func (cub *clusterUpgraderBuilder) NewClient(c client.Client, cfm configmanager.ConfigManager, mc metrics.Metrics, nc eventmanager.EventManager, upgradeType upgradev1alpha1.UpgradeType) (ClusterUpgrader, error) {
 	switch upgradeType {
 	case upgradev1alpha1.OSD:
-		cu, err := osd_cluster_upgrader.NewClient(c, cfm, mc, nc)
+		cu, err := osd.NewClient(c, cfm, mc, nc)
 		if err != nil {
 			return nil, err
 		}
 		return cu, nil
 	default:
-		cu, err := osd_cluster_upgrader.NewClient(c, cfm, mc, nc)
+		cu, err := osd.NewClient(c, cfm, mc, nc)
 		if err != nil {
 			return nil, err
 		}
