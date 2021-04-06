@@ -11,15 +11,15 @@ import (
 )
 
 const (
-	UPGRADE_PRECHECK_FAILED_DESC       = "Cluster upgrade to version %s failed as the cluster did not pass its pre-upgrade verification checks."
-	UPGRADE_PREHEALTHCHECK_FAILED_DESC = "Cluster upgrade to version %s failed on the Pre-Health Check step. Health alerts are firing in the cluster which could impact the upgrade's operation, so the upgrade did not proceed."
-	UPGRADE_EXTDEPCHECK_FAILED_DESC    = "Cluster upgrade to version %s failed on the External Dependency Availability Check step. A dependency of the upgrade was deemed un-available, so the upgrade did not proceed."
-	UPGRADE_SCALE_FAILED_DESC          = "Cluster upgrade to version %s failed on the Scale-Up Worker Node step. A temporary additional worker node was unable to be created to temporarily house workloads, so the upgrade did not proceed."
+	UPGRADE_PRECHECK_FAILED_DESC       = "Cluster upgrade to version %s was cancelled as the cluster did not pass its pre-upgrade verification checks. Automated upgrades will be retried on their next scheduling cycle. If you have manually scheduled an upgrade instead, it must now be rescheduled."
+	UPGRADE_PREHEALTHCHECK_FAILED_DESC = "Cluster upgrade to version %s was cancelled during the Pre-Health Check step. Health alerts are firing in the cluster which could impact the upgrade's operation, so the upgrade did not proceed. Automated upgrades will be retried on their next scheduling cycle. If you have manually scheduled an upgrade instead, it must now be rescheduled."
+	UPGRADE_EXTDEPCHECK_FAILED_DESC    = "Cluster upgrade to version %s was cancelled during the External Dependency Availability Check step. A required external dependency of the upgrade was unavailable, so the upgrade did not proceed. Automated upgrades will be retried on their next scheduling cycle. If you have manually scheduled an upgrade instead, it must now be rescheduled."
+	UPGRADE_SCALE_FAILED_DESC          = "Cluster upgrade to version %s was cancelled during the Scale-Up Worker Node step. A temporary additional worker node was unable to be created to temporarily house workloads, so the upgrade did not proceed. Automated upgrades will be retried on their next scheduling cycle. If you have manually scheduled an upgrade instead, it must now be rescheduled."
 
-	UPGRADE_DEFAULT_DELAY_DESC        = "Cluster upgrade to version %s is currently delayed"
-	UPGRADE_PREHEALTHCHECK_DELAY_DESC = "Cluster upgrade to version %s is currently delayed as health alerts are firing in the cluster which could impact the upgrade's operation."
-	UPGRADE_EXTDEPCHECK_DELAY_DESC    = "Cluster upgrade to version %s is currently delayed as an external dependency of the upgrade is currently un-available."
-	UPGRADE_SCALE_DELAY_DESC          = "Cluster upgrade to version %s is currently delayed attempting to scale up an additional worker node."
+	UPGRADE_DEFAULT_DELAY_DESC        = "Cluster upgrade to version %s is experiencing a delay whilst it performs necessary pre-upgrade procedures. The upgrade will continue to retry. This is an informational notification and no action is required."
+	UPGRADE_PREHEALTHCHECK_DELAY_DESC = "Cluster upgrade to version %s is experiencing a delay as health alerts are firing in the cluster which could impact the upgrade's operation. The upgrade will continue to retry. This is an informational notification and no action is required by you."
+	UPGRADE_EXTDEPCHECK_DELAY_DESC    = "Cluster upgrade to version %s is experiencing a delay as an external dependency of the upgrade is currently unavailable. The upgrade will continue to retry. This is an informational notification and no action is required by you."
+	UPGRADE_SCALE_DELAY_DESC          = "Cluster upgrade to version %s is experiencing a delay attempting to scale up an additional worker node. The upgrade will continue to retry. This is an informational notification and no action is required by you."
 )
 
 //go:generate mockgen -destination=mocks/eventmanager.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/eventmanager EventManager
