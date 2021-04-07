@@ -2,8 +2,7 @@ package eventmanager
 
 import (
 	"fmt"
-	"time"
-
+	"github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 	"github.com/openshift/managed-upgrade-operator/pkg/configmanager"
 	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
 	"github.com/openshift/managed-upgrade-operator/pkg/notifier"
@@ -12,7 +11,15 @@ import (
 )
 
 const (
-	REFRESH_INTERVAL = 5 * time.Minute
+	UPGRADE_PRECHECK_FAILED_DESC       = "Cluster upgrade to version %s was cancelled as the cluster did not pass its pre-upgrade verification checks. Automated upgrades will be retried on their next scheduling cycle. If you have manually scheduled an upgrade instead, it must now be rescheduled."
+	UPGRADE_PREHEALTHCHECK_FAILED_DESC = "Cluster upgrade to version %s was cancelled during the Pre-Health Check step. Health alerts are firing in the cluster which could impact the upgrade's operation, so the upgrade did not proceed. Automated upgrades will be retried on their next scheduling cycle. If you have manually scheduled an upgrade instead, it must now be rescheduled."
+	UPGRADE_EXTDEPCHECK_FAILED_DESC    = "Cluster upgrade to version %s was cancelled during the External Dependency Availability Check step. A required external dependency of the upgrade was unavailable, so the upgrade did not proceed. Automated upgrades will be retried on their next scheduling cycle. If you have manually scheduled an upgrade instead, it must now be rescheduled."
+	UPGRADE_SCALE_FAILED_DESC          = "Cluster upgrade to version %s was cancelled during the Scale-Up Worker Node step. A temporary additional worker node was unable to be created to temporarily house workloads, so the upgrade did not proceed. Automated upgrades will be retried on their next scheduling cycle. If you have manually scheduled an upgrade instead, it must now be rescheduled."
+
+	UPGRADE_DEFAULT_DELAY_DESC        = "Cluster upgrade to version %s is experiencing a delay whilst it performs necessary pre-upgrade procedures. The upgrade will continue to retry. This is an informational notification and no action is required."
+	UPGRADE_PREHEALTHCHECK_DELAY_DESC = "Cluster upgrade to version %s is experiencing a delay as health alerts are firing in the cluster which could impact the upgrade's operation. The upgrade will continue to retry. This is an informational notification and no action is required by you."
+	UPGRADE_EXTDEPCHECK_DELAY_DESC    = "Cluster upgrade to version %s is experiencing a delay as an external dependency of the upgrade is currently unavailable. The upgrade will continue to retry. This is an informational notification and no action is required by you."
+	UPGRADE_SCALE_DELAY_DESC          = "Cluster upgrade to version %s is experiencing a delay attempting to scale up an additional worker node. The upgrade will continue to retry. This is an informational notification and no action is required by you."
 )
 
 //go:generate mockgen -destination=mocks/eventmanager.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/eventmanager EventManager
@@ -90,11 +97,11 @@ func (s *eventManager) Notify(state notifier.NotifyState) error {
 	case notifier.StateStarted:
 		description = fmt.Sprintf("Cluster is currently being upgraded to version %s", uc.Spec.Desired.Version)
 	case notifier.StateDelayed:
-		description = fmt.Sprintf("Cluster upgrade to version %s is currently delayed", uc.Spec.Desired.Version)
+		description = createDelayedDescription(uc)
 	case notifier.StateCompleted:
 		description = fmt.Sprintf("Cluster has been successfully upgraded to version %s", uc.Spec.Desired.Version)
 	case notifier.StateFailed:
-		description = "Cluster did not pass its pre-upgrade verification checks"
+		description = createFailureDescription(uc)
 	default:
 		return fmt.Errorf("state %v not yet implemented", state)
 	}
@@ -107,4 +114,92 @@ func (s *eventManager) Notify(state notifier.NotifyState) error {
 	s.metrics.UpdateMetricNotificationEventSent(uc.Name, string(state), uc.Spec.Desired.Version)
 
 	return nil
+}
+
+// Generates a Failure notification description based on the UpgradeConfig's last failed state
+func createFailureDescription(uc *v1alpha1.UpgradeConfig) string {
+	// Default failure message
+	var description = fmt.Sprintf(UPGRADE_PRECHECK_FAILED_DESC, uc.Spec.Desired.Version)
+
+	history := uc.Status.History.GetHistory(uc.Spec.Desired.Version)
+	// Handle a missing history
+	if history == nil {
+		return description
+	}
+	// Handle no conditions available
+	if len(history.Conditions) == 0 {
+		return description
+	}
+
+	// Find the condition which will describe what step the upgrade got to
+	var failedCondition v1alpha1.UpgradeCondition
+	foundFailedCondition := false
+	for _, condition := range history.Conditions {
+		// Find the first incomplete condition (should only be one)
+		if condition.IsFalse() {
+			failedCondition = condition
+			foundFailedCondition = true
+			break
+		}
+	}
+
+	// No incomplete condition? Just return default
+	if !foundFailedCondition {
+		return description
+	}
+
+	switch failedCondition.Type {
+	case v1alpha1.UpgradePreHealthCheck:
+		description = fmt.Sprintf(UPGRADE_PREHEALTHCHECK_FAILED_DESC, uc.Spec.Desired.Version)
+	case v1alpha1.ExtDepAvailabilityCheck:
+		description = fmt.Sprintf(UPGRADE_EXTDEPCHECK_FAILED_DESC, uc.Spec.Desired.Version)
+	case v1alpha1.UpgradeScaleUpExtraNodes:
+		description = fmt.Sprintf(UPGRADE_SCALE_FAILED_DESC, uc.Spec.Desired.Version)
+	}
+
+	return description
+}
+
+// Generates a Delayed notification description based on the UpgradeConfig's last state
+func createDelayedDescription(uc *v1alpha1.UpgradeConfig) string {
+	// Default delayed message
+	var description = fmt.Sprintf(UPGRADE_DEFAULT_DELAY_DESC, uc.Spec.Desired.Version)
+
+	history := uc.Status.History.GetHistory(uc.Spec.Desired.Version)
+	// Handle a missing history
+	if history == nil {
+		return description
+	}
+	// Handle no conditions available
+	if len(history.Conditions) == 0 {
+		return description
+	}
+
+	// Find the condition which will describe what step the upgrade got to
+	var delayedCondition v1alpha1.UpgradeCondition
+	foundDelayedCondition := false
+	for _, condition := range history.Conditions {
+		// Find the first incomplete condition (should only be one)
+		if condition.IsFalse() {
+			delayedCondition = condition
+			foundDelayedCondition = true
+			break
+		}
+	}
+
+	// No incomplete condition? Just return default
+	if !foundDelayedCondition {
+		return description
+	}
+
+	switch delayedCondition.Type {
+	case v1alpha1.UpgradePreHealthCheck:
+		description = fmt.Sprintf(UPGRADE_PREHEALTHCHECK_DELAY_DESC, uc.Spec.Desired.Version)
+	case v1alpha1.ExtDepAvailabilityCheck:
+		description = fmt.Sprintf(UPGRADE_EXTDEPCHECK_DELAY_DESC, uc.Spec.Desired.Version)
+	case v1alpha1.UpgradeScaleUpExtraNodes:
+		description = fmt.Sprintf(UPGRADE_SCALE_DELAY_DESC, uc.Spec.Desired.Version)
+	}
+
+	return description
 }
