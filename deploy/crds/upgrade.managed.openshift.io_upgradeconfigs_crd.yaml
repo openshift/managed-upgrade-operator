@@ -102,8 +102,28 @@ spec:
         status:
           description: UpgradeConfigStatus defines the observed state of UpgradeConfig
           properties:
+            clusterVerificationFailed:
+              description: A boolean advising if the cluster verification has failed.
+              type: boolean
+            configInvalid:
+              description: A boolean advising if the UpgradeConfig is valid.
+              type: boolean
+            controlPlaneTimeout:
+              description: A boolean advising if the clusters control plane upgrade has timed out.
+              type: boolean
+            healthCheck:
+              description: A boolean advising if the pre upgrade health check failed.
+              properties:
+                failed:
+                  type: boolean
+                state:
+                  enum:
+                    - pre_upgrade
+                    - post_upgrade
+                  type: string
+              type: object
             history:
-              description: This record history of every upgrade
+              description: A recorded history of every upgrade.
               items:
                 description: UpgradeHistory record history of upgrade
                 properties:
@@ -173,6 +193,44 @@ spec:
                   - phase
                 type: object
               type: array
+            nodeDrain:
+              description: A boolean advising if the UpgradeConfig provider sync failed.
+              properties:
+                failed:
+                  type: boolean
+                name:
+                  type: string
+              type: object
+            notificationEventSent:
+              description: A boolean advising if the notification event has been sent successfully.
+              properties:
+                failed:
+                  type: boolean
+                sent:
+                  type: boolean
+                state:
+                  type: string
+              type: object
+            providerSyncFailed:
+              description: A boolean advising if the UpgradeConfig provider sync failed.
+              type: boolean
+            scalingFailed:
+              description: A boolean advising if the upgrade scaling has failed.
+              properties:
+                dimension:
+                  enum:
+                    - up
+                    - down
+                  type: string
+                failed:
+                  type: boolean
+              type: object
+            windowBreached:
+              description: A boolean advising if the UpgradeConfig window has been breached.
+              type: boolean
+            workerTimeout:
+              description: A boolean advising if the clusters control plane upgrade has timed out.
+              type: boolean
           type: object
   version: v1alpha1
   versions:

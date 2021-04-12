@@ -129,7 +129,6 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
-			metricsClient.ResetAllMetrics()
 			reqLogger.Info("Reset all the metrics due to no upgrade config present.")
 			return reconcile.Result{}, nil
 		}
@@ -173,12 +172,23 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 			reqLogger.Info("An error occurred while validating UpgradeConfig")
 			return reconcile.Result{}, err
 		}
+
 		if !validatorResult.IsValid {
 			reqLogger.Info(validatorResult.Message)
-			metricsClient.UpdateMetricValidationFailed(instance.Name)
+			instance.Status.ConfigInvalid = true
+			err := r.client.Status().Update(context.TODO(), instance)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
 			return reconcile.Result{}, nil
 		}
-		metricsClient.UpdateMetricValidationSucceeded(instance.Name)
+
+		instance.Status.ConfigInvalid = false
+		err = r.client.Status().Update(context.TODO(), instance)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+
 		if !validatorResult.IsAvailableUpdate {
 			reqLogger.Info(validatorResult.Message)
 			return reconcile.Result{}, nil
@@ -261,6 +271,13 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 		reqLogger.Info("Cluster is already upgraded")
 		return reconcile.Result{}, nil
 	case upgradev1alpha1.UpgradePhaseFailed:
+		instance.Status.WindowBreached = true
+		instance.Status.Scaling.Failed = false
+		instance.Status.Scaling.Dimension = ""
+		instance.Status.ClusterVerificationFailed = false
+		if err = r.client.Status().Update(context.TODO(), instance); err != nil {
+			return reconcile.Result{}, err
+		}
 		reqLogger.Info("Cluster has failed to upgrade")
 		return reconcile.Result{}, nil
 	default:

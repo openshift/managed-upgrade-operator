@@ -28,10 +28,10 @@ import (
 	routev1 "github.com/openshift/api/route/v1"
 	machineapi "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
 	machineconfigapi "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
-	muocfg "github.com/openshift/managed-upgrade-operator/config"
+	muoconfig "github.com/openshift/managed-upgrade-operator/config"
 	"github.com/openshift/managed-upgrade-operator/pkg/apis"
+	"github.com/openshift/managed-upgrade-operator/pkg/collector"
 	"github.com/openshift/managed-upgrade-operator/pkg/controller"
-	"github.com/openshift/managed-upgrade-operator/pkg/metrics/collector"
 	"github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager"
 	"github.com/openshift/managed-upgrade-operator/util"
 	"github.com/openshift/managed-upgrade-operator/version"
@@ -42,6 +42,8 @@ import (
 	"github.com/operator-framework/operator-sdk/pkg/log/zap"
 	"github.com/operator-framework/operator-sdk/pkg/metrics"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
+	"github.com/prometheus/client_golang/prometheus"
+
 	"github.com/spf13/pflag"
 )
 
@@ -106,7 +108,7 @@ func main() {
 	}
 
 	// This set the sync period to 5m
-	syncPeriod := time.Duration(muocfg.SyncPeriodDefault)
+	syncPeriod := time.Duration(muoconfig.SyncPeriodDefault)
 
 	// Set default manager options
 	options := manager.Options{
@@ -175,6 +177,15 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Setup operator specific metrics
+	muoMetrics := prometheus.NewRegistry()
+	muoMetrics.MustRegister(
+		prometheus.NewGoCollector(),
+		prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{
+			Namespace: muoconfig.OperatorAcronym,
+		}),
+	)
+
 	// Add the custom Metrics Service
 	metricsClient, err := client.New(cfg, client.Options{})
 	if err != nil {
@@ -197,7 +208,8 @@ func main() {
 		WithPath(customMetricsPath).
 		WithCollector(uCollector).
 		WithServiceMonitor().
-		WithServiceLabel(map[string]string{"name": muocfg.OperatorName}).
+		WithServiceLabel(map[string]string{"name": muoconfig.OperatorName}).
+		WithRegistry(muoMetrics).
 		GetConfig()
 
 	if err = opmetrics.ConfigureMetrics(context.TODO(), *customMetrics); err != nil {

@@ -36,9 +36,74 @@ type UpgradeConfigSpec struct {
 // UpgradeConfigStatus defines the observed state of UpgradeConfig
 type UpgradeConfigStatus struct {
 
-	// This record history of every upgrade
+	// A recorded history of every upgrade.
 	// +kubebuilder:validation:Optional
 	History UpgradeHistories `json:"history,omitempty"`
+
+	// A boolean advising if the UpgradeConfig is valid.
+	// +kubebuilder:validation:Optional
+	ConfigInvalid bool `json:"configInvalid,omitempty"`
+
+	// A boolean advising if the pre upgrade health check failed.
+	// +kubebuilder:validation:Optional
+	HealthCheck HealthCheck `json:"healthCheck,omitempty"`
+
+	// A boolean advising if the upgrade scaling has failed.
+	// +kubebuilder:validation:Optional
+	Scaling Scaling `json:"scalingFailed,omitempty"`
+
+	// A boolean advising if the cluster verification has failed.
+	// +kubebuilder:validation:Optional
+	ClusterVerificationFailed bool `json:"clusterVerificationFailed,omitempty"`
+
+	// A boolean advising if the clusters control plane upgrade has timed out.
+	// +kubebuilder:validation:Optional
+	ControlPlaneTimeout bool `json:"controlPlaneTimeout"`
+
+	// A boolean advising if the clusters control plane upgrade has timed out.
+	// +kubebuilder:validation:Optional
+	WorkerTimeout bool `json:"workerTimeout"`
+
+	// A boolean advising if the UpgradeConfig provider sync failed.
+	// +kubebuilder:validation:Optional
+	ProviderSyncFailed bool `json:"providerSyncFailed"`
+
+	// A boolean advising if the UpgradeConfig provider sync failed.
+	// +kubebuilder:validation:Optional
+	NodeDrain Drain `json:"nodeDrain"`
+
+	// A boolean advising if the UpgradeConfig window has been breached.
+	// +kubebuilder:validation:Optional
+	WindowBreached bool `json:"windowBreached"`
+
+	// A boolean advising if the notification event has been sent successfully.
+	// +kubebuilder:validation:Optional
+	NotificationEvent Notification `json:"notificationEventSent"`
+}
+
+type Scaling struct {
+	Failed bool `json:"failed,omitempty"`
+	// +kubebuilder:validation:Enum={"up","down"}
+	Dimension string `json:"dimension,omitempty"`
+}
+
+type HealthCheck struct {
+	Failed bool `json:"failed,omitempty"`
+	// +kubebuilder:validation:Enum={"pre_upgrade","post_upgrade"}
+	State string `json:"state,omitempty"`
+}
+
+// NotificationEvent provides a boolean of notification success for a given event state.
+type Notification struct {
+	Failed bool   `json:"failed,omitempty"`
+	Sent   bool   `json:"sent,omitempty"`
+	State  string `json:"state,omitempty"`
+}
+
+// Drain provides a boolean of a failed drain with a node name.
+type Drain struct {
+	Failed bool   `json:"failed,omitempty"`
+	Name   string `json:"name,omitempty"`
 }
 
 // UpgradeHistories is a slice of UpgradeHistory

@@ -75,25 +75,28 @@ var _ = Describe("OCM Notifier", func() {
 			uc.Spec.Desired.Version = TEST_UPGRADE_VERSION
 			uc.Status.History[0].Version = TEST_UPGRADE_VERSION
 			uc.Spec.UpgradeAt = TEST_UPGRADE_TIME
+			uc.Status.NotificationEvent.Failed = false
+			uc.Status.NotificationEvent.Sent = true
+			uc.Status.NotificationEvent.State = string(testState)
 		})
 
 		Context("when a notification has already been sent", func() {
 			It("does no action", func() {
 				gomock.InOrder(
 					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
-					mockMetricsClient.EXPECT().IsMetricNotificationEventSentSet(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION).Return(true, nil),
 				)
 				err := manager.Notify(testState)
 				Expect(err).To(BeNil())
 			})
 		})
 		Context("when a notification has not been sent", func() {
+			var notificationNotSentUC upgradev1alpha1.UpgradeConfig
+			notificationNotSentUC = uc
+			notificationNotSentUC.Status.NotificationEvent.Sent = false
 			It("sends a correct notification", func() {
 				gomock.InOrder(
-					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
-					mockMetricsClient.EXPECT().IsMetricNotificationEventSentSet(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION).Return(false, nil),
+					mockUpgradeConfigManager.EXPECT().Get().Return(&notificationNotSentUC, nil),
 					mockNotifier.EXPECT().NotifyState(testState, gomock.Any()),
-					mockMetricsClient.EXPECT().UpdateMetricNotificationEventSent(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION),
 				)
 				err := manager.Notify(testState)
 				Expect(err).To(BeNil())
@@ -101,10 +104,13 @@ var _ = Describe("OCM Notifier", func() {
 		})
 		Context("when a notification can't be sent", func() {
 			var fakeError = fmt.Errorf("fake error")
+			var notificationFailedUC upgradev1alpha1.UpgradeConfig
+			notifcationFailedUC := uc
+			notifcationFailedUC.Status.NotificationEvent.Failed = true
+			notifcationFailedUC.Status.NotificationEvent.State = string(testState)
 			It("returns an error", func() {
 				gomock.InOrder(
-					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
-					mockMetricsClient.EXPECT().IsMetricNotificationEventSentSet(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION).Return(false, nil),
+					mockUpgradeConfigManager.EXPECT().Get().Return(&notificationFailedUC, nil),
 					mockNotifier.EXPECT().NotifyState(testState, gomock.Any()).Return(fakeError),
 				)
 				err := manager.Notify(testState)

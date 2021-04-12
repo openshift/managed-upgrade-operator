@@ -76,11 +76,7 @@ func (s *eventManager) Notify(state notifier.NotifyState) error {
 	}
 
 	// Check if a notification for it has been sent successfully - if so, nothing to do
-	isNotified, err := s.metrics.IsMetricNotificationEventSentSet(uc.Name, string(state), uc.Spec.Desired.Version)
-	if err != nil {
-		return fmt.Errorf("can't check cluster metric NotificationSent: %v", err)
-	}
-	if isNotified {
+	if uc.Status.NotificationEvent.State == string(state) && uc.Status.NotificationEvent.Sent == true {
 		return nil
 	}
 
@@ -104,7 +100,6 @@ func (s *eventManager) Notify(state notifier.NotifyState) error {
 	if err != nil {
 		return fmt.Errorf("can't send notification '%s': %v", state, err)
 	}
-	s.metrics.UpdateMetricNotificationEventSent(uc.Name, string(state), uc.Spec.Desired.Version)
 
 	return nil
 }

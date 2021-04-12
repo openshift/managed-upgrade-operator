@@ -52,6 +52,7 @@ var _ = Describe("ClusterUpgrader", func() {
 		mockDrainStrategyBuilder *mockDrain.MockNodeDrainStrategyBuilder
 		mockEMClient             *emMocks.MockEventManager
 		mockAC                   *acMocks.MockAvailabilityChecker
+		mockUpdater              *mocks.MockStatusWriter
 		// upgradeconfig to be used during tests
 		upgradeConfigName types.NamespacedName
 		upgradeConfig     *upgradev1alpha1.UpgradeConfig
@@ -75,6 +76,7 @@ var _ = Describe("ClusterUpgrader", func() {
 		mockDrainStrategyBuilder = mockDrain.NewMockNodeDrainStrategyBuilder(mockCtrl)
 		mockEMClient = emMocks.NewMockEventManager(mockCtrl)
 		mockAC = acMocks.NewMockAvailabilityChecker(mockCtrl)
+		mockUpdater = mocks.NewMockStatusWriter(mockCtrl)
 		logger = logf.Log.WithName("cluster upgrader test logger")
 		stepCounter = make(map[upgradev1alpha1.UpgradeConditionType]int)
 		config = &osdUpgradeConfig{
@@ -127,7 +129,8 @@ var _ = Describe("ClusterUpgrader", func() {
 				gomock.InOrder(
 					mockCVClient.EXPECT().GetClusterVersion().Return(clusterVersion, nil),
 					mockCVClient.EXPECT().HasUpgradeCompleted(gomock.Any(), gomock.Any()).Return(true),
-					mockMetricsClient.EXPECT().ResetMetricUpgradeControlPlaneTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version),
+					mockKubeClient.EXPECT().Status().Return(mockUpdater),
+					mockUpdater.EXPECT().Update(gomock.Any(), upgradeConfig),
 				)
 				result, err := ControlPlaneUpgraded(mockKubeClient, config, mockScalerClient, mockDrainStrategyBuilder, mockMetricsClient, mockMaintClient, mockCVClient, mockEMClient, upgradeConfig, mockMachineryClient, []ac.AvailabilityChecker{mockAC}, logger)
 				Expect(err).NotTo(HaveOccurred())
@@ -137,6 +140,7 @@ var _ = Describe("ClusterUpgrader", func() {
 
 		Context("When the control plane hasn't upgraded within the window", func() {
 			var clusterVersion *configv1.ClusterVersion
+			var timeoutUC *upgradev1alpha1.UpgradeConfig
 			upgradeStartTime := time.Now().Add(-300 * time.Minute)
 			BeforeEach(func() {
 				clusterVersion = &configv1.ClusterVersion{
@@ -146,12 +150,15 @@ var _ = Describe("ClusterUpgrader", func() {
 						},
 					},
 				}
+				timeoutUC = upgradeConfig
+				timeoutUC.Status.ControlPlaneTimeout = true
 			})
-			It("Sets the appropriate metric", func() {
+			It("Sets the appropriate status", func() {
 				gomock.InOrder(
 					mockCVClient.EXPECT().GetClusterVersion().Return(clusterVersion, nil),
 					mockCVClient.EXPECT().HasUpgradeCompleted(gomock.Any(), gomock.Any()).Return(false),
-					mockMetricsClient.EXPECT().UpdateMetricUpgradeControlPlaneTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version),
+					mockKubeClient.EXPECT().Status().Return(mockUpdater).AnyTimes(),
+					mockUpdater.EXPECT().Update(gomock.Any(), timeoutUC),
 				)
 				result, err := ControlPlaneUpgraded(mockKubeClient, config, mockScalerClient, mockDrainStrategyBuilder, mockMetricsClient, mockMaintClient, mockCVClient, mockEMClient, upgradeConfig, mockMachineryClient, []ac.AvailabilityChecker{mockAC}, logger)
 				Expect(err).NotTo(HaveOccurred())
@@ -161,11 +168,17 @@ var _ = Describe("ClusterUpgrader", func() {
 	})
 
 	Context("Scaling", func() {
-		It("Should scale up extra nodes and set success metric on successful scaling", func() {
+		var timeoutUC *upgradev1alpha1.UpgradeConfig
+		BeforeEach(func() {
+			timeoutUC = upgradeConfig
+			timeoutUC.Status.ControlPlaneTimeout = true
+		})
+		It("Should scale up extra nodes and set success status on successful scaling", func() {
 			gomock.InOrder(
 				mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
 				mockScalerClient.EXPECT().EnsureScaleUpNodes(gomock.Any(), config.GetScaleDuration(), gomock.Any()).Return(true, nil),
-				mockMetricsClient.EXPECT().UpdateMetricScalingSucceeded(gomock.Any()),
+				mockKubeClient.EXPECT().Status().Return(mockUpdater).AnyTimes(),
+				mockUpdater.EXPECT().Update(gomock.Any(), upgradeConfig),
 			)
 
 			ok, err := EnsureExtraUpgradeWorkers(mockKubeClient, config, mockScalerClient, mockDrainStrategyBuilder, mockMetricsClient, mockMaintClient, mockCVClient, mockEMClient, upgradeConfig, mockMachineryClient, []ac.AvailabilityChecker{mockAC}, logger)
@@ -176,7 +189,8 @@ var _ = Describe("ClusterUpgrader", func() {
 			gomock.InOrder(
 				mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
 				mockScalerClient.EXPECT().EnsureScaleUpNodes(gomock.Any(), config.GetScaleDuration(), gomock.Any()).Return(false, scaler.NewScaleTimeOutError("test scale timed out")),
-				mockMetricsClient.EXPECT().UpdateMetricScalingFailed(gomock.Any()),
+				mockKubeClient.EXPECT().Status().Return(mockUpdater).AnyTimes(),
+				mockUpdater.EXPECT().Update(gomock.Any(), timeoutUC),
 			)
 
 			ok, err := EnsureExtraUpgradeWorkers(mockKubeClient, config, mockScalerClient, mockDrainStrategyBuilder, mockMetricsClient, mockMaintClient, mockCVClient, mockEMClient, upgradeConfig, mockMachineryClient, []ac.AvailabilityChecker{mockAC}, logger)
@@ -190,7 +204,8 @@ var _ = Describe("ClusterUpgrader", func() {
 			It("Indicates an error", func() {
 				fakeError := fmt.Errorf("a fake error")
 				gomock.InOrder(
-					mockMetricsClient.EXPECT().UpdateMetricUpgradeWindowNotBreached(gomock.Any()),
+					mockKubeClient.EXPECT().Status().Return(mockUpdater).AnyTimes(),
+					mockUpdater.EXPECT().Update(gomock.Any(), upgradeConfig),
 					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, fakeError),
 				)
 				result, err := CommenceUpgrade(mockKubeClient, config, mockScalerClient, mockDrainStrategyBuilder, mockMetricsClient, mockMaintClient, mockCVClient, mockEMClient, upgradeConfig, mockMachineryClient, []ac.AvailabilityChecker{mockAC}, logger)
@@ -204,7 +219,8 @@ var _ = Describe("ClusterUpgrader", func() {
 			It("Indicates an error", func() {
 				fakeError := fmt.Errorf("fake error")
 				gomock.InOrder(
-					mockMetricsClient.EXPECT().UpdateMetricUpgradeWindowNotBreached(gomock.Any()),
+					mockKubeClient.EXPECT().Status().Return(mockUpdater).AnyTimes(),
+					mockUpdater.EXPECT().Update(gomock.Any(), upgradeConfig),
 					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
 					mockCVClient.EXPECT().EnsureDesiredVersion(gomock.Any()).Return(false, fakeError),
 				)
@@ -222,7 +238,8 @@ var _ = Describe("ClusterUpgrader", func() {
 				gomock.InOrder(
 					mockMachineryClient.EXPECT().IsUpgrading(gomock.Any(), "worker").Return(&machinery.UpgradingResult{IsUpgrading: false}, nil),
 					mockMaintClient.EXPECT().IsActive(),
-					mockMetricsClient.EXPECT().ResetMetricUpgradeWorkerTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version),
+					mockKubeClient.EXPECT().Status().Return(mockUpdater).AnyTimes(),
+					mockUpdater.EXPECT().Update(gomock.Any(), upgradeConfig),
 				)
 				result, err := AllWorkersUpgraded(mockKubeClient, config, mockScalerClient, mockDrainStrategyBuilder, mockMetricsClient, mockMaintClient, mockCVClient, mockEMClient, upgradeConfig, mockMachineryClient, []ac.AvailabilityChecker{mockAC}, logger)
 				Expect(err).NotTo(HaveOccurred())
@@ -234,7 +251,8 @@ var _ = Describe("ClusterUpgrader", func() {
 				gomock.InOrder(
 					mockMachineryClient.EXPECT().IsUpgrading(gomock.Any(), "worker").Return(&machinery.UpgradingResult{IsUpgrading: true}, nil),
 					mockMaintClient.EXPECT().IsActive(),
-					mockMetricsClient.EXPECT().UpdateMetricUpgradeWorkerTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version),
+					mockKubeClient.EXPECT().Status().Return(mockUpdater).AnyTimes(),
+					mockUpdater.EXPECT().Update(gomock.Any(), upgradeConfig),
 				)
 				result, err := AllWorkersUpgraded(mockKubeClient, config, mockScalerClient, mockDrainStrategyBuilder, mockMetricsClient, mockMaintClient, mockCVClient, mockEMClient, upgradeConfig, mockMachineryClient, []ac.AvailabilityChecker{mockAC}, logger)
 				Expect(err).NotTo(HaveOccurred())
@@ -260,7 +278,8 @@ var _ = Describe("ClusterUpgrader", func() {
 		})
 		It("will not re-perform commencing an upgrade", func() {
 			gomock.InOrder(
-				mockMetricsClient.EXPECT().UpdateMetricUpgradeWindowNotBreached(gomock.Any()),
+				mockKubeClient.EXPECT().Status().Return(mockUpdater),
+				mockUpdater.EXPECT().Update(gomock.Any(), upgradeConfig),
 				mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(true, nil),
 			)
 			result, err := CommenceUpgrade(mockKubeClient, config, mockScalerClient, mockDrainStrategyBuilder, mockMetricsClient, mockMaintClient, mockCVClient, mockEMClient, upgradeConfig, mockMachineryClient, []ac.AvailabilityChecker{mockAC}, logger)
@@ -289,7 +308,8 @@ var _ = Describe("ClusterUpgrader", func() {
 		})
 		It("will abort the commencing of an upgrade", func() {
 			gomock.InOrder(
-				mockMetricsClient.EXPECT().UpdateMetricUpgradeWindowNotBreached(gomock.Any()),
+				mockKubeClient.EXPECT().Status().Return(mockUpdater),
+				mockUpdater.EXPECT().Update(gomock.Any(), upgradeConfig),
 				mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(true, fakeError),
 			)
 			result, err := CommenceUpgrade(mockKubeClient, config, mockScalerClient, mockDrainStrategyBuilder, mockMetricsClient, mockMaintClient, mockCVClient, mockEMClient, upgradeConfig, mockMachineryClient, []ac.AvailabilityChecker{mockAC}, logger)
@@ -335,6 +355,8 @@ var _ = Describe("ClusterUpgrader", func() {
 		It("will send the correct notification", func() {
 			gomock.InOrder(
 				mockEMClient.EXPECT().Notify(notifier.StateStarted),
+				mockKubeClient.EXPECT().Status().Return(mockUpdater),
+				mockUpdater.EXPECT().Update(gomock.Any(), upgradeConfig),
 			)
 			result, err := SendStartedNotification(mockKubeClient, config, mockScalerClient, mockDrainStrategyBuilder, mockMetricsClient, mockMaintClient, mockCVClient, mockEMClient, upgradeConfig, mockMachineryClient, []ac.AvailabilityChecker{mockAC}, logger)
 			Expect(err).NotTo(HaveOccurred())
@@ -344,6 +366,8 @@ var _ = Describe("ClusterUpgrader", func() {
 			fakeErr := fmt.Errorf("fake error")
 			gomock.InOrder(
 				mockEMClient.EXPECT().Notify(notifier.StateStarted).Return(fakeErr),
+				mockKubeClient.EXPECT().Status().Return(mockUpdater),
+				mockUpdater.EXPECT().Update(gomock.Any(), upgradeConfig),
 			)
 			result, err := SendStartedNotification(mockKubeClient, config, mockScalerClient, mockDrainStrategyBuilder, mockMetricsClient, mockMaintClient, mockCVClient, mockEMClient, upgradeConfig, mockMachineryClient, []ac.AvailabilityChecker{mockAC}, logger)
 			Expect(err).To(HaveOccurred())
@@ -355,6 +379,8 @@ var _ = Describe("ClusterUpgrader", func() {
 		It("will send the notification", func() {
 			gomock.InOrder(
 				mockEMClient.EXPECT().Notify(notifier.StateCompleted),
+				mockKubeClient.EXPECT().Status().Return(mockUpdater),
+				mockUpdater.EXPECT().Update(gomock.Any(), upgradeConfig),
 			)
 			result, err := SendCompletedNotification(mockKubeClient, config, mockScalerClient, mockDrainStrategyBuilder, mockMetricsClient, mockMaintClient, mockCVClient, mockEMClient, upgradeConfig, mockMachineryClient, []ac.AvailabilityChecker{mockAC}, logger)
 			Expect(err).NotTo(HaveOccurred())
@@ -364,6 +390,8 @@ var _ = Describe("ClusterUpgrader", func() {
 			fakeErr := fmt.Errorf("fake error")
 			gomock.InOrder(
 				mockEMClient.EXPECT().Notify(notifier.StateCompleted).Return(fakeErr),
+				mockKubeClient.EXPECT().Status().Return(mockUpdater),
+				mockUpdater.EXPECT().Update(gomock.Any(), upgradeConfig),
 			)
 			result, err := SendCompletedNotification(mockKubeClient, config, mockScalerClient, mockDrainStrategyBuilder, mockMetricsClient, mockMaintClient, mockCVClient, mockEMClient, upgradeConfig, mockMachineryClient, []ac.AvailabilityChecker{mockAC}, logger)
 			Expect(err).To(HaveOccurred())
@@ -575,9 +603,9 @@ var _ = Describe("ClusterUpgrader", func() {
 					gomock.InOrder(
 						mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
 						mockScalerClient.EXPECT().EnsureScaleDownNodes(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil),
+						mockKubeClient.EXPECT().Status().Return(mockUpdater),
+						mockUpdater.EXPECT().Update(gomock.Any(), upgradeConfig),
 						mockEMClient.EXPECT().Notify(notifier.StateFailed),
-						mockMetricsClient.EXPECT().UpdateMetricUpgradeWindowBreached(upgradeConfig.Name),
-						mockMetricsClient.EXPECT().ResetFailureMetrics(),
 					)
 					phase, condition, err := cu.UpgradeCluster(upgradeConfig, logger)
 					Expect(phase).To(Equal(upgradev1alpha1.UpgradePhaseFailed))

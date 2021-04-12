@@ -14,7 +14,7 @@ CONTAINER_ENGINE=$(command -v podman || command -v docker)
 
 # First set up a detached container with the repo mounted.
 banner "Starting the container"
-container_id=$($CONTAINER_ENGINE run -d -v "$REPO_ROOT":"$REPO_ROOT" $IMAGE_PULL_PATH tail -f /dev/null)
+container_id=$($CONTAINER_ENGINE run --userns keep-id -d -v "$REPO_ROOT":"$REPO_ROOT":Z $IMAGE_PULL_PATH tail -f /dev/null)
 if [[ $? -ne 0 ]] || [[ -z "$container_id" ]]; then
   err "Couldn't start detached container"
 fi

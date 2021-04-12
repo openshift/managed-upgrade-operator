@@ -30,11 +30,11 @@ var _ = Describe("NodeKeeperController", func() {
 		reconciler                      *ReconcileNodeKeeper
 		mockCtrl                        *gomock.Controller
 		mockKubeClient                  *mocks.MockClient
+		mockUpdater                     *mocks.MockStatusWriter
 		mockConfigManagerBuilder        *configMocks.MockConfigManagerBuilder
 		mockConfigManager               *configMocks.MockConfigManager
 		mockMachineryClient             *mockMachinery.MockMachinery
 		mockMetricsBuilder              *mockMetrics.MockMetricsBuilder
-		mockMetricsClient               *mockMetrics.MockMetrics
 		mockDrainStrategyBuilder        *mockDrain.MockNodeDrainStrategyBuilder
 		mockDrainStrategy               *mockDrain.MockNodeDrainStrategy
 		mockUpgradeConfigManager        *mockUCMgr.MockUpgradeConfigManager
@@ -47,11 +47,11 @@ var _ = Describe("NodeKeeperController", func() {
 	BeforeEach(func() {
 		mockCtrl = gomock.NewController(GinkgoT())
 		mockKubeClient = mocks.NewMockClient(mockCtrl)
+		mockUpdater = mocks.NewMockStatusWriter(mockCtrl)
 		mockConfigManagerBuilder = configMocks.NewMockConfigManagerBuilder(mockCtrl)
 		mockConfigManager = configMocks.NewMockConfigManager(mockCtrl)
 		mockMachineryClient = mockMachinery.NewMockMachinery(mockCtrl)
 		mockMetricsBuilder = mockMetrics.NewMockMetricsBuilder(mockCtrl)
-		mockMetricsClient = mockMetrics.NewMockMetrics(mockCtrl)
 		mockDrainStrategyBuilder = mockDrain.NewMockNodeDrainStrategyBuilder(mockCtrl)
 		mockDrainStrategy = mockDrain.NewMockNodeDrainStrategy(mockCtrl)
 		mockUpgradeConfigManagerBuilder = mockUCMgr.NewMockUpgradeConfigManagerBuilder(mockCtrl)
@@ -113,8 +113,16 @@ var _ = Describe("NodeKeeperController", func() {
 
 		Context("Alerting for node drain problems", func() {
 			var uc upgradev1alpha1.UpgradeConfig
+			var nodeDrainTrueUC *upgradev1alpha1.UpgradeConfig
+			var nodeDrainFalseUC *upgradev1alpha1.UpgradeConfig
 			BeforeEach(func() {
 				uc = *testStructs.NewUpgradeConfigBuilder().WithNamespacedName(upgradeConfigName).WithPhase(upgradev1alpha1.UpgradePhaseUpgrading).GetUpgradeConfig()
+				nodeDrainTrueUC = &uc
+				nodeDrainTrueUC.Status.NodeDrain.Failed = true
+				nodeDrainTrueUC.Status.NodeDrain.Name = "Node way you can drain me"
+
+				nodeDrainFalseUC = nodeDrainTrueUC
+				nodeDrainFalseUC.Status.NodeDrain.Failed = false
 				config = nodeKeeperConfig{
 					NodeDrain: drain.NodeDrain{
 						Timeout:               5,
@@ -122,21 +130,20 @@ var _ = Describe("NodeKeeperController", func() {
 					},
 				}
 			})
-			It("should alert when a node drain takes too long", func() {
+			It("should update UpgradeConfig status advising node drain failure is true", func() {
 				gomock.InOrder(
 					mockUpgradeConfigManagerBuilder.EXPECT().NewManager(gomock.Any()).Return(mockUpgradeConfigManager, nil),
 					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
 					mockMachineryClient.EXPECT().IsUpgrading(gomock.Any(), "worker").Return(&machinery.UpgradingResult{IsUpgrading: true}, nil),
 					mockKubeClient.EXPECT().Get(gomock.Any(), testNodeName, gomock.Any()).Times(1),
 					mockMachineryClient.EXPECT().IsNodeCordoned(gomock.Any()).Return(&machinery.IsCordonedResult{IsCordoned: true, AddedAt: &metav1.Time{Time: time.Now().Add(-10 * time.Minute)}}),
-					mockMetricsBuilder.EXPECT().NewClient(gomock.Any()).Return(mockMetricsClient, nil),
 					mockConfigManagerBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockConfigManager),
 					mockConfigManager.EXPECT().Into(gomock.Any()).SetArg(0, config),
 					mockDrainStrategyBuilder.EXPECT().NewNodeDrainStrategy(gomock.Any(), gomock.Any(), gomock.Any()).Return(mockDrainStrategy, nil),
 					mockDrainStrategy.EXPECT().Execute(gomock.Any()).Return([]*drain.DrainStrategyResult{}, nil),
 					mockDrainStrategy.EXPECT().HasFailed(gomock.Any()).Return(true, nil),
-					mockMetricsClient.EXPECT().UpdateMetricNodeDrainFailed(gomock.Any()).Times(1),
-					mockMetricsClient.EXPECT().ResetMetricNodeDrainFailed(gomock.Any()).Times(0),
+					mockKubeClient.EXPECT().Status().Return(mockUpdater),
+					mockUpdater.EXPECT().Update(gomock.Any(), nodeDrainTrueUC),
 				)
 				result, err := reconciler.Reconcile(reconcile.Request{NamespacedName: testNodeName})
 				Expect(err).NotTo(HaveOccurred())
@@ -150,9 +157,8 @@ var _ = Describe("NodeKeeperController", func() {
 					mockMachineryClient.EXPECT().IsUpgrading(gomock.Any(), "worker").Return(&machinery.UpgradingResult{IsUpgrading: true}, nil),
 					mockKubeClient.EXPECT().Get(gomock.Any(), testNodeName, gomock.Any()).Times(1),
 					mockMachineryClient.EXPECT().IsNodeCordoned(gomock.Any()).Return(&machinery.IsCordonedResult{IsCordoned: false}),
-					mockMetricsBuilder.EXPECT().NewClient(gomock.Any()).Return(mockMetricsClient, nil),
-					mockMetricsClient.EXPECT().ResetMetricNodeDrainFailed(gomock.Any()).Times(1),
-					mockMetricsClient.EXPECT().UpdateMetricNodeDrainFailed(gomock.Any()).Times(0),
+					mockKubeClient.EXPECT().Status().Return(mockUpdater),
+					mockUpdater.EXPECT().Update(gomock.Any(), nodeDrainFalseUC),
 				)
 				result, err := reconciler.Reconcile(reconcile.Request{NamespacedName: testNodeName})
 				Expect(err).NotTo(HaveOccurred())
