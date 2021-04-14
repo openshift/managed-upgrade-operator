@@ -2,10 +2,12 @@ package structs
 
 import (
 	"fmt"
+	"time"
+
 	api "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
+	"github.com/openshift/managed-upgrade-operator/pkg/collector"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"time"
 )
 
 type testUpgradeConfigBuilder struct {
@@ -17,21 +19,50 @@ func (t *testUpgradeConfigBuilder) GetUpgradeConfig() *api.UpgradeConfig {
 }
 
 func NewUpgradeConfigBuilder() *testUpgradeConfigBuilder {
+	testTime := time.Now()
 	return &testUpgradeConfigBuilder{
 		uc: api.UpgradeConfig{
 
 			ObjectMeta: metav1.ObjectMeta{
-				Name:                       "fakeUpgradeConfig",
-				Namespace:                  "fakeNamespace",
+				Name:      "fakeUpgradeConfig",
+				Namespace: "fakeNamespace",
 			},
 			Spec: api.UpgradeConfigSpec{
 				Type: api.OSD,
-				Desired:             api.Update{
+				Desired: api.Update{
 					Version: "fakeVersion",
 					Channel: "fakeChannel",
 				},
-				UpgradeAt: time.Now().Format(time.RFC3339),
+				UpgradeAt:            testTime.Format(time.RFC3339),
 				PDBForceDrainTimeout: 60,
+			},
+			Status: api.UpgradeConfigStatus{
+				History: []api.UpgradeHistory{
+					{
+						Version:            "fakeVersion",
+						Phase:              api.UpgradePhaseUpgrading,
+						StartTime:          &metav1.Time{Time: testTime},
+						CompleteTime:       &metav1.Time{Time: testTime},
+						WorkerStartTime:    &metav1.Time{Time: testTime},
+						WorkerCompleteTime: &metav1.Time{Time: testTime},
+						HealthCheck: api.HealthCheck{
+							Failed: false,
+							State:  collector.ValuePreUpgrade,
+						},
+						Scaling: api.Scaling{
+							Failed:    false,
+							Dimension: "down",
+						},
+						ClusterVerificationFailed: false,
+						ControlPlaneTimeout:       false,
+						WorkerTimeout:             false,
+						NodeDrain: api.Drain{
+							Failed: false,
+							Name:   "cool_node",
+						},
+						WindowBreached: false,
+					},
+				},
 			},
 		},
 	}
@@ -46,8 +77,8 @@ func (t *testUpgradeConfigBuilder) WithNamespacedName(namespacedName types.Names
 func (t *testUpgradeConfigBuilder) WithPhase(phase api.UpgradePhase) *testUpgradeConfigBuilder {
 	t.uc.Status.History = []api.UpgradeHistory{
 		api.UpgradeHistory{
-			Version:      t.uc.Spec.Desired.Version,
-			Phase:        phase,
+			Version: t.uc.Spec.Desired.Version,
+			Phase:   phase,
 		},
 	}
 	return t
@@ -55,7 +86,7 @@ func (t *testUpgradeConfigBuilder) WithPhase(phase api.UpgradePhase) *testUpgrad
 
 type UpgradeConfigMatcher struct {
 	ActualUpgradeConfig api.UpgradeConfig
-	FailReason             string
+	FailReason          string
 }
 
 func NewUpgradeConfigMatcher() *UpgradeConfigMatcher {
