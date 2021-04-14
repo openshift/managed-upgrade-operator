@@ -5,7 +5,6 @@ import (
 	"time"
 
 	api "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
-	"github.com/openshift/managed-upgrade-operator/pkg/collector"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -19,7 +18,8 @@ func (t *testUpgradeConfigBuilder) GetUpgradeConfig() *api.UpgradeConfig {
 }
 
 func NewUpgradeConfigBuilder() *testUpgradeConfigBuilder {
-	testTime := time.Now()
+	var testTime time.Time
+	testTime, _ = time.Parse(time.RFC3339, "2006-01-02T15:04:05Z")
 	return &testUpgradeConfigBuilder{
 		uc: api.UpgradeConfig{
 
@@ -47,7 +47,7 @@ func NewUpgradeConfigBuilder() *testUpgradeConfigBuilder {
 						WorkerCompleteTime: &metav1.Time{Time: testTime},
 						HealthCheck: api.HealthCheck{
 							Failed: false,
-							State:  collector.ValuePreUpgrade,
+							State:  "pre_upgrade",
 						},
 						Scaling: api.Scaling{
 							Failed:    false,
