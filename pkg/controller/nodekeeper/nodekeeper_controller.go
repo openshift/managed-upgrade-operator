@@ -129,13 +129,12 @@ func (r *ReconcileNodeKeeper) Reconcile(request reconcile.Request) (reconcile.Re
 	}
 
 	result := r.machinery.IsNodeCordoned(node)
-	//metricsClient, err := r.metricsClientBuilder.NewClient(r.client)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 	if !result.IsCordoned {
-		uc.Status.NodeDrain.Failed = false
-		uc.Status.NodeDrain.Name = node.Name
+		uc.Status.History[0].NodeDrain.Failed = false
+		uc.Status.History[0].NodeDrain.Name = node.Name
 		if err := r.client.Status().Update(context.TODO(), uc); err != nil {
 			return reconcile.Result{}, nil
 		}
@@ -172,8 +171,8 @@ func (r *ReconcileNodeKeeper) Reconcile(request reconcile.Request) (reconcile.Re
 	}
 	if hasFailed {
 		reqLogger.Info(fmt.Sprintf("Node drain timed out %s. Alerting.", node.Name))
-		uc.Status.NodeDrain.Failed = true
-		uc.Status.NodeDrain.Name = node.Name
+		uc.Status.History[0].NodeDrain.Failed = true
+		uc.Status.History[0].NodeDrain.Name = node.Name
 		if err := r.client.Status().Update(context.TODO(), uc); err != nil {
 			return reconcile.Result{}, nil
 		}

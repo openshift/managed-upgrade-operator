@@ -2,10 +2,12 @@ package collector
 
 // generics for metric construction
 const (
+	MetricsNamespace       = "managed_upgrade"
 	subSystemCluster       = "cluster"
 	subSystemUpgrade       = "upgrade"
 	subSystemUpgradeConfig = "upgradeconfig"
 	subSystemNotification  = "notification"
+	subSystemCollector     = "collector"
 )
 
 // keys for labels

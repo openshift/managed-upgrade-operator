@@ -1,4 +1,4 @@
-package collector_test
+package collector
 
 import (
 	"testing"

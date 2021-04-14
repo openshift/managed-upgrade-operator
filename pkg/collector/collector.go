@@ -1,17 +1,32 @@
 package collector
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1 "github.com/openshift/api/config/v1"
-	muoconfig "github.com/openshift/managed-upgrade-operator/config"
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 	cv "github.com/openshift/managed-upgrade-operator/pkg/clusterversion"
 	ucm "github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager"
+)
+
+const (
+	// Core
+	helpUpgradeState               = "Timestamp of upgrade state execution"
+	helpConfigInvalid              = "Boolean indicating UpgradeConfig has failed validation"
+	helpUpgradeHealthCheckFailed   = "Boolean indicating cluster health check has failed"
+	helpScalingFailed              = "Boolean indicating failure to scale workers"
+	helpClusterVerificationTimeout = "Boolean indicating cluster verification has failed"
+	helpControlPlaneTimeout        = "Boolean indicating if the control plane upgrade timed out"
+	helpWorkerTimeout              = "Boolean indicating if the worker upgrade timed out"
+	helpNodeDrainFailed            = "Boolean indicating if a force node drain has failed"
+	helpUpgradeWindowBreached      = "Boolean indicating if a the upgrade window has been breached"
+	helpCollectorFailed            = "An error occurred during scape of metrics"
+
+	// OSD
+	helpNotificationEventSentFailed = "Boolean indicating if a the upgrade notification event has failed"
 )
 
 // CoreUpgradeMetrics holds fields that contain upgrade metrics required to
@@ -61,61 +76,61 @@ func NewUpgradeCollector(c client.Client) (prometheus.Collector, error) {
 
 	coreMetrics := &CoreUpgradeMetrics{
 		upgradeState: prometheus.NewDesc(
-			prometheus.BuildFQName(muoconfig.OperatorAcronym, subSystemUpgrade, "state_timestamp"),
-			"Timestamps of upgrade state execution",
+			prometheus.BuildFQName(MetricsNamespace, subSystemUpgrade, "state_timestamp"),
+			helpUpgradeState,
 			[]string{
 				keyVersion,
 				keyPhase,
 			}, nil),
 		configInvalid: prometheus.NewDesc(
-			prometheus.BuildFQName(muoconfig.OperatorAcronym, subSystemUpgradeConfig, "invalid"),
-			"Boolean indicating UpgradeConfig has failed validation",
+			prometheus.BuildFQName(MetricsNamespace, subSystemUpgradeConfig, "invalid"),
+			helpConfigInvalid,
 			[]string{
 				keyUpgradeConfigName,
 			}, nil),
 		upgradeHealthCheckFailed: prometheus.NewDesc(
-			prometheus.BuildFQName(muoconfig.OperatorAcronym, subSystemCluster, "health_check_failed"),
-			"Boolean indicating cluster health check has failed",
+			prometheus.BuildFQName(MetricsNamespace, subSystemCluster, "health_check_failed"),
+			helpUpgradeHealthCheckFailed,
 			[]string{
 				keyUpgradeConfigName,
 				keyState,
 			}, nil),
 		scalingFailed: prometheus.NewDesc(
-			prometheus.BuildFQName(muoconfig.OperatorAcronym, subSystemUpgrade, "scaling_failed"),
-			"Boolean indicating failure to scale workers",
+			prometheus.BuildFQName(MetricsNamespace, subSystemUpgrade, "scaling_failed"),
+			helpScalingFailed,
 			[]string{
 				keyDimension,
 			}, nil),
 		clusterVerificationFailed: prometheus.NewDesc(
-			prometheus.BuildFQName(muoconfig.OperatorAcronym, subSystemCluster, "verification_failed"),
-			"Boolean indicating cluster verification has failed",
+			prometheus.BuildFQName(MetricsNamespace, subSystemCluster, "verification_failed"),
+			helpClusterVerificationTimeout,
 			[]string{
 				keyUpgradeConfigName,
 				keyPhase,
 			}, nil),
 		controlPlaneTimeout: prometheus.NewDesc(
-			prometheus.BuildFQName(muoconfig.OperatorAcronym, subSystemUpgrade, "control_plane_timeout"),
-			"Boolean indicating if the control plane upgrade timed out",
+			prometheus.BuildFQName(MetricsNamespace, subSystemUpgrade, "control_plane_timeout"),
+			helpControlPlaneTimeout,
 			[]string{
 				keyUpgradeConfigName,
 				keyPhase,
 			}, nil),
 		workerTimeout: prometheus.NewDesc(
-			prometheus.BuildFQName(muoconfig.OperatorAcronym, subSystemUpgrade, "worker_timeout"),
-			"Boolean indicating if the worker upgrade timed out",
+			prometheus.BuildFQName(MetricsNamespace, subSystemUpgrade, "worker_timeout"),
+			helpWorkerTimeout,
 			[]string{
 				keyUpgradeConfigName,
 				keyVersion,
 			}, nil),
 		nodeDrainFailed: prometheus.NewDesc(
-			prometheus.BuildFQName(muoconfig.OperatorAcronym, subSystemUpgrade, "node_drain_failed"),
-			"Boolean indicating if a force node drain has failed",
+			prometheus.BuildFQName(MetricsNamespace, subSystemUpgrade, "node_drain_failed"),
+			helpNodeDrainFailed,
 			[]string{
 				keyNodeName,
 			}, nil),
 		upgradeWindowBreached: prometheus.NewDesc(
-			prometheus.BuildFQName(muoconfig.OperatorAcronym, subSystemUpgrade, "window_breached"),
-			"Boolean indicating if a the upgrade window has been breached",
+			prometheus.BuildFQName(MetricsNamespace, subSystemUpgrade, "window_breached"),
+			helpUpgradeWindowBreached,
 			[]string{
 				keyUpgradeConfigName,
 			}, nil),
@@ -123,7 +138,7 @@ func NewUpgradeCollector(c client.Client) (prometheus.Collector, error) {
 
 	//	osdMetrics := &OSDUpgradeMetrics{
 	//		providerSyncFailed: prometheus.NewDesc(
-	//			prometheus.BuildFQName(muoconfig.OperatorAcronym, subSystemUpgradeConfig, "sync_failed"),
+	//			prometheus.BuildFQName(MetricsNamespace, subSystemUpgradeConfig, "sync_failed"),
 	//			"Boolean indicating if the sync with UpgradeConfig provider failed",
 	//			[]string{
 	//				keyUpgradeConfigName,
@@ -131,8 +146,8 @@ func NewUpgradeCollector(c client.Client) (prometheus.Collector, error) {
 	//	}
 	osdMetrics := &OSDUpgradeMetrics{
 		notificationEventSentFailed: prometheus.NewDesc(
-			prometheus.BuildFQName(muoconfig.OperatorAcronym, subSystemNotification, "event_sent_failed"),
-			"Boolean indicating if a the upgrade notification event has failed",
+			prometheus.BuildFQName(MetricsNamespace, subSystemNotification, "event_sent_failed"),
+			helpNotificationEventSentFailed,
 			[]string{
 				keyUpgradeConfigName,
 				keyState,
@@ -167,19 +182,27 @@ func (uc *UpgradeCollector) Describe(ch chan<- *prometheus.Desc) {
 
 // Collect is method required to implement the prometheus.Collector(prometheus/client_golang/prometheus/collector.go) interface.
 func (uc *UpgradeCollector) Collect(ch chan<- prometheus.Metric) {
-	uc.collectUpgradeMetrics(ch)
+	err := uc.collectUpgradeMetrics(ch)
+	if err != nil {
+		ch <- prometheus.NewInvalidMetric(
+			prometheus.NewDesc(prometheus.BuildFQName(MetricsNamespace, subSystemCollector, "scrape_failed"),
+				helpCollectorFailed, nil, nil),
+			err)
+	}
 }
 
 // collectUpgradeMetrics reviews the Status of the current UpgradeConfig and
 // writes metrics based on whats available within the status.
-func (uc *UpgradeCollector) collectUpgradeMetrics(ch chan<- prometheus.Metric) {
+func (uc *UpgradeCollector) collectUpgradeMetrics(ch chan<- prometheus.Metric) error {
 	upgradeConfig, err := uc.upgradeConfigManager.Get()
 	if err != nil {
-		return
+		return err
 	}
 
 	// metrics that should always be collected
-	uc.collectUpgradeAtTimestamp(upgradeConfig, ch)
+	if err = uc.collectUpgradeAtTimestamp(upgradeConfig, ch); err != nil {
+		return err
+	}
 	uc.collectConfigValidation(upgradeConfig, ch)
 	uc.collectNotificationEvent(upgradeConfig, ch)
 
@@ -196,7 +219,7 @@ func (uc *UpgradeCollector) collectUpgradeMetrics(ch chan<- prometheus.Metric) {
 
 			clusterVersion, err := uc.cvClient.GetClusterVersion()
 			if err != nil {
-				return
+				return err
 			}
 
 			// metrics that should be recorded once the upgrade has started
@@ -214,17 +237,18 @@ func (uc *UpgradeCollector) collectUpgradeMetrics(ch chan<- prometheus.Metric) {
 			}
 		}
 	}
+	return nil
 }
 
 func (uc *UpgradeCollector) collectScalingFailed(upgradeConfig *upgradev1alpha1.UpgradeConfig, ch chan<- prometheus.Metric) {
-	scalingFailed := upgradeConfig.Status.Scaling.Failed
+	scalingFailed := upgradeConfig.Status.History[0].Scaling.Failed
 
 	if scalingFailed {
 		ch <- prometheus.MustNewConstMetric(
 			uc.coreUpgradeMetrics.scalingFailed,
 			prometheus.GaugeValue,
 			float64(1),
-			upgradeConfig.Status.Scaling.Dimension,
+			upgradeConfig.Status.History[0].Scaling.Dimension,
 		)
 		return
 	}
@@ -233,7 +257,7 @@ func (uc *UpgradeCollector) collectScalingFailed(upgradeConfig *upgradev1alpha1.
 		uc.coreUpgradeMetrics.scalingFailed,
 		prometheus.GaugeValue,
 		float64(0),
-		upgradeConfig.Status.Scaling.Dimension,
+		upgradeConfig.Status.History[0].Scaling.Dimension,
 	)
 }
 
@@ -259,7 +283,7 @@ func (uc *UpgradeCollector) collectConfigValidation(upgradeConfig *upgradev1alph
 }
 
 func (uc *UpgradeCollector) collectUpgradeWindowBreach(upgradeConfig *upgradev1alpha1.UpgradeConfig, ch chan<- prometheus.Metric) {
-	windowBreached := upgradeConfig.Status.WindowBreached
+	windowBreached := upgradeConfig.Status.History[0].WindowBreached
 
 	if windowBreached {
 		ch <- prometheus.MustNewConstMetric(
@@ -305,7 +329,7 @@ func (uc *UpgradeCollector) collectNotificationEvent(upgradeConfig *upgradev1alp
 }
 
 func (uc *UpgradeCollector) collectClusterVerificationFailed(upgradeConfig *upgradev1alpha1.UpgradeConfig, ch chan<- prometheus.Metric) {
-	clusterVerificatinFailed := upgradeConfig.Status.ClusterVerificationFailed
+	clusterVerificatinFailed := upgradeConfig.Status.History[0].ClusterVerificationFailed
 
 	if clusterVerificatinFailed {
 		ch <- prometheus.MustNewConstMetric(
@@ -326,31 +350,27 @@ func (uc *UpgradeCollector) collectClusterVerificationFailed(upgradeConfig *upgr
 	)
 }
 
-func (uc *UpgradeCollector) collectUpgradeAtTimestamp(upgradeConfig *upgradev1alpha1.UpgradeConfig, ch chan<- prometheus.Metric) {
+func (uc *UpgradeCollector) collectUpgradeAtTimestamp(upgradeConfig *upgradev1alpha1.UpgradeConfig, ch chan<- prometheus.Metric) error {
 
-	//	upgradeTime, err := time.Parse(time.RFC3339, upgradeConfig.Spec.UpgradeAt)
-	//	if err != nil {
-	//		return
-	//	}
-
-	upgradeTime := time.Now()
-
-	//	ch <- prometheus.MustNewConstMetric(
-	metric, err := prometheus.NewConstMetric(
-		uc.coreUpgradeMetrics.upgradeState,
-		prometheus.GaugeValue,
-		float64(upgradeTime.Unix()),
-		upgradeConfig.Spec.Desired.Version,
-		valuePending,
-	)
-	if err != nil {
-		fmt.Println(err)
+	if upgradeConfig.Spec.UpgradeAt != "" {
+		upgradeTime, err := time.Parse(time.RFC3339, upgradeConfig.Spec.UpgradeAt)
+		if err != nil {
+			return err
+		}
+		ch <- prometheus.MustNewConstMetric(
+			uc.coreUpgradeMetrics.upgradeState,
+			prometheus.GaugeValue,
+			float64(upgradeTime.Unix()),
+			upgradeConfig.Spec.Desired.Version,
+			valuePending,
+		)
 	}
-	ch <- metric
+
+	return nil
 }
 
 func (uc *UpgradeCollector) collectClusterHealthCheckFailed(upgradeConfig *upgradev1alpha1.UpgradeConfig, h *upgradev1alpha1.UpgradeHistory, ch chan<- prometheus.Metric) {
-	healthCheckFailed := upgradeConfig.Status.HealthCheck.Failed
+	healthCheckFailed := upgradeConfig.Status.History[0].HealthCheck.Failed
 
 	if healthCheckFailed {
 		ch <- prometheus.MustNewConstMetric(
@@ -358,7 +378,7 @@ func (uc *UpgradeCollector) collectClusterHealthCheckFailed(upgradeConfig *upgra
 			prometheus.GaugeValue,
 			float64(1),
 			upgradeConfig.ObjectMeta.Name,
-			upgradeConfig.Status.HealthCheck.State,
+			upgradeConfig.Status.History[0].HealthCheck.State,
 		)
 		return
 	}
@@ -368,7 +388,7 @@ func (uc *UpgradeCollector) collectClusterHealthCheckFailed(upgradeConfig *upgra
 		prometheus.GaugeValue,
 		float64(0),
 		upgradeConfig.ObjectMeta.Name,
-		upgradeConfig.Status.HealthCheck.State,
+		upgradeConfig.Status.History[0].HealthCheck.State,
 	)
 }
 
@@ -410,7 +430,7 @@ func (uc *UpgradeCollector) collectWorkerCompleteTime(upgradeConfig *upgradev1al
 
 func (uc *UpgradeCollector) collectWorkerTimeout(upgradeConfig *upgradev1alpha1.UpgradeConfig, h *upgradev1alpha1.UpgradeHistory, ch chan<- prometheus.Metric) {
 
-	workerTimeout := upgradeConfig.Status.WorkerTimeout
+	workerTimeout := upgradeConfig.Status.History[0].WorkerTimeout
 
 	if workerTimeout {
 		ch <- prometheus.MustNewConstMetric(
@@ -434,14 +454,14 @@ func (uc *UpgradeCollector) collectWorkerTimeout(upgradeConfig *upgradev1alpha1.
 
 func (uc *UpgradeCollector) collectNodeDrainFailed(upgradeConfig *upgradev1alpha1.UpgradeConfig, h *upgradev1alpha1.UpgradeHistory, ch chan<- prometheus.Metric) {
 
-	drainFailed := upgradeConfig.Status.NodeDrain.Failed
+	drainFailed := upgradeConfig.Status.History[0].NodeDrain.Failed
 
 	if drainFailed {
 		ch <- prometheus.MustNewConstMetric(
 			uc.coreUpgradeMetrics.nodeDrainFailed,
 			prometheus.GaugeValue,
 			float64(1),
-			upgradeConfig.Status.NodeDrain.Name,
+			upgradeConfig.Status.History[0].NodeDrain.Name,
 		)
 		return
 	}
@@ -450,7 +470,7 @@ func (uc *UpgradeCollector) collectNodeDrainFailed(upgradeConfig *upgradev1alpha
 		uc.coreUpgradeMetrics.nodeDrainFailed,
 		prometheus.GaugeValue,
 		float64(0),
-		upgradeConfig.Status.NodeDrain.Name,
+		upgradeConfig.Status.History[0].NodeDrain.Name,
 	)
 }
 func (uc *UpgradeCollector) collectCompleteTime(upgradeConfig *upgradev1alpha1.UpgradeConfig, h *upgradev1alpha1.UpgradeHistory, ch chan<- prometheus.Metric) {
@@ -467,7 +487,7 @@ func (uc *UpgradeCollector) collectCompleteTime(upgradeConfig *upgradev1alpha1.U
 
 func (uc *UpgradeCollector) collectControlPlaneTimeout(upgradeConfig *upgradev1alpha1.UpgradeConfig, h *v1.UpdateHistory, ch chan<- prometheus.Metric) {
 
-	controlPlaneTimeout := upgradeConfig.Status.ControlPlaneTimeout
+	controlPlaneTimeout := upgradeConfig.Status.History[0].ControlPlaneTimeout
 
 	if controlPlaneTimeout {
 		ch <- prometheus.MustNewConstMetric(
@@ -490,13 +510,15 @@ func (uc *UpgradeCollector) collectControlPlaneTimeout(upgradeConfig *upgradev1a
 }
 
 func (uc *UpgradeCollector) collectControlPlaneStartTime(upgradeConfig *upgradev1alpha1.UpgradeConfig, h *v1.UpdateHistory, ch chan<- prometheus.Metric) {
-	ch <- prometheus.MustNewConstMetric(
-		uc.coreUpgradeMetrics.upgradeState,
-		prometheus.GaugeValue,
-		float64(h.StartedTime.Time.Unix()),
-		upgradeConfig.Spec.Desired.Version,
-		valueControlPlaneStarted,
-	)
+	if &h.StartedTime != nil {
+		ch <- prometheus.MustNewConstMetric(
+			uc.coreUpgradeMetrics.upgradeState,
+			prometheus.GaugeValue,
+			float64(h.StartedTime.Time.Unix()),
+			upgradeConfig.Spec.Desired.Version,
+			valueControlPlaneStarted,
+		)
+	}
 }
 
 func (uc *UpgradeCollector) collectControlPlaneCompletionTime(upgradeConfig *upgradev1alpha1.UpgradeConfig, h *v1.UpdateHistory, ch chan<- prometheus.Metric) {

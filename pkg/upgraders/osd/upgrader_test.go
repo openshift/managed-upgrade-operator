@@ -151,7 +151,7 @@ var _ = Describe("ClusterUpgrader", func() {
 					},
 				}
 				timeoutUC = upgradeConfig
-				timeoutUC.Status.ControlPlaneTimeout = true
+				timeoutUC.Status.History[0].ControlPlaneTimeout = true
 			})
 			It("Sets the appropriate status", func() {
 				gomock.InOrder(
@@ -171,7 +171,7 @@ var _ = Describe("ClusterUpgrader", func() {
 		var timeoutUC *upgradev1alpha1.UpgradeConfig
 		BeforeEach(func() {
 			timeoutUC = upgradeConfig
-			timeoutUC.Status.ControlPlaneTimeout = true
+			timeoutUC.Status.History[0].ControlPlaneTimeout = true
 		})
 		It("Should scale up extra nodes and set success status on successful scaling", func() {
 			gomock.InOrder(

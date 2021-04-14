@@ -659,10 +659,10 @@ var _ = Describe("UpgradeConfigController", func() {
 				BeforeEach(func() {
 					upgradeConfig.Status.History[0].Phase = upgradev1alpha1.UpgradePhaseFailed
 					failingUpgradeConfig = *upgradeConfig
-					failingUpgradeConfig.Status.WindowBreached = true
-					failingUpgradeConfig.Status.Scaling.Failed = false
-					failingUpgradeConfig.Status.Scaling.Dimension = ""
-					failingUpgradeConfig.Status.ClusterVerificationFailed = false
+					failingUpgradeConfig.Status.History[0].WindowBreached = true
+					failingUpgradeConfig.Status.History[0].Scaling.Failed = false
+					failingUpgradeConfig.Status.History[0].Scaling.Dimension = ""
+					failingUpgradeConfig.Status.History[0].ClusterVerificationFailed = false
 				})
 				It("does nothing", func() {
 					gomock.InOrder(

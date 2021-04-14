@@ -126,7 +126,7 @@ var _ = Describe("ClusterUpgrader verification and health tests", func() {
 			var failVerificationUC upgradev1alpha1.UpgradeConfig
 			BeforeEach(func() {
 				failVerificationUC = *upgradeConfig
-				failVerificationUC.Status.ClusterVerificationFailed = true
+				failVerificationUC.Status.History[0].ClusterVerificationFailed = true
 			})
 			It("Fails cluster verification", func() {
 				replicaSetList = &appsv1.ReplicaSetList{}

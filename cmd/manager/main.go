@@ -182,7 +182,7 @@ func main() {
 	muoMetrics.MustRegister(
 		prometheus.NewGoCollector(),
 		prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{
-			Namespace: muoconfig.OperatorAcronym,
+			Namespace: "muo",
 		}),
 	)
 

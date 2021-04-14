@@ -229,9 +229,6 @@ func (in *UpgradeConfigStatus) DeepCopyInto(out *UpgradeConfigStatus) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	out.HealthCheck = in.HealthCheck
-	out.Scaling = in.Scaling
-	out.NodeDrain = in.NodeDrain
 	out.NotificationEvent = in.NotificationEvent
 	return
 }
@@ -294,6 +291,9 @@ func (in *UpgradeHistory) DeepCopyInto(out *UpgradeHistory) {
 		in, out := &in.WorkerCompleteTime, &out.WorkerCompleteTime
 		*out = (*in).DeepCopy()
 	}
+	out.HealthCheck = in.HealthCheck
+	out.Scaling = in.Scaling
+	out.NodeDrain = in.NodeDrain
 	return
 }
 

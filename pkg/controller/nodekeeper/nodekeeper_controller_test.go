@@ -118,11 +118,11 @@ var _ = Describe("NodeKeeperController", func() {
 			BeforeEach(func() {
 				uc = *testStructs.NewUpgradeConfigBuilder().WithNamespacedName(upgradeConfigName).WithPhase(upgradev1alpha1.UpgradePhaseUpgrading).GetUpgradeConfig()
 				nodeDrainTrueUC = &uc
-				nodeDrainTrueUC.Status.NodeDrain.Failed = true
-				nodeDrainTrueUC.Status.NodeDrain.Name = "Node way you can drain me"
+				nodeDrainTrueUC.Status.History[0].NodeDrain.Failed = true
+				nodeDrainTrueUC.Status.History[0].NodeDrain.Name = "Node way you can drain me"
 
 				nodeDrainFalseUC = nodeDrainTrueUC
-				nodeDrainFalseUC.Status.NodeDrain.Failed = false
+				nodeDrainFalseUC.Status.History[0].NodeDrain.Failed = false
 				config = nodeKeeperConfig{
 					NodeDrain: drain.NodeDrain{
 						Timeout:               5,

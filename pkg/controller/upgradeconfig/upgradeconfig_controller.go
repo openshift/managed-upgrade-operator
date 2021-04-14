@@ -271,10 +271,10 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 		reqLogger.Info("Cluster is already upgraded")
 		return reconcile.Result{}, nil
 	case upgradev1alpha1.UpgradePhaseFailed:
-		instance.Status.WindowBreached = true
-		instance.Status.Scaling.Failed = false
-		instance.Status.Scaling.Dimension = ""
-		instance.Status.ClusterVerificationFailed = false
+		instance.Status.History[0].WindowBreached = true
+		instance.Status.History[0].Scaling.Failed = false
+		instance.Status.History[0].Scaling.Dimension = ""
+		instance.Status.History[0].ClusterVerificationFailed = false
 		if err = r.client.Status().Update(context.TODO(), instance); err != nil {
 			return reconcile.Result{}, err
 		}

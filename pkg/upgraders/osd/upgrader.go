@@ -143,16 +143,16 @@ func PreClusterHealthCheck(c client.Client, cfg *osdUpgradeConfig, scaler scaler
 
 	ok, err := performClusterHealthCheck(c, metricsClient, cvClient, cfg, logger)
 	if err != nil || !ok {
-		upgradeConfig.Status.HealthCheck.Failed = true
-		upgradeConfig.Status.HealthCheck.State = collector.ValuePreUpgrade
+		upgradeConfig.Status.History[0].HealthCheck.Failed = true
+		upgradeConfig.Status.History[0].HealthCheck.State = collector.ValuePreUpgrade
 		if uErr := c.Status().Update(context.TODO(), upgradeConfig); uErr != nil {
 			return false, uErr
 		}
 		return false, err
 	}
 
-	upgradeConfig.Status.HealthCheck.Failed = false
-	upgradeConfig.Status.HealthCheck.State = collector.ValuePreUpgrade
+	upgradeConfig.Status.History[0].HealthCheck.Failed = false
+	upgradeConfig.Status.History[0].HealthCheck.State = collector.ValuePreUpgrade
 	if err = c.Status().Update(context.TODO(), upgradeConfig); err != nil {
 		return false, err
 	}
@@ -174,8 +174,8 @@ func EnsureExtraUpgradeWorkers(c client.Client, cfg *osdUpgradeConfig, s scaler.
 	isScaled, err := s.EnsureScaleUpNodes(c, cfg.GetScaleDuration(), logger)
 	if err != nil {
 		if scaler.IsScaleTimeOutError(err) {
-			upgradeConfig.Status.Scaling.Failed = true
-			upgradeConfig.Status.Scaling.Dimension = "up"
+			upgradeConfig.Status.History[0].Scaling.Failed = true
+			upgradeConfig.Status.History[0].Scaling.Dimension = "up"
 			if err := c.Status().Update(context.TODO(), upgradeConfig); err != nil {
 				return false, err
 			}
@@ -184,8 +184,8 @@ func EnsureExtraUpgradeWorkers(c client.Client, cfg *osdUpgradeConfig, s scaler.
 	}
 
 	if isScaled {
-		upgradeConfig.Status.Scaling.Failed = false
-		upgradeConfig.Status.Scaling.Dimension = "up"
+		upgradeConfig.Status.History[0].Scaling.Failed = false
+		upgradeConfig.Status.History[0].Scaling.Dimension = "up"
 		if err := c.Status().Update(context.TODO(), upgradeConfig); err != nil {
 			return isScaled, err
 		}
@@ -227,7 +227,7 @@ func ExternalDependencyAvailabilityCheck(c client.Client, cfg *osdUpgradeConfig,
 func CommenceUpgrade(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, dsb drain.NodeDrainStrategyBuilder, metricsClient metrics.Metrics, m maintenance.Maintenance, cvClient cv.ClusterVersion, nc eventmanager.EventManager, upgradeConfig *upgradev1alpha1.UpgradeConfig, machinery machinery.Machinery, availabilityCheckers ac.AvailabilityCheckers, logger logr.Logger) (bool, error) {
 
 	// We can reset the window breached status if we're commencing
-	upgradeConfig.Status.WindowBreached = false
+	upgradeConfig.Status.History[0].WindowBreached = false
 	if err := c.Status().Update(context.TODO(), upgradeConfig); err != nil {
 		return false, err
 	}
@@ -333,12 +333,12 @@ func AllWorkersUpgraded(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Sc
 		if !silenceActive {
 			logger.Info("Worker upgrade timeout.")
 
-			upgradeConfig.Status.WorkerTimeout = true
+			upgradeConfig.Status.History[0].WorkerTimeout = true
 			if err := c.Status().Update(context.TODO(), upgradeConfig); err != nil {
 				return false, err
 			}
 		} else {
-			upgradeConfig.Status.WorkerTimeout = false
+			upgradeConfig.Status.History[0].WorkerTimeout = false
 			if err := c.Status().Update(context.TODO(), upgradeConfig); err != nil {
 				return false, err
 			}
@@ -346,7 +346,7 @@ func AllWorkersUpgraded(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Sc
 		return false, nil
 	}
 
-	upgradeConfig.Status.WorkerTimeout = false
+	upgradeConfig.Status.History[0].WorkerTimeout = false
 	if err := c.Status().Update(context.TODO(), upgradeConfig); err != nil {
 		return false, err
 	}
@@ -365,8 +365,8 @@ func RemoveExtraScaledNodes(c client.Client, cfg *osdUpgradeConfig, s scaler.Sca
 
 	if err != nil {
 		if ok {
-			upgradeConfig.Status.NodeDrain.Failed = true
-			upgradeConfig.Status.NodeDrain.Name = dtErr.GetNodeName()
+			upgradeConfig.Status.History[0].NodeDrain.Failed = true
+			upgradeConfig.Status.History[0].NodeDrain.Name = dtErr.GetNodeName()
 			if err := c.Status().Update(context.TODO(), upgradeConfig); err != nil {
 				return false, err
 			}
@@ -376,7 +376,7 @@ func RemoveExtraScaledNodes(c client.Client, cfg *osdUpgradeConfig, s scaler.Sca
 	}
 
 	if isScaledDown {
-		upgradeConfig.Status.NodeDrain.Failed = false
+		upgradeConfig.Status.History[0].NodeDrain.Failed = false
 		if err := c.Status().Update(context.TODO(), upgradeConfig); err != nil {
 			return isScaledDown, err
 		}
@@ -414,14 +414,14 @@ func UpdateSubscriptions(c client.Client, cfg *osdUpgradeConfig, scaler scaler.S
 func PostUpgradeVerification(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, dsb drain.NodeDrainStrategyBuilder, metricsClient metrics.Metrics, m maintenance.Maintenance, cvClient cv.ClusterVersion, nc eventmanager.EventManager, upgradeConfig *upgradev1alpha1.UpgradeConfig, machinery machinery.Machinery, availabilityCheckers ac.AvailabilityCheckers, logger logr.Logger) (bool, error) {
 	ok, err := performUpgradeVerification(c, cfg, metricsClient, logger)
 	if err != nil || !ok {
-		upgradeConfig.Status.ClusterVerificationFailed = true
+		upgradeConfig.Status.History[0].ClusterVerificationFailed = true
 		if err = c.Status().Update(context.TODO(), upgradeConfig); err != nil {
 			return false, err
 		}
 		return false, err
 	}
 
-	upgradeConfig.Status.ClusterVerificationFailed = false
+	upgradeConfig.Status.History[0].ClusterVerificationFailed = false
 	if err = c.Status().Update(context.TODO(), upgradeConfig); err != nil {
 		return false, err
 	}
@@ -518,16 +518,16 @@ func RemoveMaintWindow(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Sca
 func PostClusterHealthCheck(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, dsb drain.NodeDrainStrategyBuilder, metricsClient metrics.Metrics, m maintenance.Maintenance, cvClient cv.ClusterVersion, nc eventmanager.EventManager, upgradeConfig *upgradev1alpha1.UpgradeConfig, machinery machinery.Machinery, availabilityCheckers ac.AvailabilityCheckers, logger logr.Logger) (bool, error) {
 	ok, err := performClusterHealthCheck(c, metricsClient, cvClient, cfg, logger)
 	if err != nil || !ok {
-		upgradeConfig.Status.HealthCheck.Failed = true
-		upgradeConfig.Status.HealthCheck.State = collector.ValuePostUpgrade
+		upgradeConfig.Status.History[0].HealthCheck.Failed = true
+		upgradeConfig.Status.History[0].HealthCheck.State = collector.ValuePostUpgrade
 		if err := c.Status().Update(context.TODO(), upgradeConfig); err != nil {
 			return false, err
 		}
 		return false, err
 	}
 
-	upgradeConfig.Status.HealthCheck.Failed = false
-	upgradeConfig.Status.HealthCheck.State = collector.ValuePostUpgrade
+	upgradeConfig.Status.History[0].HealthCheck.Failed = false
+	upgradeConfig.Status.History[0].HealthCheck.State = collector.ValuePostUpgrade
 	if err = c.Status().Update(context.TODO(), upgradeConfig); err != nil {
 		return false, err
 	}
@@ -552,14 +552,14 @@ func ControlPlaneUpgraded(c client.Client, cfg *osdUpgradeConfig, scaler scaler.
 	upgradeTimeout := cfg.Maintenance.GetControlPlaneDuration()
 	if !upgradeStartTime.IsZero() && controlPlaneCompleteTime == nil && time.Now().After(upgradeStartTime.Add(upgradeTimeout)) {
 		logger.Info("Control plane upgrade timeout")
-		upgradeConfig.Status.ControlPlaneTimeout = true
+		upgradeConfig.Status.History[0].ControlPlaneTimeout = true
 		if err := c.Status().Update(context.TODO(), upgradeConfig); err != nil {
 			return false, err
 		}
 	}
 
 	if isCompleted {
-		upgradeConfig.Status.ControlPlaneTimeout = false
+		upgradeConfig.Status.History[0].ControlPlaneTimeout = false
 		if err := c.Status().Update(context.TODO(), upgradeConfig); err != nil {
 			return false, err
 		}
@@ -721,16 +721,16 @@ func performUpgradeFailure(c client.Client, metricsClient metrics.Metrics, s sca
 	_, err := s.EnsureScaleDownNodes(c, nil, logger)
 	if err != nil {
 		logger.Error(err, "Failed to scale down the temporary upgrade machine when upgrade failed")
-		upgradeConfig.Status.Scaling.Failed = true
-		upgradeConfig.Status.Scaling.Dimension = "down"
+		upgradeConfig.Status.History[0].Scaling.Failed = true
+		upgradeConfig.Status.History[0].Scaling.Dimension = "down"
 		if err = c.Status().Update(context.TODO(), upgradeConfig); err != nil {
 			return err
 		}
 		return err
 	}
 
-	upgradeConfig.Status.Scaling.Failed = false
-	upgradeConfig.Status.Scaling.Dimension = "down"
+	upgradeConfig.Status.History[0].Scaling.Failed = false
+	upgradeConfig.Status.History[0].Scaling.Dimension = "down"
 	if err = c.Status().Update(context.TODO(), upgradeConfig); err != nil {
 		return err
 	}

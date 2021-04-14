@@ -44,38 +44,6 @@ type UpgradeConfigStatus struct {
 	// +kubebuilder:validation:Optional
 	ConfigInvalid bool `json:"configInvalid,omitempty"`
 
-	// A boolean advising if the pre upgrade health check failed.
-	// +kubebuilder:validation:Optional
-	HealthCheck HealthCheck `json:"healthCheck,omitempty"`
-
-	// A boolean advising if the upgrade scaling has failed.
-	// +kubebuilder:validation:Optional
-	Scaling Scaling `json:"scalingFailed,omitempty"`
-
-	// A boolean advising if the cluster verification has failed.
-	// +kubebuilder:validation:Optional
-	ClusterVerificationFailed bool `json:"clusterVerificationFailed,omitempty"`
-
-	// A boolean advising if the clusters control plane upgrade has timed out.
-	// +kubebuilder:validation:Optional
-	ControlPlaneTimeout bool `json:"controlPlaneTimeout"`
-
-	// A boolean advising if the clusters control plane upgrade has timed out.
-	// +kubebuilder:validation:Optional
-	WorkerTimeout bool `json:"workerTimeout"`
-
-	// A boolean advising if the UpgradeConfig provider sync failed.
-	// +kubebuilder:validation:Optional
-	ProviderSyncFailed bool `json:"providerSyncFailed"`
-
-	// A boolean advising if the UpgradeConfig provider sync failed.
-	// +kubebuilder:validation:Optional
-	NodeDrain Drain `json:"nodeDrain"`
-
-	// A boolean advising if the UpgradeConfig window has been breached.
-	// +kubebuilder:validation:Optional
-	WindowBreached bool `json:"windowBreached"`
-
 	// A boolean advising if the notification event has been sent successfully.
 	// +kubebuilder:validation:Optional
 	NotificationEvent Notification `json:"notificationEventSent"`
@@ -128,6 +96,34 @@ type UpgradeHistory struct {
 	WorkerStartTime *metav1.Time `json:"workerStartTime,omitempty"`
 
 	WorkerCompleteTime *metav1.Time `json:"workerCompleteTime,omitempty"`
+
+	// A boolean advising if the pre upgrade health check failed.
+	// +kubebuilder:validation:Optional
+	HealthCheck HealthCheck `json:"healthCheck,omitempty"`
+
+	// A boolean advising if the upgrade scaling has failed.
+	// +kubebuilder:validation:Optional
+	Scaling Scaling `json:"scalingFailed,omitempty"`
+
+	// A boolean advising if the cluster verification has failed.
+	// +kubebuilder:validation:Optional
+	ClusterVerificationFailed bool `json:"clusterVerificationFailed,omitempty"`
+
+	// A boolean advising if the clusters control plane upgrade has timed out.
+	// +kubebuilder:validation:Optional
+	ControlPlaneTimeout bool `json:"controlPlaneTimeout"`
+
+	// A boolean advising if the clusters control plane upgrade has timed out.
+	// +kubebuilder:validation:Optional
+	WorkerTimeout bool `json:"workerTimeout"`
+
+	// A boolean advising if the UpgradeConfig provider sync failed.
+	// +kubebuilder:validation:Optional
+	NodeDrain Drain `json:"nodeDrain"`
+
+	// A boolean advising if the UpgradeConfig window has been breached.
+	// +kubebuilder:validation:Optional
+	WindowBreached bool `json:"windowBreached"`
 }
 
 // UpgradeConditionType is a Go string type.
