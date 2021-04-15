@@ -212,7 +212,7 @@ spec:
                     format: date-time
                     type: string
                   workerTimeout:
-                    description: A boolean advising if the clusters control plane upgrade has timed out.
+                    description: A boolean advising if an upgrading worker has taken too long to upgrade.
                     type: boolean
                 required:
                   - phase
