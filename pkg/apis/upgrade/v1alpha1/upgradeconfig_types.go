@@ -11,6 +11,7 @@ type UpgradeType string
 
 const (
 	OSD UpgradeType = "OSD"
+	ARO UpgradeType = "ARO"
 )
 
 // UpgradeConfigSpec defines the desired state of UpgradeConfig and upgrade window and freeze window
@@ -24,7 +25,7 @@ type UpgradeConfigSpec struct {
 	// The maximum grace period granted to a node whose drain is blocked by a Pod Disruption Budget, before that drain is forced. Measured in minutes.
 	PDBForceDrainTimeout int32 `json:"PDBForceDrainTimeout"`
 
-	// +kubebuilder:validation:Enum={"OSD"}
+	// +kubebuilder:validation:Enum={"OSD","ARO"}
 	// Type indicates the ClusterUpgrader implementation to use to perform an upgrade of the cluster
 	Type UpgradeType `json:"type"`
 

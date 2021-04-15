@@ -89,6 +89,7 @@ spec:
               description: Type indicates the ClusterUpgrader implementation to use to perform an upgrade of the cluster
               enum:
                 - OSD
+                - ARO
               type: string
             upgradeAt:
               description: Specify the upgrade start time
