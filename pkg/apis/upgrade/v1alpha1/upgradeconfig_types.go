@@ -97,7 +97,7 @@ type UpgradeHistory struct {
 
 	WorkerCompleteTime *metav1.Time `json:"workerCompleteTime,omitempty"`
 
-	// A boolean advising if the pre upgrade health check failed.
+	// A boolean advising if the pre or post upgrade health check failed.
 	// +kubebuilder:validation:Optional
 	HealthCheck HealthCheck `json:"healthCheck,omitempty"`
 
