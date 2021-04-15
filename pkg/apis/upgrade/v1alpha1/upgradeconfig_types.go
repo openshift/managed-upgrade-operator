@@ -11,6 +11,7 @@ type UpgradeType string
 
 const (
 	OSD UpgradeType = "OSD"
+	ARO UpgradeType = "ARO"
 )
 
 // UpgradeConfigSpec defines the desired state of UpgradeConfig and upgrade window and freeze window
