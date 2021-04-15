@@ -1,4 +1,4 @@
-package aro_test
+package aro
 
 import (
 	"testing"
