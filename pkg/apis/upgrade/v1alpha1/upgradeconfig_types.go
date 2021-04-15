@@ -117,7 +117,7 @@ type UpgradeHistory struct {
 	// +kubebuilder:validation:Optional
 	WorkerTimeout bool `json:"workerTimeout"`
 
-	// A boolean advising if the UpgradeConfig provider sync failed.
+	// A boolean advising if an upgrading worker is failing to drain
 	// +kubebuilder:validation:Optional
 	NodeDrain Drain `json:"nodeDrain"`
 
