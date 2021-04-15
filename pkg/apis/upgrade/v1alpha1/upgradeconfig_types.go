@@ -113,7 +113,7 @@ type UpgradeHistory struct {
 	// +kubebuilder:validation:Optional
 	ControlPlaneTimeout bool `json:"controlPlaneTimeout"`
 
-	// A boolean advising if the clusters control plane upgrade has timed out.
+	// A boolean advising if the cluster's upgrading workers have not upgraded in time.
 	// +kubebuilder:validation:Optional
 	WorkerTimeout bool `json:"workerTimeout"`
 
