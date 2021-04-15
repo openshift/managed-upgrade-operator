@@ -8,6 +8,7 @@ import (
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 	"github.com/openshift/managed-upgrade-operator/pkg/configmanager"
 	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
+	"github.com/openshift/managed-upgrade-operator/pkg/upgraders/aro"
 	"github.com/openshift/managed-upgrade-operator/pkg/upgraders/osd"
 )
 
@@ -32,6 +33,12 @@ func (cub *clusterUpgraderBuilder) NewClient(c client.Client, cfm configmanager.
 	switch upgradeType {
 	case upgradev1alpha1.OSD:
 		cu, err := osd.NewClient(c, cfm, mc, nc)
+		if err != nil {
+			return nil, err
+		}
+		return cu, nil
+	case upgradev1alpha1.ARO:
+		cu, err := aro.NewClient(c, cfm, mc, nc)
 		if err != nil {
 			return nil, err
 		}
