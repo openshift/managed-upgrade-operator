@@ -169,7 +169,7 @@ spec:
                         type: string
                     type: object
                   nodeDrain:
-                    description: A boolean advising if the UpgradeConfig provider sync failed.
+                    description: A boolean advising if an upgrade node drain has failed.
                     properties:
                       failed:
                         type: boolean
