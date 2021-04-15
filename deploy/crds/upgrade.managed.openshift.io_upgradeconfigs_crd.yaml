@@ -158,7 +158,7 @@ spec:
                     description: A boolean advising if the clusters control plane upgrade has timed out.
                     type: boolean
                   healthCheck:
-                    description: A boolean advising if the pre upgrade health check failed.
+                    description: A boolean advising if the pre or post upgrade health check failed.
                     properties:
                       failed:
                         type: boolean
