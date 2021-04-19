@@ -69,7 +69,7 @@ $ OPERATOR_NAMESPACE=managed-upgrade-operator operator-sdk run --local --watch-n
 * Trigger a reconcile loop by applying an `upgradeconfig` CR with your desired specs. 
 
 ```
-oc apply -f deploy/crds/upgrade.managed.openshift.io_v1alpha1_upgradeconfig_cr.yaml
+oc apply -f test/deploy/crds/upgrade.managed.openshift.io_v1alpha1_upgradeconfig_cr.yaml
 ```
 
 ### Remotely
@@ -96,9 +96,9 @@ podman push quay.io/myuser/managed-upgrade-operator:latest
 
 ```bash
 oc create -f deploy/cluster_role.yaml
-oc create -f deploy/role_binding.yaml
-oc create -f deploy/service_account.yaml
-oc create -f deploy/managed-upgrade-operator-config.yaml
+oc create -f deploy/cluster_role_binding.yaml
+oc create -f test/deploy/service_account.yaml
+oc create -f test/deploy/managed-upgrade-operator-config.yaml
 ```
 
 * Edit the `deploy/operator.yaml` file to represent the path to your image, and deploy it:
@@ -119,5 +119,5 @@ $ oc create -f deploy/operator.yaml
 * Trigger a reconcile loop by applying an `upgradeconfig` CR with your desired specs. 
 
 ```bash
-$ oc create -f deploy/crds/upgrade.managed.openshift.io_v1alpha1_upgradeconfig_cr.yaml
+$ oc create -f test/deploy/crds/upgrade.managed.openshift.io_v1alpha1_upgradeconfig_cr.yaml
 ```
