@@ -2,6 +2,7 @@ package upgradeconfig
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -73,7 +74,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource UpgradeConfig, status change will not trigger a reconcile
-	err = c.Watch(&source.Kind{Type: &upgradev1alpha1.UpgradeConfig{}}, &handler.EnqueueRequestForObject{}, StatusChangedPredicate, OSDUpgradePredicate)
+	err = c.Watch(&source.Kind{Type: &upgradev1alpha1.UpgradeConfig{}}, &handler.EnqueueRequestForObject{}, StatusChangedPredicate, ManagedUpgradePredicate)
 	if err != nil {
 		return err
 	}
@@ -192,7 +193,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 			return reconcile.Result{}, err
 		}
 
-		reqLogger.Info("Checking if cluster can commence upgrade.")
+		reqLogger.Info(fmt.Sprintf("Checking if cluster can commence %s upgrade.", instance.Spec.Type))
 		schedulerResult := r.scheduler.IsReadyToUpgrade(instance, cfg.GetUpgradeWindowTimeOutDuration())
 		if schedulerResult.IsReady {
 			ucMgr, err := r.ucMgrBuilder.NewManager(r.client)
@@ -210,7 +211,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 			}
 
 			if remoteChanged {
-				reqLogger.Info("The remote upgrade policy does not match the local upgrade config, applying the new upgrade policy")
+				reqLogger.Info("The cluster's upgrade policy has changed, so the operator will re-reconcile.")
 				return reconcile.Result{}, nil
 			}
 
@@ -229,7 +230,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 				return reconcile.Result{}, err
 			}
 
-			reqLogger.Info("Cluster is commencing upgrade.", "time", now)
+			reqLogger.Info(fmt.Sprintf("Cluster is commencing %s upgrade.", instance.Spec.Type), "time", now)
 			return r.upgradeCluster(upgrader, instance, reqLogger)
 		}
 
@@ -289,22 +290,22 @@ func (r *ReconcileUpgradeConfig) upgradeCluster(upgrader cub.ClusterUpgrader, uc
 	return reconcile.Result{RequeueAfter: 1 * time.Minute}, me.ErrorOrNil()
 }
 
-var OSDUpgradePredicate = predicate.Funcs{
+var ManagedUpgradePredicate = predicate.Funcs{
 	UpdateFunc: func(e event.UpdateEvent) bool {
-		return isOsdUpgrade(e.MetaNew.GetName())
+		return isManagedUpgrade(e.MetaNew.GetName())
 	},
 	// Create is required to avoid reconciliation at controller initialisation.
 	CreateFunc: func(e event.CreateEvent) bool {
-		return isOsdUpgrade(e.Meta.GetName())
+		return isManagedUpgrade(e.Meta.GetName())
 	},
 	DeleteFunc: func(e event.DeleteEvent) bool {
-		return isOsdUpgrade(e.Meta.GetName())
+		return isManagedUpgrade(e.Meta.GetName())
 	},
 	GenericFunc: func(e event.GenericEvent) bool {
-		return isOsdUpgrade(e.Meta.GetName())
+		return isManagedUpgrade(e.Meta.GetName())
 	},
 }
 
-func isOsdUpgrade(name string) bool {
+func isManagedUpgrade(name string) bool {
 	return name == ucmgr.UPGRADECONFIG_CR_NAME
 }

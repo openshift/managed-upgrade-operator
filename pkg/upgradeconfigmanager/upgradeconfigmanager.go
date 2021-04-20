@@ -30,7 +30,7 @@ var log = logf.Log.WithName("upgrade-config-manager")
 
 const (
 	// Name of the Custom Resource that the provider will manage
-	UPGRADECONFIG_CR_NAME = "osd-upgrade-config"
+	UPGRADECONFIG_CR_NAME = "managed-upgrade-config"
 	// Jitter factor (percentage / 100) used to alter watch interval
 	JITTER_FACTOR         = 0.1
 	INITIAL_SYNC_DURATION = 1 * time.Minute

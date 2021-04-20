@@ -80,7 +80,7 @@ var _ = Describe("UpgradeConfigController", func() {
 		mockUCMgrBuilder = ucMgrMocks.NewMockUpgradeConfigManagerBuilder(mockCtrl)
 		mockUCMgr = ucMgrMocks.NewMockUpgradeConfigManager(mockCtrl)
 		upgradeConfigName = types.NamespacedName{
-			Name:      "osd-upgrade-config",
+			Name:      "managed-upgrade-config",
 			Namespace: "test-namespace",
 		}
 		upgradeConfig = testStructs.NewUpgradeConfigBuilder().WithNamespacedName(upgradeConfigName).GetUpgradeConfig()
