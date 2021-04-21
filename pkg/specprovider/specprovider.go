@@ -1,10 +1,14 @@
 package specprovider
 
 import (
+	"strings"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 	"github.com/openshift/managed-upgrade-operator/pkg/configmanager"
+	"github.com/openshift/managed-upgrade-operator/pkg/localprovider"
 	"github.com/openshift/managed-upgrade-operator/pkg/ocmprovider"
 	"github.com/openshift/managed-upgrade-operator/util"
 )
@@ -26,8 +30,7 @@ func NewBuilder() SpecProviderBuilder {
 type specProviderBuilder struct{}
 
 // Errors
-var (
-)
+var ()
 
 func (ppb *specProviderBuilder) New(client client.Client, builder configmanager.ConfigManagerBuilder) (SpecProvider, error) {
 	cfg, err := readSpecProviderConfig(client, builder)
@@ -35,8 +38,9 @@ func (ppb *specProviderBuilder) New(client client.Client, builder configmanager.
 		return nil, err
 	}
 
-	switch cfg.ConfigManager.Source {
+	switch strings.ToUpper(cfg.ConfigManager.Source) {
 	case "OCM":
+		logf.Log.Logger.Info("Using OCM as the upgrade config provider")
 		cfg, err := readOcmProviderConfig(client, builder)
 		if err != nil {
 			return nil, err
@@ -46,6 +50,17 @@ func (ppb *specProviderBuilder) New(client client.Client, builder configmanager.
 			return nil, err
 		}
 		return mgr, nil
+	case "LOCAL":
+		logf.Log.Logger.Info("Using local CR as the upgrade config provider")
+		cfg, err := readLocalProviderConfig(client, builder)
+		if err != nil {
+			return nil, err
+		}
+		provider, err := localprovider.New(client, cfg.ConfigManager.LocalConfigName)
+		if err != nil {
+			return nil, err
+		}
+		return provider, nil
 	}
 	return nil, ErrInvalidSpecProvider
 }
@@ -78,5 +93,21 @@ func readOcmProviderConfig(client client.Client, cfb configmanager.ConfigManager
 	if err != nil {
 		return nil, err
 	}
+	return cfg, cfg.IsValid()
+}
+
+// Read Local Provider configuration
+func readLocalProviderConfig(client client.Client, cfb configmanager.ConfigManagerBuilder) (*localprovider.LocalProviderConfig, error) {
+	ns, err := util.GetOperatorNamespace()
+	if err != nil {
+		return nil, err
+	}
+	cfm := cfb.New(client, ns)
+	cfg := &localprovider.LocalProviderConfig{}
+	err = cfm.Into(cfg)
+	if err != nil {
+		return nil, err
+	}
+
 	return cfg, cfg.IsValid()
 }

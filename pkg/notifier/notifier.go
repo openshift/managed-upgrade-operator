@@ -2,6 +2,7 @@ package notifier
 
 import (
 	"fmt"
+	"strings"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -58,7 +59,7 @@ func (nb *notifierBuilder) New(client client.Client, cfgBuilder configmanager.Co
 		return nil, err
 	}
 
-	switch cfg.ConfigManager.Source {
+	switch strings.ToUpper(cfg.ConfigManager.Source) {
 	case "OCM":
 		cfg, err := readOcmNotifierConfig(client, cfgBuilder)
 		if err != nil {

@@ -1,7 +1,10 @@
 package notifier
 
+import "strings"
+
 const (
-	OCM ConfigManagerSource = "OCM"
+	OCM   ConfigManagerSource = "OCM"
+	LOCAL ConfigManagerSource = "LOCAL"
 )
 
 type ConfigManagerSource string
@@ -20,12 +23,12 @@ func (cfg *NotifierConfig) IsValid() error {
 		return nil
 	}
 
-	switch cfg.ConfigManager.Source {
+	switch strings.ToUpper(cfg.ConfigManager.Source) {
 	case string(OCM):
+		return nil
+	case string(LOCAL):
 		return nil
 	default:
 		return ErrNoNotifierConfigured
 	}
 }
-
-
