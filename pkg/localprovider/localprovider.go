@@ -53,7 +53,7 @@ func readSpecFromConfig(ucl upgradev1alpha1.UpgradeConfigList) ([]upgradev1alpha
 	for _, u := range ucl.Items {
 		// Completed UpgradeConfigs can be ignored
 		history := u.Status.History.GetHistory(u.Spec.Desired.Version)
-		if history.Phase != upgradev1alpha1.UpgradePhaseUpgraded {
+		if history != nil && history.Phase != upgradev1alpha1.UpgradePhaseUpgraded {
 			upgradeConfigSpecs = append(upgradeConfigSpecs, u.Spec)
 		}
 	}
