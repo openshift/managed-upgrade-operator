@@ -2,10 +2,12 @@ package specprovider
 
 import (
 	"fmt"
+	"strings"
 )
 
 const (
-	OCM ConfigManagerSource = "OCM"
+	OCM   ConfigManagerSource = "OCM"
+	LOCAL ConfigManagerSource = "LOCAL"
 )
 
 type ConfigManagerSource string
@@ -19,9 +21,8 @@ type ConfigManager struct {
 }
 
 var (
-	ErrInvalidSpecProvider = fmt.Errorf("invalid configManager spec provider type defined")
-	ErrNoSpecProviderConfig     = fmt.Errorf("no configManager spec provider configured")
-
+	ErrInvalidSpecProvider  = fmt.Errorf("invalid configManager spec provider type defined")
+	ErrNoSpecProviderConfig = fmt.Errorf("no configManager spec provider configured")
 )
 
 func (cfg *SpecProviderConfig) IsValid() error {
@@ -30,8 +31,10 @@ func (cfg *SpecProviderConfig) IsValid() error {
 		return ErrNoSpecProviderConfig
 	}
 
-	switch cfg.ConfigManager.Source {
+	switch strings.ToUpper(cfg.ConfigManager.Source) {
 	case string(OCM):
+		return nil
+	case string(LOCAL):
 		return nil
 	default:
 		return ErrInvalidSpecProvider
