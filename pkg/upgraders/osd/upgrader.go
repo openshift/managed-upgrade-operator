@@ -7,11 +7,8 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	operatorv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
@@ -42,7 +39,6 @@ var (
 		upgradev1alpha1.WorkersMaintWindow,
 		upgradev1alpha1.AllWorkerNodesUpgraded,
 		upgradev1alpha1.RemoveExtraScaledNodes,
-		upgradev1alpha1.UpdateSubscriptions,
 		upgradev1alpha1.PostUpgradeVerification,
 		upgradev1alpha1.RemoveMaintWindow,
 		upgradev1alpha1.PostClusterHealthCheck,
@@ -89,7 +85,6 @@ func NewClient(c client.Client, cfm configmanager.ConfigManager, mc metrics.Metr
 		upgradev1alpha1.WorkersMaintWindow:            CreateWorkerMaintWindow,
 		upgradev1alpha1.AllWorkerNodesUpgraded:        AllWorkersUpgraded,
 		upgradev1alpha1.RemoveExtraScaledNodes:        RemoveExtraScaledNodes,
-		upgradev1alpha1.UpdateSubscriptions:           UpdateSubscriptions,
 		upgradev1alpha1.PostUpgradeVerification:       PostUpgradeVerification,
 		upgradev1alpha1.RemoveMaintWindow:             RemoveMaintWindow,
 		upgradev1alpha1.PostClusterHealthCheck:        PostClusterHealthCheck,
@@ -344,31 +339,6 @@ func RemoveExtraScaledNodes(c client.Client, cfg *osdUpgradeConfig, s scaler.Sca
 	}
 
 	return isScaledDown, nil
-}
-
-// UpdateSubscriptions will update the subscriptions for the 3rd party components, like logging
-func UpdateSubscriptions(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, dsb drain.NodeDrainStrategyBuilder, metricsClient metrics.Metrics, m maintenance.Maintenance, cvClient cv.ClusterVersion, nc eventmanager.EventManager, upgradeConfig *upgradev1alpha1.UpgradeConfig, machinery machinery.Machinery, availabilityCheckers ac.AvailabilityCheckers, logger logr.Logger) (bool, error) {
-	for _, item := range upgradeConfig.Spec.SubscriptionUpdates {
-		sub := &operatorv1alpha1.Subscription{}
-		err := c.Get(context.TODO(), types.NamespacedName{Namespace: item.Namespace, Name: item.Name}, sub)
-		if err != nil {
-			if errors.IsNotFound(err) {
-				logger.Info("subscription :%s in namespace %s not exists, do not need update")
-				continue
-			} else {
-				return false, err
-			}
-		}
-		if sub.Spec.Channel != item.Channel {
-			sub.Spec.Channel = item.Channel
-			err = c.Update(context.TODO(), sub)
-			if err != nil {
-				return false, err
-			}
-		}
-	}
-
-	return true, nil
 }
 
 // PostUpgradeVerification run the verification steps which defined in performUpgradeVerification

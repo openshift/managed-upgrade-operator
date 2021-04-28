@@ -28,10 +28,6 @@ type UpgradeConfigSpec struct {
 	// +kubebuilder:validation:Enum={"OSD","ARO"}
 	// Type indicates the ClusterUpgrader implementation to use to perform an upgrade of the cluster
 	Type UpgradeType `json:"type"`
-
-	// This defines the 3rd party operator subscriptions upgrade
-	// +kubebuilder:validation:Optional
-	SubscriptionUpdates []SubscriptionUpdate `json:"subscriptionUpdates,omitempty"`
 }
 
 // UpgradeConfigStatus defines the observed state of UpgradeConfig
@@ -109,7 +105,6 @@ const (
 	WorkersMaintWindow            UpgradeConditionType = "WorkersMaintWindow"
 	AllWorkerNodesUpgraded        UpgradeConditionType = "AllWorkerNodesUpgraded"
 	RemoveExtraScaledNodes        UpgradeConditionType = "RemoveExtraScaledNodes"
-	UpdateSubscriptions           UpgradeConditionType = "UpdateSubscriptions"
 	PostUpgradeVerification       UpgradeConditionType = "PostUpgradeVerification"
 	RemoveMaintWindow             UpgradeConditionType = "RemoveMaintWindow"
 	PostClusterHealthCheck        UpgradeConditionType = "PostClusterHealthCheck"
@@ -172,16 +167,6 @@ type Update struct {
 	Version string `json:"version"`
 	// Channel used for upgrades
 	Channel string `json:"channel"`
-}
-
-// SubscriptionUpdate describe the 3rd party operator update config
-type SubscriptionUpdate struct {
-	// Describe the channel for the Subscription
-	Channel string `json:"channel"`
-	// Describe the namespace of the Subscription
-	Namespace string `json:"namespace"`
-	// Describe the name of the Subscription
-	Name string `json:"name"`
 }
 
 // IsTrue Condition whether the condition status is "True".
