@@ -16,16 +16,18 @@ spec:
       serviceAccountName: managed-upgrade-operator
       affinity:
         nodeAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - preference:
-              matchExpressions:
-              - key: node-role.kubernetes.io/infra
-                operator: Exists
-            weight: 1
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/master
+                operator: In
+                values:
+                - ""
       tolerations:
-        - operator: Exists
-          key: node-role.kubernetes.io/infra
-          effect: NoSchedule
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/master
+      - effect: NoExecute
+        key: node-role.kubernetes.io/master
       containers:
         - name: managed-upgrade-operator
           # Replace this with the built image name
