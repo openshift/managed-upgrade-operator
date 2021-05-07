@@ -21,13 +21,14 @@ const (
 	TEST_POLICY_ID_AUTOMATIC       = "aaaaaa-bbbbbb-cccccc-dddddd"
 
 	// Upgrade policy constants
-	TEST_OPERATOR_NAMESPACE                = "test-managed-upgrade-operator"
-	TEST_UPGRADEPOLICY_UPGRADETYPE         = "OSD"
-	TEST_UPGRADEPOLICY_TIME                = "2020-06-20T00:00:00Z"
-	TEST_UPGRADEPOLICY_TIME_NEXT_OCCURRING = "2020-05-20T00:00:00Z"
-	TEST_UPGRADEPOLICY_VERSION             = "4.4.5"
-	TEST_UPGRADEPOLICY_CHANNELGROUP        = "fast"
-	TEST_UPGRADEPOLICY_PDB_TIME            = 60
+	TEST_OPERATOR_NAMESPACE                 = "test-managed-upgrade-operator"
+	TEST_UPGRADEPOLICY_UPGRADETYPE          = "OSD"
+	TEST_UPGRADEPOLICY_TIME                 = "2020-06-20T00:00:00Z"
+	TEST_UPGRADEPOLICY_TIME_NEXT_OCCURRING  = "2020-05-20T00:00:00Z"
+	TEST_UPGRADEPOLICY_VERSION              = "4.4.5"
+	TEST_UPGRADEPOLICY_CHANNELGROUP         = "fast"
+	TEST_UPGRADEPOLICY_PDB_TIME             = 60
+	TEST_UPGRADEPOLICY_CAPACITY_RESERVATION = true
 )
 
 var _ = Describe("OCM Provider", func() {
@@ -147,6 +148,7 @@ var _ = Describe("OCM Provider", func() {
 				UpgradeAt:            TEST_UPGRADEPOLICY_TIME,
 				PDBForceDrainTimeout: TEST_UPGRADEPOLICY_PDB_TIME,
 				Type:                 TEST_UPGRADEPOLICY_UPGRADETYPE,
+				CapacityReservation:  TEST_UPGRADEPOLICY_CAPACITY_RESERVATION,
 			}
 
 			gomock.InOrder(
@@ -168,6 +170,7 @@ var _ = Describe("OCM Provider", func() {
 				UpgradeAt:            TEST_UPGRADEPOLICY_TIME_NEXT_OCCURRING,
 				PDBForceDrainTimeout: TEST_UPGRADEPOLICY_PDB_TIME,
 				Type:                 TEST_UPGRADEPOLICY_UPGRADETYPE,
+				CapacityReservation:  TEST_UPGRADEPOLICY_CAPACITY_RESERVATION,
 			}
 
 			multiPolicyResponse := ocm.UpgradePolicyList{

@@ -11,16 +11,17 @@ type UpgradePolicyList struct {
 
 // Represents an unmarshalled individual Upgrade Policy response from Cluster Services
 type UpgradePolicy struct {
-	Id                   string               `json:"id"`
-	Kind                 string               `json:"kind"`
-	Href                 string               `json:"href"`
-	Schedule             string               `json:"schedule"`
-	ScheduleType         string               `json:"schedule_type"`
-	UpgradeType          string               `json:"upgrade_type"`
-	Version              string               `json:"version"`
-	NextRun              string               `json:"next_run"`
-	PrevRun              string               `json:"prev_run"`
-	ClusterId            string               `json:"cluster_id"`
+	Id                  string `json:"id"`
+	Kind                string `json:"kind"`
+	Href                string `json:"href"`
+	Schedule            string `json:"schedule"`
+	ScheduleType        string `json:"schedule_type"`
+	UpgradeType         string `json:"upgrade_type"`
+	Version             string `json:"version"`
+	NextRun             string `json:"next_run"`
+	PrevRun             string `json:"prev_run"`
+	ClusterId           string `json:"cluster_id"`
+	CapacityReservation *bool  `json:"capacity_reservation"`
 }
 
 // Represents an unmarshalled Cluster List response from Cluster Services
@@ -34,8 +35,8 @@ type ClusterList struct {
 
 // Represents a partial unmarshalled Cluster response from Cluster Services
 type ClusterInfo struct {
-	Id      string         `json:"id"`
-	Version ClusterVersion `json:"version"`
+	Id                   string               `json:"id"`
+	Version              ClusterVersion       `json:"version"`
 	NodeDrainGracePeriod NodeDrainGracePeriod `json:"node_drain_grace_period"`
 }
 
@@ -62,5 +63,3 @@ type UpgradePolicyState struct {
 	Value       string `json:"value"`
 	Description string `json:"description"`
 }
-
-

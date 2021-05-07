@@ -32,6 +32,9 @@ type UpgradeConfigSpec struct {
 	// This defines the 3rd party operator subscriptions upgrade
 	// +kubebuilder:validation:Optional
 	SubscriptionUpdates []SubscriptionUpdate `json:"subscriptionUpdates,omitempty"`
+
+	// Specify if scale up extra node for capacity reservation before upgrade starts is needed
+	CapacityReservation bool `json:"capacityReservation"`
 }
 
 // UpgradeConfigStatus defines the observed state of UpgradeConfig

@@ -33,6 +33,7 @@ For the purpose of upgrading a cluster, an `UpgradeConfig` resource _must_ be co
 | `PDBForceDrainTimeout` | Duration in minutes that a PDB-blocked node is allowed to drain before a drain is forced | `120` |
 | `desired.version` | The desired OCP release to upgrade to | `4.4.6` |
 | `desired.channel` | The [channel](https://github.com/openshift/cincinnati/blob/master/docs/design/openshift.md#Channels) the Cluster Version Operator should be using to validate update versions | `fast-4.4` |
+| `capacityReservation` | If extra worker node(s) are needed during the upgrade to hold the customer workload | `true` |
 
 A populated `UpgradeConfig` example is presented below:
 
@@ -45,6 +46,7 @@ spec:
   type: "OSD"
   upgradeAt: "2020-06-20T12:00:00Z"
   PDBForceDrainTimeout: 120
+  capacityReservation: true
   desired:
     channel: "fast-4.4"
     version: "4.4.6"

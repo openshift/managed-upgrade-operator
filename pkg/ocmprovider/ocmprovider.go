@@ -156,6 +156,14 @@ func buildUpgradeConfigSpecs(upgradePolicy *ocm.UpgradePolicy, cluster *ocm.Clus
 
 	upgradeConfigSpecs := make([]upgradev1alpha1.UpgradeConfigSpec, 0)
 
+	// Set the capacityReservation to true if it is not explicit specified in OCM
+	var capacityReservation bool
+	if upgradePolicy.CapacityReservation != nil && !*upgradePolicy.CapacityReservation {
+		capacityReservation = false
+	} else {
+		capacityReservation = true
+	}
+
 	upgradeChannel, err := inferUpgradeChannelFromChannelGroup(cluster.Version.ChannelGroup, upgradePolicy.Version)
 	if err != nil {
 		return nil, fmt.Errorf("unable to determine channel from channel group '%v' and version '%v' for policy ID '%v'", cluster.Version.ChannelGroup, upgradePolicy.Version, upgradePolicy.Id)
@@ -168,6 +176,7 @@ func buildUpgradeConfigSpecs(upgradePolicy *ocm.UpgradePolicy, cluster *ocm.Clus
 		UpgradeAt:            upgradePolicy.NextRun,
 		PDBForceDrainTimeout: int32(cluster.NodeDrainGracePeriod.Value),
 		Type:                 upgradev1alpha1.UpgradeType(upgradePolicy.UpgradeType),
+		CapacityReservation:  capacityReservation,
 	}
 	upgradeConfigSpecs = append(upgradeConfigSpecs, upgradeConfigSpec)
 
