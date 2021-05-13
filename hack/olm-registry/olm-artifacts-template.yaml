@@ -11,7 +11,7 @@ parameters:
     required: true
   - name: IMAGE_TAG
     required: true
-  - name: REPO_DIGEST
+  - name: IMAGE_DIGEST
     required: true
   - name: REPO_NAME
     value: managed-upgrade-operator
@@ -52,7 +52,7 @@ objects:
             namespace: openshift-managed-upgrade-operator
           spec:
             sourceType: grpc
-            image: ${REPO_DIGEST}
+            image: ${REGISTRY_IMG}@${IMAGE_DIGEST}
             displayName: Managed Upgrade Operator
             publisher: Red Hat
         - apiVersion: operators.coreos.com/v1
