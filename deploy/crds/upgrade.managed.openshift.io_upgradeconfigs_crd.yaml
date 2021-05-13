@@ -53,7 +53,7 @@ spec:
               format: int32
               type: integer
             capacityReservation:
-              description: Specify if scale up extra node for capacity reservation before upgrade starts is needed
+              description: Specify if scaling up an extra node for capacity reservation before upgrade starts is needed
               type: boolean
             desired:
               description: Specify the desired OpenShift release
@@ -99,7 +99,6 @@ spec:
               type: string
           required:
             - PDBForceDrainTimeout
-            - capacityReservation
             - desired
             - type
             - upgradeAt
