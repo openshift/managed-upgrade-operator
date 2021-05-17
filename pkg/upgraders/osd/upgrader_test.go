@@ -161,27 +161,44 @@ var _ = Describe("ClusterUpgrader", func() {
 	})
 
 	Context("Scaling", func() {
-		It("Should scale up extra nodes and set success metric on successful scaling", func() {
-			gomock.InOrder(
-				mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
-				mockScalerClient.EXPECT().EnsureScaleUpNodes(gomock.Any(), config.GetScaleDuration(), gomock.Any()).Return(true, nil),
-				mockMetricsClient.EXPECT().UpdateMetricScalingSucceeded(gomock.Any()),
-			)
+		Context("When capacity reservation is enabled", func() {
+			It("Should scale up extra nodes and set success metric on successful scaling when capacity reservation enabled", func() {
+				gomock.InOrder(
+					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
+					mockScalerClient.EXPECT().EnsureScaleUpNodes(gomock.Any(), config.GetScaleDuration(), gomock.Any()).Return(true, nil),
+					mockMetricsClient.EXPECT().UpdateMetricScalingSucceeded(gomock.Any()),
+				)
 
-			ok, err := EnsureExtraUpgradeWorkers(mockKubeClient, config, mockScalerClient, mockDrainStrategyBuilder, mockMetricsClient, mockMaintClient, mockCVClient, mockEMClient, upgradeConfig, mockMachineryClient, []ac.AvailabilityChecker{mockAC}, logger)
-			Expect(err).To(Not(HaveOccurred()))
-			Expect(ok).To(BeTrue())
+				ok, err := EnsureExtraUpgradeWorkers(mockKubeClient, config, mockScalerClient, mockDrainStrategyBuilder, mockMetricsClient, mockMaintClient, mockCVClient, mockEMClient, upgradeConfig, mockMachineryClient, []ac.AvailabilityChecker{mockAC}, logger)
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(ok).To(BeTrue())
+			})
+			It("Should set failed metric on scaling time out when capacity reservation enabled", func() {
+				gomock.InOrder(
+					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
+					mockScalerClient.EXPECT().EnsureScaleUpNodes(gomock.Any(), config.GetScaleDuration(), gomock.Any()).Return(false, scaler.NewScaleTimeOutError("test scale timed out")),
+					mockMetricsClient.EXPECT().UpdateMetricScalingFailed(gomock.Any()),
+				)
+
+				ok, err := EnsureExtraUpgradeWorkers(mockKubeClient, config, mockScalerClient, mockDrainStrategyBuilder, mockMetricsClient, mockMaintClient, mockCVClient, mockEMClient, upgradeConfig, mockMachineryClient, []ac.AvailabilityChecker{mockAC}, logger)
+				Expect(err).To(HaveOccurred())
+				Expect(ok).To(BeFalse())
+			})
 		})
-		It("Should set failed metric on scaling time out", func() {
-			gomock.InOrder(
-				mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
-				mockScalerClient.EXPECT().EnsureScaleUpNodes(gomock.Any(), config.GetScaleDuration(), gomock.Any()).Return(false, scaler.NewScaleTimeOutError("test scale timed out")),
-				mockMetricsClient.EXPECT().UpdateMetricScalingFailed(gomock.Any()),
-			)
-
-			ok, err := EnsureExtraUpgradeWorkers(mockKubeClient, config, mockScalerClient, mockDrainStrategyBuilder, mockMetricsClient, mockMaintClient, mockCVClient, mockEMClient, upgradeConfig, mockMachineryClient, []ac.AvailabilityChecker{mockAC}, logger)
-			Expect(err).To(HaveOccurred())
-			Expect(ok).To(BeFalse())
+		Context("When capacity reservation is disabled", func() {
+			BeforeEach(func() {
+				upgradeConfig.Spec.CapacityReservation = false
+			})
+			It("Should not scale up extra nodes", func() {
+				ok, err := EnsureExtraUpgradeWorkers(mockKubeClient, config, mockScalerClient, mockDrainStrategyBuilder, mockMetricsClient, mockMaintClient, mockCVClient, mockEMClient, upgradeConfig, mockMachineryClient, []ac.AvailabilityChecker{mockAC}, logger)
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(ok).To(BeTrue())
+			})
+			It("Shoud not scale down extra nodes", func() {
+				ok, err := RemoveExtraScaledNodes(mockKubeClient, config, mockScalerClient, mockDrainStrategyBuilder, mockMetricsClient, mockMaintClient, mockCVClient, mockEMClient, upgradeConfig, mockMachineryClient, []ac.AvailabilityChecker{mockAC}, logger)
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(ok).To(BeTrue())
+			})
 		})
 	})
 

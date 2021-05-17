@@ -32,7 +32,7 @@ type ignoredAlerts struct {
 
 func (cfg *maintenanceConfig) IsValid() error {
 	if cfg.ControlPlaneTime <= 0 {
-		return fmt.Errorf("Config maintenace controlPlaneTime out is invalid")
+		return fmt.Errorf("config maintenace controlPlaneTime out is invalid")
 	}
 
 	return nil
@@ -73,22 +73,22 @@ func (cfg *osdUpgradeConfig) IsValid() error {
 		return err
 	}
 	if cfg.Scale.TimeOut <= 0 {
-		return fmt.Errorf("Config scale timeOut is invalid")
+		return fmt.Errorf("config scale timeOut is invalid")
 	}
 	if cfg.NodeDrain.Timeout <= 0 {
-		return fmt.Errorf("Config nodeDrain timeOut is invalid")
+		return fmt.Errorf("config nodeDrain timeOut is invalid")
 	}
 	if cfg.NodeDrain.ExpectedNodeDrainTime <= 0 {
-		return fmt.Errorf("Config nodeDrain expectedNodeDrainTime is invalid")
+		return fmt.Errorf("config nodeDrain expectedNodeDrainTime is invalid")
 	}
 	if cfg.UpgradeWindow.DelayTrigger < 0 {
-		return fmt.Errorf("Config upgrade window delay trigger is invalid")
+		return fmt.Errorf("config upgrade window delay trigger is invalid")
 	}
 	if cfg.UpgradeWindow.TimeOut < 0 {
-		return fmt.Errorf("Config upgrade window time out is invalid")
+		return fmt.Errorf("config upgrade window time out is invalid")
 	}
 	if len(cfg.ExtDependencyAvailabilityCheck.HTTP.URLS) > 0 && cfg.ExtDependencyAvailabilityCheck.HTTP.Timeout <= 0 || cfg.ExtDependencyAvailabilityCheck.HTTP.Timeout > 60 {
-		return fmt.Errorf("Config HTTP timeout is invalid (Requires int between 1 - 60 inclusive)")
+		return fmt.Errorf("config HTTP timeout is invalid (Requires int between 1 - 60 inclusive)")
 	}
 	return nil
 }

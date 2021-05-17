@@ -432,7 +432,7 @@ var _ = Describe("ClusterUpgrader verification and health tests", func() {
 		It("will abort a cluster health check with the error", func() {
 			result, err := performClusterHealthCheck(mockKubeClient, mockMetricsClient, mockCVClient, config, logger)
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("Unable to query critical alerts"))
+			Expect(err.Error()).To(ContainSubstring("unable to query critical alerts"))
 			Expect(result).To(BeFalse())
 		})
 		It("will abort Pre-Upgrade check", func() {
@@ -440,14 +440,14 @@ var _ = Describe("ClusterUpgrader verification and health tests", func() {
 			mockMetricsClient.EXPECT().UpdateMetricClusterCheckFailed(upgradeConfig.Name)
 			result, err := PreClusterHealthCheck(mockKubeClient, config, mockScaler, mockDrainStrategyBuilder, mockMetricsClient, mockMaintClient, mockCVClient, mockEMClient, upgradeConfig, mockMachinery, []ac.AvailabilityChecker{mockAC}, logger)
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("Unable to query critical alerts"))
+			Expect(err.Error()).To(ContainSubstring("unable to query critical alerts"))
 			Expect(result).To(BeFalse())
 		})
 		It("will abort Post-Upgrade check", func() {
 			mockMetricsClient.EXPECT().UpdateMetricClusterCheckFailed(upgradeConfig.Name)
 			result, err := PostClusterHealthCheck(mockKubeClient, config, mockScaler, mockDrainStrategyBuilder, mockMetricsClient, mockMaintClient, mockCVClient, mockEMClient, upgradeConfig, mockMachinery, []ac.AvailabilityChecker{mockAC}, logger)
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("Unable to query critical alerts"))
+			Expect(err.Error()).To(ContainSubstring("unable to query critical alerts"))
 			Expect(result).To(BeFalse())
 		})
 	})

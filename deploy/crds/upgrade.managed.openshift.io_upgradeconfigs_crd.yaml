@@ -52,6 +52,9 @@ spec:
               description: The maximum grace period granted to a node whose drain is blocked by a Pod Disruption Budget, before that drain is forced. Measured in minutes.
               format: int32
               type: integer
+            capacityReservation:
+              description: Specify if scaling up an extra node for capacity reservation before upgrade starts is needed
+              type: boolean
             desired:
               description: Specify the desired OpenShift release
               properties:
