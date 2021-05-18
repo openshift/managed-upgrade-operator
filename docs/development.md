@@ -69,7 +69,7 @@ $ OPERATOR_NAMESPACE=managed-upgrade-operator operator-sdk run --local --watch-n
 * Trigger a reconcile loop by applying an `upgradeconfig` CR with your desired specs. 
 
 ```
-oc apply -f test/deploy/crds/upgrade.managed.openshift.io_v1alpha1_upgradeconfig_cr.yaml
+oc apply -f test/deploy/upgrade.managed.openshift.io_v1alpha1_upgradeconfig_cr.yaml
 ```
 
 ### Remotely
@@ -119,5 +119,5 @@ $ oc create -f deploy/operator.yaml
 * Trigger a reconcile loop by applying an `upgradeconfig` CR with your desired specs. 
 
 ```bash
-$ oc create -f test/deploy/crds/upgrade.managed.openshift.io_v1alpha1_upgradeconfig_cr.yaml
+$ oc create -f test/deploy/upgrade.managed.openshift.io_v1alpha1_upgradeconfig_cr.yaml
 ```
