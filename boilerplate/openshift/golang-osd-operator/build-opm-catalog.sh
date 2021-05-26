@@ -49,7 +49,7 @@ function check_required_environment() {
 function setup_temp_dir() {
     local temp_dir
     temp_dir=$(mktemp -d --suffix "-$(basename "$0")")
-    [[ "$DELETE_TEMP_DIR" == "true" ]] && trap 'rm -rf $temp_dir' EXIT
+    [[ "$DELETE_TEMP_DIR" == "true" ]] && trap "rm -rf $temp_dir" EXIT
 
     echo "$temp_dir"
 }
@@ -164,12 +164,13 @@ function get_prev_operator_version() {
 }
 
 function build_opm_bundle() {
-    local bundle_contents_cmd=${1}
-    local opm_local_executable=${2}
-    local image_builder=${3}
-    local prev_good_operator_version=${4}
+    local temp_dir=${1}
+    local bundle_contents_cmd=${2}
+    local opm_local_executable=${3}
+    local image_builder=${4}
+    local prev_good_operator_version=${5}
     # shellcheck disable=SC2206
-    local skip_versions=(${@:5})
+    local skip_versions=(${@:6})
 
     local bundle_temp_dir
     bundle_temp_dir=$(mktemp -d -p "$temp_dir" bundle.XXXX)
@@ -333,7 +334,8 @@ function main() {
     local catalog_image_current_commit="$OLM_CATALOG_IMAGE:$CURRENT_COMMIT"
     local catalog_image_latest="$OLM_CATALOG_IMAGE:latest"
 
-    bundle_image_current_commit=$(build_opm_bundle "$bundle_contents_cmd" \
+    bundle_image_current_commit=$(build_opm_bundle "${temp_dir}" \
+                                                   "$bundle_contents_cmd" \
                                                    "$opm_local_executable" \
                                                    "$image_builder" \
                                                    "$prev_good_operator_version" \
