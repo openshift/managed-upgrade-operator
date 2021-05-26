@@ -26,21 +26,9 @@ var _ = Describe("UpgradeConfigController", func() {
 	})
 
 	Context("Update", func() {
-		Context("When the old object meta doesn't exist", func() {
-			It("will not return true", func() {
-				result := StatusChangedPredicate.UpdateFunc(event.UpdateEvent{ObjectOld: upgradeConfig, ObjectNew: upgradeConfig})
-				Expect(result).To(BeFalse())
-			})
-		})
 		Context("When the old object doesn't exist", func() {
 			It("will not return true", func() {
 				result := StatusChangedPredicate.UpdateFunc(event.UpdateEvent{ObjectOld: nil, ObjectNew: upgradeConfig})
-				Expect(result).To(BeFalse())
-			})
-		})
-		Context("When the new object meta doesn't exist", func() {
-			It("will not return true", func() {
-				result := StatusChangedPredicate.UpdateFunc(event.UpdateEvent{ObjectOld: upgradeConfig, ObjectNew: upgradeConfig})
 				Expect(result).To(BeFalse())
 			})
 		})

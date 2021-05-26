@@ -1,6 +1,7 @@
 package nodekeeper
 
 import (
+	"context"
 	"os"
 	"time"
 
@@ -95,7 +96,7 @@ var _ = Describe("NodeKeeperController", func() {
 					mockMachineryClient.EXPECT().IsUpgrading(gomock.Any(), "worker").Return(&machinery.UpgradingResult{IsUpgrading: true}, nil),
 					mockKubeClient.EXPECT().Get(gomock.Any(), testNodeName, gomock.Any()).Times(0),
 				)
-				_, err := reconciler.Reconcile(reconcile.Request{NamespacedName: testNodeName})
+				_, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: testNodeName})
 				Expect(err).NotTo(HaveOccurred())
 			})
 			It("should not check node if machines are not upgrading", func() {
@@ -106,7 +107,7 @@ var _ = Describe("NodeKeeperController", func() {
 					mockMachineryClient.EXPECT().IsUpgrading(gomock.Any(), "worker").Return(&machinery.UpgradingResult{IsUpgrading: false}, nil),
 					mockKubeClient.EXPECT().Get(gomock.Any(), testNodeName, gomock.Any()).Times(0),
 				)
-				_, err := reconciler.Reconcile(reconcile.Request{NamespacedName: testNodeName})
+				_, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: testNodeName})
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})
@@ -138,7 +139,7 @@ var _ = Describe("NodeKeeperController", func() {
 					mockMetricsClient.EXPECT().UpdateMetricNodeDrainFailed(gomock.Any()).Times(1),
 					mockMetricsClient.EXPECT().ResetMetricNodeDrainFailed(gomock.Any()).Times(0),
 				)
-				result, err := reconciler.Reconcile(reconcile.Request{NamespacedName: testNodeName})
+				result, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: testNodeName})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result.Requeue).To(BeFalse())
 				Expect(result.RequeueAfter).To(Not(BeNil()))
@@ -154,7 +155,7 @@ var _ = Describe("NodeKeeperController", func() {
 					mockMetricsClient.EXPECT().ResetMetricNodeDrainFailed(gomock.Any()).Times(1),
 					mockMetricsClient.EXPECT().UpdateMetricNodeDrainFailed(gomock.Any()).Times(0),
 				)
-				result, err := reconciler.Reconcile(reconcile.Request{NamespacedName: testNodeName})
+				result, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: testNodeName})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result.Requeue).To(BeFalse())
 				Expect(result.RequeueAfter).To(BeZero())
