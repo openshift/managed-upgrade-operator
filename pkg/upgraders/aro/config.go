@@ -14,7 +14,6 @@ type aroUpgradeConfig struct {
 	NodeDrain                      drain.NodeDrain                   `yaml:"nodeDrain"`
 	HealthCheck                    healthCheck                       `yaml:"healthCheck"`
 	ExtDependencyAvailabilityCheck ac.ExtDependencyAvailabilityCheck `yaml:"extDependencyAvailabilityChecks"`
-	Verification                   verification                      `yaml:"verification"`
 	UpgradeWindow                  upgradeWindow                     `yaml:"upgradeWindow"`
 }
 
@@ -61,11 +60,6 @@ type scaleConfig struct {
 
 type healthCheck struct {
 	IgnoredCriticals []string `yaml:"ignoredCriticals"`
-}
-
-type verification struct {
-	IgnoredNamespaces        []string `yaml:"ignoredNamespaces"`
-	NamespacePrefixesToCheck []string `yaml:"namespacePrefixesToCheck"`
 }
 
 func (cfg *aroUpgradeConfig) IsValid() error {

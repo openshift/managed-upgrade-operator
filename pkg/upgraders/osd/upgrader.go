@@ -8,7 +8,6 @@ import (
 
 	"github.com/go-logr/logr"
 	operatorv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -43,7 +42,6 @@ var (
 		upgradev1alpha1.AllWorkerNodesUpgraded,
 		upgradev1alpha1.RemoveExtraScaledNodes,
 		upgradev1alpha1.UpdateSubscriptions,
-		upgradev1alpha1.PostUpgradeVerification,
 		upgradev1alpha1.RemoveMaintWindow,
 		upgradev1alpha1.PostClusterHealthCheck,
 		upgradev1alpha1.SendCompletedNotification,
@@ -90,7 +88,6 @@ func NewClient(c client.Client, cfm configmanager.ConfigManager, mc metrics.Metr
 		upgradev1alpha1.AllWorkerNodesUpgraded:        AllWorkersUpgraded,
 		upgradev1alpha1.RemoveExtraScaledNodes:        RemoveExtraScaledNodes,
 		upgradev1alpha1.UpdateSubscriptions:           UpdateSubscriptions,
-		upgradev1alpha1.PostUpgradeVerification:       PostUpgradeVerification,
 		upgradev1alpha1.RemoveMaintWindow:             RemoveMaintWindow,
 		upgradev1alpha1.PostClusterHealthCheck:        PostClusterHealthCheck,
 		upgradev1alpha1.SendCompletedNotification:     SendCompletedNotification,
@@ -378,94 +375,6 @@ func UpdateSubscriptions(c client.Client, cfg *osdUpgradeConfig, scaler scaler.S
 				return false, err
 			}
 		}
-	}
-
-	return true, nil
-}
-
-// PostUpgradeVerification run the verification steps which defined in performUpgradeVerification
-func PostUpgradeVerification(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, dsb drain.NodeDrainStrategyBuilder, metricsClient metrics.Metrics, m maintenance.Maintenance, cvClient cv.ClusterVersion, nc eventmanager.EventManager, upgradeConfig *upgradev1alpha1.UpgradeConfig, machinery machinery.Machinery, availabilityCheckers ac.AvailabilityCheckers, logger logr.Logger) (bool, error) {
-	ok, err := performUpgradeVerification(c, cfg, metricsClient, logger)
-	if err != nil || !ok {
-		metricsClient.UpdateMetricClusterVerificationFailed(upgradeConfig.Name)
-		return false, err
-	}
-
-	metricsClient.UpdateMetricClusterVerificationSucceeded(upgradeConfig.Name)
-	return true, nil
-}
-
-// performPostUpgradeVerification verifies all replicasets are at expected counts and all daemonsets are at expected counts
-func performUpgradeVerification(c client.Client, cfg *osdUpgradeConfig, metricsClient metrics.Metrics, logger logr.Logger) (bool, error) {
-
-	namespacePrefixesToCheck := cfg.Verification.NamespacePrefixesToCheck
-	namespaceToIgnore := cfg.Verification.IgnoredNamespaces
-
-	// Verify all ReplicaSets in the default, kube* and openshfit* namespaces are satisfied
-	replicaSetList := &appsv1.ReplicaSetList{}
-	err := c.List(context.TODO(), replicaSetList)
-	if err != nil {
-		return false, err
-	}
-	readyRs := 0
-	totalRs := 0
-	for _, replicaSet := range replicaSetList.Items {
-		for _, namespacePrefix := range namespacePrefixesToCheck {
-			for _, ingoredNS := range namespaceToIgnore {
-				if strings.HasPrefix(replicaSet.Namespace, namespacePrefix) && replicaSet.Namespace != ingoredNS {
-					totalRs = totalRs + 1
-					if replicaSet.Status.ReadyReplicas == replicaSet.Status.Replicas {
-						readyRs = readyRs + 1
-					}
-				}
-			}
-		}
-	}
-	if totalRs != readyRs {
-		logger.Info(fmt.Sprintf("not all replicaset are ready:expected number :%v , ready number %v", totalRs, readyRs))
-		return false, nil
-	}
-
-	// Verify all Daemonsets in the default, kube* and openshift* namespaces are satisfied
-	daemonSetList := &appsv1.DaemonSetList{}
-	err = c.List(context.TODO(), daemonSetList)
-	if err != nil {
-		return false, err
-	}
-	readyDS := 0
-	totalDS := 0
-	for _, daemonSet := range daemonSetList.Items {
-		for _, namespacePrefix := range namespacePrefixesToCheck {
-			for _, ignoredNS := range namespaceToIgnore {
-				if strings.HasPrefix(daemonSet.Namespace, namespacePrefix) && daemonSet.Namespace != ignoredNS {
-					totalDS = totalDS + 1
-					if daemonSet.Status.DesiredNumberScheduled == daemonSet.Status.NumberReady {
-						readyDS = readyDS + 1
-					}
-				}
-			}
-		}
-	}
-	if totalDS != readyDS {
-		logger.Info(fmt.Sprintf("not all daemonset are ready:expected number :%v , ready number %v", totalDS, readyDS))
-		return false, nil
-	}
-
-	// If daemonsets and replicasets are satisfied, any active TargetDown alerts will eventually go away.
-	// Wait for that to occur before declaring the verification complete.
-	namespacePrefixesAsRegex := make([]string, 0)
-	namespaceIgnoreAlert := make([]string, 0)
-	for _, namespacePrefix := range namespacePrefixesToCheck {
-		namespacePrefixesAsRegex = append(namespacePrefixesAsRegex, fmt.Sprintf("^%s-.*", namespacePrefix))
-	}
-	namespaceIgnoreAlert = append(namespaceIgnoreAlert, namespaceToIgnore...)
-	isTargetDownFiring, err := metricsClient.IsAlertFiring("TargetDown", namespacePrefixesAsRegex, namespaceIgnoreAlert)
-	if err != nil {
-		return false, fmt.Errorf("can't query for alerts: %v", err)
-	}
-	if isTargetDownFiring {
-		logger.Info(fmt.Sprintf("TargetDown alerts are still firing in namespaces %v", namespacePrefixesAsRegex))
-		return false, nil
 	}
 
 	return true, nil
