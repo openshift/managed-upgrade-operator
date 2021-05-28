@@ -113,7 +113,6 @@ const (
 	AllWorkerNodesUpgraded        UpgradeConditionType = "AllWorkerNodesUpgraded"
 	RemoveExtraScaledNodes        UpgradeConditionType = "RemoveExtraScaledNodes"
 	UpdateSubscriptions           UpgradeConditionType = "UpdateSubscriptions"
-	PostUpgradeVerification       UpgradeConditionType = "PostUpgradeVerification"
 	RemoveMaintWindow             UpgradeConditionType = "RemoveMaintWindow"
 	PostClusterHealthCheck        UpgradeConditionType = "PostClusterHealthCheck"
 	SendCompletedNotification     UpgradeConditionType = "SendCompletedNotification"

@@ -201,30 +201,6 @@ func (mr *MockMetricsMockRecorder) UpdateMetricClusterCheckSucceeded(arg0 interf
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricClusterCheckSucceeded", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricClusterCheckSucceeded), arg0)
 }
 
-// UpdateMetricClusterVerificationFailed mocks base method
-func (m *MockMetrics) UpdateMetricClusterVerificationFailed(arg0 string) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "UpdateMetricClusterVerificationFailed", arg0)
-}
-
-// UpdateMetricClusterVerificationFailed indicates an expected call of UpdateMetricClusterVerificationFailed
-func (mr *MockMetricsMockRecorder) UpdateMetricClusterVerificationFailed(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricClusterVerificationFailed", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricClusterVerificationFailed), arg0)
-}
-
-// UpdateMetricClusterVerificationSucceeded mocks base method
-func (m *MockMetrics) UpdateMetricClusterVerificationSucceeded(arg0 string) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "UpdateMetricClusterVerificationSucceeded", arg0)
-}
-
-// UpdateMetricClusterVerificationSucceeded indicates an expected call of UpdateMetricClusterVerificationSucceeded
-func (mr *MockMetricsMockRecorder) UpdateMetricClusterVerificationSucceeded(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricClusterVerificationSucceeded", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricClusterVerificationSucceeded), arg0)
-}
-
 // UpdateMetricNodeDrainFailed mocks base method
 func (m *MockMetrics) UpdateMetricNodeDrainFailed(arg0 string) {
 	m.ctrl.T.Helper()

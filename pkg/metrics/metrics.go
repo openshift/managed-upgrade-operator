@@ -46,8 +46,6 @@ type Metrics interface {
 	UpdateMetricClusterCheckSucceeded(string)
 	UpdateMetricScalingFailed(string)
 	UpdateMetricScalingSucceeded(string)
-	UpdateMetricClusterVerificationFailed(string)
-	UpdateMetricClusterVerificationSucceeded(string)
 	UpdateMetricUpgradeWindowNotBreached(string)
 	UpdateMetricUpgradeConfigSynced(string)
 	ResetMetricUpgradeConfigSynced(string)
@@ -133,11 +131,6 @@ var (
 		Name:      "scaling_failed",
 		Help:      "Failed to scale up extra workers",
 	}, []string{nameLabel})
-	metricClusterVerificationFailed = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Subsystem: metricsTag,
-		Name:      "cluster_verification_failed",
-		Help:      "Failed on the cluster upgrade verification step",
-	}, []string{nameLabel})
 	metricUpgradeWindowBreached = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Subsystem: metricsTag,
 		Name:      "upgrade_window_breached",
@@ -173,7 +166,6 @@ var (
 		metricValidationFailed,
 		metricClusterCheckFailed,
 		metricScalingFailed,
-		metricClusterVerificationFailed,
 		metricUpgradeWindowBreached,
 		metricUpgradeConfigSynced,
 		metricUpgradeControlPlaneTimeout,
@@ -277,18 +269,6 @@ func (c *Counter) ResetAllMetricNodeDrainFailed() {
 	metricNodeDrainFailed.Reset()
 }
 
-func (c *Counter) UpdateMetricClusterVerificationFailed(upgradeConfigName string) {
-	metricClusterVerificationFailed.With(prometheus.Labels{
-		nameLabel: upgradeConfigName}).Set(
-		float64(1))
-}
-
-func (c *Counter) UpdateMetricClusterVerificationSucceeded(upgradeConfigName string) {
-	metricClusterVerificationFailed.With(prometheus.Labels{
-		nameLabel: upgradeConfigName}).Set(
-		float64(0))
-}
-
 func (c *Counter) UpdateMetricUpgradeWindowNotBreached(upgradeConfigName string) {
 	metricUpgradeWindowBreached.With(prometheus.Labels{
 		nameLabel: upgradeConfigName}).Set(
@@ -322,7 +302,6 @@ func (c *Counter) ResetFailureMetrics() {
 		metricValidationFailed,
 		metricClusterCheckFailed,
 		metricScalingFailed,
-		metricClusterVerificationFailed,
 		metricUpgradeControlPlaneTimeout,
 		metricUpgradeWorkerTimeout,
 		metricNodeDrainFailed,
