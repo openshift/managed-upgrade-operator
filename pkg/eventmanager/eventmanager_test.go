@@ -22,7 +22,7 @@ import (
 
 const (
 	TEST_OPERATOR_NAMESPACE = "openshift-managed-upgrade-operator"
-	TEST_UPGRADECONFIG_CR   = "osd-upgrade-config"
+	TEST_UPGRADECONFIG_CR   = "managed-upgrade-config"
 	TEST_UPGRADE_VERSION    = "4.4.4"
 	TEST_UPGRADE_TIME       = "2020-06-20T00:00:00Z"
 )
