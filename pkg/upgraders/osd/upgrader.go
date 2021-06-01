@@ -589,19 +589,32 @@ func performClusterHealthCheck(c client.Client, metricsClient metrics.Metrics, c
 		return false, fmt.Errorf("unable to query critical alerts: %s", err)
 	}
 
-	if len(alerts.Data.Result) > 0 {
-		logger.Info("There are critical alerts exists, cannot upgrade now")
-		return false, fmt.Errorf("there are %d critical alerts", len(alerts.Data.Result))
-	}
+	alertCount := len(alerts.Data.Result)
 
-	result, err := cvClient.HasDegradedOperators()
-	if err != nil {
-		return false, err
-	}
-	if len(result.Degraded) > 0 {
-		logger.Info(fmt.Sprintf("degraded operators :%s", strings.Join(result.Degraded, ",")))
-		// Send the metrics for the cluster check failed if we have degraded operators
-		return false, fmt.Errorf("degraded operators :%s", strings.Join(result.Degraded, ","))
+	if alertCount > 0 {
+		alert := []string{}
+		uniqueAlerts := make(map[string]bool)
+
+		for i := range alerts.Data.Result {
+			a := alerts.Data.Result[i].Metric["alertname"]
+
+			if uniqueAlerts[a] {
+				continue
+			}
+			alert = append(alert, a)
+			uniqueAlerts[a] = true
+		}
+
+		logger.Info(fmt.Sprintf("Critical alert(s) firing: %s. Cannot continue upgrade", strings.Join(alert, ", ")))
+
+		result, err := cvClient.HasDegradedOperators()
+		if err != nil {
+			return false, err
+		}
+		if len(result.Degraded) > 0 {
+			logger.Info(fmt.Sprintf("Degraded operators: %s", strings.Join(result.Degraded, ", ")))
+		}
+		return false, fmt.Errorf("critical alert(s) firing: %s", strings.Join(alert, ", "))
 	}
 
 	return true, nil
