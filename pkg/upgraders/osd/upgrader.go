@@ -595,8 +595,8 @@ func performClusterHealthCheck(c client.Client, metricsClient metrics.Metrics, c
 		alert := []string{}
 		uniqueAlerts := make(map[string]bool)
 
-		for i := range alerts.Data.Result {
-			a := alerts.Data.Result[i].Metric["alertname"]
+		for _, r := range alerts.Data.Result {
+			a := r.Metric["alertname"]
 
 			if uniqueAlerts[a] {
 				continue
