@@ -606,15 +606,16 @@ func performClusterHealthCheck(c client.Client, metricsClient metrics.Metrics, c
 		}
 
 		logger.Info(fmt.Sprintf("Critical alert(s) firing: %s. Cannot continue upgrade", strings.Join(alert, ", ")))
-
-		result, err := cvClient.HasDegradedOperators()
-		if err != nil {
-			return false, err
-		}
-		if len(result.Degraded) > 0 {
-			logger.Info(fmt.Sprintf("Degraded operators: %s", strings.Join(result.Degraded, ", ")))
-		}
 		return false, fmt.Errorf("critical alert(s) firing: %s", strings.Join(alert, ", "))
+	}
+
+	result, err := cvClient.HasDegradedOperators()
+	if err != nil {
+		return false, err
+	}
+	if len(result.Degraded) > 0 {
+		logger.Info(fmt.Sprintf("Degraded operators: %s", strings.Join(result.Degraded, ", ")))
+		return false, fmt.Errorf("degraded operators: %s", strings.Join(result.Degraded, ", "))
 	}
 
 	return true, nil
