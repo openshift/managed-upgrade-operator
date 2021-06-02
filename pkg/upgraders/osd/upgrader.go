@@ -615,6 +615,7 @@ func performClusterHealthCheck(c client.Client, metricsClient metrics.Metrics, c
 	}
 	if len(result.Degraded) > 0 {
 		logger.Info(fmt.Sprintf("Degraded operators: %s", strings.Join(result.Degraded, ", ")))
+		// Send the metrics for the cluster check failed if we have degraded operators
 		return false, fmt.Errorf("degraded operators: %s", strings.Join(result.Degraded, ", "))
 	}
 
