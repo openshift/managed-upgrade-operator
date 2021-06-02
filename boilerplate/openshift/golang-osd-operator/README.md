@@ -112,7 +112,7 @@ Checks consist of:
 * Checking if this results in any new uncommitted files in the git project or if all is clean.
 
 `make generate` does the following:
-* `operator-sdk generate crds` and `k8s`. This is a no-op if your
+* generate crds and deepcopy via controller-gen. This is a no-op if your
   operator has no APIs.
 * `openapi-gen`. This is a no-op if your operator has no APIs.
 * `go generate`. This is a no-op if you have no `//go:generate`
