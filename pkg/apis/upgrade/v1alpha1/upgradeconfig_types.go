@@ -32,10 +32,6 @@ type UpgradeConfigSpec struct {
 	// Type indicates the ClusterUpgrader implementation to use to perform an upgrade of the cluster
 	Type UpgradeType `json:"type"`
 
-	// This defines the 3rd party operator subscriptions upgrade
-	// +kubebuilder:validation:Optional
-	SubscriptionUpdates []SubscriptionUpdate `json:"subscriptionUpdates,omitempty"`
-
 	// Specify if scaling up an extra node for capacity reservation before upgrade starts is needed
 	CapacityReservation bool `json:"capacityReservation,omitempty"`
 }
@@ -196,16 +192,6 @@ type Update struct {
 	Version string `json:"version"`
 	// Channel used for upgrades
 	Channel string `json:"channel"`
-}
-
-// SubscriptionUpdate describe the 3rd party operator update config
-type SubscriptionUpdate struct {
-	// Describe the channel for the Subscription
-	Channel string `json:"channel"`
-	// Describe the namespace of the Subscription
-	Namespace string `json:"namespace"`
-	// Describe the name of the Subscription
-	Name string `json:"name"`
 }
 
 // IsTrue Condition whether the condition status is "True".
