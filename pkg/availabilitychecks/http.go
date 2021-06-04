@@ -54,7 +54,7 @@ func (h HTTPAvailabilityChecker) AvailabilityCheck() error {
 				resp, err := client.Get(url)
 
 				if err != nil {
-					return err
+					return fmt.Errorf("client request error for %v: %v", url, err)
 				}
 
 				if resp != nil && resp.Body != nil {
@@ -65,9 +65,9 @@ func (h HTTPAvailabilityChecker) AvailabilityCheck() error {
 
 				switch {
 				case s >= 500:
-					return fmt.Errorf("Server error: %v", s)
+					return fmt.Errorf("server error for %v: %v", url, s)
 				case s >= 400:
-					return stop{fmt.Errorf("Client error: %v", s)}
+					return stop{fmt.Errorf("client error for %v: %v", url, s)}
 				default:
 					return nil
 				}
@@ -77,7 +77,7 @@ func (h HTTPAvailabilityChecker) AvailabilityCheck() error {
 				HTTPAvailabilityError = err
 			}
 
-			// Call this to drop the wg Coutner by 1
+			// Call this to drop the wg Counter by 1
 			wg.Done()
 
 		}(url)
