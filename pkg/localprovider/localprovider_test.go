@@ -136,5 +136,26 @@ var _ = Describe("Local Provider", func() {
 			Expect(specs).To(BeEmpty())
 		})
 
+		It("Does not return UpgradeConfigSpec when UpgradeHistory has Upgraded phase", func() {
+			upgradedHistoryUCL := v1alpha1.UpgradeConfigList{
+				Items: []v1alpha1.UpgradeConfig{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "uc1",
+						},
+						Spec: upgradeConfigSpec,
+						Status: v1alpha1.UpgradeConfigStatus{
+							History: []v1alpha1.UpgradeHistory{
+								{Version: TEST_LOCAL_UPGRADECONFIG_VERSION, Phase: v1alpha1.UpgradePhaseUpgraded},
+							},
+						},
+					},
+				},
+			}
+			specs, err := readSpecFromConfig(upgradedHistoryUCL)
+			Expect(err).To(BeNil())
+			Expect(specs).To(BeEmpty())
+		})
+
 	})
 })
