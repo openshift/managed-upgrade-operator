@@ -1,4 +1,4 @@
-package localprovider_test
+package localprovider
 
 import (
 	"testing"

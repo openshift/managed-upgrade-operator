@@ -43,32 +43,6 @@ var _ = Describe("Local Provider", func() {
 			cfgname: TEST_LOCAL_UPGRADECONFIG_NAME,
 		}
 
-		upgradeConfigList = v1alpha1.UpgradeConfigList{
-			Items: []v1alpha1.UpgradeConfig{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "uc1",
-					},
-					Spec: v1alpha1.UpgradeConfigSpec{
-						Desired: v1alpha1.Update{
-							Version: TEST_LOCAL_UPGRADECONFIG_VERSION,
-							Channel: TEST_LOCAL_UPGRADECONFIG_CHANNELGROUP + "-4.7",
-						},
-						UpgradeAt:            TEST_LOCAL_UPGRADECONFIG_TIME,
-						PDBForceDrainTimeout: TEST_LOCAL_UPGRADECONFIG_PDB_TIME,
-						Type:                 TEST_LOCAL_UPGRADECONFIG_UPGRADETYPE,
-						CapacityReservation:  TEST_LOCAL_UPGRADECONFIG_CAPACITY_RESERVATION,
-					},
-					Status: v1alpha1.UpgradeConfigStatus{
-						History: []v1alpha1.UpgradeHistory{
-							{Version: TEST_LOCAL_UPGRADECONFIG_VERSION, Phase: v1alpha1.UpgradePhasePending},
-							{Version: TEST_LOCAL_UPGRADECONFIG_VERSION, Phase: v1alpha1.UpgradePhaseUpgraded},
-						},
-					},
-				},
-			},
-		}
-
 		upgradeConfigSpec = v1alpha1.UpgradeConfigSpec{
 			Desired: v1alpha1.Update{
 				Version: TEST_LOCAL_UPGRADECONFIG_VERSION,
@@ -78,6 +52,23 @@ var _ = Describe("Local Provider", func() {
 			PDBForceDrainTimeout: TEST_LOCAL_UPGRADECONFIG_PDB_TIME,
 			Type:                 TEST_LOCAL_UPGRADECONFIG_UPGRADETYPE,
 			CapacityReservation:  TEST_LOCAL_UPGRADECONFIG_CAPACITY_RESERVATION,
+		}
+
+		upgradeConfigList = v1alpha1.UpgradeConfigList{
+			Items: []v1alpha1.UpgradeConfig{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "uc1",
+					},
+					Spec: upgradeConfigSpec,
+					Status: v1alpha1.UpgradeConfigStatus{
+						History: []v1alpha1.UpgradeHistory{
+							{Version: TEST_LOCAL_UPGRADECONFIG_VERSION, Phase: v1alpha1.UpgradePhasePending},
+							{Version: TEST_LOCAL_UPGRADECONFIG_VERSION, Phase: v1alpha1.UpgradePhaseUpgraded},
+						},
+					},
+				},
+			},
 		}
 
 		_ = os.Setenv("OPERATOR_NAMESPACE", TEST_OPERATOR_NAMESPACE)
