@@ -126,16 +126,7 @@ var _ = Describe("Local Provider", func() {
 						ObjectMeta: metav1.ObjectMeta{
 							Name: "uc1",
 						},
-						Spec: v1alpha1.UpgradeConfigSpec{
-							Desired: v1alpha1.Update{
-								Version: TEST_LOCAL_UPGRADECONFIG_VERSION,
-								Channel: TEST_LOCAL_UPGRADECONFIG_CHANNELGROUP + "-4.7",
-							},
-							UpgradeAt:            TEST_LOCAL_UPGRADECONFIG_TIME,
-							PDBForceDrainTimeout: TEST_LOCAL_UPGRADECONFIG_PDB_TIME,
-							Type:                 TEST_LOCAL_UPGRADECONFIG_UPGRADETYPE,
-							CapacityReservation:  TEST_LOCAL_UPGRADECONFIG_CAPACITY_RESERVATION,
-						},
+						Spec:   upgradeConfigSpec,
 						Status: v1alpha1.UpgradeConfigStatus{},
 					},
 				},
