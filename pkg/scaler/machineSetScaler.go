@@ -21,7 +21,7 @@ import (
 const (
 	// LABEL_UPGRADE is the label used for managed upgrades
 	LABEL_UPGRADE = "upgrade.managed.openshift.io"
-	// LABEL_MACHINESET is the label used for machine sets
+	// LABEL_MACHINESET is the label used for machinesets
 	LABEL_MACHINESET = "machine.openshift.io/cluster-api-machineset"
 	// MACHINE_API_NAMESPACE is the namespace of the machine api
 	MACHINE_API_NAMESPACE = "openshift-machine-api"

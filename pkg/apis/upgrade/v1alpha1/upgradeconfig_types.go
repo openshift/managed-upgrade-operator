@@ -102,39 +102,39 @@ type UpgradeCondition struct {
 }
 
 const (
-	// SendStartedNotification is an UpgradeConfitionType
+	// SendStartedNotification is an UpgradeConditionType
 	SendStartedNotification UpgradeConditionType = "SendStartedNotification"
-	// UpgradeDelayedCheck is an UpgradeConfitionType
+	// UpgradeDelayedCheck is an UpgradeConditionType
 	UpgradeDelayedCheck UpgradeConditionType = "UpgradeDelayedCheck"
-	// UpgradeValidated is an UpgradeConfitionType
+	// UpgradeValidated is an UpgradeConditionType
 	UpgradeValidated UpgradeConditionType = "Validation"
-	// UpgradePreHealthCheck is an UpgradeConfitionType
+	// UpgradePreHealthCheck is an UpgradeConditionType
 	UpgradePreHealthCheck UpgradeConditionType = "PreHealthCheck"
-	// ExtDepAvailabilityCheck is an UpgradeConfitionType
+	// ExtDepAvailabilityCheck is an UpgradeConditionType
 	ExtDepAvailabilityCheck UpgradeConditionType = "ExternalDependencyAvailabilityCheck"
-	// UpgradeScaleUpExtraNodes is an UpgradeConfitionType
+	// UpgradeScaleUpExtraNodes is an UpgradeConditionType
 	UpgradeScaleUpExtraNodes UpgradeConditionType = "ScaleUpExtraNodes"
-	// ControlPlaneMaintWindow is an UpgradeConfitionType
+	// ControlPlaneMaintWindow is an UpgradeConditionType
 	ControlPlaneMaintWindow UpgradeConditionType = "ControlPlaneMaintWindow"
-	// CommenceUpgrade is an UpgradeConfitionType
+	// CommenceUpgrade is an UpgradeConditionType
 	CommenceUpgrade UpgradeConditionType = "CommenceUpgrade"
-	// ControlPlaneUpgraded is an UpgradeConfitionType
+	// ControlPlaneUpgraded is an UpgradeConditionType
 	ControlPlaneUpgraded UpgradeConditionType = "ControlPlaneUpgraded"
-	// RemoveControlPlaneMaintWindow is an UpgradeConfitionType
+	// RemoveControlPlaneMaintWindow is an UpgradeConditionType
 	RemoveControlPlaneMaintWindow UpgradeConditionType = "RemoveControlPlaneMaintWindow"
-	// WorkersMaintWindow is an UpgradeConfitionType
+	// WorkersMaintWindow is an UpgradeConditionType
 	WorkersMaintWindow UpgradeConditionType = "WorkersMaintWindow"
-	// AllWorkerNodesUpgraded is an UpgradeConfitionType
+	// AllWorkerNodesUpgraded is an UpgradeConditionType
 	AllWorkerNodesUpgraded UpgradeConditionType = "AllWorkerNodesUpgraded"
-	// RemoveExtraScaledNodes is an UpgradeConfitionType
+	// RemoveExtraScaledNodes is an UpgradeConditionType
 	RemoveExtraScaledNodes UpgradeConditionType = "RemoveExtraScaledNodes"
-	// UpdateSubscriptions is an UpgradeConfitionType
+	// UpdateSubscriptions is an UpgradeConditionType
 	UpdateSubscriptions UpgradeConditionType = "UpdateSubscriptions"
-	// RemoveMaintWindow is an UpgradeConfitionType
+	// RemoveMaintWindow is an UpgradeConditionType
 	RemoveMaintWindow UpgradeConditionType = "RemoveMaintWindow"
-	// PostClusterHealthCheck is an UpgradeConfitionType
+	// PostClusterHealthCheck is an UpgradeConditionType
 	PostClusterHealthCheck UpgradeConditionType = "PostClusterHealthCheck"
-	// SendCompletedNotification is an UpgradeConfitionType
+	// SendCompletedNotification is an UpgradeConditionType
 	SendCompletedNotification UpgradeConditionType = "SendCompletedNotification"
 )
 

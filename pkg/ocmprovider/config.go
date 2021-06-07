@@ -10,7 +10,7 @@ type OcmProviderConfig struct {
 	ConfigManager ConfigManager `yaml:"configManager"`
 }
 
-// ConfigManager manages confif for an OCM provider
+// ConfigManager manages config for an OCM provider
 type ConfigManager struct {
 	OcmBaseUrl string `yaml:"ocmBaseUrl"`
 }
