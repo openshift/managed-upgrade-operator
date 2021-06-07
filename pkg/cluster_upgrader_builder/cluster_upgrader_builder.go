@@ -12,17 +12,20 @@ import (
 	"github.com/openshift/managed-upgrade-operator/pkg/upgraders/osd"
 )
 
+// ClusterUpgrader enables an implementation of a ClusterUpgrader
 // Interface describing the functions of a cluster upgrader.
 //go:generate mockgen -destination=mocks/cluster_upgrader.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/cluster_upgrader_builder ClusterUpgrader
 type ClusterUpgrader interface {
 	UpgradeCluster(upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (upgradev1alpha1.UpgradePhase, *upgradev1alpha1.UpgradeCondition, error)
 }
 
+// ClusterUpgraderBuilder enables an implementation of a ClusterUpgraderBuilder
 //go:generate mockgen -destination=mocks/cluster_upgrader_builder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/cluster_upgrader_builder ClusterUpgraderBuilder
 type ClusterUpgraderBuilder interface {
 	NewClient(client.Client, configmanager.ConfigManager, metrics.Metrics, eventmanager.EventManager, upgradev1alpha1.UpgradeType) (ClusterUpgrader, error)
 }
 
+// NewBuilder returns a clusterUpgraderBuilder
 func NewBuilder() ClusterUpgraderBuilder {
 	return &clusterUpgraderBuilder{}
 }

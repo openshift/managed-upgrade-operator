@@ -21,15 +21,16 @@ var (
 	aroUpgradeStepOrdering = []upgradev1alpha1.UpgradeConditionType{}
 )
 
-// Represents a named series of steps as part of an upgrade process
+// UpgradeSteps represents a named series of steps as part of an upgrade process
 type UpgradeSteps map[upgradev1alpha1.UpgradeConditionType]UpgradeStep
 
-// Represents an individual step in the upgrade process
+// UpgradeStep is an individual step in the upgrade process
 type UpgradeStep func(client.Client, *aroUpgradeConfig, scaler.Scaler, drain.NodeDrainStrategyBuilder, metrics.Metrics, maintenance.Maintenance, cv.ClusterVersion, eventmanager.EventManager, *upgradev1alpha1.UpgradeConfig, machinery.Machinery, ac.AvailabilityCheckers, logr.Logger) (bool, error)
 
-// Represents the order in which to undertake upgrade steps
+// UpgradeStepOrdering represents the order in which to undertake upgrade steps
 type UpgradeStepOrdering []upgradev1alpha1.UpgradeConditionType
 
+// NewClient returns a new aroClusterUpgrader
 func NewClient(c client.Client, cfm configmanager.ConfigManager, mc metrics.Metrics, notifier eventmanager.EventManager) (*aroClusterUpgrader, error) {
 	cfg := &aroUpgradeConfig{}
 	err := cfm.Into(cfg)

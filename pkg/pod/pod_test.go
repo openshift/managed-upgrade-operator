@@ -16,10 +16,10 @@ import (
 var _ = Describe("Pod Filter", func() {
 
 	var (
-		podList       *corev1.PodList
-		mockKubeClient           *mocks.MockClient
-		mockCtrl                 *gomock.Controller
-		passPredicate PodPredicate = func(p corev1.Pod) bool {
+		podList        *corev1.PodList
+		mockKubeClient *mocks.MockClient
+		mockCtrl       *gomock.Controller
+		passPredicate  PodPredicate = func(p corev1.Pod) bool {
 			return true
 		}
 		failPredicate PodPredicate = func(p corev1.Pod) bool {
@@ -63,7 +63,7 @@ var _ = Describe("Pod Filter", func() {
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name: "testpod",
-							Finalizers: []string {
+							Finalizers: []string{
 								"deleteThisFinalizer",
 								"deleteThisFinalizerAlso",
 							},
@@ -77,7 +77,7 @@ var _ = Describe("Pod Filter", func() {
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name: "testpod",
-							Finalizers: []string {
+							Finalizers: []string{
 								"deleteThisFinalizer",
 							},
 						},
@@ -104,13 +104,13 @@ var _ = Describe("Pod Filter", func() {
 				Items: []corev1.Pod{
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							Name: "testpodBeingDeleted",
+							Name:              "testpodBeingDeleted",
 							DeletionTimestamp: &metav1.Time{Time: time.Now()},
 						},
 					},
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							Name: "testpodBeingDeletedToo",
+							Name:              "testpodBeingDeletedToo",
 							DeletionTimestamp: &metav1.Time{Time: time.Now()},
 						},
 					},

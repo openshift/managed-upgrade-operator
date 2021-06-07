@@ -132,10 +132,10 @@ var _ = Describe("OCM Notifier", func() {
 			It("sends a correct notification and description", func() {
 				uc.Status.History[0].Conditions = []upgradev1alpha1.UpgradeCondition{
 					{
-						Type:               upgradev1alpha1.UpgradePreHealthCheck,
-						Status:             "False",
-						Reason:             "PreHealthCheck not done",
-						Message:            "There are 2 critical alerts",
+						Type:    upgradev1alpha1.UpgradePreHealthCheck,
+						Status:  "False",
+						Reason:  "PreHealthCheck not done",
+						Message: "There are 2 critical alerts",
 					},
 				}
 				expectedDescription := fmt.Sprintf(UPGRADE_PREHEALTHCHECK_FAILED_DESC, uc.Spec.Desired.Version)
@@ -154,10 +154,10 @@ var _ = Describe("OCM Notifier", func() {
 			It("sends a correct notification and description", func() {
 				uc.Status.History[0].Conditions = []upgradev1alpha1.UpgradeCondition{
 					{
-						Type:               upgradev1alpha1.ExtDepAvailabilityCheck,
-						Status:             "False",
-						Reason:             "ExtDepAvailabilityCheck not done",
-						Message:            "An external dependency is down.",
+						Type:    upgradev1alpha1.ExtDepAvailabilityCheck,
+						Status:  "False",
+						Reason:  "ExtDepAvailabilityCheck not done",
+						Message: "An external dependency is down.",
 					},
 				}
 				expectedDescription := fmt.Sprintf(UPGRADE_EXTDEPCHECK_FAILED_DESC, uc.Spec.Desired.Version)
@@ -176,10 +176,10 @@ var _ = Describe("OCM Notifier", func() {
 			It("sends a correct notification and description", func() {
 				uc.Status.History[0].Conditions = []upgradev1alpha1.UpgradeCondition{
 					{
-						Type:               upgradev1alpha1.UpgradeScaleUpExtraNodes,
-						Status:             "False",
-						Reason:             "UpgradeScaleUpExtraNodes not done",
-						Message:            "Cannot scale nodes.",
+						Type:    upgradev1alpha1.UpgradeScaleUpExtraNodes,
+						Status:  "False",
+						Reason:  "UpgradeScaleUpExtraNodes not done",
+						Message: "Cannot scale nodes.",
 					},
 				}
 				expectedDescription := fmt.Sprintf(UPGRADE_SCALE_FAILED_DESC, uc.Spec.Desired.Version)
@@ -198,10 +198,10 @@ var _ = Describe("OCM Notifier", func() {
 			It("sends a correct default notification and description", func() {
 				uc.Status.History[0].Conditions = []upgradev1alpha1.UpgradeCondition{
 					{
-						Type:               upgradev1alpha1.CommenceUpgrade,
-						Status:             "False",
-						Reason:             "something strange",
-						Message:            "in your neighbourhood",
+						Type:    upgradev1alpha1.CommenceUpgrade,
+						Status:  "False",
+						Reason:  "something strange",
+						Message: "in your neighbourhood",
 					},
 				}
 				expectedDescription := fmt.Sprintf(UPGRADE_PRECHECK_FAILED_DESC, uc.Spec.Desired.Version)
@@ -236,10 +236,10 @@ var _ = Describe("OCM Notifier", func() {
 			It("sends a correct notification and description", func() {
 				uc.Status.History[0].Conditions = []upgradev1alpha1.UpgradeCondition{
 					{
-						Type:               upgradev1alpha1.UpgradePreHealthCheck,
-						Status:             "False",
-						Reason:             "PreHealthCheck not done",
-						Message:            "There are 2 critical alerts",
+						Type:    upgradev1alpha1.UpgradePreHealthCheck,
+						Status:  "False",
+						Reason:  "PreHealthCheck not done",
+						Message: "There are 2 critical alerts",
 					},
 				}
 				expectedDescription := fmt.Sprintf(UPGRADE_PREHEALTHCHECK_DELAY_DESC, uc.Spec.Desired.Version)
@@ -258,10 +258,10 @@ var _ = Describe("OCM Notifier", func() {
 			It("sends a correct notification and description", func() {
 				uc.Status.History[0].Conditions = []upgradev1alpha1.UpgradeCondition{
 					{
-						Type:               upgradev1alpha1.ExtDepAvailabilityCheck,
-						Status:             "False",
-						Reason:             "ExtDepAvailabilityCheck not done",
-						Message:            "An external dependency is down.",
+						Type:    upgradev1alpha1.ExtDepAvailabilityCheck,
+						Status:  "False",
+						Reason:  "ExtDepAvailabilityCheck not done",
+						Message: "An external dependency is down.",
 					},
 				}
 				expectedDescription := fmt.Sprintf(UPGRADE_EXTDEPCHECK_DELAY_DESC, uc.Spec.Desired.Version)
@@ -280,10 +280,10 @@ var _ = Describe("OCM Notifier", func() {
 			It("sends a correct notification and description", func() {
 				uc.Status.History[0].Conditions = []upgradev1alpha1.UpgradeCondition{
 					{
-						Type:               upgradev1alpha1.UpgradeScaleUpExtraNodes,
-						Status:             "False",
-						Reason:             "UpgradeScaleUpExtraNodes not done",
-						Message:            "Cannot scale nodes.",
+						Type:    upgradev1alpha1.UpgradeScaleUpExtraNodes,
+						Status:  "False",
+						Reason:  "UpgradeScaleUpExtraNodes not done",
+						Message: "Cannot scale nodes.",
 					},
 				}
 				expectedDescription := fmt.Sprintf(UPGRADE_SCALE_DELAY_DESC, uc.Spec.Desired.Version)
@@ -302,10 +302,10 @@ var _ = Describe("OCM Notifier", func() {
 			It("sends a correct default notification and description", func() {
 				uc.Status.History[0].Conditions = []upgradev1alpha1.UpgradeCondition{
 					{
-						Type:               upgradev1alpha1.CommenceUpgrade,
-						Status:             "False",
-						Reason:             "something strange",
-						Message:            "in your neighbourhood",
+						Type:    upgradev1alpha1.CommenceUpgrade,
+						Status:  "False",
+						Reason:  "something strange",
+						Message: "in your neighbourhood",
 					},
 				}
 				expectedDescription := fmt.Sprintf(UPGRADE_DEFAULT_DELAY_DESC, uc.Spec.Desired.Version)

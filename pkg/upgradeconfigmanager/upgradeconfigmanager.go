@@ -24,17 +24,20 @@ import (
 	"github.com/openshift/managed-upgrade-operator/util"
 )
 
+// ConfigManagerSource is a type illustrating a config manager source
 type ConfigManagerSource string
 
 var log = logf.Log.WithName("upgrade-config-manager")
 
 const (
-	// Name of the Custom Resource that the provider will manage
+	// UPGRADECONFIG_CR_NAME is the name of the Custom Resource that the provider will manage
 	UPGRADECONFIG_CR_NAME = "managed-upgrade-config"
-	// Jitter factor (percentage / 100) used to alter watch interval
-	JITTER_FACTOR         = 0.1
+	// JITTER_FACTOR is a jitter factor (percentage / 100) used to alter watch interval
+	JITTER_FACTOR = 0.1
+	// INITIAL_SYNC_DURATION is an initial sync duration
 	INITIAL_SYNC_DURATION = 1 * time.Minute
-	ERROR_RETRY_DURATION  = 5 * time.Minute
+	// ERROR_RETRY_DURATION is an error retryn duration
+	ERROR_RETRY_DURATION = 5 * time.Minute
 )
 
 // Errors
@@ -49,6 +52,7 @@ var (
 	ErrNotConfigured            = fmt.Errorf("no upgrade config manager configured")
 )
 
+// UpgradeConfigManager enables an implementation of an UpgradeConfigManager
 //go:generate mockgen -destination=mocks/upgradeconfigmanager.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager UpgradeConfigManager
 type UpgradeConfigManager interface {
 	Get() (*upgradev1alpha1.UpgradeConfig, error)
@@ -56,11 +60,13 @@ type UpgradeConfigManager interface {
 	Refresh() (bool, error)
 }
 
+// UpgradeConfigManagerBuilder enables an implementation of an UpgradeConfigManagerBuilder
 //go:generate mockgen -destination=mocks/upgradeconfigmanager_builder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager UpgradeConfigManagerBuilder
 type UpgradeConfigManagerBuilder interface {
 	NewManager(client.Client) (UpgradeConfigManager, error)
 }
 
+// NewBuilder returns an upgradeConfigManagerBuilder
 func NewBuilder() UpgradeConfigManagerBuilder {
 	return &upgradeConfigManagerBuilder{}
 }
@@ -275,9 +281,8 @@ func (s *upgradeConfigManager) Refresh() (bool, error) {
 						if err == ErrUpgradeConfigNotFound {
 							log.Info("UpgradeConfig deletion confirmed")
 							return true, nil
-						} else {
-							return false, err
 						}
+						return false, err
 					}
 					return false, nil
 				})

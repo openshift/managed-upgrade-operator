@@ -10,7 +10,7 @@ type config struct {
 }
 
 type upgradeWindow struct {
-	TimeOut int `yaml:"timeOut" default:"120"`
+	TimeOut      int `yaml:"timeOut" default:"120"`
 	DelayTrigger int `yaml:"delayTrigger" default:"30"`
 }
 

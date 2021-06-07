@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
 	configv1 "github.com/openshift/api/config/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -12,16 +13,17 @@ import (
 )
 
 const (
-	pullSecretKey = ".dockerconfigjson"
+	pullSecretKey     = ".dockerconfigjson"
 	pullSecretAuthKey = "cloud.openshift.com"
 )
 
+// AccessToken contains fields for an access token
 type AccessToken struct {
 	PullSecret string
 	ClusterId  string
 }
 
-// Fetches the access token for authentication to the Cluster Service API via the cluster pull secret
+// GetAccessToken fetches the access token for authentication to the Cluster Service API via the cluster pull secret
 func GetAccessToken(c client.Client) (*AccessToken, error) {
 
 	cv := &configv1.ClusterVersion{}
@@ -61,7 +63,7 @@ func GetAccessToken(c client.Client) (*AccessToken, error) {
 	strAccessToken := fmt.Sprintf("%v", accessToken)
 
 	at := &AccessToken{
-		ClusterId: string(cv.Spec.ClusterID),
+		ClusterId:  string(cv.Spec.ClusterID),
 		PullSecret: strAccessToken,
 	}
 

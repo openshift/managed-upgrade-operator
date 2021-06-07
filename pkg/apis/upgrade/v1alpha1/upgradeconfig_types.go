@@ -7,10 +7,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// UpgradeType provides a type to declare upgrade types with
 type UpgradeType string
 
 const (
+	// OSD is a type of upgrade
 	OSD UpgradeType = "OSD"
+	// ARO is a type of upgrade
 	ARO UpgradeType = "ARO"
 )
 
@@ -99,29 +102,47 @@ type UpgradeCondition struct {
 }
 
 const (
-	SendStartedNotification       UpgradeConditionType = "SendStartedNotification"
-	UpgradeDelayedCheck           UpgradeConditionType = "UpgradeDelayedCheck"
-	UpgradeValidated              UpgradeConditionType = "Validation"
-	UpgradePreHealthCheck         UpgradeConditionType = "PreHealthCheck"
-	ExtDepAvailabilityCheck       UpgradeConditionType = "ExternalDependencyAvailabilityCheck"
-	UpgradeScaleUpExtraNodes      UpgradeConditionType = "ScaleUpExtraNodes"
-	ControlPlaneMaintWindow       UpgradeConditionType = "ControlPlaneMaintWindow"
-	CommenceUpgrade               UpgradeConditionType = "CommenceUpgrade"
-	ControlPlaneUpgraded          UpgradeConditionType = "ControlPlaneUpgraded"
+	// SendStartedNotification is an UpgradeConfitionType
+	SendStartedNotification UpgradeConditionType = "SendStartedNotification"
+	// UpgradeDelayedCheck is an UpgradeConfitionType
+	UpgradeDelayedCheck UpgradeConditionType = "UpgradeDelayedCheck"
+	// UpgradeValidated is an UpgradeConfitionType
+	UpgradeValidated UpgradeConditionType = "Validation"
+	// UpgradePreHealthCheck is an UpgradeConfitionType
+	UpgradePreHealthCheck UpgradeConditionType = "PreHealthCheck"
+	// ExtDepAvailabilityCheck is an UpgradeConfitionType
+	ExtDepAvailabilityCheck UpgradeConditionType = "ExternalDependencyAvailabilityCheck"
+	// UpgradeScaleUpExtraNodes is an UpgradeConfitionType
+	UpgradeScaleUpExtraNodes UpgradeConditionType = "ScaleUpExtraNodes"
+	// ControlPlaneMaintWindow is an UpgradeConfitionType
+	ControlPlaneMaintWindow UpgradeConditionType = "ControlPlaneMaintWindow"
+	// CommenceUpgrade is an UpgradeConfitionType
+	CommenceUpgrade UpgradeConditionType = "CommenceUpgrade"
+	// ControlPlaneUpgraded is an UpgradeConfitionType
+	ControlPlaneUpgraded UpgradeConditionType = "ControlPlaneUpgraded"
+	// RemoveControlPlaneMaintWindow is an UpgradeConfitionType
 	RemoveControlPlaneMaintWindow UpgradeConditionType = "RemoveControlPlaneMaintWindow"
-	WorkersMaintWindow            UpgradeConditionType = "WorkersMaintWindow"
-	AllWorkerNodesUpgraded        UpgradeConditionType = "AllWorkerNodesUpgraded"
-	RemoveExtraScaledNodes        UpgradeConditionType = "RemoveExtraScaledNodes"
-	UpdateSubscriptions           UpgradeConditionType = "UpdateSubscriptions"
-	RemoveMaintWindow             UpgradeConditionType = "RemoveMaintWindow"
-	PostClusterHealthCheck        UpgradeConditionType = "PostClusterHealthCheck"
-	SendCompletedNotification     UpgradeConditionType = "SendCompletedNotification"
+	// WorkersMaintWindow is an UpgradeConfitionType
+	WorkersMaintWindow UpgradeConditionType = "WorkersMaintWindow"
+	// AllWorkerNodesUpgraded is an UpgradeConfitionType
+	AllWorkerNodesUpgraded UpgradeConditionType = "AllWorkerNodesUpgraded"
+	// RemoveExtraScaledNodes is an UpgradeConfitionType
+	RemoveExtraScaledNodes UpgradeConditionType = "RemoveExtraScaledNodes"
+	// UpdateSubscriptions is an UpgradeConfitionType
+	UpdateSubscriptions UpgradeConditionType = "UpdateSubscriptions"
+	// RemoveMaintWindow is an UpgradeConfitionType
+	RemoveMaintWindow UpgradeConditionType = "RemoveMaintWindow"
+	// PostClusterHealthCheck is an UpgradeConfitionType
+	PostClusterHealthCheck UpgradeConditionType = "PostClusterHealthCheck"
+	// SendCompletedNotification is an UpgradeConfitionType
+	SendCompletedNotification UpgradeConditionType = "SendCompletedNotification"
 )
 
 // UpgradePhase is a Go string type.
 type UpgradePhase string
 
 const (
+	// UpgradePhaseNew defines that an upgrade is new.
 	UpgradePhaseNew UpgradePhase = "New"
 	// UpgradePhasePending defines that an upgrade has been scheduled.
 	UpgradePhasePending UpgradePhase = "Pending"
@@ -154,6 +175,7 @@ type UpgradeConfig struct {
 	Status UpgradeConfigStatus `json:"status,omitempty"`
 }
 
+// GetPDBDrainTimeoutDuration returns the PDB timeout
 func (uc *UpgradeConfig) GetPDBDrainTimeoutDuration() time.Duration {
 	return time.Duration(uc.Spec.PDBForceDrainTimeout) * time.Minute
 }
@@ -307,6 +329,7 @@ func (conditions *Conditions) RemoveCondition(t UpgradeConditionType) bool {
 	return false
 }
 
+// GetHistory returns UpgradeHistory
 func (histories UpgradeHistories) GetHistory(version string) *UpgradeHistory {
 	for _, history := range histories {
 		if history.Version == version {
@@ -315,6 +338,8 @@ func (histories UpgradeHistories) GetHistory(version string) *UpgradeHistory {
 	}
 	return nil
 }
+
+// SetHistory appends new history to current
 func (histories *UpgradeHistories) SetHistory(history UpgradeHistory) {
 	for i, h := range *histories {
 		if h.Version == history.Version {

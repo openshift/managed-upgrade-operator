@@ -7,9 +7,11 @@ import (
 )
 
 const (
+	// MasterLabel for master node
 	MasterLabel = "node-role.kubernetes.io/master"
 )
 
+// Machinery enables an implementation of a Machinery interface
 //go:generate mockgen -destination=mocks/machinery.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/machinery Machinery
 type Machinery interface {
 	IsUpgrading(c client.Client, nodeType string) (*UpgradingResult, error)
@@ -18,6 +20,7 @@ type Machinery interface {
 
 type machinery struct{}
 
+// NewMachinery returns a machinery struct
 func NewMachinery() Machinery {
 	return &machinery{}
 }

@@ -21,6 +21,7 @@ var (
 	stuckTerminatingPodName        = "POD-STUCK-TERMINATING"
 )
 
+// NewNodeDrainStrategy returns a new node drain stategy
 func NewNodeDrainStrategy(c client.Client, cfg *NodeDrain, ts []TimedDrainStrategy) (NodeDrainStrategy, error) {
 	return &osdDrainStrategy{
 		c,

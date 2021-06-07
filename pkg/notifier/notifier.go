@@ -11,11 +11,13 @@ import (
 	"github.com/openshift/managed-upgrade-operator/util"
 )
 
+// Notifier is an interface that enables implementation of a Notifier
 //go:generate mockgen -destination=mocks/notifier.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/notifier Notifier
 type Notifier interface {
 	NotifyState(value NotifyState, description string) error
 }
 
+// NotifierBuilder is an interface that enables implementation of a NotifierBuilder
 //go:generate mockgen -destination=mocks/notifier_builder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/notifier NotifierBuilder
 type NotifierBuilder interface {
 	New(client.Client, configmanager.ConfigManagerBuilder, upgradeconfigmanager.UpgradeConfigManagerBuilder) (Notifier, error)
@@ -32,6 +34,7 @@ const (
 	StateScheduled NotifyState = "scheduled"
 )
 
+// NotifyState is a type
 type NotifyState string
 
 // Errors
@@ -39,7 +42,7 @@ var (
 	ErrNoNotifierConfigured = fmt.Errorf("no valid configured notifier")
 )
 
-// Creates a new Notifier instance builder
+// NewBuilder creates a new Notifier instance builder
 func NewBuilder() NotifierBuilder {
 	return &notifierBuilder{}
 }

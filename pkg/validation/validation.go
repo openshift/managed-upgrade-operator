@@ -34,6 +34,7 @@ type Validator interface {
 
 type validator struct{}
 
+// ValidatorResult returns a type that enables validation of upgradeconfigs
 type ValidatorResult struct {
 	// Indicates that the UpgradeConfig is semantically and syntactically valid
 	IsValid bool
@@ -43,12 +44,17 @@ type ValidatorResult struct {
 	Message string
 }
 
+// VersionComparison is an in used to compare versions
 type VersionComparison int
 
 const (
+	// VersionUnknown is of type VersionComparision and is used to idicate an unknown version
 	VersionUnknown VersionComparison = iota - 2
+	// VersionDowngrade is of type VersionComparision and is used to idicate an version downgrade
 	VersionDowngrade
+	// VersionEqual is of type VersionComparision and is used to idicate version are equal
 	VersionEqual
+	// VersionUpgrade is of type VersionComparision and is used to idicate version is able to upgrade
 	VersionUpgrade
 )
 
@@ -215,13 +221,14 @@ func getUpstreamURL(cV *configv1.ClusterVersion) string {
 	return upstream
 }
 
+// ValidationBuilder is a interface that enables ValidationBuiler implementations
 //go:generate mockgen -destination=mocks/mockValidationBuilder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/validation ValidationBuilder
 type ValidationBuilder interface {
 	NewClient() (Validator, error)
 }
 
 // validationBuilder is an empty struct that enables instantiation of this type and its
-// implimented interface.
+// implemented interface.
 type validationBuilder struct{}
 
 // NewClient returns a Validator interface or an error if one occurs.
