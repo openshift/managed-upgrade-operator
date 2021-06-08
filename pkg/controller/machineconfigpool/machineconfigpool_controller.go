@@ -66,6 +66,7 @@ type ReconcileMachineConfigPool struct {
 	upgradeConfigManagerBuilder ucm.UpgradeConfigManagerBuilder
 }
 
+// Reconcile reconciles the machineconfigpool object
 func (r *ReconcileMachineConfigPool) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling MachineConfigPool")

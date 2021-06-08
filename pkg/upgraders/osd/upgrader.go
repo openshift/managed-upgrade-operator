@@ -48,15 +48,16 @@ var (
 	}
 )
 
-// Represents a named series of steps as part of an upgrade process
+// UpgradeSteps represents a named series of steps as part of an upgrade process
 type UpgradeSteps map[upgradev1alpha1.UpgradeConditionType]UpgradeStep
 
-// Represents an individual step in the upgrade process
+// UpgradeStep represents an individual step in the upgrade process
 type UpgradeStep func(client.Client, *osdUpgradeConfig, scaler.Scaler, drain.NodeDrainStrategyBuilder, metrics.Metrics, maintenance.Maintenance, cv.ClusterVersion, eventmanager.EventManager, *upgradev1alpha1.UpgradeConfig, machinery.Machinery, ac.AvailabilityCheckers, logr.Logger) (bool, error)
 
-// Represents the order in which to undertake upgrade steps
+// UpgradeStepOrdering represents the order in which to undertake upgrade steps
 type UpgradeStepOrdering []upgradev1alpha1.UpgradeConditionType
 
+// NewClient returns a new osdClusterUpgrader
 func NewClient(c client.Client, cfm configmanager.ConfigManager, mc metrics.Metrics, notifier eventmanager.EventManager) (*osdClusterUpgrader, error) {
 	cfg := &osdUpgradeConfig{}
 	err := cfm.Into(cfg)
@@ -264,7 +265,7 @@ func CreateWorkerMaintWindow(c client.Client, cfg *osdUpgradeConfig, scaler scal
 
 	// Depending on how long the Control Plane takes all workers may be already upgraded.
 	if !upgradingResult.IsUpgrading {
-		logger.Info(fmt.Sprintf("Worker nodes are already upgraded. Skipping worker maintenace for %s", upgradeConfig.Spec.Desired.Version))
+		logger.Info(fmt.Sprintf("Worker nodes are already upgraded. Skipping worker maintenance for %s", upgradeConfig.Spec.Desired.Version))
 		return true, nil
 	}
 
@@ -290,7 +291,7 @@ func CreateWorkerMaintWindow(c client.Client, cfg *osdUpgradeConfig, scaler scal
 	totalWorkerMaintenanceDuration := waitTimePeriod + actionTimePeriod
 
 	endTime := time.Now().Add(totalWorkerMaintenanceDuration)
-	logger.Info(fmt.Sprintf("Creating worker node maintenace for %d remaining nodes if no previous silence, ending at %v", pendingWorkerCount, endTime))
+	logger.Info(fmt.Sprintf("Creating worker node maintenance for %d remaining nodes if no previous silence, ending at %v", pendingWorkerCount, endTime))
 	err = m.SetWorker(endTime, upgradeConfig.Spec.Desired.Version, pendingWorkerCount)
 	if err != nil {
 		return false, err

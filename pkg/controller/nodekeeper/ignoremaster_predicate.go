@@ -8,6 +8,7 @@ import (
 	"github.com/openshift/managed-upgrade-operator/pkg/machinery"
 )
 
+// IgnoreMasterPredicate holds predicate funcs
 var IgnoreMasterPredicate = predicate.Funcs{
 	UpdateFunc: func(e event.UpdateEvent) bool {
 		newNode, ok := e.MetaNew.(*corev1.Node)

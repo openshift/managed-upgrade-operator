@@ -17,6 +17,7 @@ func (t *testUpgradeConfigBuilder) GetUpgradeConfig() *api.UpgradeConfig {
 	return &t.uc
 }
 
+// NewUpgradeConfigBuilder returns a prebuilt upgradeConfig
 func NewUpgradeConfigBuilder() *testUpgradeConfigBuilder {
 	return &testUpgradeConfigBuilder{
 		uc: api.UpgradeConfig{
@@ -55,15 +56,18 @@ func (t *testUpgradeConfigBuilder) WithPhase(phase api.UpgradePhase) *testUpgrad
 	return t
 }
 
+// UpgradeConfigMatcher is a type that evaluates upgradeConfigs
 type UpgradeConfigMatcher struct {
 	ActualUpgradeConfig api.UpgradeConfig
 	FailReason          string
 }
 
+// NewUpgradeConfigMatcher returns a UpgradeConfigMatcher
 func NewUpgradeConfigMatcher() *UpgradeConfigMatcher {
 	return &UpgradeConfigMatcher{}
 }
 
+// Matches matches upgradeconfigs and returns a bool if true
 func (m *UpgradeConfigMatcher) Matches(x interface{}) bool {
 	ref, isCorrectType := x.(*api.UpgradeConfig)
 	if !isCorrectType {

@@ -67,7 +67,7 @@ var _ = Describe("OCM Notifier", func() {
 		var (
 			cluster                   ocm.ClusterInfo
 			upgradePolicyListResponse ocm.UpgradePolicyList
-			upgradePolicyState ocm.UpgradePolicyState
+			upgradePolicyState        ocm.UpgradePolicyState
 		)
 
 		BeforeEach(func() {

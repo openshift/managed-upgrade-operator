@@ -8,6 +8,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// UpgradingResult provides a struct to illustrate the upgrading result
 type UpgradingResult struct {
 	IsUpgrading  bool
 	UpdatedCount int32

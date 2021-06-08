@@ -1,12 +1,14 @@
 package scheduler
 
 import (
-	"github.com/prometheus/common/log"
 	"time"
+
+	"github.com/prometheus/common/log"
 
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 )
 
+// Scheduler is an interface that enables implementations of type Scheduler
 //go:generate mockgen -destination=mocks/mockScheduler.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/scheduler Scheduler
 type Scheduler interface {
 	IsReadyToUpgrade(*upgradev1alpha1.UpgradeConfig, time.Duration) SchedulerResult
@@ -14,10 +16,12 @@ type Scheduler interface {
 
 type scheduler struct{}
 
+// NewScheduler returns a Scheduler
 func NewScheduler() Scheduler {
 	return &scheduler{}
 }
 
+// SchedulerResult is a type that holds fields describing a schedulers result
 type SchedulerResult struct {
 	IsReady          bool
 	IsBreached       bool

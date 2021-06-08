@@ -12,11 +12,13 @@ import (
 )
 
 const (
+	// CONFIG_MAP_NAME is the name of the operators config
 	CONFIG_MAP_NAME = config.OperatorName + "-config"
-	CONFIG_PATH     = "config.yaml"
+	// CONFIG_PATH is the name of the config
+	CONFIG_PATH = "config.yaml"
 )
 
-// Interface describing the functions of a cluster upgrader.
+// ConfigManagerBuilder is an interface describing the functions of a cluster upgrader.
 //go:generate mockgen -destination=mocks/configmanagerbuilder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/configmanager ConfigManagerBuilder
 type ConfigManagerBuilder interface {
 	New(client.Client, string) ConfigManager
@@ -31,11 +33,12 @@ func (*configManagerBuilder) New(c client.Client, ns string) ConfigManager {
 	}
 }
 
+// NewBuilder returns a new configManagerBuilder
 func NewBuilder() ConfigManagerBuilder {
 	return &configManagerBuilder{}
 }
 
-// Interface describing the functions of a cluster upgrader.
+// ConfigManager is an interface describing the functions of a cluster upgrader.
 //go:generate mockgen -destination=mocks/configmanager.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/configmanager ConfigManager
 type ConfigManager interface {
 	Into(ConfigValidator) error
@@ -46,6 +49,7 @@ type configManager struct {
 	namespace string
 }
 
+// ConfigValidator is an interface that validates MUO's config
 type ConfigValidator interface {
 	IsValid() error
 }

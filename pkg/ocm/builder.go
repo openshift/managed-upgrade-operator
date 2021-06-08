@@ -2,18 +2,20 @@ package ocm
 
 import (
 	"fmt"
+	"net/url"
+
 	"github.com/go-resty/resty/v2"
 	"github.com/openshift/managed-upgrade-operator/util"
-	"net/url"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 //go:generate mockgen -destination=mocks/builder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/ocm OcmClientBuilder
+// OcmClientBuilder enables implementation of an ocm client.
 type OcmClientBuilder interface {
 	New(c client.Client, ocmBaseUrl *url.URL) (OcmClient, error)
 }
 
-// Creates a new Notifier instance builder
+// NewBuilder creates a new Notifier instance builder
 func NewBuilder() OcmClientBuilder {
 	return &ocmClientBuilder{}
 }

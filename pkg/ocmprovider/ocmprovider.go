@@ -25,6 +25,7 @@ var (
 	ErrProcessingPolicies  = fmt.Errorf("could not process provider upgrade policies")
 )
 
+// New returns a new ocmProvider
 func New(client client.Client, ocmBaseUrl *url.URL) (*ocmProvider, error) {
 
 	ocmClient, err := ocm.NewBuilder().New(client, ocmBaseUrl)

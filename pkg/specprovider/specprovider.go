@@ -13,16 +13,19 @@ import (
 	"github.com/openshift/managed-upgrade-operator/util"
 )
 
+// SpecProvider is an interface that enables an implementation of a spec provider
 //go:generate mockgen -destination=mocks/specprovider.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/specprovider SpecProvider
 type SpecProvider interface {
 	Get() ([]upgradev1alpha1.UpgradeConfigSpec, error)
 }
 
+// SpecProviderBuilder is an interface that enables implementation of a spec provider builder
 //go:generate mockgen -destination=mocks/specprovider_builder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/specprovider SpecProviderBuilder
 type SpecProviderBuilder interface {
 	New(client.Client, configmanager.ConfigManagerBuilder) (SpecProvider, error)
 }
 
+// NewBuilder returns a new specProviderBuilder
 func NewBuilder() SpecProviderBuilder {
 	return &specProviderBuilder{}
 }

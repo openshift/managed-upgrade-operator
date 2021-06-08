@@ -10,8 +10,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// PodPredicate is a predicate function for a given Pod
 type PodPredicate func(corev1.Pod) bool
 
+// FilterPods filters a podList and returns a PodList matching the predicates
 func FilterPods(podList *corev1.PodList, predicates ...PodPredicate) *corev1.PodList {
 	filteredPods := &corev1.PodList{}
 	for _, pod := range podList.Items {
@@ -30,11 +32,13 @@ func FilterPods(podList *corev1.PodList, predicates ...PodPredicate) *corev1.Pod
 	return filteredPods
 }
 
+// DeleteResult holds fields describing the result of a pod deletion
 type DeleteResult struct {
 	Message              string
 	NumMarkedForDeletion int
 }
 
+// DeletePods attempts to delete a given PodList and returns a DeleteResult and error
 func DeletePods(c client.Client, pl *corev1.PodList, ignoreAlreadyDeleting bool, options ...client.DeleteOption) (*DeleteResult, error) {
 	me := &multierror.Error{}
 	var podsMarkedForDeletion []string
@@ -55,11 +59,13 @@ func DeletePods(c client.Client, pl *corev1.PodList, ignoreAlreadyDeleting bool,
 	}, me.ErrorOrNil()
 }
 
+// RemoveFinalizersResult is a type that describes the result of removing a finalizer
 type RemoveFinalizersResult struct {
 	Message    string
 	NumRemoved int
 }
 
+// RemoveFinalizersFromPod attempts to remove the finalizers from a given PodList and returns a RemoveFinalizersResult and error
 func RemoveFinalizersFromPod(c client.Client, pl *corev1.PodList) (*RemoveFinalizersResult, error) {
 	var podsWithFinalizersRemoved []string
 	me := &multierror.Error{}

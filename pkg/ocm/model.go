@@ -1,6 +1,6 @@
 package ocm
 
-// Represents an unmarshalled Upgrade Policy response from Cluster Services
+// UpgradePolicyList represents an unmarshalled Upgrade Policy response from Cluster Services
 type UpgradePolicyList struct {
 	Kind  string          `json:"kind"`
 	Page  int64           `json:"page"`
@@ -9,7 +9,7 @@ type UpgradePolicyList struct {
 	Items []UpgradePolicy `json:"items"`
 }
 
-// Represents an unmarshalled individual Upgrade Policy response from Cluster Services
+// UpgradePolicy represents an unmarshalled individual Upgrade Policy response from Cluster Services
 type UpgradePolicy struct {
 	Id                  string `json:"id"`
 	Kind                string `json:"kind"`
@@ -24,7 +24,7 @@ type UpgradePolicy struct {
 	CapacityReservation *bool  `json:"capacity_reservation"`
 }
 
-// Represents an unmarshalled Cluster List response from Cluster Services
+// ClusterList represents an unmarshalled Cluster List response from Cluster Services
 type ClusterList struct {
 	Kind  string        `json:"kind"`
 	Page  int64         `json:"page"`
@@ -33,30 +33,32 @@ type ClusterList struct {
 	Items []ClusterInfo `json:"items"`
 }
 
-// Represents a partial unmarshalled Cluster response from Cluster Services
+// ClusterInfo represents a partial unmarshalled Cluster response from Cluster Services
 type ClusterInfo struct {
 	Id                   string               `json:"id"`
 	Version              ClusterVersion       `json:"version"`
 	NodeDrainGracePeriod NodeDrainGracePeriod `json:"node_drain_grace_period"`
 }
 
+// NodeDrainGracePeriod represents a duration for node drain grace periods
 type NodeDrainGracePeriod struct {
 	Value int64  `json:"value"`
 	Unit  string `json:"unit"`
 }
 
+// ClusterVersion represents a clusters version
 type ClusterVersion struct {
 	Id           string `json:"id"`
 	ChannelGroup string `json:"channel_group"`
 }
 
-// Represents an Upgrade Policy state for notifications
+// UpgradePolicyStateRequest represents an Upgrade Policy state for notifications
 type UpgradePolicyStateRequest struct {
 	Value       string `json:"value"`
 	Description string `json:"description"`
 }
 
-// Represents an Upgrade Policy state for notifications
+// UpgradePolicyState represents an Upgrade Policy state for notifications
 type UpgradePolicyState struct {
 	Kind        string `json:"kind"`
 	Href        string `json:"href"`

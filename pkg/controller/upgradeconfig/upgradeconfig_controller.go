@@ -290,6 +290,7 @@ func (r *ReconcileUpgradeConfig) upgradeCluster(upgrader cub.ClusterUpgrader, uc
 	return reconcile.Result{RequeueAfter: 1 * time.Minute}, me.ErrorOrNil()
 }
 
+// ManagedUpgradePredicate is used for managing predicates of the UpgradeConfig
 var ManagedUpgradePredicate = predicate.Funcs{
 	UpdateFunc: func(e event.UpdateEvent) bool {
 		return isManagedUpgrade(e.MetaNew.GetName())

@@ -8,6 +8,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
+// StatusChangedPredicate is a function that executes predicates for an UpgradeConfig
 var StatusChangedPredicate = predicate.Funcs{
 	UpdateFunc: func(e event.UpdateEvent) bool {
 		if e.MetaOld == nil {

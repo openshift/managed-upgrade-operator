@@ -78,7 +78,7 @@ var _ = Describe("Alert Manager Maintenance Client", func() {
 
 	// Starting a Control Plane Silence
 	Context("Creating a Control Plane silence", func() {
-		It("Should not error on successfull maintenance start", func() {
+		It("Should not error on successful maintenance start", func() {
 			gomock.InOrder(
 				silenceClient.EXPECT().Filter(gomock.Any()).Return(&testNoActiveSilences, nil).Times(2),
 				silenceClient.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2),
@@ -100,7 +100,7 @@ var _ = Describe("Alert Manager Maintenance Client", func() {
 
 	// Starting a worker silence
 	Context("Creating a worker silence", func() {
-		It("Should not error on successfull maintenance start", func() {
+		It("Should not error on successful maintenance start", func() {
 			gomock.InOrder(
 				silenceClient.EXPECT().Filter(gomock.Any()).Return(&testNoActiveSilences, nil).Times(2),
 				silenceClient.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil),

@@ -31,7 +31,7 @@ type ignoredAlerts struct {
 
 func (cfg *maintenanceConfig) IsValid() error {
 	if cfg.ControlPlaneTime <= 0 {
-		return fmt.Errorf("Config maintenace controlPlaneTime out is invalid")
+		return fmt.Errorf("Config maintenance controlPlaneTime out is invalid")
 	}
 
 	return nil
