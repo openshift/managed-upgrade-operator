@@ -10,7 +10,7 @@ Currently, the following sources are supported:
 | Source | Description |
 | --- | --- |
 | `OCM` | Retrieve an UpgradeConfig from the OpenShift Cluster Manager [`upgrade_policies`](https://api.openshift.com/#/default/get_api_clusters_mgmt_v1_clusters__cluster_id__upgrade_policies) API |
-| `LOCAL` | Using UpgradeConfig CR localy on the OpenShift Cluster|
+| `LOCAL` | Using UpgradeConfig CR locally on the OpenShift Cluster|
 
 ## Configuring an UpgradeConfig Manager
 
@@ -47,5 +47,5 @@ The following configuration fields must be set:
 | Field | Description | Example |
 | --- | --- | --- |
 | `source` | Indicates the type of config manager being used | `LOCAL` |
-| `LocalConfigName` | Name of the Local config being used | `example-upgrade-config` |
+| `LocalConfigName` | Name of the Local config being used | `managed-upgrade-config` |
 | `watchInterval` | Frequency* in minutes with which UpgradeConfig CR name being looked | 60 |
