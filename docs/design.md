@@ -12,7 +12,7 @@ The operator is primarily driven through an `UpgradeConfig` custom resource, whi
 
 The `UpgradeConfig` can be created directly on the cluster which is not managed via Hive. Also this method can be used for development/testing purposes
 
-For OpenShift Dedicated deployments, the `UpgradeConfig` is distributed via a [Hive SelectorSyncSet](https://github.com/openshift/hive/blob/master/docs/syncset.md) and managed by OpenShift SRE.
+For OpenShift Dedicated deployments, the `UpgradeConfig` is distributed via a [Hive SyncSet](https://github.com/openshift/hive/blob/master/docs/syncset.md) and managed by OpenShift SRE.
 
 The process for SRE to manage the creation and distribution of `UpgradeConfig` custom resources is documented in [SOPs](https://github.com/openshift/ops-sop/blob/master/v4/howto/managed-upgrade.md).
 
@@ -41,7 +41,7 @@ A populated `UpgradeConfig` example is presented below:
 apiVersion: upgrade.managed.openshift.io/v1alpha1
 kind: UpgradeConfig
 metadata:
-  name: example-upgrade-config
+  name: managed-upgrade-config
 spec:
   type: "OSD"
   upgradeAt: "2020-06-20T12:00:00Z"

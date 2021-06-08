@@ -14,11 +14,11 @@ Currently this is a manual process. We are working on dashboards and other metri
 
 **Does MUO reserve compute capacity?**
 
-Yes. MUO will create a temporary +1 to every worker `machinesets` within the cluster. In multi availability zones, this is true for each zone.
+Yes, if `capacityReservation: true` is enabled in the upgradeconfig CR. MUO will create a temporary +1 to every worker `machinesets` within the cluster. In multi availability zones, this is true for each zone.
 
 **Does MUO maintain correct instance types for each machine pool?**
 
-Yes. MUO creates the extra compute based on the found instance types of the current `machinesets`.
+Yes, if `capacityReservation: true` is enabled in the upgradeconfig CR. MUO creates the extra compute based on the found instance types of the current `machinesets`.
 
 **How does MUO handle [PodDisruptionBudgets](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/#pod-disruption-budgets) that block node draining?**
 
