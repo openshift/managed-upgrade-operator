@@ -47,5 +47,5 @@ The following configuration fields must be set:
 | Field | Description | Example |
 | --- | --- | --- |
 | `source` | Indicates the type of config manager being used | `LOCAL` |
-| `LocalConfigName` | Name of the Local config being used | `managed-upgrade-config` |
+| `localConfigName` | Name of the Local config being used | `managed-upgrade-config` |
 | `watchInterval` | Frequency* in minutes with which UpgradeConfig CR name being looked | 60 |
