@@ -102,7 +102,7 @@ $ oc create -f deploy/crds/upgrade.managed.openshift.io_upgradeconfigs_crd.yaml
 
 - Make sure you have the [operator-sdk](https://github.com/operator-framework/operator-sdk/releases) binary in your `$PATH`.
 
-- If you are not using an account that has `cluster-admin` privileges, you will need to [elevate permissions](https://github.com/openshift/ops-sop/blob/master/v4/howto/manage-privileges.md) to possess them.
+- If you are not using an account that has `cluster-admin` privileges, you will need to [elevate permissions](https://github.com/openshift/ops-sop/blob/master/v4/knowledge_base/manage-privileges.md) to possess them.
 
 - Create a project for the operator to run inside of.
 
