@@ -14,7 +14,7 @@ The `UpgradeConfig` can be created directly on the cluster which is not managed 
 
 For OpenShift Dedicated cluster you should not create `UpgradeConfig` directly. The process for scheduling an upgrade is automated and achieved using the [upgrade_policies API](https://api.openshift.com/#/default/get_api_clusters_mgmt_v1_clusters__cluster_id__upgrade_policies). 
 
-The process for SRE to manage the creation and distribution of `UpgradeConfig` custom resources is documented in [SOPs](https://github.com/openshift/ops-sop/blob/master/v4/howto/managed-upgrade.md).
+The process for creating `upgrade-policy` is documented in [SOPs](https://github.com/openshift/ops-sop/blob/master/v4/howto/managed-upgrade.md).
 
 ## Custom Resource Definitions
 
