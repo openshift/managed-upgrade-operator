@@ -59,7 +59,8 @@ type scaleConfig struct {
 }
 
 type healthCheck struct {
-	IgnoredCriticals []string `yaml:"ignoredCriticals"`
+	IgnoredCriticals  []string `yaml:"ignoredCriticals"`
+	IgnoredNamespaces []string `yaml:"ignoredNamespaces"`
 }
 
 func (cfg *osdUpgradeConfig) IsValid() error {
