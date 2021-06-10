@@ -257,7 +257,6 @@ func addMetrics(ctx context.Context, cfg *rest.Config) error {
 	// necessary to configure Prometheus to scrape metrics from this operator.
 	services := []*v1.Service{service}
 
-	var serviceMonitors []*monitoringv1.ServiceMonitor
 	mclient := monclientv1.NewForConfigOrDie(cfg)
 
 	for _, s := range services {
@@ -271,7 +270,7 @@ func addMetrics(ctx context.Context, cfg *rest.Config) error {
 
 		log.Info(fmt.Sprintf("Attempting to create service monitor %s", sm.Name))
 		// TODO: Get SM and compare to see if an UPDATE is required
-		smc, err := mclient.ServiceMonitors(operatorNs).Create(sm)
+		_, err := mclient.ServiceMonitors(operatorNs).Create(sm)
 		if err != nil {
 			if err.Error() != ErrSMMetricsExists {
 				return err
@@ -279,7 +278,6 @@ func addMetrics(ctx context.Context, cfg *rest.Config) error {
 			log.Info("ServiceMonitor already exists")
 		}
 		log.Info(fmt.Sprintf("Successfully created service monitor %s", sm.Name))
-		serviceMonitors = append(serviceMonitors, smc)
 	}
 	return nil
 }
