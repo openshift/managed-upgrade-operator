@@ -12,7 +12,7 @@ type nodeKeeperConfig struct {
 
 func (nkc *nodeKeeperConfig) IsValid() error {
 	if nkc.NodeDrain.Timeout < 0 {
-		return fmt.Errorf("Config nodeDrain timeOut is invalid")
+		return fmt.Errorf("config nodeDrain timeOut is invalid")
 	}
 
 	return nil

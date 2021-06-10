@@ -56,7 +56,7 @@ var (
 //go:generate mockgen -destination=mocks/upgradeconfigmanager.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager UpgradeConfigManager
 type UpgradeConfigManager interface {
 	Get() (*upgradev1alpha1.UpgradeConfig, error)
-	StartSync(stopCh <-chan struct{})
+	StartSync(stopCh context.Context)
 	Refresh() (bool, error)
 }
 
@@ -123,7 +123,7 @@ func (s *upgradeConfigManager) Get() (*upgradev1alpha1.UpgradeConfig, error) {
 }
 
 // Syncs UpgradeConfigs from the spec provider periodically until the operator is killed or a message is sent on the stopCh
-func (s *upgradeConfigManager) StartSync(stopCh <-chan struct{}) {
+func (s *upgradeConfigManager) StartSync(stopCh context.Context) {
 	log.Info("Starting the upgradeConfigManager")
 
 	// Read manager configuration
@@ -158,7 +158,7 @@ func (s *upgradeConfigManager) StartSync(stopCh <-chan struct{}) {
 				metricsClient.ResetMetricUpgradeConfigSynced(UPGRADECONFIG_CR_NAME)
 				duration = durationWithJitter(cfg.GetWatchInterval(), JITTER_FACTOR)
 			}
-		case <-stopCh:
+		case <-stopCh.Done():
 			log.Info("Stopping the upgradeConfigManager")
 			break
 		}
@@ -287,7 +287,7 @@ func (s *upgradeConfigManager) Refresh() (bool, error) {
 					return false, nil
 				})
 				if err != nil {
-					return false, fmt.Errorf("Unable to confirm deletion of current UpgradeConfig: %v", err)
+					return false, fmt.Errorf("unable to confirm deletion of current UpgradeConfig: %v", err)
 				}
 			}
 		}

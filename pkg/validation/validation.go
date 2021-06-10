@@ -4,7 +4,6 @@ package validation
 import (
 	"fmt"
 	"net/url"
-	"runtime"
 	"time"
 
 	"github.com/blang/semver"
@@ -150,7 +149,7 @@ func (v *validator) IsValidUpgradeConfig(uC *upgradev1alpha1.UpgradeConfig, cV *
 		}, nil
 	}
 
-	updates, err := cincinnati.NewClient(clusterId, nil, nil).GetUpdates(upstreamURI, runtime.GOARCH, desiredChannel, currentVersion)
+	updates, err := cincinnati.NewClient(clusterId).GetUpdates(upstreamURI.String(), desiredChannel, currentVersion)
 	if err != nil {
 		return ValidatorResult{
 			IsValid:           false,

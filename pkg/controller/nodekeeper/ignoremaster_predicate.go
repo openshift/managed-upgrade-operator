@@ -11,7 +11,7 @@ import (
 // IgnoreMasterPredicate holds predicate funcs
 var IgnoreMasterPredicate = predicate.Funcs{
 	UpdateFunc: func(e event.UpdateEvent) bool {
-		newNode, ok := e.MetaNew.(*corev1.Node)
+		newNode, ok := e.ObjectNew.(*corev1.Node)
 		if !ok {
 			return false
 		}
@@ -20,15 +20,15 @@ var IgnoreMasterPredicate = predicate.Funcs{
 	},
 	// Create is required to avoid reconciliation at controller initialisation.
 	CreateFunc: func(e event.CreateEvent) bool {
-		nodeLabels := e.Meta.GetLabels()
+		nodeLabels := e.Object.GetLabels()
 		return !hasMasterLabel(nodeLabels)
 	},
 	DeleteFunc: func(e event.DeleteEvent) bool {
-		nodeLabels := e.Meta.GetLabels()
+		nodeLabels := e.Object.GetLabels()
 		return !hasMasterLabel(nodeLabels)
 	},
 	GenericFunc: func(e event.GenericEvent) bool {
-		nodeLabels := e.Meta.GetLabels()
+		nodeLabels := e.Object.GetLabels()
 		return !hasMasterLabel(nodeLabels)
 	},
 }

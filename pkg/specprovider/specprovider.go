@@ -43,7 +43,7 @@ func (ppb *specProviderBuilder) New(client client.Client, builder configmanager.
 
 	switch strings.ToUpper(cfg.ConfigManager.Source) {
 	case "OCM":
-		logf.Log.Logger.Info("Using OCM as the upgrade config provider")
+		logf.Log.Info("Using OCM as the upgrade config provider")
 		cfg, err := readOcmProviderConfig(client, builder)
 		if err != nil {
 			return nil, err
@@ -54,7 +54,7 @@ func (ppb *specProviderBuilder) New(client client.Client, builder configmanager.
 		}
 		return mgr, nil
 	case "LOCAL":
-		logf.Log.Logger.Info("Using local CR as the upgrade config provider")
+		logf.Log.Info("Using local CR as the upgrade config provider")
 		cfg, err := readLocalProviderConfig(client, builder)
 		if err != nil {
 			return nil, err
