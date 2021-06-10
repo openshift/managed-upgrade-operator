@@ -6,12 +6,12 @@ metadata:
   annotations:
     categories: A list of comma separated categories that your operator falls under.
     certified: "false"
-    description: Operator to manage upgrades for Openshift version 4 clusters
+    description: Operator providing managed upgrades for OpenShift 4
     containerImage: quay.io/app-sre/managed-upgrade-operator:latest
     support: Red Hat OpenShift SRE
 spec:
   displayName: managed-upgrade-operator
-  description: Operator to manage upgrades for Openshift version 4 clusters
+  description: Operator providing managed upgrades for OpenShift 4
   keywords:
   - kubernetes
   - openshift
@@ -21,6 +21,10 @@ spec:
   provider:
     name: Red Hat, Inc
   maturity: alpha
+  maintainers:
+  - name: OpenShift SRE
+  links:
+  - url: https://github.com/openshift/managed-upgrade-operator
   installModes:
   - type: OwnNamespace
     supported: true

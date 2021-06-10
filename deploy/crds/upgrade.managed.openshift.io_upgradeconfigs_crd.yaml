@@ -68,26 +68,6 @@ spec:
                 - channel
                 - version
               type: object
-            subscriptionUpdates:
-              description: This defines the 3rd party operator subscriptions upgrade
-              items:
-                description: SubscriptionUpdate describe the 3rd party operator update config
-                properties:
-                  channel:
-                    description: Describe the channel for the Subscription
-                    type: string
-                  name:
-                    description: Describe the name of the Subscription
-                    type: string
-                  namespace:
-                    description: Describe the namespace of the Subscription
-                    type: string
-                required:
-                  - channel
-                  - name
-                  - namespace
-                type: object
-              type: array
             type:
               description: Type indicates the ClusterUpgrader implementation to use to perform an upgrade of the cluster
               enum:

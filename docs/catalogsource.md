@@ -1,32 +1,12 @@
 # Create a CatalogSource to test manifest changes
 
-## Create manifests
-```bash
-make manifests
-```
+## Create manifests/registry
 
-## Create registry
+This is done via [boilerplate](https://github.com/openshift/boilerplate/blob/343c71de5ca9d97876727b4842ee8bbf66eb11d7/boilerplate/openshift/golang-osd-operator/app-sre.md)
 
-### Create registry Dockerfile
-```bash
-cat <<EOF > LocalRegistryDockerfile
-FROM quay.io/openshift/origin-operator-registry:latest
+## Create or edit CatalogSource
 
-COPY manifests manifests
-RUN initializer --permissive
-
-CMD ["registry-server", "-t", "/tmp/terminate.log"]
-EOF
-```
-
-### Build and push Dockerfile
-
-```bash
-buildah build-using-dockerfile -f ./LocalRegistryDockerfile --tag quay.io/USER/managed-upgrade-operator-registry:latest .
-podman push IMAGE_ID docker://quay.io/USER/managed-upgrade-operator-registry:latest
-```
-
-## Create CatalogSource
+Update the image to your custom image built in previous step. 
 
 ```yaml
 apiVersion: operators.coreos.com/v1alpha1
@@ -47,7 +27,7 @@ oc create -f CatalogSource.yaml
 catalogsource.operators.coreos.com/managed-upgrade-operator-catalog created
 ```
 
-## Setup the subscription of MUO to Manual for Approval by adding installPlanApproval: Manual
+## OPTIONAL: Setup the subscription of MUO to Manual for Approval by adding installPlanApproval: Manual
 ```yaml
 spec:
   channel: staging
