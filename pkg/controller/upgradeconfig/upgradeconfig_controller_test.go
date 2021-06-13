@@ -1,6 +1,7 @@
 package upgradeconfig
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"time"
@@ -128,7 +129,7 @@ var _ = Describe("UpgradeConfigController", func() {
 					mockKubeClient.EXPECT().Get(gomock.Any(), upgradeConfigName, gomock.Any()).SetArg(2, *upgradeConfig).Return(notFound),
 					mockMetricsClient.EXPECT().ResetAllMetrics(),
 				)
-				result, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
+				result, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: upgradeConfigName})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result.Requeue).To(BeFalse())
 				Expect(result.RequeueAfter).To(BeZero())
@@ -142,7 +143,7 @@ var _ = Describe("UpgradeConfigController", func() {
 					mockEMBuilder.EXPECT().NewManager(gomock.Any()).Return(mockEMClient, nil),
 					mockKubeClient.EXPECT().Get(gomock.Any(), upgradeConfigName, gomock.Any()).SetArg(2, *upgradeConfig).Return(fakeError),
 				)
-				result, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
+				result, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: upgradeConfigName})
 				Expect(err).To(Equal(fakeError))
 				// This doesn't make a great deal of sense to me, but it's what the
 				// boilerplate operator code says/does
@@ -172,7 +173,7 @@ var _ = Describe("UpgradeConfigController", func() {
 							mockKubeClient.EXPECT().Status().Return(mockUpdater),
 							mockUpdater.EXPECT().Update(gomock.Any(), gomock.Any()).Return(fakeError),
 						)
-						result, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
+						result, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: upgradeConfigName})
 						Expect(err).To(Equal(fakeError))
 						Expect(result.Requeue).To(BeFalse())
 						Expect(result.RequeueAfter).To(BeZero())
@@ -217,7 +218,7 @@ var _ = Describe("UpgradeConfigController", func() {
 							mockKubeClient.EXPECT().Status().Return(mockUpdater),
 							mockUpdater.EXPECT().Update(gomock.Any(), matcher),
 						)
-						_, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
+						_, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: upgradeConfigName})
 						Expect(err).NotTo(HaveOccurred())
 						Expect(matcher.ActualUpgradeConfig.Status.History).To(ContainElement(
 							gstruct.MatchFields(gstruct.IgnoreExtras, gstruct.Fields{"Version": Equal(desiredVersion)})))
@@ -262,7 +263,7 @@ var _ = Describe("UpgradeConfigController", func() {
 							mockValidator.EXPECT().IsValidUpgradeConfig(gomock.Any(), gomock.Any(), gomock.Any()).Return(validation.ValidatorResult{IsValid: false, IsAvailableUpdate: false}, nil),
 							mockMetricsClient.EXPECT().UpdateMetricValidationFailed(gomock.Any()),
 						)
-						_, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
+						_, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: upgradeConfigName})
 						Expect(err).NotTo(HaveOccurred())
 					})
 				})
@@ -278,7 +279,7 @@ var _ = Describe("UpgradeConfigController", func() {
 							mockValidator.EXPECT().IsValidUpgradeConfig(gomock.Any(), gomock.Any(), gomock.Any()).Return(validation.ValidatorResult{IsValid: true, IsAvailableUpdate: false}, nil),
 							mockMetricsClient.EXPECT().UpdateMetricValidationSucceeded(gomock.Any()),
 						)
-						_, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
+						_, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: upgradeConfigName})
 						Expect(err).NotTo(HaveOccurred())
 					})
 				})
@@ -299,7 +300,7 @@ var _ = Describe("UpgradeConfigController", func() {
 							mockKubeClient.EXPECT().Status().Return(mockUpdater),
 							mockUpdater.EXPECT().Update(gomock.Any(), gomock.Any()),
 						)
-						_, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
+						_, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: upgradeConfigName})
 						Expect(err).NotTo(HaveOccurred())
 						Expect(upgradeConfig.Status.History.GetHistory("a version").Phase == upgradev1alpha1.UpgradePhasePending).To(BeTrue())
 					})
@@ -330,7 +331,7 @@ var _ = Describe("UpgradeConfigController", func() {
 							mockConfigManagerBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockConfigManager),
 							mockConfigManager.EXPECT().Into(gomock.Any()).Return(fmt.Errorf("config error")),
 						)
-						_, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
+						_, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: upgradeConfigName})
 						Expect(err).To(HaveOccurred())
 						Expect(err.Error()).To(Equal("config error"))
 					})
@@ -355,7 +356,7 @@ var _ = Describe("UpgradeConfigController", func() {
 							mockKubeClient.EXPECT().Status().Return(mockUpdater),
 							mockUpdater.EXPECT().Update(gomock.Any(), gomock.Any()),
 						)
-						result, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
+						result, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: upgradeConfigName})
 						Expect(err).NotTo(HaveOccurred())
 						Expect(result.Requeue).To(BeFalse())
 					})
@@ -374,7 +375,7 @@ var _ = Describe("UpgradeConfigController", func() {
 							mockUCMgrBuilder.EXPECT().NewManager(gomock.Any()).Return(mockUCMgr, nil),
 							mockUCMgr.EXPECT().Refresh().Return(true, nil),
 						)
-						result, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
+						result, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: upgradeConfigName})
 						Expect(err).NotTo(HaveOccurred())
 						Expect(result.Requeue).To(BeFalse())
 						Expect(upgradeConfig.Status.History.GetHistory("a version").Phase == upgradev1alpha1.UpgradePhaseNew).To(BeTrue())
@@ -400,7 +401,7 @@ var _ = Describe("UpgradeConfigController", func() {
 							mockKubeClient.EXPECT().Status().Return(mockUpdater),
 							mockUpdater.EXPECT().Update(gomock.Any(), gomock.Any()),
 						)
-						result, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
+						result, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: upgradeConfigName})
 						Expect(err).NotTo(HaveOccurred())
 						Expect(result.Requeue).To(BeFalse())
 						Expect(result.RequeueAfter).To(Equal(upgradingReconcileTime))
@@ -447,7 +448,7 @@ var _ = Describe("UpgradeConfigController", func() {
 								mockUCMgrBuilder.EXPECT().NewManager(gomock.Any()).Return(mockUCMgr, nil),
 								mockUCMgr.EXPECT().Refresh().Return(false, nil),
 							)
-							result, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
+							result, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: upgradeConfigName})
 							Expect(err).To(Equal(fakeError))
 							Expect(result.Requeue).To(BeFalse())
 							Expect(result.RequeueAfter).To(BeZero())
@@ -488,7 +489,7 @@ var _ = Describe("UpgradeConfigController", func() {
 								mockKubeClient.EXPECT().Status().Return(mockUpdater),
 								mockUpdater.EXPECT().Update(gomock.Any(), gomock.Any()),
 							)
-							result, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
+							result, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: upgradeConfigName})
 							Expect(err).NotTo(HaveOccurred())
 							Expect(result.Requeue).To(BeFalse())
 							Expect(result.RequeueAfter).To(Equal(upgradingReconcileTime))
@@ -531,7 +532,7 @@ var _ = Describe("UpgradeConfigController", func() {
 								mockKubeClient.EXPECT().Status().Return(mockUpdater),
 								mockUpdater.EXPECT().Update(gomock.Any(), gomock.Any()),
 							)
-							result, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
+							result, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: upgradeConfigName})
 							Expect(err).To(HaveOccurred())
 							Expect(result.Requeue).To(BeFalse())
 							Expect(result.RequeueAfter).To(Equal(upgradingReconcileTime))
@@ -570,7 +571,7 @@ var _ = Describe("UpgradeConfigController", func() {
 						mockKubeClient.EXPECT().Status().Return(mockUpdater),
 						mockUpdater.EXPECT().Update(gomock.Any(), gomock.Any()),
 					)
-					result, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
+					result, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: upgradeConfigName})
 					Expect(err).NotTo(HaveOccurred())
 					Expect(result.Requeue).To(BeFalse())
 					Expect(result.RequeueAfter).To(BeZero())
@@ -593,7 +594,7 @@ var _ = Describe("UpgradeConfigController", func() {
 							mockClusterUpgraderBuilder.EXPECT().NewClient(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), upgradeConfig.Spec.Type).Return(nil, fakeError),
 							mockClusterUpgrader.EXPECT().UpgradeCluster(gomock.Any(), gomock.Any()).Times(0),
 						)
-						result, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
+						result, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: upgradeConfigName})
 						Expect(err).To(Equal(fakeError))
 						Expect(result.Requeue).To(BeFalse())
 						Expect(result.RequeueAfter).To(BeZero())
@@ -611,7 +612,7 @@ var _ = Describe("UpgradeConfigController", func() {
 							mockKubeClient.EXPECT().Status().Return(mockUpdater),
 							mockUpdater.EXPECT().Update(gomock.Any(), gomock.Any()),
 						)
-						result, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
+						result, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: upgradeConfigName})
 						Expect(err).NotTo(HaveOccurred())
 						Expect(result.Requeue).To(BeFalse())
 						Expect(result.RequeueAfter).To(Equal(upgradingReconcileTime))
@@ -630,7 +631,7 @@ var _ = Describe("UpgradeConfigController", func() {
 							mockKubeClient.EXPECT().Status().Return(mockUpdater),
 							mockUpdater.EXPECT().Update(gomock.Any(), gomock.Any()),
 						)
-						result, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
+						result, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: upgradeConfigName})
 						Expect(err).To(HaveOccurred())
 						Expect(result.Requeue).To(BeFalse())
 						Expect(result.RequeueAfter).To(Equal(upgradingReconcileTime))
@@ -648,7 +649,7 @@ var _ = Describe("UpgradeConfigController", func() {
 						mockKubeClient.EXPECT().Get(gomock.Any(), upgradeConfigName, gomock.Any()).SetArg(2, *upgradeConfig),
 						mockClusterUpgraderBuilder.EXPECT().NewClient(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), upgradeConfig.Spec.Type).Times(0),
 					)
-					result, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
+					result, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: upgradeConfigName})
 					Expect(err).NotTo(HaveOccurred())
 					Expect(result.Requeue).To(BeFalse())
 					Expect(result.RequeueAfter).To(BeZero())
@@ -665,7 +666,7 @@ var _ = Describe("UpgradeConfigController", func() {
 						mockKubeClient.EXPECT().Get(gomock.Any(), upgradeConfigName, gomock.Any()).SetArg(2, *upgradeConfig),
 						mockClusterUpgraderBuilder.EXPECT().NewClient(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), upgradeConfig.Spec.Type).Times(0),
 					)
-					result, err := reconciler.Reconcile(reconcile.Request{NamespacedName: upgradeConfigName})
+					result, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: upgradeConfigName})
 					Expect(err).NotTo(HaveOccurred())
 					Expect(result.Requeue).To(BeFalse())
 					Expect(result.RequeueAfter).To(BeZero())

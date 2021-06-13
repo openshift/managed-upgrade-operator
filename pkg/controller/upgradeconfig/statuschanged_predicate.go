@@ -11,7 +11,7 @@ import (
 // StatusChangedPredicate is a function that executes predicates for an UpgradeConfig
 var StatusChangedPredicate = predicate.Funcs{
 	UpdateFunc: func(e event.UpdateEvent) bool {
-		if e.MetaOld == nil {
+		if e.ObjectOld == nil {
 			log.Error(nil, "Update event has no old metadata", "event", e)
 			return false
 		}
@@ -23,7 +23,7 @@ var StatusChangedPredicate = predicate.Funcs{
 			log.Error(nil, "Update event has no new runtime object for update", "event", e)
 			return false
 		}
-		if e.MetaNew == nil {
+		if e.ObjectNew == nil {
 			log.Error(nil, "Update event has no new metadata", "event", e)
 			return false
 		}

@@ -9,7 +9,7 @@ import (
 
 var isWorkerPredicate = predicate.Funcs{
 	UpdateFunc: func(e event.UpdateEvent) bool {
-		mp, ok := e.MetaNew.(*machineconfigapi.MachineConfigPool)
+		mp, ok := e.ObjectNew.(*machineconfigapi.MachineConfigPool)
 		if !ok {
 			return false
 		}
@@ -17,13 +17,13 @@ var isWorkerPredicate = predicate.Funcs{
 	},
 	// Create is required to avoid reconciliation at controller initialisation.
 	CreateFunc: func(e event.CreateEvent) bool {
-		return isWorkerPool(e.Meta.GetName())
+		return isWorkerPool(e.Object.GetName())
 	},
 	DeleteFunc: func(e event.DeleteEvent) bool {
-		return isWorkerPool(e.Meta.GetName())
+		return isWorkerPool(e.Object.GetName())
 	},
 	GenericFunc: func(e event.GenericEvent) bool {
-		return isWorkerPool(e.Meta.GetName())
+		return isWorkerPool(e.Object.GetName())
 	},
 }
 

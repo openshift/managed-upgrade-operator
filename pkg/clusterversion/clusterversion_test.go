@@ -97,11 +97,10 @@ var _ = Describe("ClusterVersion client and utils", func() {
 							DesiredUpdate: nil,
 						},
 						Status: configv1.ClusterVersionStatus{
-							AvailableUpdates: []configv1.Update{
+							AvailableUpdates: []configv1.Release{
 								{
 									Version: upgradeConfig.Spec.Desired.Version,
 									Image:   "quay.io/this-doesnt-exist",
-									Force:   false,
 								},
 							},
 						},
@@ -130,11 +129,10 @@ var _ = Describe("ClusterVersion client and utils", func() {
 							DesiredUpdate: nil,
 						},
 						Status: configv1.ClusterVersionStatus{
-							AvailableUpdates: []configv1.Update{
+							AvailableUpdates: []configv1.Release{
 								{
 									Version: upgradeConfig.Spec.Desired.Version,
 									Image:   "quay.io/dummy-image-for-test",
-									Force:   false,
 								},
 							},
 						},
@@ -164,11 +162,10 @@ var _ = Describe("ClusterVersion client and utils", func() {
 							},
 						},
 						Status: configv1.ClusterVersionStatus{
-							AvailableUpdates: []configv1.Update{
+							AvailableUpdates: []configv1.Release{
 								{
 									Version: upgradeConfig.Spec.Desired.Version,
 									Image:   "quay.io/dummy-image-for-test",
-									Force:   false,
 								},
 							},
 						},

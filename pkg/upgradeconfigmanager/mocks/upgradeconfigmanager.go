@@ -5,6 +5,7 @@
 package mocks
 
 import (
+	context "context"
 	gomock "github.com/golang/mock/gomock"
 	v1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 	reflect "reflect"
@@ -64,7 +65,7 @@ func (mr *MockUpgradeConfigManagerMockRecorder) Refresh() *gomock.Call {
 }
 
 // StartSync mocks base method
-func (m *MockUpgradeConfigManager) StartSync(arg0 <-chan struct{}) {
+func (m *MockUpgradeConfigManager) StartSync(arg0 context.Context) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "StartSync", arg0)
 }
