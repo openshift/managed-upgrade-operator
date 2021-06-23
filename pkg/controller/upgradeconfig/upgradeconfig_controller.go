@@ -274,7 +274,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile
 func (r *ReconcileUpgradeConfig) upgradeCluster(upgrader cub.ClusterUpgrader, uc *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (reconcile.Result, error) {
 	me := &multierror.Error{}
 
-	phase, condition, err := upgrader.UpgradeCluster(uc, logger)
+	phase, condition, err := upgrader.UpgradeCluster(context.TODO(), uc, logger)
 	me = multierror.Append(err, me)
 
 	history := uc.Status.History.GetHistory(uc.Spec.Desired.Version)
