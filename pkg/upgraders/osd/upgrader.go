@@ -126,9 +126,14 @@ func PreClusterHealthCheck(c client.Client, cfg *osdUpgradeConfig, scaler scaler
 	if err != nil {
 		return false, err
 	}
+
 	desired := upgradeConfig.Spec.Desired
 	if upgradeCommenced {
-		logger.Info(fmt.Sprintf("ClusterVersion is already set to Channel %s Version %s, skipping %s", desired.Channel, desired.Version, upgradev1alpha1.UpgradePreHealthCheck))
+		if len(desired.Channel) > 0 && len(desired.Version) > 0 {
+			logger.Info(fmt.Sprintf("ClusterVersion is already set to Channel %s Version %s, skipping %s", desired.Channel, desired.Version, upgradev1alpha1.UpgradePreHealthCheck))
+		} else if len(desired.Image) > 0 && len(desired.Version) > 0 {
+			logger.Info(fmt.Sprintf("ClusterVersion is already set to Image %s, skipping %s", desired.Image, upgradev1alpha1.UpgradePreHealthCheck))
+		}
 		return true, nil
 	}
 
@@ -154,9 +159,14 @@ func EnsureExtraUpgradeWorkers(c client.Client, cfg *osdUpgradeConfig, s scaler.
 	if err != nil {
 		return false, err
 	}
+
 	desired := upgradeConfig.Spec.Desired
 	if upgradeCommenced {
-		logger.Info(fmt.Sprintf("ClusterVersion is already set to Channel %s Version %s, skipping %s", desired.Channel, desired.Version, upgradev1alpha1.UpgradeScaleUpExtraNodes))
+		if len(desired.Channel) > 0 && len(desired.Version) > 0 {
+			logger.Info(fmt.Sprintf("ClusterVersion is already set to Channel %s Version %s, skipping %s", desired.Channel, desired.Version, upgradev1alpha1.UpgradeScaleUpExtraNodes))
+		} else if len(desired.Image) > 0 && len(desired.Version) > 0 {
+			logger.Info(fmt.Sprintf("ClusterVersion is already set to Image %s, skipping %s", desired.Image, upgradev1alpha1.UpgradeScaleUpExtraNodes))
+		}
 		return true, nil
 	}
 
@@ -181,9 +191,14 @@ func ExternalDependencyAvailabilityCheck(c client.Client, cfg *osdUpgradeConfig,
 	if err != nil {
 		return false, err
 	}
+
 	desired := upgradeConfig.Spec.Desired
 	if upgradeCommenced {
-		logger.Info(fmt.Sprintf("ClusterVersion is already set to Channel %s Version %s, skipping %s", desired.Channel, desired.Version, upgradev1alpha1.ExtDepAvailabilityCheck))
+		if len(desired.Channel) > 0 && len(desired.Version) > 0 {
+			logger.Info(fmt.Sprintf("ClusterVersion is already set to Channel %s Version %s, skipping %s", desired.Channel, desired.Version, upgradev1alpha1.ExtDepAvailabilityCheck))
+		} else if len(desired.Image) > 0 && len(desired.Version) > 0 {
+			logger.Info(fmt.Sprintf("ClusterVersion is already set to Image %s, skipping %s", desired.Image, upgradev1alpha1.ExtDepAvailabilityCheck))
+		}
 		return true, nil
 	}
 
@@ -214,14 +229,24 @@ func CommenceUpgrade(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scale
 	if err != nil {
 		return false, err
 	}
+
 	desired := upgradeConfig.Spec.Desired
 	if upgradeCommenced {
-		logger.Info(fmt.Sprintf("ClusterVersion is already set to Channel %s Version %s, skipping %s", desired.Channel, desired.Version, upgradev1alpha1.CommenceUpgrade))
+		if len(desired.Channel) > 0 && len(desired.Version) > 0 {
+			logger.Info(fmt.Sprintf("ClusterVersion is already set to Channel %s Version %s, skipping %s", desired.Channel, desired.Version, upgradev1alpha1.CommenceUpgrade))
+		} else if len(desired.Image) > 0 && len(desired.Version) > 0 {
+			logger.Info(fmt.Sprintf("ClusterVersion is already set to Image %s, skipping %s", desired.Image, upgradev1alpha1.CommenceUpgrade))
+		}
 		return true, nil
 	}
 
-	logger.Info(fmt.Sprintf("Setting ClusterVersion to Channel %s, version %s", desired.Channel, desired.Version))
-	isComplete, err := cvClient.EnsureDesiredVersion(upgradeConfig)
+	if len(desired.Channel) > 0 && len(desired.Version) > 0 {
+		logger.Info(fmt.Sprintf("Setting ClusterVersion to Channel %s, version %s", desired.Channel, desired.Version))
+	} else if len(desired.Image) > 0 && len(desired.Version) > 0 {
+		logger.Info(fmt.Sprintf("Setting ClusterVersion to Image %s", desired.Image))
+	}
+
+	isComplete, err := cvClient.EnsureDesiredConfig(upgradeConfig)
 	if err != nil {
 		return false, err
 	}

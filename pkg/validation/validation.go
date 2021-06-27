@@ -12,6 +12,7 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 	"github.com/openshift/cluster-version-operator/pkg/cincinnati"
 
+	imagereference "github.com/openshift/library-go/pkg/image/reference"
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 	cv "github.com/openshift/managed-upgrade-operator/pkg/clusterversion"
 )
@@ -57,131 +58,195 @@ const (
 	VersionUpgrade
 )
 
+// IsValidUpgradeConfig checks the validity of UpgradeConfig CRs
 func (v *validator) IsValidUpgradeConfig(uC *upgradev1alpha1.UpgradeConfig, cV *configv1.ClusterVersion, logger logr.Logger) (ValidatorResult, error) {
+
 	// Validate upgradeAt as RFC3339
-	_, err := time.Parse(time.RFC3339, uC.Spec.UpgradeAt)
+	upgradeAt := uC.Spec.UpgradeAt
+	_, err := time.Parse(time.RFC3339, upgradeAt)
 	if err != nil {
 		return ValidatorResult{
 			IsValid:           false,
 			IsAvailableUpdate: false,
-			Message:           fmt.Sprintf("Failed to parse upgradeAt:%s during validation", uC.Spec.UpgradeAt),
+			Message:           fmt.Sprintf("Failed to parse upgradeAt:%s during validation", upgradeAt),
 		}, nil
 	}
 
-	// Validate desired version.
+	// Initial validation considering the usage for three optional fields for image, version and channel.
+	// .spec.desired is mandatory field required with either (image and version) or (version and channel) to be defined (all three are optional fields)
+	// TODO: In future, image should not be tied with version for validation. Refer Jira OSD-7609.
+	image := uC.Spec.Desired.Image
 	dv := uC.Spec.Desired.Version
-	version, err := cv.GetCurrentVersion(cV)
-	if err != nil {
-		return ValidatorResult{
-			IsValid:           false,
-			IsAvailableUpdate: false,
-			Message:           "Failed to get current cluster version during validation",
-		}, err
-	}
-
-	// Check for valid SemVer and convert to SemVer.
-	desiredVersion, err := semver.Parse(dv)
-	if err != nil {
-		return ValidatorResult{
-			IsValid:           false,
-			IsAvailableUpdate: false,
-			Message:           fmt.Sprintf("Failed to parse desired version %s as semver", dv),
-		}, nil
-	}
-	currentVersion, err := semver.Parse(version)
-	if err != nil {
-		return ValidatorResult{
-			IsValid:           false,
-			IsAvailableUpdate: false,
-			Message:           fmt.Sprintf("Failed to parse desired version %s as semver", version),
-		}, nil
-	}
-
-	// Compare versions to ascertain if upgrade should proceed.
-	versionComparison, err := compareVersions(desiredVersion, currentVersion, logger)
-	if err != nil {
-		return ValidatorResult{
-			IsValid:           true,
-			IsAvailableUpdate: false,
-			Message:           err.Error(),
-		}, nil
-	}
-
-	switch versionComparison {
-	case VersionUnknown:
-		return ValidatorResult{
-			IsValid:           false,
-			IsAvailableUpdate: false,
-			Message:           fmt.Sprintf("Desired version %s and current version %s could not be compared.", desiredVersion, currentVersion),
-		}, nil
-	case VersionDowngrade:
-		return ValidatorResult{
-			IsValid:           true,
-			IsAvailableUpdate: false,
-			Message:           fmt.Sprintf("Downgrades to desired version %s from %s are unsupported", desiredVersion, currentVersion),
-		}, nil
-	case VersionEqual:
-		return ValidatorResult{
-			IsValid:           true,
-			IsAvailableUpdate: false,
-			Message:           fmt.Sprintf("Desired version %s matches the current version %s", desiredVersion, currentVersion),
-		}, nil
-	case VersionUpgrade:
-		logger.Info(fmt.Sprintf("Desired version %s validated as greater then current version %s", desiredVersion, currentVersion))
-	}
-
-	// Validate available version is in Cincinnati.
 	desiredChannel := uC.Spec.Desired.Channel
-	clusterId, err := uuid.Parse(string(cV.Spec.ClusterID))
-	if err != nil {
+	if (len(image) == 0 && len(dv) == 0) || (len(image) > 0 && len(desiredChannel) > 0) || (len(image) > 0 && len(dv) == 0 && len(desiredChannel) == 0) {
 		return ValidatorResult{
 			IsValid:           false,
 			IsAvailableUpdate: false,
-			Message:           "",
-		}, nil
-	}
-	upstreamURI, err := url.Parse(getUpstreamURL(cV))
-	if err != nil {
-		return ValidatorResult{
-			IsValid:           false,
-			IsAvailableUpdate: false,
-			Message:           "",
+			Message:           "Failed to validate .spec.desired in UpgradeConfig: Either (image and version) or (version and channel) should be specified",
 		}, nil
 	}
 
-	updates, err := cincinnati.NewClient(clusterId).GetUpdates(upstreamURI.String(), desiredChannel, currentVersion)
-	if err != nil {
-		return ValidatorResult{
-			IsValid:           false,
-			IsAvailableUpdate: false,
-			Message:           "",
-		}, err
-	}
+	// Validate image spec reference
+	// Sample image spec: "quay.io/openshift-release-dev/ocp-release@sha256:8c3f5392ac933cd520b4dce560e007f2472d2d943de14c29cbbb40c72ae44e4c"
+	// Image spec structure: Registry/Namespace/Name@ID
+	if (len(image) > 0 && len(dv) > 0) && len(desiredChannel) == 0 {
+		ref, err := imagereference.Parse(image)
+		if err != nil {
+			return ValidatorResult{
+				IsValid:           false,
+				IsAvailableUpdate: false,
+				Message:           fmt.Sprintf("Failed to parse image %s: must be a valid image pull spec:%v", image, err),
+			}, nil
+		}
 
-	var cvoUpdates []configv1.Update
-	for _, update := range updates {
-		cvoUpdates = append(cvoUpdates, configv1.Update{
-			Version: update.Version.String(),
-			Image:   update.Image,
-		})
-	}
+		if len(ref.Registry) == 0 {
+			return ValidatorResult{
+				IsValid:           false,
+				IsAvailableUpdate: false,
+				Message:           fmt.Sprintf("Failed to parse image:%s must be a valid image pull spec: no registry specified", image),
+			}, nil
+		}
 
-	// Check whether the desired version exists in availableUpdates
-	found := false
-	for _, v := range cvoUpdates {
-		if v.Version == dv && !v.Force {
-			found = true
+		if len(ref.Namespace) == 0 {
+			return ValidatorResult{
+				IsValid:           false,
+				IsAvailableUpdate: false,
+				Message:           fmt.Sprintf("Failed to parse image:%s must be a valid image pull spec: no repository specified", image),
+			}, nil
+		}
+
+		if len(ref.ID) == 0 {
+			return ValidatorResult{
+				IsValid:           false,
+				IsAvailableUpdate: false,
+				Message:           fmt.Sprintf("Failed to parse image:%s must be a valid image pull spec: no image digest specified", image),
+			}, nil
 		}
 	}
 
-	if !found {
-		logger.Info(fmt.Sprintf("Failed to find the desired version %s in channel %s", desiredVersion, desiredChannel))
-		return ValidatorResult{
-			IsValid:           false,
-			IsAvailableUpdate: false,
-			Message:           fmt.Sprintf("cannot find version %s in available updates", desiredVersion),
-		}, nil
+	// Validate desired version.
+	if len(dv) > 0 {
+		version, err := cv.GetCurrentVersion(cV)
+		if err != nil {
+			return ValidatorResult{
+				IsValid:           false,
+				IsAvailableUpdate: false,
+				Message:           "Failed to get current cluster version during validation",
+			}, err
+		}
+
+		// Check for valid SemVer and convert to SemVer.
+		desiredVersion, err := semver.Parse(dv)
+		if err != nil {
+			return ValidatorResult{
+				IsValid:           false,
+				IsAvailableUpdate: false,
+				Message:           fmt.Sprintf("Failed to parse desired version %s as semver", dv),
+			}, nil
+		}
+		currentVersion, err := semver.Parse(version)
+		if err != nil {
+			return ValidatorResult{
+				IsValid:           false,
+				IsAvailableUpdate: false,
+				Message:           fmt.Sprintf("Failed to parse current version %s as semver", version),
+			}, nil
+		}
+
+		// Compare versions to ascertain if upgrade should proceed.
+		versionComparison, err := compareVersions(desiredVersion, currentVersion, logger)
+		if err != nil {
+			return ValidatorResult{
+				IsValid:           true,
+				IsAvailableUpdate: false,
+				Message:           err.Error(),
+			}, nil
+		}
+
+		switch versionComparison {
+		case VersionUnknown:
+			return ValidatorResult{
+				IsValid:           false,
+				IsAvailableUpdate: false,
+				Message:           fmt.Sprintf("Desired version %s and current version %s could not be compared.", desiredVersion, currentVersion),
+			}, nil
+		case VersionDowngrade:
+			return ValidatorResult{
+				IsValid:           true,
+				IsAvailableUpdate: false,
+				Message:           fmt.Sprintf("Downgrades to desired version %s from %s are unsupported", desiredVersion, currentVersion),
+			}, nil
+		case VersionEqual:
+			return ValidatorResult{
+				IsValid:           true,
+				IsAvailableUpdate: false,
+				Message:           fmt.Sprintf("Desired version %s matches the current version %s", desiredVersion, currentVersion),
+			}, nil
+		case VersionUpgrade:
+			logger.Info(fmt.Sprintf("Desired version %s validated as greater than current version %s", desiredVersion, currentVersion))
+		}
 	}
+
+	if len(image) == 0 && len(desiredChannel) > 0 {
+		// Validate available version is in Cincinnati.
+		clusterId, err := uuid.Parse(string(cV.Spec.ClusterID))
+		if err != nil {
+			return ValidatorResult{
+				IsValid:           false,
+				IsAvailableUpdate: false,
+				Message:           "",
+			}, nil
+		}
+		upstreamURI, err := url.Parse(getUpstreamURL(cV))
+		if err != nil {
+			return ValidatorResult{
+				IsValid:           false,
+				IsAvailableUpdate: false,
+				Message:           "",
+			}, nil
+		}
+
+		version, _ := cv.GetCurrentVersion(cV)
+		desiredVersion, _ := semver.Parse(dv)
+		currentVersion, _ := semver.Parse(version)
+
+		updates, err := cincinnati.NewClient(clusterId).GetUpdates(upstreamURI.String(), desiredChannel, currentVersion)
+		if err != nil {
+			return ValidatorResult{
+				IsValid:           false,
+				IsAvailableUpdate: false,
+				Message:           "",
+			}, err
+		}
+
+		var cvoUpdates []configv1.Update
+		for _, update := range updates {
+			cvoUpdates = append(cvoUpdates, configv1.Update{
+				Version: update.Version.String(),
+				Image:   update.Image,
+			})
+		}
+
+		// Check whether the desired version exists in availableUpdates
+		found := false
+		for _, v := range cvoUpdates {
+			if v.Version == dv && !v.Force {
+				found = true
+			}
+		}
+
+		if !found {
+			logger.Info(fmt.Sprintf("Failed to find the desired version %s in channel %s", desiredVersion, desiredChannel))
+			return ValidatorResult{
+				IsValid:           false,
+				IsAvailableUpdate: false,
+				Message:           fmt.Sprintf("cannot find version %s in available updates", desiredVersion),
+			}, nil
+		}
+	} else {
+		logger.Info("Skipping version validation from channel as image is used")
+	}
+
 	return ValidatorResult{
 		IsValid:           true,
 		IsAvailableUpdate: true,
@@ -205,7 +270,7 @@ func compareVersions(dV semver.Version, cV semver.Version, logger logr.Logger) (
 		logger.Info(fmt.Sprintf("%s is greater then %s", dV, cV))
 		return VersionUpgrade, nil
 	default:
-		return VersionUnknown, fmt.Errorf("Semver comparison failed for unknown reason. Versions %s & %s", dV, cV)
+		return VersionUnknown, fmt.Errorf("semver comparison failed for unknown reason. Versions %s & %s", dV, cV)
 	}
 
 }

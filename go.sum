@@ -844,6 +844,7 @@ github.com/openshift/client-go v0.0.0-20200827190008-3062137373b5/go.mod h1:5rGm
 github.com/openshift/cluster-version-operator v3.11.1-0.20190629164025-08cac1c02538+incompatible h1:aLjroKDBGQ7oW2R8876TsB1nKIl+loREmjEVm0aqTno=
 github.com/openshift/cluster-version-operator v3.11.1-0.20190629164025-08cac1c02538+incompatible/go.mod h1:0BbpR1mrN0F2ZRae5N1XHcytmkvVPaeKgSQwRRBWugc=
 github.com/openshift/library-go v0.0.0-20191003152030-97c62d8a2901/go.mod h1:NBttNjZpWwup/nthuLbPAPSYC8Qyo+BBK5bCtFoyYjo=
+github.com/openshift/library-go v0.0.0-20200831114015-2ab0c61c15de h1:V984tJombwXeUvZaMiMSzN6yOiHUdd1kWLHS1a54Yrw=
 github.com/openshift/library-go v0.0.0-20200831114015-2ab0c61c15de/go.mod h1:6vwp+YhYOIlj8MpkQKkebTTSn2TuYyvgiAFQ206jIEQ=
 github.com/openshift/machine-api-operator v0.2.1-0.20200226185612-9b0170a1ba07 h1:S5OTK8uPzYJrnoHlYaQzQg6VbEfbY1UFL6cx5mHw87M=
 github.com/openshift/machine-api-operator v0.2.1-0.20200226185612-9b0170a1ba07/go.mod h1:b3huCV+DbroXP1sHtsU5xBwx97zqc6GKB5owyl2zsNM=
