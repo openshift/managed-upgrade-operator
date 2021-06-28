@@ -63,3 +63,11 @@ func (c *clusterUpgrader) runSteps(ctx context.Context, logger logr.Logger, s []
 	phase, condition, err := upgradesteps.Run(ctx, logger, s)
 	return phase, condition, err
 }
+
+// UpgradeCluster performs the upgrade of the cluster and returns an indication of the
+// last-executed upgrade phase, the success condition of the phase, and any error associated
+// with the phase execution.
+func (c *clusterUpgrader) UpgradeCluster(ctx context.Context, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (upgradev1alpha1.UpgradePhase, *upgradev1alpha1.UpgradeCondition, error) {
+	c.upgradeConfig = upgradeConfig
+	return c.runSteps(ctx, logger, c.steps)
+}

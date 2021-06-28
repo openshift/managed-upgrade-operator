@@ -16,7 +16,6 @@ import (
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 	"github.com/openshift/managed-upgrade-operator/pkg/clusterversion"
 	cvMocks "github.com/openshift/managed-upgrade-operator/pkg/clusterversion/mocks"
-	"github.com/openshift/managed-upgrade-operator/pkg/drain"
 	mockDrain "github.com/openshift/managed-upgrade-operator/pkg/drain/mocks"
 	emMocks "github.com/openshift/managed-upgrade-operator/pkg/eventmanager/mocks"
 	mockMachinery "github.com/openshift/managed-upgrade-operator/pkg/machinery/mocks"
@@ -41,12 +40,13 @@ var _ = Describe("HealthCheckStep", func() {
 		mockCVClient             *cvMocks.MockClusterVersion
 		mockDrainStrategyBuilder *mockDrain.MockNodeDrainStrategyBuilder
 		mockEMClient             *emMocks.MockEventManager
+
 		// upgradeconfig to be used during tests
 		upgradeConfigName types.NamespacedName
 		upgradeConfig     *upgradev1alpha1.UpgradeConfig
 
-		config *upgraderConfig
-
+		// upgrader to be used during tests
+		config   *upgraderConfig
 		upgrader *clusterUpgrader
 	)
 
@@ -66,24 +66,10 @@ var _ = Describe("HealthCheckStep", func() {
 		mockDrainStrategyBuilder = mockDrain.NewMockNodeDrainStrategyBuilder(mockCtrl)
 		mockEMClient = emMocks.NewMockEventManager(mockCtrl)
 		logger = logf.Log.WithName("cluster upgrader test logger")
-		config = &upgraderConfig{
-			Maintenance: maintenanceConfig{
-				ControlPlaneTime: 90,
-			},
-			Scale: scaleConfig{
-				TimeOut: 30,
-			},
-			HealthCheck: healthCheck{
-				IgnoredCriticals:  []string{"alert1", "alert2"},
-				IgnoredNamespaces: []string{"ns1"},
-			},
-			NodeDrain: drain.NodeDrain{
-				ExpectedNodeDrainTime: 8,
-			},
-			UpgradeWindow: upgradeWindow{
-				TimeOut:      120,
-				DelayTrigger: 30,
-			},
+		config = buildTestUpgraderConfig(90, 30, 8, 120, 30)
+		config.HealthCheck = healthCheck{
+			IgnoredCriticals:  []string{"alert1", "alert2"},
+			IgnoredNamespaces: []string{"ns1"},
 		}
 		upgrader = &clusterUpgrader{
 			client:               mockKubeClient,
@@ -155,7 +141,7 @@ var _ = Describe("HealthCheckStep", func() {
 					})
 				mockCVClient.EXPECT().HasDegradedOperators().Return(&clusterversion.HasDegradedOperatorsResult{Degraded: []string{}}, nil)
 				mockMetricsClient.EXPECT().UpdateMetricClusterCheckSucceeded(upgradeConfig.Name)
-				result, err := PreClusterHealthCheck(mockKubeClient, config, mockScaler, mockDrainStrategyBuilder, mockMetricsClient, mockMaintClient, mockCVClient, mockEMClient, upgradeConfig, mockMachinery, []ac.AvailabilityChecker{mockAC}, logger)
+				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(result).To(BeTrue())
 			})

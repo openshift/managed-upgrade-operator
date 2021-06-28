@@ -16,7 +16,6 @@ import (
 	ac "github.com/openshift/managed-upgrade-operator/pkg/availabilitychecks"
 	acMocks "github.com/openshift/managed-upgrade-operator/pkg/availabilitychecks/mocks"
 	cvMocks "github.com/openshift/managed-upgrade-operator/pkg/clusterversion/mocks"
-	"github.com/openshift/managed-upgrade-operator/pkg/drain"
 	mockDrain "github.com/openshift/managed-upgrade-operator/pkg/drain/mocks"
 	emMocks "github.com/openshift/managed-upgrade-operator/pkg/eventmanager/mocks"
 	mockMachinery "github.com/openshift/managed-upgrade-operator/pkg/machinery/mocks"
@@ -45,8 +44,8 @@ var _ = Describe("HealthCheckStep", func() {
 		upgradeConfigName types.NamespacedName
 		upgradeConfig     *upgradev1alpha1.UpgradeConfig
 
-		config *upgraderConfig
-
+		// upgrader to be used during tests
+		config   *upgraderConfig
 		upgrader *osdUpgrader
 	)
 
@@ -67,21 +66,7 @@ var _ = Describe("HealthCheckStep", func() {
 		mockEMClient = emMocks.NewMockEventManager(mockCtrl)
 		mockAC = acMocks.NewMockAvailabilityChecker(mockCtrl)
 		logger = logf.Log.WithName("cluster upgrader test logger")
-		config = &upgraderConfig{
-			Maintenance: maintenanceConfig{
-				ControlPlaneTime: 90,
-			},
-			Scale: scaleConfig{
-				TimeOut: 30,
-			},
-			NodeDrain: drain.NodeDrain{
-				ExpectedNodeDrainTime: 8,
-			},
-			UpgradeWindow: upgradeWindow{
-				TimeOut:      120,
-				DelayTrigger: 30,
-			},
-		}
+		config = buildTestUpgraderConfig(90, 30, 8, 120, 30)
 		upgrader = &osdUpgrader{
 			clusterUpgrader: &clusterUpgrader{
 				client:               mockKubeClient,

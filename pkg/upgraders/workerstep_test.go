@@ -42,8 +42,8 @@ var _ = Describe("HealthCheckStep", func() {
 		upgradeConfigName types.NamespacedName
 		upgradeConfig     *upgradev1alpha1.UpgradeConfig
 
-		config *upgraderConfig
-
+		// upgrader to be used in testing
+		config   *upgraderConfig
 		upgrader *clusterUpgrader
 	)
 

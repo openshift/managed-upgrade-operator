@@ -55,7 +55,15 @@ func performClusterHealthCheck(metricsClient metrics.Metrics, cvClient cv.Cluste
 	if len(ic) > 0 {
 		icQuery = `,alertname!="` + strings.Join(ic, `",alertname!="`) + `"`
 	}
-	healthCheckQuery := `ALERTS{alertstate="firing",severity="critical",namespace=~"^openshift.*|^kube-.*|^default$",namespace!="openshift-customer-monitoring",namespace!="openshift-logging",namespace!="openshift-operators"` + icQuery + "}"
+
+	ignoredNamespace := cfg.HealthCheck.IgnoredNamespaces
+	ignoredNamespaceQuery := ""
+	if len(ignoredNamespace) > 0 {
+		ignoredNamespaceQuery = `,namespace!="` + strings.Join(ignoredNamespace, `",namespace!="`) + `"`
+	}
+
+	healthCheckQuery := `ALERTS{alertstate="firing",severity="critical",namespace=~"^openshift.*|^kube-.*|^default$"` + ignoredNamespaceQuery + icQuery + "}"
+
 	alerts, err := metricsClient.Query(healthCheckQuery)
 	if err != nil {
 		return false, fmt.Errorf("unable to query critical alerts: %s", err)
