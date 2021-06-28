@@ -31,7 +31,7 @@ type ignoredAlerts struct {
 
 func (cfg *maintenanceConfig) IsValid() error {
 	if cfg.ControlPlaneTime <= 0 {
-		return fmt.Errorf("config maintenace controlPlaneTime out is invalid")
+		return fmt.Errorf("config maintenance controlPlaneTime out is invalid")
 	}
 
 	return nil
@@ -59,7 +59,8 @@ type scaleConfig struct {
 }
 
 type healthCheck struct {
-	IgnoredCriticals []string `yaml:"ignoredCriticals"`
+	IgnoredCriticals  []string `yaml:"ignoredCriticals"`
+	IgnoredNamespaces []string `yaml:"ignoredNamespaces"`
 }
 
 func (cfg *upgraderConfig) IsValid() error {

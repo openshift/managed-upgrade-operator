@@ -7,11 +7,13 @@ import (
 	"time"
 )
 
+// HTTPAvailabilityChecker type provides target and timeout fields for http checks
 type HTTPAvailabilityChecker struct {
 	Targets []string
 	Timeout time.Duration
 }
 
+// HTTPConfig type provides target and timeout fields for http config
 type HTTPConfig struct {
 	Targets []string
 	Timeout time.Duration
@@ -29,7 +31,7 @@ func GetHTTPAvailabilityChecker(c Config) (AvailabilityChecker, error) {
 	return &HTTPAvailabilityChecker{}, fmt.Errorf("Attempt to get HTTP implementation failed ascertation as HTTPConfig")
 }
 
-// HTTPAvailabilityCheck accepts a slice of HTTP targets accompanied by a timeout
+// AvailabilityCheck accepts a slice of HTTP targets accompanied by a timeout
 // and asynchronously checks the targets to deem them available. If any of the targets
 // are deemed unhealthy, all running routines are cancelled and an error is returned.
 func (h HTTPAvailabilityChecker) AvailabilityCheck() error {

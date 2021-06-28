@@ -13,9 +13,11 @@ import (
 )
 
 var (
+	// OSD_CV_NAME is the name of cluster version singleton
 	OSD_CV_NAME = "version"
 )
 
+// ClusterVersion interface enables implementations of the ClusterVersion
 //go:generate mockgen -destination=mocks/mockClusterVersion.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/clusterversion ClusterVersion
 type ClusterVersion interface {
 	GetClusterVersion() (*configv1.ClusterVersion, error)
@@ -25,6 +27,7 @@ type ClusterVersion interface {
 	HasDegradedOperators() (*HasDegradedOperatorsResult, error)
 }
 
+// ClusterVersionBuilder returns a ClusterVersion interface
 //go:generate mockgen -destination=mocks/mockClusterVersionBuilder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/clusterversion ClusterVersionBuilder
 type ClusterVersionBuilder interface {
 	New(client.Client) ClusterVersion
@@ -36,10 +39,12 @@ type clusterVersionClient struct {
 
 type clusterVersionClientBuilder struct{}
 
+// NewCVClient returns a ClusterVersion interface
 func NewCVClient(c client.Client) ClusterVersion {
 	return &clusterVersionClient{c}
 }
 
+// NewBuilder returns a CluserVersionBuilder type
 func NewBuilder() ClusterVersionBuilder {
 	return &clusterVersionClientBuilder{}
 }
@@ -102,6 +107,7 @@ func (c *clusterVersionClient) EnsureDesiredVersion(uc *upgradev1alpha1.UpgradeC
 	return true, nil
 }
 
+// HasDegradedOperatorsResult holds fields that describe a degraded operator
 type HasDegradedOperatorsResult struct {
 	Degraded []string
 }
@@ -168,6 +174,7 @@ func (c *clusterVersionClient) HasUpgradeCommenced(uc *upgradev1alpha1.UpgradeCo
 	return true, nil
 }
 
+// GetHistory returns a configv1.UpdateHistory from a ClusterVersion
 func GetHistory(clusterVersion *configv1.ClusterVersion, version string) *configv1.UpdateHistory {
 	for _, history := range clusterVersion.Status.History {
 		if history.Version == version {
@@ -178,6 +185,7 @@ func GetHistory(clusterVersion *configv1.ClusterVersion, version string) *config
 	return nil
 }
 
+// GetCurrentVersion strings a version as a string and error
 func GetCurrentVersion(clusterVersion *configv1.ClusterVersion) (string, error) {
 	var gotVersion string
 	var latestCompletionTime *metav1.Time = nil

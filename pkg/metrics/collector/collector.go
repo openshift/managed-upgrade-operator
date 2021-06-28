@@ -24,7 +24,7 @@ type UpgradeCollector struct {
 	upgradeMetrics       *UpgradeMetrics
 }
 
-// Consturct a new UpgradeCollector and return to caller.
+// NewUpgradeCollector constructs a new UpgradeCollector and return to caller.
 func NewUpgradeCollector(c client.Client) (prometheus.Collector, error) {
 	upgradeConfigManager, err := ucm.NewBuilder().NewManager(c)
 	if err != nil {

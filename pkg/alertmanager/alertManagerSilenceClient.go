@@ -3,13 +3,15 @@ package alertmanager
 import (
 	"context"
 	"fmt"
+	"net/http"
+
 	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"
 	amSilence "github.com/prometheus/alertmanager/api/v2/client/silence"
 	amv2Models "github.com/prometheus/alertmanager/api/v2/models"
-	"net/http"
 )
 
+// AlertManagerSilencer interface enables implementations of an AlertManagerSilencer
 //go:generate mockgen -destination=mocks/alertManagerSilenceClient.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/alertmanager AlertManagerSilencer
 type AlertManagerSilencer interface {
 	Create(matchers amv2Models.Matchers, startsAt strfmt.DateTime, endsAt strfmt.DateTime, creator string, comment string) error
@@ -19,11 +21,12 @@ type AlertManagerSilencer interface {
 	Filter(predicates ...SilencePredicate) (*[]amv2Models.GettableSilence, error)
 }
 
+// AlertManagerSilenceClient holds fields for an AlertManagerSilenceClient
 type AlertManagerSilenceClient struct {
 	Transport *httptransport.Runtime
 }
 
-// Creates a silence in Alertmanager instance defined in Transport
+// Create creates a silence in Alertmanager instance defined in Transport
 func (ams *AlertManagerSilenceClient) Create(matchers amv2Models.Matchers, startsAt strfmt.DateTime, endsAt strfmt.DateTime, creator string, comment string) error {
 	pParams := &amSilence.PostSilencesParams{
 		Silence: &amv2Models.PostableSilence{
@@ -48,7 +51,7 @@ func (ams *AlertManagerSilenceClient) Create(matchers amv2Models.Matchers, start
 	return nil
 }
 
-// list silences in Alertmanager instance defined in Transport
+// List lists silences in Alertmanager instance defined in Transport
 func (ams *AlertManagerSilenceClient) List(filter []string) (*amSilence.GetSilencesOK, error) {
 	gParams := &amSilence.GetSilencesParams{
 		Filter:     filter,
@@ -65,7 +68,7 @@ func (ams *AlertManagerSilenceClient) List(filter []string) (*amSilence.GetSilen
 	return results, nil
 }
 
-// Delete silence in Alertmanager instance defined in Transport
+// Delete deletes silence in Alertmanager instance defined in Transport
 func (ams *AlertManagerSilenceClient) Delete(id string) error {
 	dParams := &amSilence.DeleteSilenceParams{
 		SilenceID:  strfmt.UUID(id),
@@ -82,7 +85,7 @@ func (ams *AlertManagerSilenceClient) Delete(id string) error {
 	return nil
 }
 
-// Update silence end time in AlertManager instance defined in Transport
+// Update updates silence end time in AlertManager instance defined in Transport
 func (ams *AlertManagerSilenceClient) Update(id string, endsAt strfmt.DateTime) error {
 	silenceClient := amSilence.New(ams.Transport, strfmt.Default)
 	gParams := &amSilence.GetSilenceParams{
@@ -112,9 +115,10 @@ func (ams *AlertManagerSilenceClient) Update(id string, endsAt strfmt.DateTime) 
 	return nil
 }
 
+// SilencePredicate is a predicate that returns a bool
 type SilencePredicate func(*amv2Models.GettableSilence) bool
 
-// Filter silences in Alertmanager based on the predicates
+// Filter filters silences in Alertmanager based on the predicates
 func (ams *AlertManagerSilenceClient) Filter(predicates ...SilencePredicate) (*[]amv2Models.GettableSilence, error) {
 	silences, err := ams.List([]string{})
 	if err != nil {

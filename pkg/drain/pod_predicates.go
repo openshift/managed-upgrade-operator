@@ -68,4 +68,3 @@ func hasNoFinalizers(p corev1.Pod) bool {
 func isTerminating(p corev1.Pod) bool {
 	return p.DeletionTimestamp != nil
 }
-

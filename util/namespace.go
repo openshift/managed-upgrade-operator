@@ -5,7 +5,7 @@ import (
 	"os"
 )
 
-// Retrieves the operator namespace from the running environment or error if unavailable
+// GetOperatorNamespace retrieves the operator namespace from the running environment or error if unavailable
 func GetOperatorNamespace() (string, error) {
 	envVarOperatorNamespace := "OPERATOR_NAMESPACE"
 	ns, found := os.LookupEnv(envVarOperatorNamespace)
@@ -14,4 +14,3 @@ func GetOperatorNamespace() (string, error) {
 	}
 	return ns, nil
 }
-

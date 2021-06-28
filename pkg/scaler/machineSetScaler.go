@@ -19,14 +19,17 @@ import (
 )
 
 const (
-	LABEL_UPGRADE         = "upgrade.managed.openshift.io"
-	LABEL_MACHINESET      = "machine.openshift.io/cluster-api-machineset"
+	// LABEL_UPGRADE is the label used for managed upgrades
+	LABEL_UPGRADE = "upgrade.managed.openshift.io"
+	// LABEL_MACHINESET is the label used for machinesets
+	LABEL_MACHINESET = "machine.openshift.io/cluster-api-machineset"
+	// MACHINE_API_NAMESPACE is the namespace of the machine api
 	MACHINE_API_NAMESPACE = "openshift-machine-api"
 )
 
 type machineSetScaler struct{}
 
-// This will create a new MachineSet with 1 extra replicas for workers in every region and report when the nodes are ready.
+// EnsureScaleUpNodes will create a new MachineSet with 1 extra replicas for workers in every region and report when the nodes are ready.
 func (s *machineSetScaler) EnsureScaleUpNodes(c client.Client, timeOut time.Duration, logger logr.Logger) (bool, error) {
 	upgradeMachinesets := &machineapi.MachineSetList{}
 
@@ -149,7 +152,7 @@ func (s *machineSetScaler) EnsureScaleUpNodes(c client.Client, timeOut time.Dura
 	return allNodeReady, nil
 }
 
-// This will remove extra MachineSets and report when the nodes are removed.
+// EnsureScaleDownNodes will remove extra MachineSets and report when the nodes are removed.
 func (s *machineSetScaler) EnsureScaleDownNodes(c client.Client, nds drain.NodeDrainStrategy, logger logr.Logger) (bool, error) {
 	upgradeMachinesets := &machineapi.MachineSetList{}
 
@@ -228,13 +231,16 @@ func (s *machineSetScaler) EnsureScaleDownNodes(c client.Client, nds drain.NodeD
 	return true, nil
 }
 
+// NotMatchingLabels is a map of strings
 type NotMatchingLabels map[string]string
 
+// ApplyToList applies listOptions to NotMachingLabels
 func (m NotMatchingLabels) ApplyToList(opts *client.ListOptions) {
 	sel := NotSelectorFromSet(map[string]string(m))
 	opts.LabelSelector = sel
 }
 
+// NotSelectorFromSet returns a labels.Selector
 func NotSelectorFromSet(ls NotMatchingLabels) labels.Selector {
 	if ls == nil || len(ls) == 0 {
 		return labels.NewSelector()

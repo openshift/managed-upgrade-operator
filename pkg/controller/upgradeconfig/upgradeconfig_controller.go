@@ -106,7 +106,7 @@ type ReconcileUpgradeConfig struct {
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
-func (r *ReconcileUpgradeConfig) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling UpgradeConfig")
 
@@ -290,19 +290,20 @@ func (r *ReconcileUpgradeConfig) upgradeCluster(upgrader cub.ClusterUpgrader, uc
 	return reconcile.Result{RequeueAfter: 1 * time.Minute}, me.ErrorOrNil()
 }
 
+// ManagedUpgradePredicate is used for managing predicates of the UpgradeConfig
 var ManagedUpgradePredicate = predicate.Funcs{
 	UpdateFunc: func(e event.UpdateEvent) bool {
-		return isManagedUpgrade(e.MetaNew.GetName())
+		return isManagedUpgrade(e.ObjectNew.GetName())
 	},
 	// Create is required to avoid reconciliation at controller initialisation.
 	CreateFunc: func(e event.CreateEvent) bool {
-		return isManagedUpgrade(e.Meta.GetName())
+		return isManagedUpgrade(e.Object.GetName())
 	},
 	DeleteFunc: func(e event.DeleteEvent) bool {
-		return isManagedUpgrade(e.Meta.GetName())
+		return isManagedUpgrade(e.Object.GetName())
 	},
 	GenericFunc: func(e event.GenericEvent) bool {
-		return isManagedUpgrade(e.Meta.GetName())
+		return isManagedUpgrade(e.Object.GetName())
 	},
 }
 

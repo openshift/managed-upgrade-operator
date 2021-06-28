@@ -13,16 +13,19 @@ import (
 	"github.com/openshift/managed-upgrade-operator/util"
 )
 
+// SpecProvider is an interface that enables an implementation of a spec provider
 //go:generate mockgen -destination=mocks/specprovider.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/specprovider SpecProvider
 type SpecProvider interface {
 	Get() ([]upgradev1alpha1.UpgradeConfigSpec, error)
 }
 
+// SpecProviderBuilder is an interface that enables implementation of a spec provider builder
 //go:generate mockgen -destination=mocks/specprovider_builder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/specprovider SpecProviderBuilder
 type SpecProviderBuilder interface {
 	New(client.Client, configmanager.ConfigManagerBuilder) (SpecProvider, error)
 }
 
+// NewBuilder returns a new specProviderBuilder
 func NewBuilder() SpecProviderBuilder {
 	return &specProviderBuilder{}
 }
@@ -40,7 +43,7 @@ func (ppb *specProviderBuilder) New(client client.Client, builder configmanager.
 
 	switch strings.ToUpper(cfg.ConfigManager.Source) {
 	case "OCM":
-		logf.Log.Logger.Info("Using OCM as the upgrade config provider")
+		logf.Log.Info("Using OCM as the upgrade config provider")
 		cfg, err := readOcmProviderConfig(client, builder)
 		if err != nil {
 			return nil, err
@@ -51,7 +54,7 @@ func (ppb *specProviderBuilder) New(client client.Client, builder configmanager.
 		}
 		return mgr, nil
 	case "LOCAL":
-		logf.Log.Logger.Info("Using local CR as the upgrade config provider")
+		logf.Log.Info("Using local CR as the upgrade config provider")
 		cfg, err := readLocalProviderConfig(client, builder)
 		if err != nil {
 			return nil, err

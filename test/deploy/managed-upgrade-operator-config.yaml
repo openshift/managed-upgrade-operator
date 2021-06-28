@@ -27,3 +27,8 @@ data:
       - MetricsClientSendFailingSRE
       - UpgradeNodeScalingFailedSRE
       - UpgradeClusterCheckFailedSRE
+      ignoredNamespaces:
+      - openshift-logging
+      - openshift-customer-monitoring
+      - openshift-operators
+      - openshift-redhat-marketplace

@@ -34,36 +34,36 @@ var _ = Describe("NodeKeeperController IgnoreMasterPredicate", func() {
 
 	Context("IgnoreMasterPredicate", func() {
 		It("Update ignores master nodes", func() {
-			result := IgnoreMasterPredicate.UpdateFunc(event.UpdateEvent{MetaNew: masterNode})
+			result := IgnoreMasterPredicate.UpdateFunc(event.UpdateEvent{ObjectNew: masterNode})
 			Expect(result).To(BeFalse())
 		})
 		It("Create ignores master nodes", func() {
-			result := IgnoreMasterPredicate.CreateFunc(event.CreateEvent{Meta: masterNode.GetObjectMeta()})
+			result := IgnoreMasterPredicate.CreateFunc(event.CreateEvent{Object: masterNode})
 			Expect(result).To(BeFalse())
 		})
 		It("Delete ignores master nodes", func() {
-			result := IgnoreMasterPredicate.DeleteFunc(event.DeleteEvent{Meta: masterNode.GetObjectMeta()})
+			result := IgnoreMasterPredicate.DeleteFunc(event.DeleteEvent{Object: masterNode})
 			Expect(result).To(BeFalse())
 		})
 		It("Generic ignores master nodes", func() {
-			result := IgnoreMasterPredicate.GenericFunc(event.GenericEvent{Meta: masterNode.GetObjectMeta()})
+			result := IgnoreMasterPredicate.GenericFunc(event.GenericEvent{Object: masterNode})
 			Expect(result).To(BeFalse())
 		})
 
 		It("Update allows non master nodes", func() {
-			result := IgnoreMasterPredicate.UpdateFunc(event.UpdateEvent{MetaNew: notMasterNode})
+			result := IgnoreMasterPredicate.UpdateFunc(event.UpdateEvent{ObjectNew: notMasterNode})
 			Expect(result).To(BeTrue())
 		})
 		It("Create allows non master nodes", func() {
-			result := IgnoreMasterPredicate.CreateFunc(event.CreateEvent{Meta: notMasterNode.GetObjectMeta()})
+			result := IgnoreMasterPredicate.CreateFunc(event.CreateEvent{Object: notMasterNode})
 			Expect(result).To(BeTrue())
 		})
 		It("Delete allows non master nodes", func() {
-			result := IgnoreMasterPredicate.DeleteFunc(event.DeleteEvent{Meta: notMasterNode.GetObjectMeta()})
+			result := IgnoreMasterPredicate.DeleteFunc(event.DeleteEvent{Object: notMasterNode})
 			Expect(result).To(BeTrue())
 		})
 		It("Generic allows non master nodes", func() {
-			result := IgnoreMasterPredicate.GenericFunc(event.GenericEvent{Meta: notMasterNode.GetObjectMeta()})
+			result := IgnoreMasterPredicate.GenericFunc(event.GenericEvent{Object: notMasterNode})
 			Expect(result).To(BeTrue())
 		})
 	})

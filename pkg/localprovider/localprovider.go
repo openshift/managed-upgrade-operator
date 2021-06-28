@@ -11,10 +11,12 @@ import (
 	"github.com/openshift/managed-upgrade-operator/util"
 )
 
+// UPGRADECONFIG_CR_NAME is the name of the Custom Resource that the provider will manage
 const UPGRADECONFIG_CR_NAME = "managed-upgrade-config"
 
 var log = logf.Log.WithName("upgradeconfig-localprovider")
 
+// New returns a new localProvider
 func New(c client.Client, name string) (*localProvider, error) {
 	return &localProvider{
 		client:  c,

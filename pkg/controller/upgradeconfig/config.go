@@ -10,16 +10,16 @@ type config struct {
 }
 
 type upgradeWindow struct {
-	TimeOut int `yaml:"timeOut" default:"120"`
+	TimeOut      int `yaml:"timeOut" default:"120"`
 	DelayTrigger int `yaml:"delayTrigger" default:"30"`
 }
 
 func (cfg *config) IsValid() error {
 	if cfg.UpgradeWindow.TimeOut < 0 {
-		return fmt.Errorf("Config upgrade window time out is invalid")
+		return fmt.Errorf("config upgrade window time out is invalid")
 	}
 	if cfg.UpgradeWindow.DelayTrigger < 0 {
-		return fmt.Errorf("Config upgrade window delay trigger is invalid")
+		return fmt.Errorf("config upgrade window delay trigger is invalid")
 	}
 	return nil
 }

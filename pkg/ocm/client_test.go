@@ -19,16 +19,16 @@ import (
 )
 
 const (
-	TEST_CLUSTER_ID                = "111111-2222222-3333333-4444444"
-	TEST_POLICY_ID_MANUAL          = "aaaaaa-bbbbbb-cccccc-dddddd"
+	TEST_CLUSTER_ID       = "111111-2222222-3333333-4444444"
+	TEST_POLICY_ID_MANUAL = "aaaaaa-bbbbbb-cccccc-dddddd"
 
 	// Upgrade policy constants
-	TEST_OPERATOR_NAMESPACE                = "test-managed-upgrade-operator"
-	TEST_UPGRADEPOLICY_UPGRADETYPE         = "OSD"
-	TEST_UPGRADEPOLICY_TIME                = "2020-06-20T00:00:00Z"
-	TEST_UPGRADEPOLICY_VERSION             = "4.4.5"
-	TEST_UPGRADEPOLICY_CHANNELGROUP        = "fast"
-	TEST_UPGRADEPOLICY_PDB_TIME            = 60
+	TEST_OPERATOR_NAMESPACE         = "test-managed-upgrade-operator"
+	TEST_UPGRADEPOLICY_UPGRADETYPE  = "OSD"
+	TEST_UPGRADEPOLICY_TIME         = "2020-06-20T00:00:00Z"
+	TEST_UPGRADEPOLICY_VERSION      = "4.4.5"
+	TEST_UPGRADEPOLICY_CHANNELGROUP = "fast"
+	TEST_UPGRADEPOLICY_PDB_TIME     = 60
 
 	// OCM test constants
 	TEST_OCM_SERVER_URL = "https://fakeapi.openshift.com"

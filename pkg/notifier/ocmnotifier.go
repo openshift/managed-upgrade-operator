@@ -10,6 +10,7 @@ import (
 	"github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager"
 )
 
+// NewOCMNotifier returns a ocmNotifier
 func NewOCMNotifier(client client.Client, ocmBaseUrl *url.URL, upgradeConfigManager upgradeconfigmanager.UpgradeConfigManager) (*ocmNotifier, error) {
 	ocmClient, err := ocm.NewBuilder().New(client, ocmBaseUrl)
 	if err != nil {
@@ -92,6 +93,7 @@ func (s *ocmNotifier) getPolicyIdForUpgradeConfig(clusterId string) (*string, er
 
 	return &policyId, nil
 }
+
 // Validates that a state transition can be made from the supplied from/to states
 func validateStateTransition(from NotifyState, to NotifyState) bool {
 
@@ -116,7 +118,8 @@ func validateStateTransition(from NotifyState, to NotifyState) bool {
 			return true
 		case StateFailed:
 			return true
-		default: return false
+		default:
+			return false
 		}
 	case StateDelayed:
 		// can go to completed or failed state

@@ -17,20 +17,22 @@ import (
 )
 
 const (
-	// Header field used to correlate OCM events
+	// OPERATION_ID_HEADER is a header field used to correlate OCM events
 	OPERATION_ID_HEADER = "X-Operation-Id"
-	// Path to the OCM clusters service
+	// CLUSTERS_V1_PATH is a path to the OCM clusters service
 	CLUSTERS_V1_PATH = "/api/clusters_mgmt/v1/clusters"
-	// Sub-path to the OCM upgrade policies service
+	// UPGRADEPOLICIES_V1_PATH is a sub-path to the OCM upgrade policies service
 	UPGRADEPOLICIES_V1_PATH = "upgrade_policies"
-	// Sub-path to the policy state service
+	// STATE_V1_PATH sub-path to the policy state service
 	STATE_V1_PATH = "state"
 )
 
 var (
+	// ErrClusterIdNotFound is an error describing the cluster ID can not be found
 	ErrClusterIdNotFound = fmt.Errorf("cluster ID can't be found")
 )
 
+// OcmClient enables an implementation of an ocm client
 //go:generate mockgen -destination=mocks/client.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/ocm OcmClient
 type OcmClient interface {
 	GetCluster() (*ClusterInfo, error)

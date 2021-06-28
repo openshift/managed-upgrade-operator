@@ -2,6 +2,7 @@ package eventmanager
 
 import (
 	"fmt"
+
 	"github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 	"github.com/openshift/managed-upgrade-operator/pkg/configmanager"
 	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
@@ -11,27 +12,38 @@ import (
 )
 
 const (
-	UPGRADE_PRECHECK_FAILED_DESC       = "Cluster upgrade to version %s was cancelled as the cluster did not pass its pre-upgrade verification checks. Automated upgrades will be retried on their next scheduling cycle. If you have manually scheduled an upgrade instead, it must now be rescheduled."
+	// UPGRADE_PRECHECK_FAILED_DESC describes the upgrade pre check failure
+	UPGRADE_PRECHECK_FAILED_DESC = "Cluster upgrade to version %s was cancelled as the cluster did not pass its pre-upgrade verification checks. Automated upgrades will be retried on their next scheduling cycle. If you have manually scheduled an upgrade instead, it must now be rescheduled."
+	// UPGRADE_PREHEALTHCHECK_FAILED_DESC describes the upgrade pre health check failure
 	UPGRADE_PREHEALTHCHECK_FAILED_DESC = "Cluster upgrade to version %s was cancelled during the Pre-Health Check step. Health alerts are firing in the cluster which could impact the upgrade's operation, so the upgrade did not proceed. Automated upgrades will be retried on their next scheduling cycle. If you have manually scheduled an upgrade instead, it must now be rescheduled."
-	UPGRADE_EXTDEPCHECK_FAILED_DESC    = "Cluster upgrade to version %s was cancelled during the External Dependency Availability Check step. A required external dependency of the upgrade was unavailable, so the upgrade did not proceed. Automated upgrades will be retried on their next scheduling cycle. If you have manually scheduled an upgrade instead, it must now be rescheduled."
-	UPGRADE_SCALE_FAILED_DESC          = "Cluster upgrade to version %s was cancelled during the Scale-Up Worker Node step. A temporary additional worker node was unable to be created to temporarily house workloads, so the upgrade did not proceed. Automated upgrades will be retried on their next scheduling cycle. If you have manually scheduled an upgrade instead, it must now be rescheduled."
+	// UPGRADE_EXTDEPCHECK_FAILED_DESC describes the upgrade external dependency check failure
+	UPGRADE_EXTDEPCHECK_FAILED_DESC = "Cluster upgrade to version %s was cancelled during the External Dependency Availability Check step. A required external dependency of the upgrade was unavailable, so the upgrade did not proceed. Automated upgrades will be retried on their next scheduling cycle. If you have manually scheduled an upgrade instead, it must now be rescheduled."
+	// UPGRADE_SCALE_FAILED_DESC describes the upgrade scaling failed
+	UPGRADE_SCALE_FAILED_DESC = "Cluster upgrade to version %s was cancelled during the Scale-Up Worker Node step. A temporary additional worker node was unable to be created to temporarily house workloads, so the upgrade did not proceed. Automated upgrades will be retried on their next scheduling cycle. If you have manually scheduled an upgrade instead, it must now be rescheduled."
 
-	UPGRADE_DEFAULT_DELAY_DESC        = "Cluster upgrade to version %s is experiencing a delay whilst it performs necessary pre-upgrade procedures. The upgrade will continue to retry. This is an informational notification and no action is required."
+	// UPGRADE_DEFAULT_DELAY_DESC describes the upgrade default delay
+	UPGRADE_DEFAULT_DELAY_DESC = "Cluster upgrade to version %s is experiencing a delay whilst it performs necessary pre-upgrade procedures. The upgrade will continue to retry. This is an informational notification and no action is required."
+	// UPGRADE_PREHEALTHCHECK_DELAY_DESC describes the upgrade pre health check delay
 	UPGRADE_PREHEALTHCHECK_DELAY_DESC = "Cluster upgrade to version %s is experiencing a delay as health alerts are firing in the cluster which could impact the upgrade's operation. The upgrade will continue to retry. This is an informational notification and no action is required by you."
-	UPGRADE_EXTDEPCHECK_DELAY_DESC    = "Cluster upgrade to version %s is experiencing a delay as an external dependency of the upgrade is currently unavailable. The upgrade will continue to retry. This is an informational notification and no action is required by you."
-	UPGRADE_SCALE_DELAY_DESC          = "Cluster upgrade to version %s is experiencing a delay attempting to scale up an additional worker node. The upgrade will continue to retry. This is an informational notification and no action is required by you."
+	// UPGRADE_EXTDEPCHECK_DELAY_DESC describes the upgrade external dependency check delay
+	UPGRADE_EXTDEPCHECK_DELAY_DESC = "Cluster upgrade to version %s is experiencing a delay as an external dependency of the upgrade is currently unavailable. The upgrade will continue to retry. This is an informational notification and no action is required by you."
+	// UPGRADE_SCALE_DELAY_DESC describes the upgrade scaling delayed
+	UPGRADE_SCALE_DELAY_DESC = "Cluster upgrade to version %s is experiencing a delay attempting to scale up an additional worker node. The upgrade will continue to retry. This is an informational notification and no action is required by you."
 )
 
+// EventManager enables implementation of an EventManager
 //go:generate mockgen -destination=mocks/eventmanager.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/eventmanager EventManager
 type EventManager interface {
 	Notify(state notifier.NotifyState) error
 }
 
+// EventManagerBuilder enables implementation of an EventManagerBuilder
 //go:generate mockgen -destination=mocks/eventmanager_builder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/eventmanager EventManagerBuilder
 type EventManagerBuilder interface {
 	NewManager(client.Client) (EventManager, error)
 }
 
+// NewBuilder returns an eventManagerBuilder
 func NewBuilder() EventManagerBuilder {
 	return &eventManagerBuilder{}
 }
@@ -77,9 +89,8 @@ func (s *eventManager) Notify(state notifier.NotifyState) error {
 	if err != nil {
 		if err == upgradeconfigmanager.ErrUpgradeConfigNotFound {
 			return nil
-		} else {
-			return fmt.Errorf("unable to find UpgradeConfig: %v", err)
 		}
+		return fmt.Errorf("unable to find UpgradeConfig: %v", err)
 	}
 
 	// Check if a notification for it has been sent successfully - if so, nothing to do

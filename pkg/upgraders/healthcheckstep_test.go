@@ -74,7 +74,8 @@ var _ = Describe("HealthCheckStep", func() {
 				TimeOut: 30,
 			},
 			HealthCheck: healthCheck{
-				IgnoredCriticals: []string{"alert1", "alert2"},
+				IgnoredCriticals:  []string{"alert1", "alert2"},
+				IgnoredNamespaces: []string{"ns1"},
 			},
 			NodeDrain: drain.NodeDrain{
 				ExpectedNodeDrainTime: 8,
@@ -143,6 +144,19 @@ var _ = Describe("HealthCheckStep", func() {
 				)
 				result, err := upgrader.PostUpgradeHealthCheck(context.TODO(), logger)
 				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(BeTrue())
+			})
+			It("will have ignored alerts in specified namespaces", func() {
+				mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil)
+				mockMetricsClient.EXPECT().Query(gomock.Any()).DoAndReturn(
+					func(query string) (*metrics.AlertResponse, error) {
+						Expect(strings.Contains(query, `namespace!="`+config.HealthCheck.IgnoredNamespaces[0]+`"`)).To(BeTrue())
+						return &metrics.AlertResponse{}, nil
+					})
+				mockCVClient.EXPECT().HasDegradedOperators().Return(&clusterversion.HasDegradedOperatorsResult{Degraded: []string{}}, nil)
+				mockMetricsClient.EXPECT().UpdateMetricClusterCheckSucceeded(upgradeConfig.Name)
+				result, err := PreClusterHealthCheck(mockKubeClient, config, mockScaler, mockDrainStrategyBuilder, mockMetricsClient, mockMaintClient, mockCVClient, mockEMClient, upgradeConfig, mockMachinery, []ac.AvailabilityChecker{mockAC}, logger)
+				Expect(err).To(Not(HaveOccurred()))
 				Expect(result).To(BeTrue())
 			})
 		})

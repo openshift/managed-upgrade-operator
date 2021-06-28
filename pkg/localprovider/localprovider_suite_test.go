@@ -1,4 +1,4 @@
-package pod
+package localprovider
 
 import (
 	"testing"
@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestPod(t *testing.T) {
+func TestLocalprovider(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Pod Suite")
+	RunSpecs(t, "Localprovider Suite")
 }

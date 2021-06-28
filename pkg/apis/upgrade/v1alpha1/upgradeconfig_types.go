@@ -7,10 +7,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// UpgradeType provides a type to declare upgrade types with
 type UpgradeType string
 
 const (
+	// OSD is a type of upgrade
 	OSD UpgradeType = "OSD"
+	// ARO is a type of upgrade
 	ARO UpgradeType = "ARO"
 )
 
@@ -28,10 +31,6 @@ type UpgradeConfigSpec struct {
 	// +kubebuilder:validation:Enum={"OSD","ARO"}
 	// Type indicates the ClusterUpgrader implementation to use to perform an upgrade of the cluster
 	Type UpgradeType `json:"type"`
-
-	// This defines the 3rd party operator subscriptions upgrade
-	// +kubebuilder:validation:Optional
-	SubscriptionUpdates []SubscriptionUpdate `json:"subscriptionUpdates,omitempty"`
 
 	// Specify if scaling up an extra node for capacity reservation before upgrade starts is needed
 	CapacityReservation bool `json:"capacityReservation,omitempty"`
@@ -99,29 +98,47 @@ type UpgradeCondition struct {
 }
 
 const (
-	SendStartedNotification       UpgradeConditionType = "SendStartedNotification"
-	UpgradeDelayedCheck           UpgradeConditionType = "UpgradeDelayedCheck"
-	UpgradeValidated              UpgradeConditionType = "Validation"
-	UpgradePreHealthCheck         UpgradeConditionType = "PreHealthCheck"
-	ExtDepAvailabilityCheck       UpgradeConditionType = "ExternalDependencyAvailabilityCheck"
-	UpgradeScaleUpExtraNodes      UpgradeConditionType = "ScaleUpExtraNodes"
-	ControlPlaneMaintWindow       UpgradeConditionType = "ControlPlaneMaintWindow"
-	CommenceUpgrade               UpgradeConditionType = "CommenceUpgrade"
-	ControlPlaneUpgraded          UpgradeConditionType = "ControlPlaneUpgraded"
+	// SendStartedNotification is an UpgradeConditionType
+	SendStartedNotification UpgradeConditionType = "SendStartedNotification"
+	// UpgradeDelayedCheck is an UpgradeConditionType
+	UpgradeDelayedCheck UpgradeConditionType = "UpgradeDelayedCheck"
+	// UpgradeValidated is an UpgradeConditionType
+	UpgradeValidated UpgradeConditionType = "Validation"
+	// UpgradePreHealthCheck is an UpgradeConditionType
+	UpgradePreHealthCheck UpgradeConditionType = "PreHealthCheck"
+	// ExtDepAvailabilityCheck is an UpgradeConditionType
+	ExtDepAvailabilityCheck UpgradeConditionType = "ExternalDependencyAvailabilityCheck"
+	// UpgradeScaleUpExtraNodes is an UpgradeConditionType
+	UpgradeScaleUpExtraNodes UpgradeConditionType = "ScaleUpExtraNodes"
+	// ControlPlaneMaintWindow is an UpgradeConditionType
+	ControlPlaneMaintWindow UpgradeConditionType = "ControlPlaneMaintWindow"
+	// CommenceUpgrade is an UpgradeConditionType
+	CommenceUpgrade UpgradeConditionType = "CommenceUpgrade"
+	// ControlPlaneUpgraded is an UpgradeConditionType
+	ControlPlaneUpgraded UpgradeConditionType = "ControlPlaneUpgraded"
+	// RemoveControlPlaneMaintWindow is an UpgradeConditionType
 	RemoveControlPlaneMaintWindow UpgradeConditionType = "RemoveControlPlaneMaintWindow"
-	WorkersMaintWindow            UpgradeConditionType = "WorkersMaintWindow"
-	AllWorkerNodesUpgraded        UpgradeConditionType = "AllWorkerNodesUpgraded"
-	RemoveExtraScaledNodes        UpgradeConditionType = "RemoveExtraScaledNodes"
-	UpdateSubscriptions           UpgradeConditionType = "UpdateSubscriptions"
-	RemoveMaintWindow             UpgradeConditionType = "RemoveMaintWindow"
-	PostClusterHealthCheck        UpgradeConditionType = "PostClusterHealthCheck"
-	SendCompletedNotification     UpgradeConditionType = "SendCompletedNotification"
+	// WorkersMaintWindow is an UpgradeConditionType
+	WorkersMaintWindow UpgradeConditionType = "WorkersMaintWindow"
+	// AllWorkerNodesUpgraded is an UpgradeConditionType
+	AllWorkerNodesUpgraded UpgradeConditionType = "AllWorkerNodesUpgraded"
+	// RemoveExtraScaledNodes is an UpgradeConditionType
+	RemoveExtraScaledNodes UpgradeConditionType = "RemoveExtraScaledNodes"
+	// UpdateSubscriptions is an UpgradeConditionType
+	UpdateSubscriptions UpgradeConditionType = "UpdateSubscriptions"
+	// RemoveMaintWindow is an UpgradeConditionType
+	RemoveMaintWindow UpgradeConditionType = "RemoveMaintWindow"
+	// PostClusterHealthCheck is an UpgradeConditionType
+	PostClusterHealthCheck UpgradeConditionType = "PostClusterHealthCheck"
+	// SendCompletedNotification is an UpgradeConditionType
+	SendCompletedNotification UpgradeConditionType = "SendCompletedNotification"
 )
 
 // UpgradePhase is a Go string type.
 type UpgradePhase string
 
 const (
+	// UpgradePhaseNew defines that an upgrade is new.
 	UpgradePhaseNew UpgradePhase = "New"
 	// UpgradePhasePending defines that an upgrade has been scheduled.
 	UpgradePhasePending UpgradePhase = "Pending"
@@ -154,6 +171,7 @@ type UpgradeConfig struct {
 	Status UpgradeConfigStatus `json:"status,omitempty"`
 }
 
+// GetPDBDrainTimeoutDuration returns the PDB timeout
 func (uc *UpgradeConfig) GetPDBDrainTimeoutDuration() time.Duration {
 	return time.Duration(uc.Spec.PDBForceDrainTimeout) * time.Minute
 }
@@ -174,16 +192,6 @@ type Update struct {
 	Version string `json:"version"`
 	// Channel used for upgrades
 	Channel string `json:"channel"`
-}
-
-// SubscriptionUpdate describe the 3rd party operator update config
-type SubscriptionUpdate struct {
-	// Describe the channel for the Subscription
-	Channel string `json:"channel"`
-	// Describe the namespace of the Subscription
-	Namespace string `json:"namespace"`
-	// Describe the name of the Subscription
-	Name string `json:"name"`
 }
 
 // IsTrue Condition whether the condition status is "True".
@@ -307,6 +315,7 @@ func (conditions *Conditions) RemoveCondition(t UpgradeConditionType) bool {
 	return false
 }
 
+// GetHistory returns UpgradeHistory
 func (histories UpgradeHistories) GetHistory(version string) *UpgradeHistory {
 	for _, history := range histories {
 		if history.Version == version {
@@ -315,6 +324,8 @@ func (histories UpgradeHistories) GetHistory(version string) *UpgradeHistory {
 	}
 	return nil
 }
+
+// SetHistory appends new history to current
 func (histories *UpgradeHistories) SetHistory(history UpgradeHistory) {
 	for i, h := range *histories {
 		if h.Version == history.Version {

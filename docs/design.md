@@ -10,11 +10,11 @@ The following diagram illustrates the main resources that the Managed Upgrade Op
 
 The operator is primarily driven through an `UpgradeConfig` custom resource, which defines the version of OpenShift that the cluster should be running at.
 
-The `UpgradeConfig` can be created directly on the cluster for development/testing purposes.
+The `UpgradeConfig` can be created directly on the cluster which is not managed via Hive. Also this method can be used for development/testing purposes
 
-For production OpenShift Dedicated deployments, the `UpgradeConfig` is distributed via a [Hive SelectorSyncSet](https://github.com/openshift/hive/blob/master/docs/syncset.md) and managed by OpenShift SRE.
+For OpenShift Dedicated cluster you should not create `UpgradeConfig` directly. The process for scheduling an upgrade is automated and achieved using the [upgrade_policies API](https://api.openshift.com/#/default/get_api_clusters_mgmt_v1_clusters__cluster_id__upgrade_policies). 
 
-The process for SRE to manage the creation and distribution of `UpgradeConfig` custom resources is documented in [SOPs](https://github.com/openshift/ops-sop/blob/master/v4/howto/managed-upgrade.md).
+The process for creating `upgrade-policy` is documented in [SOPs](https://github.com/openshift/ops-sop/blob/master/v4/howto/managed-upgrade.md).
 
 ## Custom Resource Definitions
 
@@ -28,7 +28,7 @@ For the purpose of upgrading a cluster, an `UpgradeConfig` resource _must_ be co
 
 | Item | Definition | Example |
 | ---- | ---------- | ------- |
-| `type` | The cluster upgrader to use when upgrading (valid values: `OSD`)| `OSD` |  
+| `type` | The cluster upgrader to use when upgrading (valid values: `OSD`, `ARO`)| `OSD` |  
 | `upgradeAt` | Timestamp indicating when the upgrade can commence (ISO-8601)| `2020-05-01T12:00:00Z` |
 | `PDBForceDrainTimeout` | Duration in minutes that a PDB-blocked node is allowed to drain before a drain is forced | `120` |
 | `desired.version` | The desired OCP release to upgrade to | `4.4.6` |
@@ -41,7 +41,7 @@ A populated `UpgradeConfig` example is presented below:
 apiVersion: upgrade.managed.openshift.io/v1alpha1
 kind: UpgradeConfig
 metadata:
-  name: example-upgrade-config
+  name: managed-upgrade-config
 spec:
   type: "OSD"
   upgradeAt: "2020-06-20T12:00:00Z"
