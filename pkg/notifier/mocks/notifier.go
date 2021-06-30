@@ -34,7 +34,7 @@ func (m *MockNotifier) EXPECT() *MockNotifierMockRecorder {
 }
 
 // NotifyState mocks base method
-func (m *MockNotifier) NotifyState(arg0 notifier.NotifyState, arg1 string) error {
+func (m *MockNotifier) NotifyState(arg0 notifier.MuoState, arg1 string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "NotifyState", arg0, arg1)
 	ret0, _ := ret[0].(error)

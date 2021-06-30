@@ -29,12 +29,14 @@ const (
 	UPGRADE_EXTDEPCHECK_DELAY_DESC = "Cluster upgrade to version %s is experiencing a delay as an external dependency of the upgrade is currently unavailable. The upgrade will continue to retry. This is an informational notification and no action is required by you."
 	// UPGRADE_SCALE_DELAY_DESC describes the upgrade scaling delayed
 	UPGRADE_SCALE_DELAY_DESC = "Cluster upgrade to version %s is experiencing a delay attempting to scale up an additional worker node. The upgrade will continue to retry. This is an informational notification and no action is required by you."
+	// UPGRADE_SCALE_DELAY_SKIP_DESC describes the upgrade scaling skipped after delay
+	UPGRADE_SCALE_DELAY_SKIP_DESC = "Cluster upgrade to version %s has experienced issue during capacity reservation efforts. This could be caused by the AWS account service quota limitation, or the temporary connectivity issue from the new worker node to the masters or the external services. The upgrade will continue without extra compute. This is an informational notification and no action is required by you."
 )
 
 // EventManager enables implementation of an EventManager
 //go:generate mockgen -destination=mocks/eventmanager.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/eventmanager EventManager
 type EventManager interface {
-	Notify(state notifier.NotifyState) error
+	Notify(state notifier.MuoState) error
 }
 
 // EventManagerBuilder enables implementation of an EventManagerBuilder
@@ -83,7 +85,7 @@ func (emb *eventManagerBuilder) NewManager(client client.Client) (EventManager, 
 	}, nil
 }
 
-func (s *eventManager) Notify(state notifier.NotifyState) error {
+func (s *eventManager) Notify(state notifier.MuoState) error {
 	// Get the current UpgradeConfig
 	uc, err := s.upgradeConfigManager.Get()
 	if err != nil {
@@ -105,13 +107,15 @@ func (s *eventManager) Notify(state notifier.NotifyState) error {
 	// Customize the state description
 	var description string
 	switch state {
-	case notifier.StateStarted:
+	case notifier.MuoStateStarted:
 		description = fmt.Sprintf("Cluster is currently being upgraded to version %s", uc.Spec.Desired.Version)
-	case notifier.StateDelayed:
+	case notifier.MuoStateDelayed:
 		description = createDelayedDescription(uc)
-	case notifier.StateCompleted:
+	case notifier.MuoStateSkipped:
+		description = fmt.Sprintf(UPGRADE_SCALE_DELAY_SKIP_DESC, uc.Spec.Desired.Version)
+	case notifier.MuoStateCompleted:
 		description = fmt.Sprintf("Cluster has been successfully upgraded to version %s", uc.Spec.Desired.Version)
-	case notifier.StateFailed:
+	case notifier.MuoStateFailed:
 		description = createFailureDescription(uc)
 	default:
 		return fmt.Errorf("state %v not yet implemented", state)

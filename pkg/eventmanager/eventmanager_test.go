@@ -65,7 +65,7 @@ var _ = Describe("OCM Notifier", func() {
 
 	Context("When notifying a completed state", func() {
 		var uc upgradev1alpha1.UpgradeConfig
-		var testState = notifier.StateCompleted
+		var testState = notifier.MuoStateCompleted
 		BeforeEach(func() {
 			upgradeConfigName = types.NamespacedName{
 				Name:      TEST_UPGRADECONFIG_CR,
@@ -116,7 +116,7 @@ var _ = Describe("OCM Notifier", func() {
 
 	Context("When notifying a failed state", func() {
 		var uc upgradev1alpha1.UpgradeConfig
-		var testState = notifier.StateFailed
+		var testState = notifier.MuoStateFailed
 		BeforeEach(func() {
 			upgradeConfigName = types.NamespacedName{
 				Name:      TEST_UPGRADECONFIG_CR,
@@ -220,7 +220,7 @@ var _ = Describe("OCM Notifier", func() {
 
 	Context("When notifying a delayed state", func() {
 		var uc upgradev1alpha1.UpgradeConfig
-		var testState = notifier.StateDelayed
+		var testState = notifier.MuoStateDelayed
 		BeforeEach(func() {
 			upgradeConfigName = types.NamespacedName{
 				Name:      TEST_UPGRADECONFIG_CR,

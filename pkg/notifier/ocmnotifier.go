@@ -3,6 +3,7 @@ package notifier
 import (
 	"fmt"
 	"net/url"
+	"strings"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -23,6 +24,29 @@ func NewOCMNotifier(client client.Client, ocmBaseUrl *url.URL, upgradeConfigMana
 	}, nil
 }
 
+type OcmState string
+
+const (
+	OcmStatePending   OcmState = "pending"
+	OcmStateStarted   OcmState = "started"
+	OcmStateDelayed   OcmState = "delayed"
+	OcmStateFailed    OcmState = "failed"
+	OcmStateCompleted OcmState = "completed"
+	OcmStateCancelled OcmState = "cancelled"
+	OcmStateScheduled OcmState = "scheduled"
+)
+
+var stateMap = map[MuoState]OcmState{
+	MuoStatePending:   OcmStatePending,
+	MuoStateCancelled: OcmStateCancelled,
+	MuoStateStarted:   OcmStateStarted,
+	MuoStateCompleted: OcmStateCompleted,
+	MuoStateDelayed:   OcmStateDelayed,
+	MuoStateFailed:    OcmStateFailed,
+	MuoStateScheduled: OcmStateScheduled,
+	MuoStateSkipped:   OcmStateDelayed,
+}
+
 type ocmNotifier struct {
 	// Cluster k8s client
 	client client.Client
@@ -32,7 +56,7 @@ type ocmNotifier struct {
 	upgradeConfigManager upgradeconfigmanager.UpgradeConfigManager
 }
 
-func (s *ocmNotifier) NotifyState(value NotifyState, description string) error {
+func (s *ocmNotifier) NotifyState(state MuoState, description string) error {
 
 	cluster, err := s.ocmClient.GetCluster()
 	if err != nil {
@@ -49,14 +73,30 @@ func (s *ocmNotifier) NotifyState(value NotifyState, description string) error {
 		return fmt.Errorf("can't determine policy state: %v", err)
 	}
 
+	var muoCurrent MuoState
+	// Return the MuoState from the current OcmState, determine if MUO is "skipped" or "delayed" it is OCM "deleyed"
+	if OcmState(currentState.Value) == OcmStateDelayed {
+		if strings.Contains(currentState.Description, "retry") {
+			muoCurrent = MuoStateDelayed
+		} else {
+			muoCurrent = MuoStateSkipped
+		}
+	} else {
+		mstate, ok := mapState(OcmState(currentState.Value), stateMap)
+		if !ok {
+			return fmt.Errorf("failed to convert OCM state")
+		}
+		muoCurrent = mstate
+	}
+
 	// Don't notify if the state is already at the same value
 	// Only notify if it's a valid transition
-	shouldNotify := validateStateTransition(NotifyState(currentState.Value), value)
+	shouldNotify := validateStateTransition(muoCurrent, state)
 	if !shouldNotify {
 		return nil
 	}
 
-	err = s.ocmClient.SetState(string(value), description, *policyId, cluster.Id)
+	err = s.ocmClient.SetState(string(stateMap[state]), description, *policyId, cluster.Id)
 	if err != nil {
 		return fmt.Errorf("can't send notification: %v", err)
 	}
@@ -95,49 +135,73 @@ func (s *ocmNotifier) getPolicyIdForUpgradeConfig(clusterId string) (*string, er
 }
 
 // Validates that a state transition can be made from the supplied from/to states
-func validateStateTransition(from NotifyState, to NotifyState) bool {
+func validateStateTransition(from MuoState, to MuoState) bool {
 
 	switch from {
-	case StatePending:
+	case MuoStatePending:
 		// We shouldn't even be in this state to transition from
 		return false
-	case StateScheduled:
+	case MuoStateScheduled:
 		// Can only go to a started state
 		switch to {
-		case StateStarted:
+		case MuoStateStarted:
 			return true
 		default:
 			return false
 		}
-	case StateStarted:
+	case MuoStateStarted:
 		// Can go to a delayed, completed or failed state
 		switch to {
-		case StateDelayed:
+		case MuoStateDelayed:
 			return true
-		case StateCompleted:
+		case MuoStateCompleted:
 			return true
-		case StateFailed:
+		case MuoStateFailed:
 			return true
 		default:
 			return false
 		}
-	case StateDelayed:
+	case MuoStateDelayed:
+		// can go to completed or failed or skipped state
+		switch to {
+		case MuoStateCompleted:
+			return true
+		case MuoStateFailed:
+			return true
+		case MuoStateSkipped:
+			return true
+		default:
+			return false
+		}
+	case MuoStateSkipped:
 		// can go to completed or failed state
 		switch to {
-		case StateCompleted:
+		case MuoStateCompleted:
 			return true
-		case StateFailed:
+		case MuoStateFailed:
 			return true
 		default:
 			return false
 		}
-	case StateCompleted:
+	case MuoStateCompleted:
 		// can't go anywhere
 		return false
-	case StateFailed:
+	case MuoStateFailed:
 		// can't go anywhere
 		return false
 	default:
 		return false
 	}
+}
+
+// return the MuoState from the given OcmState
+func mapState(os OcmState, dict map[MuoState]OcmState) (ms MuoState, ok bool) {
+	for k, v := range dict {
+		if v == os {
+			ms = k
+			ok = true
+			return ms, ok
+		}
+	}
+	return "", false
 }

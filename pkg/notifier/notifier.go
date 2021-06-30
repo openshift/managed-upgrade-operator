@@ -14,7 +14,7 @@ import (
 // Notifier is an interface that enables implementation of a Notifier
 //go:generate mockgen -destination=mocks/notifier.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/notifier Notifier
 type Notifier interface {
-	NotifyState(value NotifyState, description string) error
+	NotifyState(value MuoState, description string) error
 }
 
 // NotifierBuilder is an interface that enables implementation of a NotifierBuilder
@@ -25,17 +25,18 @@ type NotifierBuilder interface {
 
 // Represents valid notify states that can be reported
 const (
-	StatePending   NotifyState = "pending"
-	StateStarted   NotifyState = "started"
-	StateCompleted NotifyState = "completed"
-	StateDelayed   NotifyState = "delayed"
-	StateFailed    NotifyState = "failed"
-	StateCancelled NotifyState = "cancelled"
-	StateScheduled NotifyState = "scheduled"
+	MuoStatePending   MuoState = "StatePending"
+	MuoStateStarted   MuoState = "StateStarted"
+	MuoStateCompleted MuoState = "StateCompleted"
+	MuoStateDelayed   MuoState = "StateDelayed"
+	MuoStateFailed    MuoState = "StateFailed"
+	MuoStateCancelled MuoState = "StateCancelled"
+	MuoStateScheduled MuoState = "StateScheduled"
+	MuoStateSkipped   MuoState = "StateSkipped"
 )
 
-// NotifyState is a type
-type NotifyState string
+// MuoState is a type
+type MuoState string
 
 // Errors
 var (
