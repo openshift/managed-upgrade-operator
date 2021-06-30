@@ -26,7 +26,7 @@ import (
 	testStructs "github.com/openshift/managed-upgrade-operator/util/mocks/structs"
 )
 
-var _ = Describe("HealthCheckStep", func() {
+var _ = Describe("AvailabilityCheckStep", func() {
 	var (
 		logger logr.Logger
 		// mocks

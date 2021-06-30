@@ -3,6 +3,7 @@ package upgraders
 import (
 	"context"
 	"fmt"
+	"github.com/openshift/managed-upgrade-operator/pkg/notifier"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -21,13 +22,12 @@ import (
 	mockMachinery "github.com/openshift/managed-upgrade-operator/pkg/machinery/mocks"
 	mockMaintenance "github.com/openshift/managed-upgrade-operator/pkg/maintenance/mocks"
 	mockMetrics "github.com/openshift/managed-upgrade-operator/pkg/metrics/mocks"
-	"github.com/openshift/managed-upgrade-operator/pkg/notifier"
 	mockScaler "github.com/openshift/managed-upgrade-operator/pkg/scaler/mocks"
 	"github.com/openshift/managed-upgrade-operator/util/mocks"
 	testStructs "github.com/openshift/managed-upgrade-operator/util/mocks/structs"
 )
 
-var _ = Describe("NotifierStep", func() {
+var _ = Describe("UpgradeDelayedCheckStep", func() {
 	var (
 		logger logr.Logger
 		// mocks
@@ -46,7 +46,7 @@ var _ = Describe("NotifierStep", func() {
 
 		// upgrader to be used during tests
 		config   *upgraderConfig
-		upgrader *clusterUpgrader
+		upgrader *osdUpgrader
 	)
 
 	BeforeEach(func() {
@@ -66,62 +66,24 @@ var _ = Describe("NotifierStep", func() {
 		mockEMClient = emMocks.NewMockEventManager(mockCtrl)
 		logger = logf.Log.WithName("cluster upgrader test logger")
 		config = buildTestUpgraderConfig(90, 30, 8, 120, 30)
-		upgrader = &clusterUpgrader{
-			client:               mockKubeClient,
-			metrics:              mockMetricsClient,
-			cvClient:             mockCVClient,
-			notifier:             mockEMClient,
-			config:               config,
-			scaler:               mockScalerClient,
-			drainstrategyBuilder: mockDrainStrategyBuilder,
-			maintenance:          mockMaintClient,
-			machinery:            mockMachineryClient,
-			upgradeConfig:        upgradeConfig,
+		upgrader = &osdUpgrader{
+			clusterUpgrader: &clusterUpgrader{
+				client:               mockKubeClient,
+				metrics:              mockMetricsClient,
+				cvClient:             mockCVClient,
+				notifier:             mockEMClient,
+				config:               config,
+				scaler:               mockScalerClient,
+				drainstrategyBuilder: mockDrainStrategyBuilder,
+				maintenance:          mockMaintClient,
+				machinery:            mockMachineryClient,
+				upgradeConfig:        upgradeConfig,
+			},
 		}
 	})
 
 	AfterEach(func() {
 		mockCtrl.Finish()
-	})
-
-	Context("When running the send-started-notification phase", func() {
-		It("will send the correct notification", func() {
-			gomock.InOrder(
-				mockEMClient.EXPECT().Notify(notifier.StateStarted),
-			)
-			result, err := upgrader.SendStartedNotification(context.TODO(), logger)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(BeTrue())
-		})
-		It("will not succeed if it can't send the notification", func() {
-			fakeErr := fmt.Errorf("fake error")
-			gomock.InOrder(
-				mockEMClient.EXPECT().Notify(notifier.StateStarted).Return(fakeErr),
-			)
-			result, err := upgrader.SendStartedNotification(context.TODO(), logger)
-			Expect(err).To(HaveOccurred())
-			Expect(result).To(BeFalse())
-		})
-	})
-
-	Context("When running the send-completed-notification phase", func() {
-		It("will send the notification", func() {
-			gomock.InOrder(
-				mockEMClient.EXPECT().Notify(notifier.StateCompleted),
-			)
-			result, err := upgrader.SendCompletedNotification(context.TODO(), logger)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(BeTrue())
-		})
-		It("will not succeed if it can't send the notification", func() {
-			fakeErr := fmt.Errorf("fake error")
-			gomock.InOrder(
-				mockEMClient.EXPECT().Notify(notifier.StateCompleted).Return(fakeErr),
-			)
-			result, err := upgrader.SendCompletedNotification(context.TODO(), logger)
-			Expect(err).To(HaveOccurred())
-			Expect(result).To(BeFalse())
-		})
 	})
 
 	Context("When running the send-delayed-notification phase", func() {
@@ -154,6 +116,7 @@ var _ = Describe("NotifierStep", func() {
 						mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
 						mockEMClient.EXPECT().Notify(notifier.StateDelayed).Return(nil),
 					)
+
 					result, err := upgrader.UpgradeDelayedCheck(context.TODO(), logger)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(result).To(BeTrue())
