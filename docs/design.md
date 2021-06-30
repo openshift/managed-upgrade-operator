@@ -129,20 +129,18 @@ The `NodeKeeper` controller will flag through metrics any worker node that conti
 
 ### Cluster Upgrader
 
-The steps performed by the Managed Upgrade Operator are carried out by implementations of the [ClusterUpgrader](../pkg/osd_cluster_upgrader/upgrader.go) interface.
+The steps performed by the Managed Upgrade Operator are carried out by implementations of the [clusterUpgrader](../pkg/upgraders/upgrader.go) interface.
 
-Each `ClusterUpgrader` implementation must define an ordered series of `UpgradeSteps`, which represents the runbook of the implementation when conducting a cluster upgrade.
+Each `clusterUpgrader` implementation must define an ordered series of [UpgradeSteps](../pkg/upgradesteps/runner.go), which represent idempotent conditions that together form the procedure of a managed cluster upgrade.
 
-`UpgradeStep`s are homogeneous functions of code that carry out a part of the upgrade process. If the step has completed, it will return `true`. If the step has not completed, it will return `false`. If the step has failed, it will return an error.
+`UpgradeStep`s are homogeneous functions of code that carry out a part of the upgrade process. If the step has completed, it will return `true`. If the step has not completed, it will return `false`. If the step has failed, it will return an `false` and an accompanying error.
 
 When actively performing a cluster upgrade, the operator will follow the process below during each iteration of the controller reconcile loop:
 - Get the first step in the ordered list.
-- Check if the `UpgradeConfig`'s status history indicates the step has already completed.
-  - If the step has already completed, move to the step.
-- If the step has not already completed, execute the step.
+- Execute the step.
   - If the step returns `true` indicating it has successfully completed, move to the next step.
-  - If the step returns `false` indicating it has not successfully completed, the operator will check again on the next reconcile loop.
-  - If the step returns an error, the operator will log this, and try to execute the step again on the next reconcile loop.
+  - If the step returns `false` indicating it has not successfully completed, the operator will stop processing steps and restart on the next reconcile loop.
+  - If the step returns an error, the error will be passed back up to the controller and logged, and the current step execution will be restarted on the next reconcile loop.
 
 Steps should generally be idempotent in nature; if they have already run and completed during an upgrade, they should return `true` for subsequent calls and not attempt to re-perform the same action. An example of this is the `ControlPlaneMaintWindow` step to create a maintenance window.
 
@@ -151,21 +149,21 @@ This overall process of executing Upgrade Steps is illustrated below.
 ![Managed Upgrade Operator](images/upgradecluster-flow.svg)
 
 To define a new custom procedure for performing a cluster upgrade, a developer should:
-- Create a new implementation of the `ClusterUpgrader` that defines a unique order of `UpgradeStep`s.
+- Create a new implementation of the `clusterUpgrader` that defines a unique order of `UpgradeStep`s.
 - Implement any missing or new `UpgradeStep`s that need to be performed.  
 
 ### Ready to upgrade criteria
 
-The Managed Upgrade Operator will only attempt to perform an upgrade if the current system time is later than,
-but within _30 minutes_ of, the `upgradeAt` timestamp specified in the `UpgradeConfig` CR.
+The `UpgradeConfig` controller will only attempt to perform an upgrade if the current system time is later than the `upgradeAt` timestamp specified in the `UpgradeConfig` CR.
 
 For example:
 
 | `upgradeAt` time | Current time | Commence Upgrade? |
 | --- | --- | --- |
 | `2020-05-01 12:00:00` | `2020-05-01 11:50:00` | No, it is not yet 12:00 |
-| `2020-05-01 12:00:00` | `2020-05-01 12:32:00` | No, 30 minutes have passed since 12:00 |
-| `2020-05-01 12:00:00` | `2020-05-01 12:15:00` | Yes, it is within the upgrade window |
+| `2020-05-01 12:00:00` | `2020-05-01 12:15:00` | Yes, an upgrade can commence |
+
+Specific `clusterUpgrader`s can incorporate additional ready-to-upgrade criteria in their `UpgradeCluster()` implementation. For example, the `osdClusterUpgrader` incorporates the ability to fail an upgrade if it has not commenced a control plane upgrade within a configurable time window.
 
 ### Validating upgrade versions
 
