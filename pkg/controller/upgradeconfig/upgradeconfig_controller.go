@@ -24,13 +24,13 @@ import (
 
 	muocfg "github.com/openshift/managed-upgrade-operator/config"
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
-	cub "github.com/openshift/managed-upgrade-operator/pkg/cluster_upgrader_builder"
 	cv "github.com/openshift/managed-upgrade-operator/pkg/clusterversion"
 	"github.com/openshift/managed-upgrade-operator/pkg/configmanager"
 	"github.com/openshift/managed-upgrade-operator/pkg/eventmanager"
 	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
 	"github.com/openshift/managed-upgrade-operator/pkg/scheduler"
 	ucmgr "github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager"
+	cub "github.com/openshift/managed-upgrade-operator/pkg/upgraders"
 	"github.com/openshift/managed-upgrade-operator/pkg/validation"
 )
 
