@@ -4,6 +4,7 @@ package validation
 import (
 	"fmt"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/blang/semver"
@@ -73,12 +74,9 @@ func (v *validator) IsValidUpgradeConfig(uC *upgradev1alpha1.UpgradeConfig, cV *
 	}
 
 	// Initial validation considering the usage for three optional fields for image, version and channel.
-	// .spec.desired is mandatory field required with either (image and version) or (version and channel) to be defined (all three are optional fields)
-	// TODO: In future, image should not be tied with version for validation. Refer Jira OSD-7609.
-	image := uC.Spec.Desired.Image
-	dv := uC.Spec.Desired.Version
-	desiredChannel := uC.Spec.Desired.Channel
-	if (len(image) == 0 && len(dv) == 0) || (len(image) > 0 && len(desiredChannel) > 0) || (len(image) > 0 && len(dv) == 0 && len(desiredChannel) == 0) {
+	// If the UpgradeConfig doesn't support image or version based upgrade then fail validation.
+	// TODO: Remove (image and version) message once OSD-7609 is done.
+	if !supportsImageUpgrade(uC) && !supportsVersionUpgrade(uC) {
 		return ValidatorResult{
 			IsValid:           false,
 			IsAvailableUpdate: false,
@@ -89,7 +87,8 @@ func (v *validator) IsValidUpgradeConfig(uC *upgradev1alpha1.UpgradeConfig, cV *
 	// Validate image spec reference
 	// Sample image spec: "quay.io/openshift-release-dev/ocp-release@sha256:8c3f5392ac933cd520b4dce560e007f2472d2d943de14c29cbbb40c72ae44e4c"
 	// Image spec structure: Registry/Namespace/Name@ID
-	if (len(image) > 0 && len(dv) > 0) && len(desiredChannel) == 0 {
+	image := uC.Spec.Desired.Image
+	if supportsImageUpgrade(uC) {
 		ref, err := imagereference.Parse(image)
 		if err != nil {
 			return ValidatorResult{
@@ -125,7 +124,8 @@ func (v *validator) IsValidUpgradeConfig(uC *upgradev1alpha1.UpgradeConfig, cV *
 	}
 
 	// Validate desired version.
-	if len(dv) > 0 {
+	dv := uC.Spec.Desired.Version
+	if !empty(dv) {
 		version, err := cv.GetCurrentVersion(cV)
 		if err != nil {
 			return ValidatorResult{
@@ -187,7 +187,8 @@ func (v *validator) IsValidUpgradeConfig(uC *upgradev1alpha1.UpgradeConfig, cV *
 		}
 	}
 
-	if len(image) == 0 && len(desiredChannel) > 0 {
+	desiredChannel := uC.Spec.Desired.Channel
+	if supportsVersionUpgrade(uC) {
 		// Validate available version is in Cincinnati.
 		clusterId, err := uuid.Parse(string(cV.Spec.ClusterID))
 		if err != nil {
@@ -298,4 +299,20 @@ type validationBuilder struct{}
 // NewClient returns a Validator interface or an error if one occurs.
 func (vb *validationBuilder) NewClient() (Validator, error) {
 	return &validator{}, nil
+}
+
+// supportsImageUpgrade function checks if the upgrade should proceed with image digest reference.
+// TODO: In future, image should not be tied with version for validation. Refer Jira OSD-7609.
+func supportsImageUpgrade(uc *upgradev1alpha1.UpgradeConfig) bool {
+	return !empty(uc.Spec.Desired.Image) && !empty(uc.Spec.Desired.Version) && empty(uc.Spec.Desired.Channel)
+}
+
+// supportsVersionUpgrade function checks if the upgrade should proceed with version from a channel.
+func supportsVersionUpgrade(uc *upgradev1alpha1.UpgradeConfig) bool {
+	return empty(uc.Spec.Desired.Image) && !empty(uc.Spec.Desired.Version) && !empty(uc.Spec.Desired.Channel)
+}
+
+// empty function checks if a given string is empty or not.
+func empty(s string) bool {
+	return strings.TrimSpace(s) == ""
 }
