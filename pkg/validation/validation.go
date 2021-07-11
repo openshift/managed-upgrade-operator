@@ -262,13 +262,13 @@ func compareVersions(dV semver.Version, cV semver.Version, logger logr.Logger) (
 	result := dV.Compare(cV)
 	switch result {
 	case -1:
-		logger.Info(fmt.Sprintf("%s is less then %s", dV, cV))
+		logger.Info(fmt.Sprintf("%s is less than %s", dV, cV))
 		return VersionDowngrade, nil
 	case 0:
 		logger.Info(fmt.Sprintf("%s is equal to %s", dV, cV))
 		return VersionEqual, nil
 	case 1:
-		logger.Info(fmt.Sprintf("%s is greater then %s", dV, cV))
+		logger.Info(fmt.Sprintf("%s is greater than %s", dV, cV))
 		return VersionUpgrade, nil
 	default:
 		return VersionUnknown, fmt.Errorf("semver comparison failed for unknown reason. Versions %s & %s", dV, cV)

@@ -10,14 +10,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 )
 
 var (
 	// OSD_CV_NAME is the name of cluster version singleton
-	OSD_CV_NAME = "version"
-	logger      logr.Logger
+	OSD_CV_NAME             = "version"
+	logger      logr.Logger = logf.Log.WithName("clusterversion")
 )
 
 // ClusterVersion interface enables implementations of the ClusterVersion
