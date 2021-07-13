@@ -223,7 +223,7 @@ var _ = Describe("ClusterUpgrader", func() {
 				gomock.InOrder(
 					mockMetricsClient.EXPECT().UpdateMetricUpgradeWindowNotBreached(gomock.Any()),
 					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
-					mockCVClient.EXPECT().EnsureDesiredVersion(gomock.Any()).Return(false, fakeError),
+					mockCVClient.EXPECT().EnsureDesiredConfig(gomock.Any()).Return(false, fakeError),
 				)
 				result, err := CommenceUpgrade(mockKubeClient, config, mockScalerClient, mockDrainStrategyBuilder, mockMetricsClient, mockMaintClient, mockCVClient, mockEMClient, upgradeConfig, mockMachineryClient, []ac.AvailabilityChecker{mockAC}, logger)
 				Expect(err).To(HaveOccurred())

@@ -18,6 +18,7 @@ require (
 	github.com/onsi/gomega v1.10.2
 	github.com/openshift/api v3.9.1-0.20190424152011-77b8897ec79a+incompatible
 	github.com/openshift/cluster-version-operator v3.11.1-0.20190629164025-08cac1c02538+incompatible
+	github.com/openshift/library-go v0.0.0-20200831114015-2ab0c61c15de
 	github.com/openshift/machine-api-operator v0.2.1-0.20200226185612-9b0170a1ba07
 	github.com/openshift/machine-config-operator v0.0.1-0.20200913004441-7eba765c69c9
 	github.com/openshift/operator-custom-metrics v0.4.2

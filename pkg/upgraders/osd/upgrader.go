@@ -126,9 +126,9 @@ func PreClusterHealthCheck(c client.Client, cfg *osdUpgradeConfig, scaler scaler
 	if err != nil {
 		return false, err
 	}
-	desired := upgradeConfig.Spec.Desired
+
 	if upgradeCommenced {
-		logger.Info(fmt.Sprintf("ClusterVersion is already set to Channel %s Version %s, skipping %s", desired.Channel, desired.Version, upgradev1alpha1.UpgradePreHealthCheck))
+		logger.Info(fmt.Sprintf("Skipping upgrade step %s", upgradev1alpha1.UpgradePreHealthCheck))
 		return true, nil
 	}
 
@@ -154,9 +154,9 @@ func EnsureExtraUpgradeWorkers(c client.Client, cfg *osdUpgradeConfig, s scaler.
 	if err != nil {
 		return false, err
 	}
-	desired := upgradeConfig.Spec.Desired
+
 	if upgradeCommenced {
-		logger.Info(fmt.Sprintf("ClusterVersion is already set to Channel %s Version %s, skipping %s", desired.Channel, desired.Version, upgradev1alpha1.UpgradeScaleUpExtraNodes))
+		logger.Info(fmt.Sprintf("Skipping upgrade step %s", upgradev1alpha1.UpgradeScaleUpExtraNodes))
 		return true, nil
 	}
 
@@ -181,9 +181,9 @@ func ExternalDependencyAvailabilityCheck(c client.Client, cfg *osdUpgradeConfig,
 	if err != nil {
 		return false, err
 	}
-	desired := upgradeConfig.Spec.Desired
+
 	if upgradeCommenced {
-		logger.Info(fmt.Sprintf("ClusterVersion is already set to Channel %s Version %s, skipping %s", desired.Channel, desired.Version, upgradev1alpha1.ExtDepAvailabilityCheck))
+		logger.Info(fmt.Sprintf("Skipping upgrade step %s", upgradev1alpha1.ExtDepAvailabilityCheck))
 		return true, nil
 	}
 
@@ -214,14 +214,13 @@ func CommenceUpgrade(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scale
 	if err != nil {
 		return false, err
 	}
-	desired := upgradeConfig.Spec.Desired
+
 	if upgradeCommenced {
-		logger.Info(fmt.Sprintf("ClusterVersion is already set to Channel %s Version %s, skipping %s", desired.Channel, desired.Version, upgradev1alpha1.CommenceUpgrade))
+		logger.Info(fmt.Sprintf("Skipping upgrade step %s", upgradev1alpha1.CommenceUpgrade))
 		return true, nil
 	}
 
-	logger.Info(fmt.Sprintf("Setting ClusterVersion to Channel %s, version %s", desired.Channel, desired.Version))
-	isComplete, err := cvClient.EnsureDesiredVersion(upgradeConfig)
+	isComplete, err := cvClient.EnsureDesiredConfig(upgradeConfig)
 	if err != nil {
 		return false, err
 	}

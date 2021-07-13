@@ -33,6 +33,7 @@ For the purpose of upgrading a cluster, an `UpgradeConfig` resource _must_ be co
 | `PDBForceDrainTimeout` | Duration in minutes that a PDB-blocked node is allowed to drain before a drain is forced | `120` |
 | `desired.version` | The desired OCP release to upgrade to | `4.4.6` |
 | `desired.channel` | The [channel](https://github.com/openshift/cincinnati/blob/master/docs/design/openshift.md#Channels) the Cluster Version Operator should be using to validate update versions | `fast-4.4` |
+| `desired.image`   | The image digest that CVO should use to upgrade cluster. To be used with `version`. | quay.io/openshift-release-dev/ocp-release@sha256:783a2c963f35ccab38e82e6a8c7fa954c3a4551e07d2f43c06098828dd986ed4 |
 | `capacityReservation` | If extra worker node(s) are needed during the upgrade to hold the customer workload | `true` |
 
 A populated `UpgradeConfig` example is presented below:

@@ -3,18 +3,22 @@ package clusterversion
 import (
 	"context"
 	"fmt"
+	"strings"
 
+	"github.com/go-logr/logr"
 	configv1 "github.com/openshift/api/config/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 )
 
 var (
 	// OSD_CV_NAME is the name of cluster version singleton
-	OSD_CV_NAME = "version"
+	OSD_CV_NAME             = "version"
+	logger      logr.Logger = logf.Log.WithName("clusterversion")
 )
 
 // ClusterVersion interface enables implementations of the ClusterVersion
@@ -22,7 +26,7 @@ var (
 type ClusterVersion interface {
 	GetClusterVersion() (*configv1.ClusterVersion, error)
 	HasUpgradeCommenced(*upgradev1alpha1.UpgradeConfig) (bool, error)
-	EnsureDesiredVersion(uc *upgradev1alpha1.UpgradeConfig) (bool, error)
+	EnsureDesiredConfig(uc *upgradev1alpha1.UpgradeConfig) (bool, error)
 	HasUpgradeCompleted(*configv1.ClusterVersion, *upgradev1alpha1.UpgradeConfig) bool
 	HasDegradedOperators() (*HasDegradedOperatorsResult, error)
 }
@@ -64,44 +68,68 @@ func (c *clusterVersionClient) GetClusterVersion() (*configv1.ClusterVersion, er
 	return cv, err
 }
 
-func (c *clusterVersionClient) EnsureDesiredVersion(uc *upgradev1alpha1.UpgradeConfig) (bool, error) {
+func (c *clusterVersionClient) EnsureDesiredConfig(uc *upgradev1alpha1.UpgradeConfig) (bool, error) {
 	clusterVersion, err := c.GetClusterVersion()
 	if err != nil {
 		return false, err
 	}
 
-	// Move the cluster to the same channel first
 	desired := uc.Spec.Desired
-	if clusterVersion.Spec.Channel != desired.Channel {
-		clusterVersion.Spec.Channel = desired.Channel
+
+	// Commence upgrade using version and channel
+	// Move the cluster to the same channel first
+	if !empty(desired.Channel) && !empty(desired.Version) {
+		if clusterVersion.Spec.Channel != desired.Channel {
+			logger.Info(fmt.Sprintf("Setting ClusterVersion to Channel %s Version %s", desired.Channel, desired.Version))
+			clusterVersion.Spec.Channel = desired.Channel
+			err = c.client.Update(context.TODO(), clusterVersion)
+			if err != nil {
+				return false, err
+			}
+
+			// Retrieve the updated version
+			clusterVersion, err = c.GetClusterVersion()
+			if err != nil {
+				return false, err
+			}
+		}
+
+		// The CVO may need time sync the version before launching the upgrade
+		updateAvailable := false
+		for _, update := range clusterVersion.Status.AvailableUpdates {
+			if update.Version == desired.Version && update.Image != "" {
+				updateAvailable = true
+			}
+		}
+		if !updateAvailable {
+			return false, nil
+		}
+
+		clusterVersion.Spec.Overrides = []configv1.ComponentOverride{}
+		clusterVersion.Spec.DesiredUpdate = &configv1.Update{Version: uc.Spec.Desired.Version}
 		err = c.client.Update(context.TODO(), clusterVersion)
 		if err != nil {
 			return false, err
 		}
+	}
 
-		// Retrieve the updated version
-		clusterVersion, err = c.GetClusterVersion()
-		if err != nil {
-			return false, err
+	// Commence upgrade using Image
+	// TODO: Remove dependency on version as per OSD-7609
+	if !empty(desired.Image) && !empty(desired.Version) && empty(desired.Channel) {
+		if clusterVersion.Spec.DesiredUpdate == nil || (clusterVersion.Spec.DesiredUpdate.Image != desired.Image) {
+			logger.Info(fmt.Sprintf("Setting ClusterVersion to Image %s", desired.Image))
+			clusterVersion.Spec.DesiredUpdate = &configv1.Update{Image: desired.Image}
+			err = c.client.Update(context.TODO(), clusterVersion)
+			if err != nil {
+				return false, err
+			}
 		}
 	}
 
-	// The CVO may need time sync the version before launching the upgrade
-	updateAvailable := false
-	for _, update := range clusterVersion.Status.AvailableUpdates {
-		if update.Version == desired.Version && update.Image != "" {
-			updateAvailable = true
-		}
-	}
-	if !updateAvailable {
-		return false, nil
-	}
-
-	clusterVersion.Spec.Overrides = []configv1.ComponentOverride{}
-	clusterVersion.Spec.DesiredUpdate = &configv1.Update{Version: uc.Spec.Desired.Version}
-	err = c.client.Update(context.TODO(), clusterVersion)
-	if err != nil {
-		return false, err
+	// If neither (version+channel) nor (image) is defined, throw error.
+	// TODO OSD-7609 to remove (image+version) dependency
+	if (empty(desired.Version) && empty(desired.Channel)) && empty(desired.Image) {
+		return false, fmt.Errorf("need either (version+channel) or (image+version) defined in UpgradeConfig")
 	}
 
 	return true, nil
@@ -151,15 +179,15 @@ func (c *clusterVersionClient) HasUpgradeCompleted(cv *configv1.ClusterVersion, 
 
 // isEqualVersion compare the upgrade version state for cv and uc
 func isEqualVersion(cv *configv1.ClusterVersion, uc *upgradev1alpha1.UpgradeConfig) bool {
-	if cv.Spec.DesiredUpdate != nil &&
-		cv.Spec.DesiredUpdate.Version == uc.Spec.Desired.Version {
-		return true
-	}
-
-	return false
+	return cv.Spec.DesiredUpdate != nil && (cv.Spec.DesiredUpdate.Version == uc.Spec.Desired.Version)
 }
 
-// hasUpgradeCommenced checks if the upgrade has commenced
+// isEqualImage compare the upgrade version state for cv and uc
+func isEqualImage(cv *configv1.ClusterVersion, uc *upgradev1alpha1.UpgradeConfig) bool {
+	return cv.Spec.DesiredUpdate != nil && (cv.Spec.DesiredUpdate.Image == uc.Spec.Desired.Image)
+}
+
+// HasUpgradeCommenced checks if the upgrade has commenced based on version or image
 func (c *clusterVersionClient) HasUpgradeCommenced(uc *upgradev1alpha1.UpgradeConfig) (bool, error) {
 
 	clusterVersion, err := c.GetClusterVersion()
@@ -167,8 +195,21 @@ func (c *clusterVersionClient) HasUpgradeCommenced(uc *upgradev1alpha1.UpgradeCo
 		return false, err
 	}
 
-	if !isEqualVersion(clusterVersion, uc) {
-		return false, nil
+	if !empty(uc.Spec.Desired.Version) && !empty(uc.Spec.Desired.Channel) && empty(uc.Spec.Desired.Image) {
+		if !isEqualVersion(clusterVersion, uc) {
+			return false, nil
+		} else {
+			logger.Info(fmt.Sprintf("ClusterVersion is already set to Channel %s Version %s", uc.Spec.Desired.Channel, uc.Spec.Desired.Version))
+		}
+	}
+
+	// TODO: Remove version dependency after work on OSD-7609
+	if !empty(uc.Spec.Desired.Version) && !empty(uc.Spec.Desired.Image) && empty(uc.Spec.Desired.Channel) {
+		if !isEqualImage(clusterVersion, uc) {
+			return false, nil
+		} else {
+			logger.Info(fmt.Sprintf("ClusterVersion is already set to Image %s", uc.Spec.Desired.Image))
+		}
 	}
 
 	return true, nil
@@ -199,8 +240,13 @@ func GetCurrentVersion(clusterVersion *configv1.ClusterVersion) (string, error) 
 	}
 
 	if len(gotVersion) == 0 {
-		return gotVersion, fmt.Errorf("Failed to get current version")
+		return gotVersion, fmt.Errorf("failed to get current version")
 	}
 
 	return gotVersion, nil
+}
+
+// empty function checks if a given string is empty or not.
+func empty(s string) bool {
+	return strings.TrimSpace(s) == ""
 }
