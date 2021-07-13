@@ -127,8 +127,9 @@ func (c *clusterVersionClient) EnsureDesiredConfig(uc *upgradev1alpha1.UpgradeCo
 	}
 
 	// If neither (version+channel) nor (image) is defined, throw error.
+	// TODO OSD-7609 to remove (image+version) dependency
 	if (empty(desired.Version) && empty(desired.Channel)) && empty(desired.Image) {
-		return false, fmt.Errorf("need atleast (version+channel) or (image) defined in UpgradeConfig")
+		return false, fmt.Errorf("need either (version+channel) or (image+version) defined in UpgradeConfig")
 	}
 
 	return true, nil
