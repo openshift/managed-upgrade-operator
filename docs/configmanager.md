@@ -49,3 +49,11 @@ The following configuration fields must be set:
 | `source` | Indicates the type of config manager being used | `LOCAL` |
 | `localConfigName` | Name of the Local config being used | `managed-upgrade-config` |
 | `watchInterval` | Frequency* in minutes with which UpgradeConfig CR name being looked | 60 |
+
+Complete example:
+```yaml
+configManager:
+  source: LOCAL
+  localConfigName: managed-upgrade-config
+  watchInterval: 60
+```
