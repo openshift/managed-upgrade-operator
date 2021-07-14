@@ -2,7 +2,11 @@
 package validation
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"log"
+	"net/http"
 	"net/url"
 	"strings"
 	"time"
@@ -12,6 +16,7 @@ import (
 	"github.com/google/uuid"
 	configv1 "github.com/openshift/api/config/v1"
 	"github.com/openshift/cluster-version-operator/pkg/cincinnati"
+	"github.com/openshift/library-go/pkg/image/dockerv1client"
 
 	imagereference "github.com/openshift/library-go/pkg/image/reference"
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
@@ -114,11 +119,38 @@ func (v *validator) IsValidUpgradeConfig(uC *upgradev1alpha1.UpgradeConfig, cV *
 			}, nil
 		}
 
+		if len(ref.Name) == 0 {
+			return ValidatorResult{
+				IsValid:           false,
+				IsAvailableUpdate: false,
+				Message:           fmt.Sprintf("Failed to parse image:%s must be a valid image pull spec: no image name specified", image),
+			}, nil
+		}
+
 		if len(ref.ID) == 0 {
 			return ValidatorResult{
 				IsValid:           false,
 				IsAvailableUpdate: false,
 				Message:           fmt.Sprintf("Failed to parse image:%s must be a valid image pull spec: no image digest specified", image),
+			}, nil
+		}
+
+		// Validate the desired version with the image digest version if spec.Desired.Image and spec.Desired.Version both specified in upgradeconfig
+		// Reference OSD 7608
+		digestversion, err := fetchImageVersion(image)
+		if err != nil {
+			return ValidatorResult{
+				IsValid:           false,
+				IsAvailableUpdate: false,
+				Message:           err.Error(),
+			}, nil
+		}
+
+		if digestversion != uC.Spec.Desired.Version {
+			return ValidatorResult{
+				IsValid:           false,
+				IsAvailableUpdate: false,
+				Message:           fmt.Sprintf("Failed to validate: spec.Desired.Image version %s and spec.Desired.Version %s are not same", digestversion, uC.Spec.Desired.Version),
 			}, nil
 		}
 	}
@@ -315,4 +347,86 @@ func supportsVersionUpgrade(uc *upgradev1alpha1.UpgradeConfig) bool {
 // empty function checks if a given string is empty or not.
 func empty(s string) bool {
 	return strings.TrimSpace(s) == ""
+}
+
+// fetchImageVersion function returns the image version from the image digest
+func fetchImageVersion(image string) (string, error) {
+	ref, _ := imagereference.Parse(image)
+	manifesturl := url.URL{
+		Scheme: "https",
+		Host:   ref.Registry,
+		Path:   "v2" + "/" + ref.Namespace + "/" + ref.Name + "/" + "manifests" + "/" + ref.ID,
+	}
+
+	body, err := runHTTP(manifesturl.String())
+	if len(body) == 0 {
+		return "", fmt.Errorf("Failed to fetch image manifest digest: %s needs to be a valid release image", image)
+	}
+	if err != nil {
+		return "", err
+	}
+
+	manifest := &dockerv1client.DockerImageManifest{}
+	if err := parse(body, &manifest); err != nil {
+		return "", err
+	}
+	bloburl := url.URL{
+		Scheme: "https",
+		Host:   ref.Registry,
+		Path:   "v2" + "/" + ref.Namespace + "/" + ref.Name + "/" + "blobs" + "/" + manifest.Config.Digest,
+	}
+
+	resbody, err := runHTTP(bloburl.String())
+	if len(resbody) == 0 {
+		return "", fmt.Errorf("Failed to fetch blobs for image manifest digest: %s needs to be a valid release image", image)
+	}
+	if err != nil {
+		return "", err
+	}
+
+	imageConfig := &dockerv1client.DockerImageConfig{}
+	if err := parse(resbody, &imageConfig); err != nil {
+		return "", err
+	}
+	return imageConfig.Config.Labels["io.openshift.release"], nil
+}
+
+func runHTTP(url string) ([]byte, error) {
+
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	req.Header.Set("Accept", "application/vnd.docker.distribution.manifest.v2+json")
+	client := http.Client{
+		Timeout: time.Second * 20,
+	}
+
+	res, getErr := client.Do(req)
+	if getErr != nil {
+		return nil, getErr
+	}
+
+	if res.StatusCode != http.StatusOK {
+		return nil, getErr
+	}
+
+	if res.Body != nil {
+		defer res.Body.Close()
+	}
+
+	body, readErr := ioutil.ReadAll(res.Body)
+	if readErr != nil {
+		return nil, readErr
+	}
+	return body, nil
+}
+
+func parse(body []byte, v interface{}) error {
+	jsonErr := json.Unmarshal(body, v)
+	if jsonErr != nil {
+		return jsonErr
+	}
+	return nil
 }
