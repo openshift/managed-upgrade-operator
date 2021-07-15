@@ -30,7 +30,7 @@ const (
 	// UPGRADE_SCALE_DELAY_DESC describes the upgrade scaling delayed
 	UPGRADE_SCALE_DELAY_DESC = "Cluster upgrade to version %s is experiencing a delay attempting to scale up an additional worker node. The upgrade will continue to retry. This is an informational notification and no action is required by you."
 	// UPGRADE_SCALE_DELAY_SKIP_DESC describes the upgrade scaling skipped after delay
-	UPGRADE_SCALE_DELAY_SKIP_DESC = "Cluster upgrade to version %s has experienced issue during capacity reservation efforts. This could be caused by the AWS account service quota limitation, or the temporary connectivity issue from the new worker node to the masters or the external services. The upgrade will continue without extra compute. This is an informational notification and no action is required by you."
+	UPGRADE_SCALE_DELAY_SKIP_DESC = "Cluster upgrade to version %s has experienced an issue during capacity reservation efforts. This could be caused by AWS account service quota limitations or temporary connectivity issues to/from the new worker node. The upgrade will continue without extra compute. This is an informational notification and no action is required by you."
 )
 
 // EventManager enables implementation of an EventManager
