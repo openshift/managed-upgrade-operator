@@ -189,9 +189,14 @@ type UpgradeConfigList struct {
 type Update struct {
 	// Version of openshift release
 	// +kubebuilder:validation:Type=string
-	Version string `json:"version"`
+	// +optional
+	Version string `json:"version,omitempty"`
 	// Channel used for upgrades
-	Channel string `json:"channel"`
+	// +optional
+	Channel string `json:"channel,omitempty"`
+	// Image reference used for upgrades
+	// +optional
+	Image string `json:"image,omitempty"`
 }
 
 // IsTrue Condition whether the condition status is "True".

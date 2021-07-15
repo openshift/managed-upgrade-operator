@@ -50,7 +50,9 @@ If you like to contribute to the Managed Upgrade Operator, please read our [Cont
      * As steps are launched or complete, they are added to the `UpgradeConfig`'s Status History. 
 5. Once all steps have been completed, the upgrade is considered complete and a Status History entry is written to indicate that the `UpgradeConfig` has been applied.
 
-### Example Input Custom Resource
+## Sample UpgradeConfig CR definition
+
+### Example 1 - OSD upgrade using to version 4.4.6 using fast channel
 
 ```yaml
 apiVersion: upgrade.managed.openshift.io/v1alpha1
@@ -65,4 +67,20 @@ spec:
   desired:
     channel: "fast-4.4"
     version: "4.4.6"
+```
+
+### Example 2 - OSD upgrade using to 4.7.13 using image digest
+
+```yaml
+apiVersion: upgrade.managed.openshift.io/v1alpha1
+kind: UpgradeConfig
+metadata:
+  name: managed-upgrade-config
+spec:
+  type: "OSD"
+  upgradeAt: "2021-01-01T00:00:00Z"
+  PDBForceDrainTimeout: 60
+  desired:
+    image: "quay.io/openshift-release-dev/ocp-release@sha256:783a2c963f35ccab38e82e6a8c7fa954c3a4551e07d2f43c06098828dd986ed4"
+    version: "4.7.13"
 ```

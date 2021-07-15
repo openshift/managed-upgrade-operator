@@ -61,12 +61,12 @@ spec:
                 channel:
                   description: Channel used for upgrades
                   type: string
+                image:
+                  description: Image reference used for upgrades
+                  type: string
                 version:
                   description: Version of openshift release
                   type: string
-              required:
-                - channel
-                - version
               type: object
             type:
               description: Type indicates the ClusterUpgrader implementation to use to perform an upgrade of the cluster

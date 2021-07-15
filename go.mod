@@ -18,15 +18,16 @@ require (
 	github.com/onsi/gomega v1.10.2
 	github.com/openshift/api v3.9.1-0.20190424152011-77b8897ec79a+incompatible
 	github.com/openshift/cluster-version-operator v3.11.1-0.20190629164025-08cac1c02538+incompatible
+	github.com/openshift/library-go v0.0.0-20200831114015-2ab0c61c15de
 	github.com/openshift/machine-api-operator v0.2.1-0.20200226185612-9b0170a1ba07
 	github.com/openshift/machine-config-operator v0.0.1-0.20200913004441-7eba765c69c9
 	github.com/openshift/operator-custom-metrics v0.4.2
-	github.com/operator-framework/api v0.3.8
 	github.com/operator-framework/operator-sdk v0.18.2
 	github.com/prometheus/alertmanager v0.20.0
 	github.com/prometheus/client_golang v1.7.1
 	github.com/prometheus/common v0.10.0
-	github.com/spf13/pflag v1.0.5
+	github.com/sykesm/zap-logfmt v0.0.4
+	go.uber.org/zap v1.15.0
 	gopkg.in/yaml.v2 v2.3.0
 	k8s.io/api v0.20.2
 	k8s.io/apimachinery v0.20.2

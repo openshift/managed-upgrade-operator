@@ -12,6 +12,7 @@
   - [How to run](#how-to-run)
     - [Locally](#locally)
     - [Remotely](#remotely)
+  - [Monitoring ongoing upgrade](#monitoring-ongoing-upgrade)
 
 This document should entail all you need to develop this operator locally.
 
@@ -92,7 +93,7 @@ $ boilerplate/_lib/container-make
 
 ## How to run
 
-Regardless of how you choose to run the operator, before doing so you will need to install the `UpgradeConfig` CRD on your cluster:
+Regardless of how you choose to run the operator, before doing so ensure the `UpgradeConfig` CRD is present on your cluster:
 
 ```shell
 $ oc create -f deploy/crds/upgrade.managed.openshift.io_upgradeconfigs_crd.yaml
@@ -100,25 +101,25 @@ $ oc create -f deploy/crds/upgrade.managed.openshift.io_upgradeconfigs_crd.yaml
 
 ### Locally
 
-- Make sure you have the [operator-sdk](https://github.com/operator-framework/operator-sdk/releases) binary in your `$PATH`.
+- Make sure you have the [operator-sdk](#operator-sdk) `$PATH`.
 
 - If you are not using an account that has `cluster-admin` privileges, you will need to [elevate permissions](https://github.com/openshift/ops-sop/blob/master/v4/knowledge_base/manage-privileges.md) to possess them.
 
-- Create a project for the operator to run inside of.
+- Create a project for the operator to run inside of:
 
 ```
-$ oc new-project managed-upgrade-operator
+$ oc new-project test-managed-upgrade-operator
 ```
 
 - Run the operator via the Operator SDK:
 
 ```
-$ OPERATOR_NAMESPACE=managed-upgrade-operator operator-sdk run --local --watch-namespace=""
+$ OPERATOR_NAMESPACE=test-managed-upgrade-operator operator-sdk run --local --watch-namespace=""
 ```
 
 (`make run` will also work here)
 
-- Trigger a reconcile loop by applying an `upgradeconfig` CR with your desired specs.
+- Trigger a reconcile loop by applying an `upgradeconfig` CR with your desired specs:
 
 ```shell
 $ oc apply -f test/deploy/upgrade.managed.openshift.io_v1alpha1_upgradeconfig_cr.yaml
@@ -126,50 +127,106 @@ $ oc apply -f test/deploy/upgrade.managed.openshift.io_v1alpha1_upgradeconfig_cr
 
 ### Remotely
 
-- Create a project for the operator to run inside of.
+- Build the image. In this example, we will use [Quay](http://quay.io/) as the container registry for our image:
 
 ```shell
-$ oc new-project managed-upgrade-operator
+$ operator-sdk build quay.io/<QUAY_USERNAME>/managed-upgrade-operator:latest
 ```
 
-- Build the image. In this example, we will use [Quay](http://quay.io/) as the container registry for our image.
+- Setup [quay](./quay.md) registry and push the image:
 
 ```shell
-$ operator-sdk build quay.io/myuser/managed-upgrade-operator:latest
+podman push quay.io/<QUAY_USERNAME>/managed-upgrade-operator:latest
 ```
 
-- Push the image to the registry.
+- Login to `oc` [as admin](https://github.com/openshift/ops-sop/blob/master/v4/howto/break-glass-kubeadmin.md#for-clusters-with-public-api) 
+  
+- Ensure no other instances of managed-upgrade-operator are actively running on your cluster, as they may conflict. If MUO is already deployed on the cluster scale the deployment down to 0:
 
 ```shell
-podman push quay.io/myuser/managed-upgrade-operator:latest
+oc scale deployment managed-upgrade-operator -n <EXISTING_MUO_NAMESPACE> --replicas=0
 ```
 
-- Deploy the service account, clusterrole, clusterrolebinding and ConfigMap on your target cluster.
+- Create a project for the operator to run inside of:
+
+```shell
+$ oc new-project test-managed-upgrade-operator
+```
+
+- Deploy the service account, clusterrole, clusterrolebinding and ConfigMap on your target cluster:
 
 ```shell
 oc create -f deploy/cluster_role.yaml
-oc create -f deploy/cluster_role_binding.yaml
+oc create -f test/deploy/cluster_role_binding.yaml
 oc create -f test/deploy/service_account.yaml
 oc create -f test/deploy/managed-upgrade-operator-config.yaml
 ```
 
-- Edit the `deploy/operator.yaml` file to represent the path to your image, and deploy it:
+- Set `test/deploy/operator.yaml` to use `quay.io/<QUAY_USERNAME>/managed-upgrade-operator:latest` container image and create deployment configuration
 
-```yaml
+```shell
+oc create -f test/deploy/operator.yaml
+```
+
+- Trigger a reconcile loop by applying an [upgradeconfig](../test/deploy/upgrade.managed.openshift.io_v1alpha1_upgradeconfig_cr.yaml) CR with your desired specs:
+
+```shell
+oc create -f - <<EOF
+apiVersion: upgrade.managed.openshift.io/v1alpha1
+kind: UpgradeConfig
+metadata:
+  name: managed-upgrade-config
 spec:
-  template:
-    spec:
-      containers:
-        - name: managed-upgrade-operator
-          image: quay.io/myuser/managed-upgrade-operator:latest
+  type: "OSD"
+  upgradeAt: "2020-01-01T00:00:00Z"
+  PDBForceDrainTimeout: 60
+  desired:
+    channel: "fast-4.7"
+    version: "4.7.18"
+EOF
 ```
 
+---
+
+**NOTE**
+
+Refer to [fast-4.7](https://access.redhat.com/labs/ocpupgradegraph/update_channel?channel=fast-4.7&arch=x86_64&is_show_hot_fix=false) for currently available versions in `fast-4.7` channel.
+
+---
+
+## Monitoring ongoing upgrade
+
+- After applying an `upgradeConfig`, you should see your upgrade progressing
+
 ```shell
-$ oc create -f deploy/operator.yaml
+oc get upgrade -n test-managed-upgrade-operator
+``` 
+
+- Inspect `upgradeConfig`:
+
+```shell
+oc describe upgrade -n test-managed-upgrade-operator managed-upgrade-config 
 ```
 
-- Trigger a reconcile loop by applying an `upgradeconfig` CR with your desired specs.
+- It can be useful to monitor the events in `test-managed-upgrade-operator` namespace during the upgrade:
 
 ```shell
-$ oc create -f test/deploy/upgrade.managed.openshift.io_v1alpha1_upgradeconfig_cr.yaml
+oc get event -n test-managed-upgrade-operator -w
+```
+
+- To see messages from MUO, inspect `MUO container` logs in `test-managed-upgrade-operator` namespace:
+
+```shell
+oc logs <MUO POD> -n test-managed-upgrade-operator -f
+```
+
+- To follow upgrade status, get `clusterversion`:
+
+```shell
+oc get clusterversion -w
+```
+
+- To follow upgrade messages, inspect `cluster-version-operator` pod logs in `openshift-cluster-version namespace`:
+```shell
+oc logs cluster-version-operator-<POD-ID> -n  openshift-cluster-version -f
 ```

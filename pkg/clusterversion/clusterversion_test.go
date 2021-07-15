@@ -115,7 +115,7 @@ var _ = Describe("ClusterVersion client and utils", func() {
 								return nil
 							}),
 					)
-					isCompleted, err := cvClient.EnsureDesiredVersion(upgradeConfig)
+					isCompleted, err := cvClient.EnsureDesiredConfig(upgradeConfig)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(isCompleted).To(BeTrue())
 				})
@@ -146,7 +146,7 @@ var _ = Describe("ClusterVersion client and utils", func() {
 								return nil
 							}),
 					)
-					isCompleted, err := cvClient.EnsureDesiredVersion(upgradeConfig)
+					isCompleted, err := cvClient.EnsureDesiredConfig(upgradeConfig)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(isCompleted).To(BeTrue())
 				})
@@ -179,7 +179,7 @@ var _ = Describe("ClusterVersion client and utils", func() {
 								return nil
 							}),
 					)
-					isCompleted, err := cvClient.EnsureDesiredVersion(upgradeConfig)
+					isCompleted, err := cvClient.EnsureDesiredConfig(upgradeConfig)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(isCompleted).To(BeTrue())
 				})
