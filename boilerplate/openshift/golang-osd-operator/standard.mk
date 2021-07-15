@@ -140,11 +140,26 @@ go-generate:
 
 .PHONY: op-generate
 op-generate:
-	${CONVENTION_DIR}/operator-sdk-generate.sh
+	# The artist formerly known as `operator-sdk generate crds`:
+ifeq ($(CRD_VERSION), v1beta1)
+	cd pkg/apis; controller-gen crd paths=./... output:dir=../../deploy/crds
 	# HACK: Due to an OLM bug in 3.11, we need to remove the
 	# spec.validation.openAPIV3Schema.type from CRDs. Remove once
 	# 3.11 is no longer supported.
-	find deploy/ -name '*_crd.yaml' | xargs -n1 -I{} yq d -i {} spec.validation.openAPIV3Schema.type
+	find deploy/crds -name '*.yaml' | xargs -n1 -I{} yq d -i {} spec.validation.openAPIV3Schema.type
+	# HACK: But removing that causes certain generated fields to
+	# fail validation in v4. The fields aren't needed, so remove
+	# them. We should be able to get rid of this as well when 3.11
+	# is no longer supported.
+	find deploy/crds -name '*.yaml' | xargs -n1 -I{} yq d -i {} 'spec.**.x-kubernetes-list-map-keys'
+	find deploy/crds -name '*.yaml' | xargs -n1 -I{} yq d -i {} 'spec.**.x-kubernetes-list-type'
+	find deploy/crds -name '*.yaml' | xargs -n1 -I{} yq d -i {} 'spec.**.x-kubernetes-map-type'
+	find deploy/crds -name '*.yaml' | xargs -n1 -I{} yq d -i {} 'spec.**.x-kubernetes-struct-type'
+else
+	cd pkg/apis; controller-gen crd:crdVersions=v1 paths=./... output:dir=../../deploy/crds
+endif
+	# The artist formerly known as `operator-sdk generate k8s`:
+	cd pkg/apis; controller-gen object paths=./...
 	# Don't forget to commit generated files
 
 .PHONY: openapi-generate
@@ -194,10 +209,6 @@ olm-deploy-yaml-validate: python-venv
 .PHONY: prow-config
 prow-config:
 	${CONVENTION_DIR}/prow-config ${RELEASE_CLONE}
-
-.PHONY: codecov-secret-mapping
-codecov-secret-mapping:
-	${CONVENTION_DIR}/codecov-secret-mapping ${RELEASE_CLONE}
 
 
 ######################
