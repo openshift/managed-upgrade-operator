@@ -167,7 +167,7 @@ var _ = Describe("ControlPlaneStep", func() {
 				gomock.InOrder(
 					mockMetricsClient.EXPECT().UpdateMetricUpgradeWindowNotBreached(gomock.Any()),
 					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
-					mockCVClient.EXPECT().EnsureDesiredVersion(gomock.Any()).Return(false, fakeError),
+					mockCVClient.EXPECT().EnsureDesiredConfig(gomock.Any()).Return(false, fakeError),
 				)
 				result, err := upgrader.CommenceUpgrade(context.TODO(), logger)
 				Expect(err).To(HaveOccurred())

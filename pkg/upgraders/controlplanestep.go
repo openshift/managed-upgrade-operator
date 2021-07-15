@@ -21,14 +21,12 @@ func (c *clusterUpgrader) CommenceUpgrade(ctx context.Context, logger logr.Logge
 	if err != nil {
 		return false, err
 	}
-	desired := c.upgradeConfig.Spec.Desired
 	if upgradeCommenced {
-		logger.Info(fmt.Sprintf("ClusterVersion is already set to Channel %s Version %s, skipping %s", desired.Channel, desired.Version, upgradev1alpha1.CommenceUpgrade))
+		logger.Info(fmt.Sprintf("Skipping upgrade step %s", upgradev1alpha1.CommenceUpgrade))
 		return true, nil
 	}
 
-	logger.Info(fmt.Sprintf("Setting ClusterVersion to Channel %s, version %s", desired.Channel, desired.Version))
-	isComplete, err := c.cvClient.EnsureDesiredVersion(c.upgradeConfig)
+	isComplete, err := c.cvClient.EnsureDesiredConfig(c.upgradeConfig)
 	if err != nil {
 		return false, err
 	}

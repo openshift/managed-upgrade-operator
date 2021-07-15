@@ -15,9 +15,8 @@ func (c *clusterUpgrader) ExternalDependencyAvailabilityCheck(ctx context.Contex
 	if err != nil {
 		return false, err
 	}
-	desired := c.upgradeConfig.Spec.Desired
 	if upgradeCommenced {
-		logger.Info(fmt.Sprintf("ClusterVersion is already set to Channel %s Version %s, skipping %s", desired.Channel, desired.Version, upgradev1alpha1.ExtDepAvailabilityCheck))
+		logger.Info(fmt.Sprintf("Skipping upgrade step %s", upgradev1alpha1.ExtDepAvailabilityCheck))
 		return true, nil
 	}
 
