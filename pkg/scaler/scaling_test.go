@@ -501,6 +501,7 @@ var _ = Describe("Node scaling tests", func() {
 			mockDrainStrategy := mockDrain.NewMockNodeDrainStrategy(mockCtrl)
 			var replicas int32 = 1
 			var node1Name = "test-node-1"
+			var nodePhase = "Running"
 			originalMachineSets := &machineapi.MachineSetList{
 				Items: []machineapi.MachineSet{
 					{
@@ -525,6 +526,7 @@ var _ = Describe("Node scaling tests", func() {
 							NodeRef: &corev1.ObjectReference{
 								Name: node1Name,
 							},
+							Phase: &nodePhase,
 						},
 					},
 				},

@@ -32,7 +32,8 @@ const (
 	TEST_UPGRADEPOLICY_PDB_TIME     = 60
 
 	// State constants
-	TEST_STATE_VALUE       = StateStarted
+	TEST_MUO_STATE_VALUE   = MuoStateStarted
+	TEST_OCM_STATE_VALUE   = OcmStateStarted
 	TEST_STATE_DESCRIPTION = "test-description"
 )
 
@@ -103,7 +104,7 @@ var _ = Describe("OCM Notifier", func() {
 				},
 			}
 			upgradePolicyState = ocm.UpgradePolicyState{
-				Value:       string(TEST_STATE_VALUE),
+				Value:       string(TEST_OCM_STATE_VALUE),
 				Description: TEST_STATE_DESCRIPTION,
 			}
 
@@ -124,7 +125,7 @@ var _ = Describe("OCM Notifier", func() {
 					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
 					mockOcmClient.EXPECT().GetClusterUpgradePolicies(cluster.Id).Return(nil, fmt.Errorf("fake error")),
 				)
-				err := notifier.NotifyState(TEST_STATE_VALUE, TEST_STATE_DESCRIPTION)
+				err := notifier.NotifyState(TEST_MUO_STATE_VALUE, TEST_STATE_DESCRIPTION)
 				Expect(err).NotTo(BeNil())
 				Expect(err.Error()).To(ContainSubstring("can't determine policy ID"))
 			})
@@ -144,7 +145,7 @@ var _ = Describe("OCM Notifier", func() {
 					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
 					mockOcmClient.EXPECT().GetClusterUpgradePolicies(TEST_CLUSTER_ID).Return(&upgradePolicyListResponse, nil),
 				)
-				err := notifier.NotifyState(TEST_STATE_VALUE, TEST_STATE_DESCRIPTION)
+				err := notifier.NotifyState(TEST_MUO_STATE_VALUE, TEST_STATE_DESCRIPTION)
 				Expect(err).NotTo(BeNil())
 				Expect(err.Error()).To(ContainSubstring("can't determine policy ID"))
 			})
@@ -164,7 +165,7 @@ var _ = Describe("OCM Notifier", func() {
 					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
 					mockOcmClient.EXPECT().GetClusterUpgradePolicies(TEST_CLUSTER_ID).Return(&upgradePolicyListResponse, nil),
 				)
-				err := notifier.NotifyState(TEST_STATE_VALUE, TEST_STATE_DESCRIPTION)
+				err := notifier.NotifyState(TEST_MUO_STATE_VALUE, TEST_STATE_DESCRIPTION)
 				Expect(err).NotTo(BeNil())
 				Expect(err.Error()).To(ContainSubstring("can't determine policy ID"))
 			})
@@ -186,7 +187,7 @@ var _ = Describe("OCM Notifier", func() {
 						mockOcmClient.EXPECT().GetClusterUpgradePolicies(TEST_CLUSTER_ID).Return(&upgradePolicyListResponse, nil),
 						mockOcmClient.EXPECT().GetClusterUpgradePolicyState(TEST_POLICY_ID, TEST_CLUSTER_ID).Return(&upgradePolicyState, nil),
 					)
-					err := notifier.NotifyState(TEST_STATE_VALUE, TEST_STATE_DESCRIPTION)
+					err := notifier.NotifyState(TEST_MUO_STATE_VALUE, TEST_STATE_DESCRIPTION)
 					Expect(err).To(BeNil())
 				})
 			})
@@ -204,9 +205,9 @@ var _ = Describe("OCM Notifier", func() {
 						mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
 						mockOcmClient.EXPECT().GetClusterUpgradePolicies(TEST_CLUSTER_ID).Return(&upgradePolicyListResponse, nil),
 						mockOcmClient.EXPECT().GetClusterUpgradePolicyState(TEST_POLICY_ID, TEST_CLUSTER_ID).Return(&upgradePolicyState, nil),
-						mockOcmClient.EXPECT().SetState(string(StateCompleted), TEST_STATE_DESCRIPTION, TEST_POLICY_ID, TEST_CLUSTER_ID),
+						mockOcmClient.EXPECT().SetState(string(stateMap[MuoStateCompleted]), TEST_STATE_DESCRIPTION, TEST_POLICY_ID, TEST_CLUSTER_ID),
 					)
-					err := notifier.NotifyState(StateCompleted, TEST_STATE_DESCRIPTION)
+					err := notifier.NotifyState(MuoStateCompleted, TEST_STATE_DESCRIPTION)
 					Expect(err).To(BeNil())
 				})
 			})
