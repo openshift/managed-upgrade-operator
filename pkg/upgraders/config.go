@@ -1,4 +1,4 @@
-package osd
+package upgraders
 
 import (
 	"fmt"
@@ -8,7 +8,7 @@ import (
 	"github.com/openshift/managed-upgrade-operator/pkg/drain"
 )
 
-type osdUpgradeConfig struct {
+type upgraderConfig struct {
 	Maintenance                    maintenanceConfig                 `yaml:"maintenance"`
 	Scale                          scaleConfig                       `yaml:"scale"`
 	NodeDrain                      drain.NodeDrain                   `yaml:"nodeDrain"`
@@ -63,7 +63,7 @@ type healthCheck struct {
 	IgnoredNamespaces []string `yaml:"ignoredNamespaces"`
 }
 
-func (cfg *osdUpgradeConfig) IsValid() error {
+func (cfg *upgraderConfig) IsValid() error {
 	if err := cfg.Maintenance.IsValid(); err != nil {
 		return err
 	}
@@ -88,6 +88,6 @@ func (cfg *osdUpgradeConfig) IsValid() error {
 	return nil
 }
 
-func (cfg *osdUpgradeConfig) GetScaleDuration() time.Duration {
+func (cfg *upgraderConfig) GetScaleDuration() time.Duration {
 	return time.Duration(cfg.Scale.TimeOut) * time.Minute
 }

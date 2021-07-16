@@ -1,4 +1,4 @@
-package osd
+package upgradesteps
 
 import (
 	"testing"
@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestUpgradeConfig(t *testing.T) {
+func TestUpgraderStepRunner(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ClusterUpgrader Suite")
+	RunSpecs(t, "UpgradeStep Runner Suite")
 }
