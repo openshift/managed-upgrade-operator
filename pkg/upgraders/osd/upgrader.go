@@ -164,6 +164,11 @@ func EnsureExtraUpgradeWorkers(c client.Client, cfg *osdUpgradeConfig, s scaler.
 	if err != nil {
 		if scaler.IsScaleTimeOutError(err) {
 			metricsClient.UpdateMetricScalingFailed(upgradeConfig.Name)
+			err := nc.Notify(notifier.MuoStateSkipped)
+			if err != nil {
+				return false, err
+			}
+			return true, nil
 		}
 		return false, err
 	}
@@ -402,7 +407,7 @@ func ControlPlaneUpgraded(c client.Client, cfg *osdUpgradeConfig, scaler scaler.
 
 // SendStartedNotification sends a notification on upgrade commencement
 func SendStartedNotification(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, dsb drain.NodeDrainStrategyBuilder, metricsClient metrics.Metrics, m maintenance.Maintenance, cvClient cv.ClusterVersion, nc eventmanager.EventManager, upgradeConfig *upgradev1alpha1.UpgradeConfig, machinery machinery.Machinery, availabilityCheckers ac.AvailabilityCheckers, logger logr.Logger) (bool, error) {
-	err := nc.Notify(notifier.StateStarted)
+	err := nc.Notify(notifier.MuoStateStarted)
 	if err != nil {
 		return false, err
 	}
@@ -432,7 +437,7 @@ func UpgradeDelayedCheck(c client.Client, cfg *osdUpgradeConfig, scaler scaler.S
 	delayTimeoutTrigger := cfg.UpgradeWindow.GetUpgradeDelayedTriggerDuration()
 	// Send notification if the managed upgrade started but did not hit the controlplane upgrade phase in delayTimeoutTrigger minutes
 	if !startTime.IsZero() && delayTimeoutTrigger > 0 && time.Now().After(startTime.Add(delayTimeoutTrigger)) {
-		err := nc.Notify(notifier.StateDelayed)
+		err := nc.Notify(notifier.MuoStateDelayed)
 		if err != nil {
 			return false, err
 		}
@@ -442,7 +447,7 @@ func UpgradeDelayedCheck(c client.Client, cfg *osdUpgradeConfig, scaler scaler.S
 
 // SendCompletedNotification sends a notification on upgrade completion
 func SendCompletedNotification(c client.Client, cfg *osdUpgradeConfig, scaler scaler.Scaler, dsb drain.NodeDrainStrategyBuilder, metricsClient metrics.Metrics, m maintenance.Maintenance, cvClient cv.ClusterVersion, nc eventmanager.EventManager, upgradeConfig *upgradev1alpha1.UpgradeConfig, machinery machinery.Machinery, availabilityCheckers ac.AvailabilityCheckers, logger logr.Logger) (bool, error) {
-	err := nc.Notify(notifier.StateCompleted)
+	err := nc.Notify(notifier.MuoStateCompleted)
 	if err != nil {
 		return false, err
 	}
@@ -529,7 +534,7 @@ func performUpgradeFailure(c client.Client, metricsClient metrics.Metrics, s sca
 	}
 
 	// Notify of failure
-	err = nc.Notify(notifier.StateFailed)
+	err = nc.Notify(notifier.MuoStateFailed)
 	if err != nil {
 		return err
 	}
