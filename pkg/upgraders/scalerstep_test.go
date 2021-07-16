@@ -3,6 +3,7 @@ package upgraders
 import (
 	"context"
 	"fmt"
+	"github.com/openshift/managed-upgrade-operator/pkg/notifier"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -100,11 +101,12 @@ var _ = Describe("ScalerStep", func() {
 					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
 					mockScalerClient.EXPECT().EnsureScaleUpNodes(gomock.Any(), config.GetScaleDuration(), gomock.Any()).Return(false, scaler.NewScaleTimeOutError("test scale timed out")),
 					mockMetricsClient.EXPECT().UpdateMetricScalingFailed(gomock.Any()),
+					mockEMClient.EXPECT().Notify(notifier.MuoStateSkipped),
 				)
 
 				ok, err := upgrader.EnsureExtraUpgradeWorkers(context.TODO(), logger)
-				Expect(err).To(HaveOccurred())
-				Expect(ok).To(BeFalse())
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(ok).To(BeTrue())
 			})
 		})
 

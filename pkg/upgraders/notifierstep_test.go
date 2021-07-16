@@ -85,29 +85,43 @@ var _ = Describe("NotifierStep", func() {
 	})
 
 	Context("When running the send-started-notification phase", func() {
-		It("will send the correct notification", func() {
-			gomock.InOrder(
-				mockEMClient.EXPECT().Notify(notifier.StateStarted),
-			)
-			result, err := upgrader.SendStartedNotification(context.TODO(), logger)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(BeTrue())
+		Context("When the cluster is upgrading", func() {
+			It("will return without doing anything", func() {
+				gomock.InOrder(
+					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(true, nil),
+				)
+				result, err := upgrader.SendStartedNotification(context.TODO(), logger)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(BeTrue())
+			})
 		})
-		It("will not succeed if it can't send the notification", func() {
-			fakeErr := fmt.Errorf("fake error")
-			gomock.InOrder(
-				mockEMClient.EXPECT().Notify(notifier.StateStarted).Return(fakeErr),
-			)
-			result, err := upgrader.SendStartedNotification(context.TODO(), logger)
-			Expect(err).To(HaveOccurred())
-			Expect(result).To(BeFalse())
+		Context("When the cluster has not started upgrading yet", func() {
+			It("will send the correct notification", func() {
+				gomock.InOrder(
+					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
+					mockEMClient.EXPECT().Notify(notifier.MuoStateStarted),
+				)
+				result, err := upgrader.SendStartedNotification(context.TODO(), logger)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(BeTrue())
+			})
+			It("will not succeed if it can't send the notification", func() {
+				fakeErr := fmt.Errorf("fake error")
+				gomock.InOrder(
+					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
+					mockEMClient.EXPECT().Notify(notifier.MuoStateStarted).Return(fakeErr),
+				)
+				result, err := upgrader.SendStartedNotification(context.TODO(), logger)
+				Expect(err).To(HaveOccurred())
+				Expect(result).To(BeFalse())
+			})
 		})
 	})
 
 	Context("When running the send-completed-notification phase", func() {
 		It("will send the notification", func() {
 			gomock.InOrder(
-				mockEMClient.EXPECT().Notify(notifier.StateCompleted),
+				mockEMClient.EXPECT().Notify(notifier.MuoStateCompleted),
 			)
 			result, err := upgrader.SendCompletedNotification(context.TODO(), logger)
 			Expect(err).NotTo(HaveOccurred())
@@ -116,7 +130,7 @@ var _ = Describe("NotifierStep", func() {
 		It("will not succeed if it can't send the notification", func() {
 			fakeErr := fmt.Errorf("fake error")
 			gomock.InOrder(
-				mockEMClient.EXPECT().Notify(notifier.StateCompleted).Return(fakeErr),
+				mockEMClient.EXPECT().Notify(notifier.MuoStateCompleted).Return(fakeErr),
 			)
 			result, err := upgrader.SendCompletedNotification(context.TODO(), logger)
 			Expect(err).To(HaveOccurred())
@@ -152,7 +166,7 @@ var _ = Describe("NotifierStep", func() {
 				It("will send a notification", func() {
 					gomock.InOrder(
 						mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
-						mockEMClient.EXPECT().Notify(notifier.StateDelayed).Return(nil),
+						mockEMClient.EXPECT().Notify(notifier.MuoStateDelayed).Return(nil),
 					)
 					result, err := upgrader.UpgradeDelayedCheck(context.TODO(), logger)
 					Expect(err).NotTo(HaveOccurred())
@@ -162,7 +176,7 @@ var _ = Describe("NotifierStep", func() {
 					fakeError := fmt.Errorf("fake error")
 					gomock.InOrder(
 						mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
-						mockEMClient.EXPECT().Notify(notifier.StateDelayed).Return(fakeError),
+						mockEMClient.EXPECT().Notify(notifier.MuoStateDelayed).Return(fakeError),
 					)
 					result, err := upgrader.UpgradeDelayedCheck(context.TODO(), logger)
 					Expect(err).To(HaveOccurred())

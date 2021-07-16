@@ -147,7 +147,7 @@ func performUpgradeFailure(c client.Client, metricsClient metrics.Metrics, s sca
 	}
 
 	// Notify of failure
-	err = nc.Notify(notifier.StateFailed)
+	err = nc.Notify(notifier.MuoStateFailed)
 	if err != nil {
 		logger.Error(err, "Failed to notify of upgrade failure")
 		return h.Phase, condition, nil

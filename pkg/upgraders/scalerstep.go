@@ -3,6 +3,7 @@ package upgraders
 import (
 	"context"
 	"fmt"
+	"github.com/openshift/managed-upgrade-operator/pkg/notifier"
 
 	"github.com/go-logr/logr"
 
@@ -31,6 +32,11 @@ func (c *clusterUpgrader) EnsureExtraUpgradeWorkers(ctx context.Context, logger 
 	if err != nil {
 		if scaler.IsScaleTimeOutError(err) {
 			c.metrics.UpdateMetricScalingFailed(c.upgradeConfig.Name)
+			err := c.notifier.Notify(notifier.MuoStateSkipped)
+			if err != nil {
+				return false, err
+			}
+			return true, nil
 		}
 		return false, err
 	}

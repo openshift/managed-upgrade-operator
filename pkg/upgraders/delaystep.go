@@ -33,7 +33,7 @@ func (c *osdUpgrader) UpgradeDelayedCheck(ctx context.Context, logger logr.Logge
 	delayTimeoutTrigger := c.config.UpgradeWindow.GetUpgradeDelayedTriggerDuration()
 	// Send notification if the managed upgrade started but did not hit the controlplane upgrade phase in delayTimeoutTrigger minutes
 	if !startTime.IsZero() && delayTimeoutTrigger > 0 && time.Now().After(startTime.Add(delayTimeoutTrigger)) {
-		err := c.notifier.Notify(notifier.StateDelayed)
+		err := c.notifier.Notify(notifier.MuoStateDelayed)
 		if err != nil {
 			return false, err
 		}

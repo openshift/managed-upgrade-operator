@@ -114,7 +114,7 @@ var _ = Describe("UpgradeDelayedCheckStep", func() {
 				It("will send a notification", func() {
 					gomock.InOrder(
 						mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
-						mockEMClient.EXPECT().Notify(notifier.StateDelayed).Return(nil),
+						mockEMClient.EXPECT().Notify(notifier.MuoStateDelayed).Return(nil),
 					)
 
 					result, err := upgrader.UpgradeDelayedCheck(context.TODO(), logger)
@@ -125,7 +125,7 @@ var _ = Describe("UpgradeDelayedCheckStep", func() {
 					fakeError := fmt.Errorf("fake error")
 					gomock.InOrder(
 						mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
-						mockEMClient.EXPECT().Notify(notifier.StateDelayed).Return(fakeError),
+						mockEMClient.EXPECT().Notify(notifier.MuoStateDelayed).Return(fakeError),
 					)
 					result, err := upgrader.UpgradeDelayedCheck(context.TODO(), logger)
 					Expect(err).To(HaveOccurred())
