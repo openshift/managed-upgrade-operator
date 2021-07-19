@@ -169,7 +169,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 		}
 
 		// Validate UpgradeConfig instance
-		validatorResult, err := validator.IsValidUpgradeConfig(instance, clusterVersion, reqLogger)
+		validatorResult, err := validator.IsValidUpgradeConfig(r.client, instance, clusterVersion, reqLogger)
 		if err != nil {
 			reqLogger.Info("An error occurred while validating UpgradeConfig")
 			return reconcile.Result{}, err

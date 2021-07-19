@@ -2,6 +2,7 @@
 package validation
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -14,13 +15,14 @@ import (
 	"github.com/blang/semver"
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
+
 	configv1 "github.com/openshift/api/config/v1"
 	"github.com/openshift/cluster-version-operator/pkg/cincinnati"
 	"github.com/openshift/library-go/pkg/image/dockerv1client"
-
 	imagereference "github.com/openshift/library-go/pkg/image/reference"
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 	cv "github.com/openshift/managed-upgrade-operator/pkg/clusterversion"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -35,7 +37,7 @@ func NewBuilder() ValidationBuilder {
 // Validator knows how to validate UpgradeConfig CRs.
 //go:generate mockgen -destination=mocks/mockValidation.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/validation Validator
 type Validator interface {
-	IsValidUpgradeConfig(uC *upgradev1alpha1.UpgradeConfig, cV *configv1.ClusterVersion, logger logr.Logger) (ValidatorResult, error)
+	IsValidUpgradeConfig(c client.Client, uC *upgradev1alpha1.UpgradeConfig, cV *configv1.ClusterVersion, logger logr.Logger) (ValidatorResult, error)
 }
 
 type validator struct{}
@@ -65,7 +67,7 @@ const (
 )
 
 // IsValidUpgradeConfig checks the validity of UpgradeConfig CRs
-func (v *validator) IsValidUpgradeConfig(uC *upgradev1alpha1.UpgradeConfig, cV *configv1.ClusterVersion, logger logr.Logger) (ValidatorResult, error) {
+func (v *validator) IsValidUpgradeConfig(c client.Client, uC *upgradev1alpha1.UpgradeConfig, cV *configv1.ClusterVersion, logger logr.Logger) (ValidatorResult, error) {
 
 	// Validate upgradeAt as RFC3339
 	upgradeAt := uC.Spec.UpgradeAt
@@ -79,13 +81,12 @@ func (v *validator) IsValidUpgradeConfig(uC *upgradev1alpha1.UpgradeConfig, cV *
 	}
 
 	// Initial validation considering the usage for three optional fields for image, version and channel.
-	// If the UpgradeConfig doesn't support image or version based upgrade then fail validation.
-	// TODO: Remove (image and version) message once OSD-7609 is done.
+	// If the UpgradeConfig doesn't support image or (version+channel) based upgrade then fail validation.
 	if !supportsImageUpgrade(uC) && !supportsVersionUpgrade(uC) {
 		return ValidatorResult{
 			IsValid:           false,
 			IsAvailableUpdate: false,
-			Message:           "Failed to validate .spec.desired in UpgradeConfig: Either (image and version) or (version and channel) should be specified",
+			Message:           "Failed to validate .spec.desired in UpgradeConfig: Either image or (version and channel) should be specified",
 		}, nil
 	}
 
@@ -135,8 +136,7 @@ func (v *validator) IsValidUpgradeConfig(uC *upgradev1alpha1.UpgradeConfig, cV *
 			}, nil
 		}
 
-		// Validate the desired version with the image digest version if spec.Desired.Image and spec.Desired.Version both specified in upgradeconfig
-		// Reference OSD 7608
+		// Fetch the version labelled in image to use for upgrade ahead.
 		digestversion, err := fetchImageVersion(image)
 		if err != nil {
 			return ValidatorResult{
@@ -146,12 +146,27 @@ func (v *validator) IsValidUpgradeConfig(uC *upgradev1alpha1.UpgradeConfig, cV *
 			}, nil
 		}
 
-		if digestversion != uC.Spec.Desired.Version {
-			return ValidatorResult{
-				IsValid:           false,
-				IsAvailableUpdate: false,
-				Message:           fmt.Sprintf("Failed to validate: spec.Desired.Image version %s and spec.Desired.Version %s are not same", digestversion, uC.Spec.Desired.Version),
-			}, nil
+		// Compare image version and UpgradeConfig version
+		if !empty(digestversion) && !empty(uC.Spec.Desired.Version) {
+			if digestversion != uC.Spec.Desired.Version {
+				return ValidatorResult{
+					IsValid:           false,
+					IsAvailableUpdate: false,
+					Message:           fmt.Sprintf("Failed to validate: spec.Desired.Image version %s and spec.Desired.Version %s are not same", digestversion, uC.Spec.Desired.Version),
+				}, nil
+			}
+		}
+
+		// Update the UpgradeConfig with the fetched version from image
+		if !empty(digestversion) && empty(uC.Spec.Desired.Version) {
+			err = updateImageVersion(c, digestversion, uC)
+			if err != nil {
+				return ValidatorResult{
+					IsValid:           false,
+					IsAvailableUpdate: false,
+					Message:           "Failed to update version from image metadata",
+				}, err
+			}
 		}
 	}
 
@@ -276,8 +291,6 @@ func (v *validator) IsValidUpgradeConfig(uC *upgradev1alpha1.UpgradeConfig, cV *
 				Message:           fmt.Sprintf("cannot find version %s in available updates", desiredVersion),
 			}, nil
 		}
-	} else {
-		logger.Info("Skipping version validation from channel as image is used")
 	}
 
 	return ValidatorResult{
@@ -334,9 +347,8 @@ func (vb *validationBuilder) NewClient() (Validator, error) {
 }
 
 // supportsImageUpgrade function checks if the upgrade should proceed with image digest reference.
-// TODO: In future, image should not be tied with version for validation. Refer Jira OSD-7609.
 func supportsImageUpgrade(uc *upgradev1alpha1.UpgradeConfig) bool {
-	return !empty(uc.Spec.Desired.Image) && !empty(uc.Spec.Desired.Version) && empty(uc.Spec.Desired.Channel)
+	return !empty(uc.Spec.Desired.Image) && empty(uc.Spec.Desired.Channel)
 }
 
 // supportsVersionUpgrade function checks if the upgrade should proceed with version from a channel.
@@ -360,7 +372,7 @@ func fetchImageVersion(image string) (string, error) {
 
 	body, err := runHTTP(manifesturl.String())
 	if len(body) == 0 {
-		return "", fmt.Errorf("Failed to fetch image manifest digest: %s needs to be a valid release image", image)
+		return "", fmt.Errorf("failed to fetch image manifest digest: %s needs to be a valid release image", image)
 	}
 	if err != nil {
 		return "", err
@@ -378,7 +390,7 @@ func fetchImageVersion(image string) (string, error) {
 
 	resbody, err := runHTTP(bloburl.String())
 	if len(resbody) == 0 {
-		return "", fmt.Errorf("Failed to fetch blobs for image manifest digest: %s needs to be a valid release image", image)
+		return "", fmt.Errorf("failed to fetch blobs for image manifest digest: %s needs to be a valid release image", image)
 	}
 	if err != nil {
 		return "", err
@@ -427,6 +439,15 @@ func parse(body []byte, v interface{}) error {
 	jsonErr := json.Unmarshal(body, v)
 	if jsonErr != nil {
 		return jsonErr
+	}
+	return nil
+}
+
+func updateImageVersion(c client.Client, v string, upgradeConfig *upgradev1alpha1.UpgradeConfig) error {
+	upgradeConfig.Spec.Desired.Version = v
+	err := c.Update(context.TODO(), upgradeConfig)
+	if err != nil {
+		return err
 	}
 	return nil
 }
