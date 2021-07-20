@@ -82,5 +82,4 @@ spec:
   PDBForceDrainTimeout: 60
   desired:
     image: "quay.io/openshift-release-dev/ocp-release@sha256:783a2c963f35ccab38e82e6a8c7fa954c3a4551e07d2f43c06098828dd986ed4"
-    version: "4.7.13"
 ```
