@@ -444,10 +444,26 @@ func parse(body []byte, v interface{}) error {
 }
 
 func updateImageVersion(c client.Client, v string, upgradeConfig *upgradev1alpha1.UpgradeConfig) error {
+	// Update the version in UpgradeConfigSpec
 	upgradeConfig.Spec.Desired.Version = v
 	err := c.Update(context.TODO(), upgradeConfig)
 	if err != nil {
 		return err
+	}
+
+	// Update the version in UpgradeConfig.Status.History
+	history := upgradeConfig.Status.History.GetHistory(upgradeConfig.Spec.Desired.Version)
+	if history == nil {
+		for _, h := range upgradeConfig.Status.History {
+			if h.Phase == upgradev1alpha1.UpgradePhaseNew {
+				h.Version = upgradeConfig.Spec.Desired.Version
+				upgradeConfig.Status.History[0] = h
+				err := c.Status().Update(context.TODO(), upgradeConfig)
+				if err != nil {
+					return err
+				}
+			}
+		}
 	}
 	return nil
 }
