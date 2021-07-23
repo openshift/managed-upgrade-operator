@@ -11,6 +11,7 @@ import (
 	v1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 	validation "github.com/openshift/managed-upgrade-operator/pkg/validation"
 	reflect "reflect"
+	client "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // MockValidator is a mock of Validator interface
@@ -37,16 +38,16 @@ func (m *MockValidator) EXPECT() *MockValidatorMockRecorder {
 }
 
 // IsValidUpgradeConfig mocks base method
-func (m *MockValidator) IsValidUpgradeConfig(arg0 *v1alpha1.UpgradeConfig, arg1 *v1.ClusterVersion, arg2 logr.Logger) (validation.ValidatorResult, error) {
+func (m *MockValidator) IsValidUpgradeConfig(arg0 client.Client, arg1 *v1alpha1.UpgradeConfig, arg2 *v1.ClusterVersion, arg3 logr.Logger) (validation.ValidatorResult, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsValidUpgradeConfig", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "IsValidUpgradeConfig", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(validation.ValidatorResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // IsValidUpgradeConfig indicates an expected call of IsValidUpgradeConfig
-func (mr *MockValidatorMockRecorder) IsValidUpgradeConfig(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockValidatorMockRecorder) IsValidUpgradeConfig(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsValidUpgradeConfig", reflect.TypeOf((*MockValidator)(nil).IsValidUpgradeConfig), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsValidUpgradeConfig", reflect.TypeOf((*MockValidator)(nil).IsValidUpgradeConfig), arg0, arg1, arg2, arg3)
 }

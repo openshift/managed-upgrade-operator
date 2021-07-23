@@ -114,7 +114,6 @@ func (c *clusterVersionClient) EnsureDesiredConfig(uc *upgradev1alpha1.UpgradeCo
 	}
 
 	// Commence upgrade using Image
-	// TODO: Remove dependency on version as per OSD-7609
 	if !empty(desired.Image) && !empty(desired.Version) && empty(desired.Channel) {
 		if clusterVersion.Spec.DesiredUpdate == nil || (clusterVersion.Spec.DesiredUpdate.Image != desired.Image) {
 			logger.Info(fmt.Sprintf("Setting ClusterVersion to Image %s", desired.Image))
@@ -127,9 +126,8 @@ func (c *clusterVersionClient) EnsureDesiredConfig(uc *upgradev1alpha1.UpgradeCo
 	}
 
 	// If neither (version+channel) nor (image) is defined, throw error.
-	// TODO OSD-7609 to remove (image+version) dependency
 	if (empty(desired.Version) && empty(desired.Channel)) && empty(desired.Image) {
-		return false, fmt.Errorf("need either (version+channel) or (image+version) defined in UpgradeConfig")
+		return false, fmt.Errorf("need either (version+channel) or (image) defined in UpgradeConfig")
 	}
 
 	return true, nil
@@ -203,7 +201,6 @@ func (c *clusterVersionClient) HasUpgradeCommenced(uc *upgradev1alpha1.UpgradeCo
 		}
 	}
 
-	// TODO: Remove version dependency after work on OSD-7609
 	if !empty(uc.Spec.Desired.Version) && !empty(uc.Spec.Desired.Image) && empty(uc.Spec.Desired.Channel) {
 		if !isEqualImage(clusterVersion, uc) {
 			return false, nil

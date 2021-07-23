@@ -169,7 +169,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 		}
 
 		// Validate UpgradeConfig instance
-		validatorResult, err := validator.IsValidUpgradeConfig(instance, clusterVersion, reqLogger)
+		validatorResult, err := validator.IsValidUpgradeConfig(r.client, instance, clusterVersion, reqLogger)
 		if err != nil {
 			reqLogger.Info("An error occurred while validating UpgradeConfig")
 			return reconcile.Result{}, err
@@ -224,6 +224,12 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 			now := time.Now()
 			history.Phase = upgradev1alpha1.UpgradePhaseUpgrading
 			history.StartTime = &metav1.Time{Time: now}
+
+			// TODO - OSD-7686 to refactor this fix
+			if history.Version == "" && instance.Spec.Desired.Image != "" {
+				history.Version = instance.Spec.Desired.Version
+			}
+
 			instance.Status.History.SetHistory(*history)
 			err = r.client.Status().Update(context.TODO(), instance)
 			if err != nil {
