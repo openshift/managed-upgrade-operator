@@ -56,94 +56,18 @@ func (s *machineSetScaler) EnsureScaleUpNodes(c client.Client, timeOut time.Dura
 		return false, fmt.Errorf("failed to get original machineset")
 	}
 
-	updated := false
-	for _, ms := range originalMachineSets.Items {
-
-		found := false
-		for _, ums := range upgradeMachinesets.Items {
-			if ums.Name == ms.Name+"-upgrade" {
-				found = true
-			}
-		}
-		if found {
-			logger.Info(fmt.Sprintf("machineset for upgrade already created :%s", ms.Name))
-			continue
-		}
-		updated = true
-		replica := int32(1)
-		newMs := ms.DeepCopy()
-
-		newMs.ObjectMeta = metav1.ObjectMeta{
-			Name:      ms.Name + "-upgrade",
-			Namespace: ms.Namespace,
-			Labels: map[string]string{
-				LABEL_UPGRADE: "true",
-			},
-		}
-		newMs.Spec.Replicas = &replica
-		newMs.Spec.Template.Labels[LABEL_UPGRADE] = "true"
-		newMs.Spec.Template.Labels[LABEL_MACHINESET] = newMs.Name
-		newMs.Spec.Selector.MatchLabels[LABEL_UPGRADE] = "true"
-		newMs.Spec.Selector.MatchLabels[LABEL_MACHINESET] = newMs.Name
-		logger.Info(fmt.Sprintf("creating machineset %s for upgrade", newMs.Name))
-
-		err = c.Create(context.TODO(), newMs)
-		if err != nil {
-			logger.Error(err, "failed to create machineset")
-			return false, err
-		}
-
+	created, err := extraMachineSetCreated(c, *originalMachineSets, *upgradeMachinesets, logger)
+	if err != nil {
+		return false, err
 	}
-	if updated {
+	if created {
 		// New machineset created, machines must not ready at the moment, so skip following steps
 		return false, nil
 	}
-	allNodeReady := true
-	for _, ms := range upgradeMachinesets.Items {
-		//We assume the create time is the start time for scale up extra compute nodes
-		startTime := ms.CreationTimestamp
-		if ms.Status.Replicas != ms.Status.ReadyReplicas {
 
-			if time.Now().After(startTime.Time.Add(timeOut)) {
-				return false, NewScaleTimeOutError(fmt.Sprintf("Machineset %s provisioning timout", ms.Name))
-			}
-			logger.Info(fmt.Sprintf("not all machines are ready for machineset:%s", ms.Name))
-			return false, nil
-		}
-
-		machines := &machineapi.MachineList{}
-		err := c.List(context.TODO(), machines, []client.ListOption{
-			client.InNamespace(MACHINE_API_NAMESPACE),
-			client.MatchingLabels{LABEL_UPGRADE: "true"},
-			client.MatchingLabels{LABEL_MACHINESET: ms.Name},
-		}...)
-		if err != nil || len(machines.Items) != 1 {
-			logger.Error(err, "failed to list extra upgrade machine")
-			return false, err
-		}
-
-		machine := machines.Items[0]
-		node := &corev1.Node{}
-		err = c.Get(context.TODO(), types.NamespacedName{Name: machine.Status.NodeRef.Name}, node)
-		if err != nil {
-			logger.Error(err, "failed to get node")
-			return false, err
-		}
-		nodeReady := false
-		var nodeName string
-		for _, con := range node.Status.Conditions {
-			if con.Type == corev1.NodeReady && con.Status == corev1.ConditionTrue {
-				nodeReady = true
-				nodeName = node.Name
-			}
-		}
-		if !nodeReady {
-			allNodeReady = false
-			if time.Now().After(startTime.Time.Add(timeOut)) {
-				logger.Info("node is not ready within timeout time")
-				return false, NewScaleTimeOutError(fmt.Sprintf("Timeout waiting for node:%s to become ready", nodeName))
-			}
-		}
+	allNodeReady, err := nodesAreReady(c, timeOut, *upgradeMachinesets, logger)
+	if err != nil {
+		return false, err
 	}
 	if !allNodeReady {
 		return false, nil
@@ -178,23 +102,9 @@ func (s *machineSetScaler) EnsureScaleDownNodes(c client.Client, nds drain.NodeD
 		if err != nil {
 			return false, err
 		}
-		for _, n := range upgradeNodes.Items {
-			res, err := nds.Execute(&n)
-			for _, r := range res {
-				logger.Info(r.Message)
-			}
-			if err != nil {
-				return false, err
-			}
-		}
-		for _, n := range upgradeNodes.Items {
-			hasFailed, err := nds.HasFailed(&n)
-			if err != nil {
-				return false, err
-			}
-			if hasFailed {
-				return false, NewDrainTimeOutError(n.Name)
-			}
+		dsResult, err := handleDrainStrategy(c, nds, *upgradeNodes, logger)
+		if err != nil {
+			return dsResult, err
 		}
 	}
 
@@ -281,4 +191,120 @@ func getExtraUpgradeNodes(c client.Client) (*corev1.NodeList, error) {
 	}
 
 	return extraUpgradeNodes, nil
+}
+
+func extraMachineSetCreated(c client.Client, originalMachinesets, upgradeMachinesets machineapi.MachineSetList, logger logr.Logger) (bool, error) {
+	for _, ms := range originalMachinesets.Items {
+
+		found := false
+		for _, ums := range upgradeMachinesets.Items {
+			if ums.Name == ms.Name+"-upgrade" {
+				found = true
+			}
+		}
+		// extra machine already created
+		if found {
+			logger.Info(fmt.Sprintf("machineset for upgrade already created :%s", ms.Name))
+			return false, nil
+		}
+
+		replica := int32(1)
+		newMs := ms.DeepCopy()
+
+		newMs.ObjectMeta = metav1.ObjectMeta{
+			Name:      ms.Name + "-upgrade",
+			Namespace: ms.Namespace,
+			Labels: map[string]string{
+				LABEL_UPGRADE: "true",
+			},
+		}
+		newMs.Spec.Replicas = &replica
+		newMs.Spec.Template.Labels[LABEL_UPGRADE] = "true"
+		newMs.Spec.Template.Labels[LABEL_MACHINESET] = newMs.Name
+		newMs.Spec.Selector.MatchLabels[LABEL_UPGRADE] = "true"
+		newMs.Spec.Selector.MatchLabels[LABEL_MACHINESET] = newMs.Name
+		logger.Info(fmt.Sprintf("creating machineset %s for upgrade", newMs.Name))
+
+		err := c.Create(context.TODO(), newMs)
+		if err != nil {
+			logger.Error(err, "failed to create machineset")
+			return false, err
+		}
+	}
+
+	return true, nil
+}
+
+func nodesAreReady(c client.Client, timeOut time.Duration, upgradeMachinesets machineapi.MachineSetList, logger logr.Logger) (bool, error) {
+
+	for _, ms := range upgradeMachinesets.Items {
+		//We assume the create time is the start time for scale up extra compute nodes
+		startTime := ms.CreationTimestamp
+		if ms.Status.Replicas != ms.Status.ReadyReplicas {
+
+			if time.Now().After(startTime.Time.Add(timeOut)) {
+				return false, NewScaleTimeOutError(fmt.Sprintf("Machineset %s provisioning timout", ms.Name))
+			}
+			logger.Info(fmt.Sprintf("not all machines are ready for machineset:%s", ms.Name))
+			return false, nil
+		}
+
+		machines := &machineapi.MachineList{}
+		err := c.List(context.TODO(), machines, []client.ListOption{
+			client.InNamespace(MACHINE_API_NAMESPACE),
+			client.MatchingLabels{LABEL_UPGRADE: "true"},
+			client.MatchingLabels{LABEL_MACHINESET: ms.Name},
+		}...)
+		if err != nil || len(machines.Items) != 1 {
+			logger.Error(err, "failed to list extra upgrade machine")
+			return false, err
+		}
+
+		machine := machines.Items[0]
+		node := &corev1.Node{}
+		err = c.Get(context.TODO(), types.NamespacedName{Name: machine.Status.NodeRef.Name}, node)
+		if err != nil {
+			logger.Error(err, "failed to get node")
+			return false, err
+		}
+
+		nodeReady := false
+		var nodeName string
+		for _, con := range node.Status.Conditions {
+			if con.Type == corev1.NodeReady && con.Status == corev1.ConditionTrue {
+				nodeReady = true
+				nodeName = node.Name
+			}
+		}
+		if !nodeReady {
+			if time.Now().After(startTime.Time.Add(timeOut)) {
+				logger.Info("node is not ready within timeout time")
+				return false, NewScaleTimeOutError(fmt.Sprintf("Timeout waiting for node:%s to become ready", nodeName))
+			}
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
+func handleDrainStrategy(c client.Client, nds drain.NodeDrainStrategy, nodes corev1.NodeList, logger logr.Logger) (bool, error) {
+	for _, n := range nodes.Items {
+		res, err := nds.Execute(&n)
+		for _, r := range res {
+			logger.Info(r.Message)
+		}
+		if err != nil {
+			return false, err
+		}
+	}
+	for _, n := range nodes.Items {
+		hasFailed, err := nds.HasFailed(&n)
+		if err != nil {
+			return false, err
+		}
+		if hasFailed {
+			return false, NewDrainTimeOutError(n.Name)
+		}
+	}
+	return true, nil
 }
