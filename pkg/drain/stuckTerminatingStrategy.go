@@ -4,6 +4,7 @@ import (
 	"context"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/openshift/managed-upgrade-operator/pkg/pod"
@@ -42,8 +43,16 @@ func (sts *stuckTerminatingStrategy) IsValid(node *corev1.Node) (bool, error) {
 }
 
 func (sts *stuckTerminatingStrategy) getPodList(node *corev1.Node) (*corev1.PodList, error) {
+
+	fieldSelector, err := fields.ParseSelector("spec.nodeName=" + node.Name)
+	if err != nil {
+		return nil, err
+	}
+
 	allPods := &corev1.PodList{}
-	err := sts.client.List(context.TODO(), allPods)
+	err = sts.client.List(context.TODO(), allPods, &client.ListOptions{
+		FieldSelector: fieldSelector,
+	})
 	if err != nil {
 		return nil, err
 	}

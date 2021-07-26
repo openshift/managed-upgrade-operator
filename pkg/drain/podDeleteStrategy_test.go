@@ -74,7 +74,7 @@ var _ = Describe("Pod Delete Strategy", func() {
 
 		It("Successfully deletes pods on a node", func() {
 			gomock.InOrder(
-				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, podList),
+				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList),
 				mockKubeClient.EXPECT().Delete(gomock.Any(), gomock.Any(), gomock.Any()),
 			)
 			result, err := pds.Execute(node)
@@ -106,7 +106,7 @@ var _ = Describe("Pod Delete Strategy", func() {
 				},
 			}
 			gomock.InOrder(
-				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, noDeletePods),
+				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, noDeletePods),
 				mockKubeClient.EXPECT().Delete(gomock.Any(), gomock.Any(), gomock.Any()).Times(3),
 			)
 			result, err := pds.Execute(node)
@@ -116,7 +116,7 @@ var _ = Describe("Pod Delete Strategy", func() {
 
 		It("Returns error if fails to return a list of pods", func() {
 			gomock.InOrder(
-				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, podList).Return(fmt.Errorf("fake error")),
+				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList).Return(fmt.Errorf("fake error")),
 			)
 			_, err := pds.Execute(node)
 			Expect(err).To(HaveOccurred())
@@ -125,7 +125,7 @@ var _ = Describe("Pod Delete Strategy", func() {
 
 		It("Returns error if failed to delete pod", func() {
 			gomock.InOrder(
-				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, podList),
+				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList),
 				mockKubeClient.EXPECT().Delete(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("fake error")),
 			)
 			_, err := pds.Execute(node)
@@ -137,7 +137,7 @@ var _ = Describe("Pod Delete Strategy", func() {
 	Context("Check if it's still valid to delete a pod", func() {
 		It("Returns true if there are target pods to be deleted", func() {
 			gomock.InOrder(
-				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, podList),
+				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList),
 			)
 			valid, err := pds.IsValid(node)
 			Expect(valid).To(BeTrue())
@@ -146,7 +146,7 @@ var _ = Describe("Pod Delete Strategy", func() {
 
 		It("Returns false if there are any errors while getting list of pods to be deleted", func() {
 			gomock.InOrder(
-				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, podList).Return(fmt.Errorf("fake error")),
+				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList).Return(fmt.Errorf("fake error")),
 			)
 			valid, err := pds.IsValid(node)
 			Expect(valid).To(BeFalse())
@@ -159,7 +159,7 @@ var _ = Describe("Pod Delete Strategy", func() {
 	Context("Get Pod List to be deleted", func() {
 		It("Returns list of pods with no errors", func() {
 			gomock.InOrder(
-				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, podList),
+				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList),
 			)
 			_, err := pds.getPodList(node)
 			Expect(err).To(BeNil())
@@ -167,7 +167,7 @@ var _ = Describe("Pod Delete Strategy", func() {
 
 		It("Returns no pods if there is any error while listing pods", func() {
 			gomock.InOrder(
-				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, podList).Return(fmt.Errorf("fake error")),
+				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList).Return(fmt.Errorf("fake error")),
 			)
 			_, err := pds.getPodList(node)
 			Expect(err).To(HaveOccurred())

@@ -82,7 +82,7 @@ var _ = Describe("Remove Finalizer Strategy", func() {
 	Context("Execute remove finalizers strategy on a node", func() {
 		It("Successfully removes finalizers from pod with finalizer", func() {
 			gomock.InOrder(
-				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, podList),
+				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList),
 				mockKubeClient.EXPECT().Update(gomock.Any(), gomock.Any()).DoAndReturn(
 					func(ctx context.Context, pod *corev1.Pod) error {
 						Expect(len(pod.ObjectMeta.Finalizers)).To(Equal(0))
@@ -108,7 +108,7 @@ var _ = Describe("Remove Finalizer Strategy", func() {
 				},
 			}
 			gomock.InOrder(
-				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, noFinalizerPods),
+				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, noFinalizerPods),
 			)
 			result, err := rfs.Execute(node)
 			Expect(result.HasExecuted).To(BeFalse())
@@ -117,7 +117,7 @@ var _ = Describe("Remove Finalizer Strategy", func() {
 
 		It("Returns error if fails to return a list of pods", func() {
 			gomock.InOrder(
-				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, podList).Return(fmt.Errorf("fake error")),
+				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList).Return(fmt.Errorf("fake error")),
 			)
 			_, err := rfs.Execute(node)
 			Expect(err).To(HaveOccurred())
@@ -126,7 +126,7 @@ var _ = Describe("Remove Finalizer Strategy", func() {
 
 		It("Returns error if failed to remove finalizer from the pod", func() {
 			gomock.InOrder(
-				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, podList),
+				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList),
 				mockKubeClient.EXPECT().Update(gomock.Any(), gomock.Any()).Return(fmt.Errorf("fake error")),
 			)
 			_, err := rfs.Execute(node)
@@ -138,7 +138,7 @@ var _ = Describe("Remove Finalizer Strategy", func() {
 	Context("Check if it's still valid to apply removeFinalizerStrategy on a node", func() {
 		It("Returns true if there are target pods with finalizers", func() {
 			gomock.InOrder(
-				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, podList),
+				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList),
 			)
 			valid, err := rfs.IsValid(node)
 			Expect(valid).To(BeTrue())
@@ -147,7 +147,7 @@ var _ = Describe("Remove Finalizer Strategy", func() {
 
 		It("Returns false if there are any errors while getting list of pods", func() {
 			gomock.InOrder(
-				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, podList).Return(fmt.Errorf("fake error")),
+				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList).Return(fmt.Errorf("fake error")),
 			)
 			valid, err := rfs.IsValid(node)
 			Expect(valid).To(BeFalse())
@@ -160,7 +160,7 @@ var _ = Describe("Remove Finalizer Strategy", func() {
 	Context("Get Pod List with finalizers", func() {
 		It("Returns list of pods with no errors", func() {
 			gomock.InOrder(
-				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, podList),
+				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList),
 			)
 			_, err := rfs.getPodList(node)
 			Expect(err).To(BeNil())
@@ -168,7 +168,7 @@ var _ = Describe("Remove Finalizer Strategy", func() {
 
 		It("Returns no pods if there is any error while listing pods", func() {
 			gomock.InOrder(
-				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, podList).Return(fmt.Errorf("fake error")),
+				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList).Return(fmt.Errorf("fake error")),
 			)
 			_, err := rfs.getPodList(node)
 			Expect(err).To(HaveOccurred())

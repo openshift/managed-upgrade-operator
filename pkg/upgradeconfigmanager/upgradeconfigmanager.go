@@ -144,9 +144,11 @@ func (s *upgradeConfigManager) StartSync(stopCh context.Context) {
 	}
 
 	duration := durationWithJitter(INITIAL_SYNC_DURATION, JITTER_FACTOR)
+	timeout := time.NewTimer(duration)
+	defer timeout.Stop()
 	for {
 		select {
-		case <-time.After(duration):
+		case <-timeout.C:
 			_, err := s.Refresh()
 			if err != nil {
 				waitDuration := s.backoffCounter.Duration()
@@ -162,6 +164,7 @@ func (s *upgradeConfigManager) StartSync(stopCh context.Context) {
 			log.Info("Stopping the upgradeConfigManager")
 			break
 		}
+		timeout.Reset(duration)
 	}
 }
 
