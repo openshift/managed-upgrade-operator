@@ -84,7 +84,7 @@ var _ = Describe("Stuck Terminating Strategy", func() {
 
 		It("Successfully deletes pods stuck in terminating state", func() {
 			gomock.InOrder(
-				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, podList),
+				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList),
 				mockKubeClient.EXPECT().Delete(gomock.Any(), gomock.Any(), gomock.Any()),
 			)
 			result, err := sts.Execute(node)
@@ -114,7 +114,7 @@ var _ = Describe("Stuck Terminating Strategy", func() {
 				},
 			}
 			gomock.InOrder(
-				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, noTerminatingPods),
+				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, noTerminatingPods),
 			)
 			result, err := sts.Execute(node)
 			Expect(result.HasExecuted).To(BeFalse())
@@ -123,7 +123,7 @@ var _ = Describe("Stuck Terminating Strategy", func() {
 
 		It("Returns error if fails to return a list of pods", func() {
 			gomock.InOrder(
-				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, podList).Return(fmt.Errorf("fake error")),
+				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList).Return(fmt.Errorf("fake error")),
 			)
 			_, err := sts.Execute(node)
 			Expect(err).To(HaveOccurred())
@@ -132,7 +132,7 @@ var _ = Describe("Stuck Terminating Strategy", func() {
 
 		It("Returns error if failed to delete pod stuck in terminating state", func() {
 			gomock.InOrder(
-				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, podList),
+				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList),
 				mockKubeClient.EXPECT().Delete(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("fake error")),
 			)
 			_, err := sts.Execute(node)
@@ -144,7 +144,7 @@ var _ = Describe("Stuck Terminating Strategy", func() {
 	Context("Check if it's still valid to apply stuckTerminating strategy on a node", func() {
 		It("Returns true if there are target pods stuck in terminating with no finalizers", func() {
 			gomock.InOrder(
-				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, podList),
+				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList),
 			)
 			valid, err := sts.IsValid(node)
 			Expect(valid).To(BeTrue())
@@ -153,7 +153,7 @@ var _ = Describe("Stuck Terminating Strategy", func() {
 
 		It("Returns false if there are any errors while getting list of pods stuck in terminating wtih no finalizers", func() {
 			gomock.InOrder(
-				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, podList).Return(fmt.Errorf("fake error")),
+				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList).Return(fmt.Errorf("fake error")),
 			)
 			valid, err := sts.IsValid(node)
 			Expect(valid).To(BeFalse())
@@ -166,7 +166,7 @@ var _ = Describe("Stuck Terminating Strategy", func() {
 	Context("Get Pod List with no finalizers and stuck in terminating state", func() {
 		It("Returns list of pods with no errors", func() {
 			gomock.InOrder(
-				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, podList),
+				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList),
 			)
 			_, err := sts.getPodList(node)
 			Expect(err).To(BeNil())
@@ -174,7 +174,7 @@ var _ = Describe("Stuck Terminating Strategy", func() {
 
 		It("Returns no pods if there is any error while listing pods", func() {
 			gomock.InOrder(
-				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, podList).Return(fmt.Errorf("fake error")),
+				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList).Return(fmt.Errorf("fake error")),
 			)
 			_, err := sts.getPodList(node)
 			Expect(err).To(HaveOccurred())
