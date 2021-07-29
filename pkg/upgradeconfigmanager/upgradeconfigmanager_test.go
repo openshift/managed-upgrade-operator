@@ -23,7 +23,7 @@ import (
 
 const (
 	TEST_OPERATOR_NAMESPACE = "test-namespace"
-	TEST_UPGRADECONFIG_CR   = "test-upgrade-config"
+	TEST_UPGRADECONFIG_CR   = "managed-upgrade-config"
 	TEST_UPGRADE_VERSION    = "4.4.4"
 	TEST_UPGRADE_CHANNEL    = "stable-4.4"
 	TEST_UPGRADE_TIME       = "2020-06-20T00:00:00Z"

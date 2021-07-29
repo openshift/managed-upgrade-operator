@@ -12,6 +12,7 @@ import (
 
 	v1 "github.com/openshift/api/config/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -238,16 +239,11 @@ func (s *upgradeConfigManager) Refresh() (bool, error) {
 	upgradeConfigSpec := configSpecs[0]
 
 	// Set up the UpgradeConfig we will replace with
-	replacementUpgradeConfig := upgradev1alpha1.UpgradeConfig{}
-
-	// Check if we have an existing UpgradeConfig to compare against, for the refresh
-	if foundUpgradeConfig {
-		// If there was an existing UpgradeConfig, make a clone of its contents
-		currentUpgradeConfig.DeepCopyInto(&replacementUpgradeConfig)
-	} else {
-		// No existing UpgradeConfig exists, give the new one the default name/namespace
-		replacementUpgradeConfig.Name = UPGRADECONFIG_CR_NAME
-		replacementUpgradeConfig.Namespace = operatorNS
+	replacementUpgradeConfig := upgradev1alpha1.UpgradeConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      UPGRADECONFIG_CR_NAME,
+			Namespace: operatorNS,
+		},
 	}
 
 	// Replace the spec with the refreshed upgrade spec
@@ -256,50 +252,9 @@ func (s *upgradeConfigManager) Refresh() (bool, error) {
 	// is there a difference between the original and replacement?
 	changed := !reflect.DeepEqual(replacementUpgradeConfig.Spec, currentUpgradeConfig.Spec)
 	if changed {
-		if foundUpgradeConfig {
-			// Delete and re-create the resource
-			log.Info("cluster upgrade spec has changed, will delete and re-create.")
-			confirmDeletedUpgrade := false
-			gracePeriod := int64(0)
-			deleteOptions := &client.DeleteOptions{
-				GracePeriodSeconds: &gracePeriod,
-			}
-
-			err = s.client.Delete(context.TODO(), currentUpgradeConfig, deleteOptions)
-			if err != nil {
-				if err == ErrUpgradeConfigNotFound {
-					log.Info("UpgradeConfig already deleted")
-					confirmDeletedUpgrade = true
-				} else {
-					log.Error(err, "can't remove UpgradeConfig during re-create")
-					return false, ErrRemovingUpgradeConfig
-				}
-			}
-
-			// Confirm object is deleted prior to creating
-			if !confirmDeletedUpgrade {
-				err = wait.PollImmediate(5*time.Second, 60*time.Second, func() (bool, error) {
-					_, err := s.Get()
-					if err != nil {
-						if err == ErrUpgradeConfigNotFound {
-							log.Info("UpgradeConfig deletion confirmed")
-							return true, nil
-						}
-						return false, err
-					}
-					return false, nil
-				})
-				if err != nil {
-					return false, fmt.Errorf("unable to confirm deletion of current UpgradeConfig: %v", err)
-				}
-			}
-		}
-
-		replacementUpgradeConfig.SetResourceVersion("")
-
-		err = s.client.Create(context.TODO(), &replacementUpgradeConfig)
+		err := recreateUpgradeConfigOnChange(s.client, foundUpgradeConfig, *currentUpgradeConfig, replacementUpgradeConfig, *s)
 		if err != nil {
-			return false, fmt.Errorf("unable to apply UpgradeConfig changes: %v", err)
+			return false, err
 		}
 		log.Info("Successfully create new UpgradeConfig")
 	} else {
@@ -370,4 +325,53 @@ func getCurrentUpgradeConfigPhase(uc *upgradev1alpha1.UpgradeConfig) upgradev1al
 		return upgradev1alpha1.UpgradePhaseUnknown
 	}
 	return history.Phase
+}
+
+func recreateUpgradeConfigOnChange(c client.Client, foundUpgradeConfig bool, existingUpgradeConfig, newUpgradeConfig upgradev1alpha1.UpgradeConfig, ucm upgradeConfigManager) error {
+	if foundUpgradeConfig {
+		// Delete and re-create the resource
+		log.Info("cluster upgrade spec has changed, will delete and re-create.")
+		confirmDeletedUpgrade := false
+		gracePeriod := int64(0)
+		deleteOptions := &client.DeleteOptions{
+			GracePeriodSeconds: &gracePeriod,
+		}
+		err := c.Delete(context.TODO(), &existingUpgradeConfig, deleteOptions)
+		if err != nil {
+			if err == ErrUpgradeConfigNotFound {
+				log.Info("UpgradeConfig already deleted")
+				confirmDeletedUpgrade = true
+			} else {
+				log.Error(err, "can't remove UpgradeConfig during re-create")
+				return ErrRemovingUpgradeConfig
+			}
+		}
+
+		// Confirm object is deleted prior to creating
+		if !confirmDeletedUpgrade {
+			err = wait.PollImmediate(5*time.Second, 60*time.Second, func() (bool, error) {
+				_, err := ucm.Get()
+				if err != nil {
+					if err == ErrUpgradeConfigNotFound {
+						log.Info("UpgradeConfig deletion confirmed")
+						return true, nil
+					}
+					return false, err
+				}
+				return false, nil
+			})
+			if err != nil {
+				return fmt.Errorf("unable to confirm deletion of current UpgradeConfig: %v", err)
+			}
+		}
+	}
+
+	newUpgradeConfig.SetResourceVersion("")
+
+	err := c.Create(context.TODO(), &newUpgradeConfig)
+	if err != nil {
+		return fmt.Errorf("unable to apply UpgradeConfig changes: %v", err)
+	}
+
+	return nil
 }
