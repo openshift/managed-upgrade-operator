@@ -3,7 +3,6 @@ package clusterversion
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/go-logr/logr"
 	configv1 "github.com/openshift/api/config/v1"
@@ -19,6 +18,11 @@ var (
 	// OSD_CV_NAME is the name of cluster version singleton
 	OSD_CV_NAME             = "version"
 	logger      logr.Logger = logf.Log.WithName("clusterversion")
+)
+
+const (
+	UpgradeWithImage          = "UpgradeWithImage"
+	UpgradeWithChannelVersion = "UpgradeWithChannelVersion"
 )
 
 // ClusterVersion interface enables implementations of the ClusterVersion
@@ -76,9 +80,26 @@ func (c *clusterVersionClient) EnsureDesiredConfig(uc *upgradev1alpha1.UpgradeCo
 
 	desired := uc.Spec.Desired
 
-	// Commence upgrade using version and channel
-	// Move the cluster to the same channel first
-	if !empty(desired.Channel) && !empty(desired.Version) {
+	// Check which upgrade spec source we are going to use
+	upgradeSource, err := checkUpgradeSource(uc)
+	if err != nil {
+		return false, err
+	}
+	switch upgradeSource {
+	// Use image to upgrade if the spec.desired.image is present
+	case UpgradeWithImage:
+		if clusterVersion.Spec.DesiredUpdate == nil {
+			logger.Info(fmt.Sprintf("Setting ClusterVersion to Image %s", desired.Image))
+			clusterVersion.Spec.DesiredUpdate = &configv1.Update{Image: desired.Image}
+			err = c.client.Update(context.TODO(), clusterVersion)
+			if err != nil {
+				return false, err
+			}
+			return true, nil
+		}
+		return false, fmt.Errorf("clusterversion already had desiredUpdate set, might be pervious upgrade wasn't completed successfully")
+	// Use version + channel if image is not present
+	case UpgradeWithChannelVersion:
 		if clusterVersion.Spec.Channel != desired.Channel {
 			logger.Info(fmt.Sprintf("Setting ClusterVersion to Channel %s Version %s", desired.Channel, desired.Version))
 			clusterVersion.Spec.Channel = desired.Channel
@@ -111,26 +132,10 @@ func (c *clusterVersionClient) EnsureDesiredConfig(uc *upgradev1alpha1.UpgradeCo
 		if err != nil {
 			return false, err
 		}
+		return true, nil
 	}
 
-	// Commence upgrade using Image
-	if !empty(desired.Image) && !empty(desired.Version) && empty(desired.Channel) {
-		if clusterVersion.Spec.DesiredUpdate == nil || (clusterVersion.Spec.DesiredUpdate.Image != desired.Image) {
-			logger.Info(fmt.Sprintf("Setting ClusterVersion to Image %s", desired.Image))
-			clusterVersion.Spec.DesiredUpdate = &configv1.Update{Image: desired.Image}
-			err = c.client.Update(context.TODO(), clusterVersion)
-			if err != nil {
-				return false, err
-			}
-		}
-	}
-
-	// If neither (version+channel) nor (image) is defined, throw error.
-	if (empty(desired.Version) && empty(desired.Channel)) && empty(desired.Image) {
-		return false, fmt.Errorf("need either (version+channel) or (image) defined in UpgradeConfig")
-	}
-
-	return true, nil
+	return false, fmt.Errorf("failed to update the clusterversion from the given upgradeconfig")
 }
 
 // HasDegradedOperatorsResult holds fields that describe a degraded operator
@@ -193,23 +198,31 @@ func (c *clusterVersionClient) HasUpgradeCommenced(uc *upgradev1alpha1.UpgradeCo
 		return false, err
 	}
 
-	if !empty(uc.Spec.Desired.Version) && !empty(uc.Spec.Desired.Channel) && empty(uc.Spec.Desired.Image) {
-		if !isEqualVersion(clusterVersion, uc) {
-			return false, nil
-		} else {
-			logger.Info(fmt.Sprintf("ClusterVersion is already set to Channel %s Version %s", uc.Spec.Desired.Channel, uc.Spec.Desired.Version))
-		}
+	// Check which upgrade spec source we are going to use
+	upgradeSource, err := checkUpgradeSource(uc)
+	if err != nil {
+		return false, err
 	}
-
-	if !empty(uc.Spec.Desired.Version) && !empty(uc.Spec.Desired.Image) && empty(uc.Spec.Desired.Channel) {
+	switch upgradeSource {
+	// When using image to upgrade
+	case UpgradeWithImage:
 		if !isEqualImage(clusterVersion, uc) {
 			return false, nil
 		} else {
 			logger.Info(fmt.Sprintf("ClusterVersion is already set to Image %s", uc.Spec.Desired.Image))
+			return true, nil
+		}
+	// When using channel + version to upgrade
+	case UpgradeWithChannelVersion:
+		if !isEqualVersion(clusterVersion, uc) {
+			return false, nil
+		} else {
+			logger.Info(fmt.Sprintf("ClusterVersion is already set to Channel %s Version %s", uc.Spec.Desired.Channel, uc.Spec.Desired.Version))
+			return true, nil
 		}
 	}
 
-	return true, nil
+	return false, fmt.Errorf("failed to check if the upgrade has commenced")
 }
 
 // GetHistory returns a configv1.UpdateHistory from a ClusterVersion
@@ -243,7 +256,14 @@ func GetCurrentVersion(clusterVersion *configv1.ClusterVersion) (string, error) 
 	return gotVersion, nil
 }
 
-// empty function checks if a given string is empty or not.
-func empty(s string) bool {
-	return strings.TrimSpace(s) == ""
+// check if we are using image or channel + version to upgrade
+func checkUpgradeSource(uc *upgradev1alpha1.UpgradeConfig) (string, error) {
+	if uc.Spec.Desired.Image != "" {
+		return UpgradeWithImage, nil
+	}
+	if uc.Spec.Desired.Channel != "" && uc.Spec.Desired.Version != "" {
+		return UpgradeWithChannelVersion, nil
+	}
+
+	return "", fmt.Errorf("cannot find the correct upgrade spec source")
 }

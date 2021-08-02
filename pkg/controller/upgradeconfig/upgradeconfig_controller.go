@@ -224,11 +224,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 			now := time.Now()
 			history.Phase = upgradev1alpha1.UpgradePhaseUpgrading
 			history.StartTime = &metav1.Time{Time: now}
-
-			// TODO - OSD-7686 to refactor this fix
-			if history.Version == "" && instance.Spec.Desired.Image != "" {
-				history.Version = instance.Spec.Desired.Version
-			}
+			history.Version = instance.Spec.Desired.Version
 
 			instance.Status.History.SetHistory(*history)
 			err = r.client.Status().Update(context.TODO(), instance)
