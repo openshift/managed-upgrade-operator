@@ -6,6 +6,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
+	"github.com/openshift/managed-upgrade-operator/config"
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 	"github.com/openshift/managed-upgrade-operator/pkg/configmanager"
 	"github.com/openshift/managed-upgrade-operator/pkg/localprovider"
@@ -74,7 +75,11 @@ func readSpecProviderConfig(client client.Client, cfb configmanager.ConfigManage
 	if err != nil {
 		return nil, err
 	}
-	cfm := cfb.New(client, ns)
+
+	target := config.CMTarget{Namespace: ns}
+	cmTarget := target.NewCMTarget()
+
+	cfm := cfb.New(client, cmTarget)
 	cfg := &SpecProviderConfig{}
 	err = cfm.Into(cfg)
 	if err != nil {
@@ -90,7 +95,11 @@ func readOcmProviderConfig(client client.Client, cfb configmanager.ConfigManager
 	if err != nil {
 		return nil, err
 	}
-	cfm := cfb.New(client, ns)
+
+	target := config.CMTarget{Namespace: ns}
+	cmTarget := target.NewCMTarget()
+
+	cfm := cfb.New(client, cmTarget)
 	cfg := &ocmprovider.OcmProviderConfig{}
 	err = cfm.Into(cfg)
 	if err != nil {
@@ -105,7 +114,11 @@ func readLocalProviderConfig(client client.Client, cfb configmanager.ConfigManag
 	if err != nil {
 		return nil, err
 	}
-	cfm := cfb.New(client, ns)
+
+	target := config.CMTarget{Namespace: ns}
+	cmTarget := target.NewCMTarget()
+
+	cfm := cfb.New(client, cmTarget)
 	cfg := &localprovider.LocalProviderConfig{}
 	err = cfm.Into(cfg)
 	if err != nil {

@@ -35,7 +35,7 @@ func (m *MockConfigManagerBuilder) EXPECT() *MockConfigManagerBuilderMockRecorde
 }
 
 // New mocks base method
-func (m *MockConfigManagerBuilder) New(arg0 client.Client, arg1 string) configmanager.ConfigManager {
+func (m *MockConfigManagerBuilder) New(arg0 client.Client, arg1 configmanager.Target) configmanager.ConfigManager {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "New", arg0, arg1)
 	ret0, _ := ret[0].(configmanager.ConfigManager)

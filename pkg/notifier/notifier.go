@@ -6,6 +6,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/openshift/managed-upgrade-operator/config"
 	"github.com/openshift/managed-upgrade-operator/pkg/configmanager"
 	"github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager"
 	"github.com/openshift/managed-upgrade-operator/util"
@@ -87,7 +88,11 @@ func readNotifierConfig(client client.Client, cfb configmanager.ConfigManagerBui
 	if err != nil {
 		return nil, err
 	}
-	cfm := cfb.New(client, ns)
+
+	target := config.CMTarget{Namespace: ns}
+	cmTarget := target.NewCMTarget()
+
+	cfm := cfb.New(client, cmTarget)
 	cfg := &NotifierConfig{}
 	err = cfm.Into(cfg)
 	if err != nil {
@@ -103,7 +108,11 @@ func readOcmNotifierConfig(client client.Client, cfb configmanager.ConfigManager
 	if err != nil {
 		return nil, err
 	}
-	cfm := cfb.New(client, ns)
+
+	target := config.CMTarget{Namespace: ns}
+	cmTarget := target.NewCMTarget()
+
+	cfm := cfb.New(client, cmTarget)
 	cfg := &OcmNotifierConfig{}
 	err = cfm.Into(cfg)
 	if err != nil {

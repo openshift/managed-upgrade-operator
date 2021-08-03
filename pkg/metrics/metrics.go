@@ -2,14 +2,20 @@ package metrics
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
+	"strconv"
 	"strings"
 	"time"
 
 	routev1 "github.com/openshift/api/route/v1"
+	"github.com/openshift/managed-upgrade-operator/config"
+	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"github.com/prometheus/client_golang/prometheus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -36,6 +42,12 @@ const (
 	ControlPlaneCompletedStateValue = "control_plane_completed"
 	WorkersStartedStateValue        = "workers_started"
 	WorkersCompletedStateValue      = "workers_completed"
+
+	MonitoringNS              = "openshift-monitoring"
+	MonitoringCAConfigMapName = "serving-certs-ca-bundle"
+	MonitoringConfigField     = "service-ca.crt"
+	promApp                   = "prometheus-k8s"
+	clusterSVCSuffix          = ".svc.cluster.local"
 )
 
 //go:generate mockgen -destination=mocks/metrics.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/metrics Metrics
@@ -78,21 +90,32 @@ func NewBuilder() MetricsBuilder {
 type metricsBuilder struct{}
 
 func (mb *metricsBuilder) NewClient(c client.Client) (Metrics, error) {
-	promHost, err := getPromHost(c)
+	promEndpoint, err := Endpoint(c, MonitoringNS, promApp, "web")
 	if err != nil {
 		return nil, err
 	}
 
-	token, err := getPrometheusToken(c)
+	token, err := prometheusToken(c)
 	if err != nil {
 		return nil, err
+	}
+
+	useRoutes := config.UseRoutes()
+	tlsConfig := &tls.Config{}
+
+	if !useRoutes {
+		tlsConfig, err = TLSConfig(c)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &Counter{
-		promHost: *promHost,
+		promEndpoint: promEndpoint,
 		promClient: http.Client{
 			Transport: &prometheusRoundTripper{
 				token: *token,
+				tls:   tlsConfig,
 			},
 		},
 	}, nil
@@ -100,19 +123,50 @@ func (mb *metricsBuilder) NewClient(c client.Client) (Metrics, error) {
 
 type prometheusRoundTripper struct {
 	token string
+	tls   *tls.Config
+}
+
+func TLSConfig(c client.Client) (*tls.Config, error) {
+	var tls tls.Config
+
+	cfgMap := &corev1.ConfigMap{}
+	err := c.Get(context.TODO(), client.ObjectKey{Name: MonitoringCAConfigMapName, Namespace: MonitoringNS}, cfgMap)
+	if err != nil {
+		return &tls, err
+	}
+
+	ca := cfgMap.Data[MonitoringConfigField]
+
+	if ca == "" {
+		return &tls, fmt.Errorf("monitoring service CA returned nil")
+	}
+
+	rootCAs, _ := x509.SystemCertPool()
+	if rootCAs == nil {
+		rootCAs = x509.NewCertPool()
+	}
+
+	if ok := rootCAs.AppendCertsFromPEM([]byte(ca)); !ok {
+		return &tls, fmt.Errorf("failed to append certs")
+	}
+
+	tls.RootCAs = rootCAs
+
+	return &tls, nil
 }
 
 func (prt *prometheusRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	req.Header.Add("Authorization", "Bearer "+prt.token)
 	transport := http.Transport{
 		TLSHandshakeTimeout: time.Second * 5,
+		TLSClientConfig:     prt.tls,
 	}
 	return transport.RoundTrip(req)
 }
 
 type Counter struct {
-	promClient http.Client
-	promHost   string
+	promClient   http.Client
+	promEndpoint string
 }
 
 var (
@@ -351,20 +405,66 @@ func (c *Counter) IsAlertFiring(alert string, checkedNS, ignoredNS []string) (bo
 	return false, nil
 }
 
-func getPromHost(c client.Client) (*string, error) {
-	route := &routev1.Route{}
-	err := c.Get(context.TODO(), types.NamespacedName{Namespace: "openshift-monitoring", Name: "prometheus-k8s"}, route)
+// GetServiceEndpoint accepts a client,namespace,svcName and portName and attempts to retrive
+// the services endpoint in the form of resolveable.service:portnumber.
+func GetServiceEndpoint(c client.Client, namespace, svcName, portName string) (string, error) {
+	svc := &corev1.Service{}
+	err := c.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: svcName}, svc)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	return &route.Spec.Host, nil
+	host := fmt.Sprintf(svcName + "." + namespace + clusterSVCSuffix)
+	var port string
+	for _, p := range svc.Spec.Ports {
+		if p.Name == portName {
+			port = strconv.FormatInt(int64(p.Port), 10)
+		}
+	}
+	endpoint := fmt.Sprint(host + ":" + port)
+	return endpoint, nil
+}
+
+func isRunModeLocal() bool {
+	return os.Getenv(k8sutil.ForceRunModeEnv) == string(k8sutil.LocalRunMode)
+}
+
+func Endpoint(c client.Client, namespace, appName, portName string) (string, error) {
+	var endpoint string
+	var err error
+
+	runLocal := isRunModeLocal()
+	useRoutes := config.UseRoutes()
+
+	if !runLocal || runLocal && !useRoutes {
+		endpoint, err = GetServiceEndpoint(c, namespace, appName, portName)
+		if err != nil {
+			return endpoint, err
+		}
+	} else {
+		endpoint, err = getRouteEndpoint(c, appName)
+		if err != nil {
+			return endpoint, err
+		}
+	}
+
+	return endpoint, nil
+}
+
+func getRouteEndpoint(c client.Client, appName string) (string, error) {
+	route := &routev1.Route{}
+	err := c.Get(context.TODO(), types.NamespacedName{Namespace: MonitoringNS, Name: appName}, route)
+	if err != nil {
+		return "", err
+	}
+
+	return route.Spec.Host, nil
 }
 
 func (c *Counter) Query(query string) (*AlertResponse, error) {
-	req, err := http.NewRequest("GET", "https://"+c.promHost+"/api/v1/query", nil)
+	req, err := http.NewRequest("GET", "https://"+c.promEndpoint+"/api/v1/query", nil)
 	if err != nil {
-		return nil, fmt.Errorf("Could not query Prometheus: %s", err)
+		return nil, fmt.Errorf("could not query prometheus: %s", err)
 	}
 
 	q := req.URL.Query()
@@ -378,7 +478,7 @@ func (c *Counter) Query(query string) (*AlertResponse, error) {
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("Error when querying Prometheus: %s", err)
+		return nil, fmt.Errorf("error when querying prometheus: %s", err)
 	}
 
 	result := &AlertResponse{}
@@ -390,11 +490,11 @@ func (c *Counter) Query(query string) (*AlertResponse, error) {
 	return result, nil
 }
 
-func getPrometheusToken(c client.Client) (*string, error) {
+func prometheusToken(c client.Client) (*string, error) {
 	sa := &corev1.ServiceAccount{}
-	err := c.Get(context.TODO(), types.NamespacedName{Namespace: "openshift-monitoring", Name: "prometheus-k8s"}, sa)
+	err := c.Get(context.TODO(), types.NamespacedName{Namespace: MonitoringNS, Name: promApp}, sa)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to fetch prometheus-k8s service account: %s", err)
+		return nil, fmt.Errorf("unable to fetch prometheus-k8s service account: %s", err)
 	}
 
 	tokenSecret := ""
@@ -404,13 +504,13 @@ func getPrometheusToken(c client.Client) (*string, error) {
 		}
 	}
 	if len(tokenSecret) == 0 {
-		return nil, fmt.Errorf("Failed to find token secret for prommetheus-k8s SA")
+		return nil, fmt.Errorf("failed to find token secret for prometheus-k8s SA")
 	}
 
 	secret := &corev1.Secret{}
-	err = c.Get(context.TODO(), types.NamespacedName{Namespace: "openshift-monitoring", Name: tokenSecret}, secret)
+	err = c.Get(context.TODO(), types.NamespacedName{Namespace: MonitoringNS, Name: tokenSecret}, secret)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to fetch secret %s: %s", tokenSecret, err)
+		return nil, fmt.Errorf("unable to fetch secret %s: %s", tokenSecret, err)
 	}
 
 	token := secret.Data[corev1.ServiceAccountTokenKey]

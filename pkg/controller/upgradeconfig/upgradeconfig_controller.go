@@ -186,7 +186,10 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 		}
 		reqLogger.Info("UpgradeConfig validated and confirmed for upgrade.")
 
-		cfm := r.configManagerBuilder.New(r.client, request.Namespace)
+		target := muocfg.CMTarget{Namespace: request.Namespace}
+		cmTarget := target.NewCMTarget()
+
+		cfm := r.configManagerBuilder.New(r.client, cmTarget)
 		cfg := &config{}
 		err = cfm.Into(cfg)
 		if err != nil {
@@ -258,7 +261,11 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 
 	case upgradev1alpha1.UpgradePhaseUpgrading:
 		reqLogger.Info("Cluster detected as already upgrading.")
-		cfm := r.configManagerBuilder.New(r.client, request.Namespace)
+
+		target := muocfg.CMTarget{Namespace: request.Namespace}
+		cmTarget := target.NewCMTarget()
+
+		cfm := r.configManagerBuilder.New(r.client, cmTarget)
 		upgrader, err := r.clusterUpgraderBuilder.NewClient(r.client, cfm, metricsClient, eventClient, instance.Spec.Type)
 		if err != nil {
 			return reconcile.Result{}, err
