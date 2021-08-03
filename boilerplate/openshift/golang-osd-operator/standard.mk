@@ -100,8 +100,7 @@ CONVENTION_DIR := boilerplate/openshift/golang-osd-operator
 # https://www.gnu.org/software/make/manual/make.html#index-_002eDEFAULT_005fGOAL-_0028define-default-goal_0029
 .DEFAULT_GOAL :=
 .PHONY: default
-#default: go-check go-test go-build
-default: go-check go-build
+default: go-check go-test go-build
 
 .PHONY: clean
 clean:
@@ -197,7 +196,7 @@ go-build: ## Build binary
 	${GOENV} GOOS=linux go build ${GOBUILDFLAGS} -o ${BINFILE} ${MAINPACKAGE}
 
 .PHONY: go-test
-go-test: ## runs go test across operator
+go-test:
 	${GOENV} go test $(TESTOPTS) $(TESTTARGETS)
 
 .PHONY: python-venv
