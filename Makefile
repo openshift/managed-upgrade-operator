@@ -24,7 +24,6 @@ run-standard-routes: ## Run locally with openshift-managed-upgrade-operator as O
 tools: ## Install local go tools for MUO
 	cat tools.go | grep _ | awk -F'"' '{print $$2}' | xargs -tI % go install %
 
-.DEFAULT_GOAL := help
 .PHONY: help
 help: ## Show this help screen.
 		@echo 'Usage: make <OPTIONS> ... <TARGETS>'
