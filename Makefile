@@ -1,5 +1,7 @@
 include boilerplate/generated-includes.mk
 
+OPERATOR_NAME=managed-upgrade-operator
+
 .PHONY: boilerplate-update
 boilerplate-update: ## Make boilerplate update itself
 	@boilerplate/update
