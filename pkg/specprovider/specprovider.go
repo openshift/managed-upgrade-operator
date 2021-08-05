@@ -6,11 +6,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
+	"github.com/openshift/managed-upgrade-operator/config"
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 	"github.com/openshift/managed-upgrade-operator/pkg/configmanager"
 	"github.com/openshift/managed-upgrade-operator/pkg/localprovider"
 	"github.com/openshift/managed-upgrade-operator/pkg/ocmprovider"
-	"github.com/openshift/managed-upgrade-operator/util"
 )
 
 // SpecProvider is an interface that enables an implementation of a spec provider
@@ -70,46 +70,53 @@ func (ppb *specProviderBuilder) New(client client.Client, builder configmanager.
 
 // Read spec provider configuration
 func readSpecProviderConfig(client client.Client, cfb configmanager.ConfigManagerBuilder) (*SpecProviderConfig, error) {
-	ns, err := util.GetOperatorNamespace()
-	if err != nil {
-		return nil, err
-	}
-	cfm := cfb.New(client, ns)
 	cfg := &SpecProviderConfig{}
+	target := config.CMTarget{}
+	cmTarget, err := target.NewCMTarget()
+	if err != nil {
+		return cfg, err
+	}
+
+	cfm := cfb.New(client, cmTarget)
 	err = cfm.Into(cfg)
 	if err != nil {
-		return nil, err
+		return cfg, err
 	}
 	return cfg, cfg.IsValid()
 }
 
 // Read OCM provider configuration
 func readOcmProviderConfig(client client.Client, cfb configmanager.ConfigManagerBuilder) (*ocmprovider.OcmProviderConfig, error) {
-	// Fetch the provider config
-	ns, err := util.GetOperatorNamespace()
-	if err != nil {
-		return nil, err
-	}
-	cfm := cfb.New(client, ns)
 	cfg := &ocmprovider.OcmProviderConfig{}
+
+	target := config.CMTarget{}
+	cmTarget, err := target.NewCMTarget()
+	if err != nil {
+		return cfg, err
+	}
+
+	cfm := cfb.New(client, cmTarget)
 	err = cfm.Into(cfg)
 	if err != nil {
-		return nil, err
+		return cfg, err
 	}
 	return cfg, cfg.IsValid()
 }
 
 // Read Local Provider configuration
 func readLocalProviderConfig(client client.Client, cfb configmanager.ConfigManagerBuilder) (*localprovider.LocalProviderConfig, error) {
-	ns, err := util.GetOperatorNamespace()
-	if err != nil {
-		return nil, err
-	}
-	cfm := cfb.New(client, ns)
 	cfg := &localprovider.LocalProviderConfig{}
+
+	target := config.CMTarget{}
+	cmTarget, err := target.NewCMTarget()
+	if err != nil {
+		return cfg, err
+	}
+
+	cfm := cfb.New(client, cmTarget)
 	err = cfm.Into(cfg)
 	if err != nil {
-		return nil, err
+		return cfg, err
 	}
 
 	return cfg, cfg.IsValid()

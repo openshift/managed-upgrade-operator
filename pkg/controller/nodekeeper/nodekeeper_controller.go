@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/openshift/managed-upgrade-operator/util"
+	"github.com/openshift/managed-upgrade-operator/config"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -138,11 +138,13 @@ func (r *ReconcileNodeKeeper) Reconcile(ctx context.Context, request reconcile.R
 		return reconcile.Result{}, nil
 	}
 
-	operatorNamespace, err := util.GetOperatorNamespace()
+	target := config.CMTarget{}
+	cmTarget, err := target.NewCMTarget()
 	if err != nil {
-		return reconcile.Result{}, nil
+		return reconcile.Result{}, err
 	}
-	cfm := r.configManagerBuilder.New(r.client, operatorNamespace)
+
+	cfm := r.configManagerBuilder.New(r.client, cmTarget)
 	cfg := &nodeKeeperConfig{}
 	err = cfm.Into(cfg)
 	if err != nil {
