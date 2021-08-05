@@ -41,6 +41,14 @@ func (cfg *maintenanceConfig) GetControlPlaneDuration() time.Duration {
 	return time.Duration(cfg.ControlPlaneTime) * time.Minute
 }
 
+func (cfg *scaleConfig) IsValid() error {
+	if cfg.TimeOut <= 0 {
+		return fmt.Errorf("config scale timeOut is invalid")
+	}
+
+	return nil
+}
+
 type upgradeWindow struct {
 	TimeOut      int `yaml:"timeOut" default:"120"`
 	DelayTrigger int `yaml:"delayTrigger" default:"30"`
@@ -66,9 +74,6 @@ type healthCheck struct {
 func (cfg *upgraderConfig) IsValid() error {
 	if err := cfg.Maintenance.IsValid(); err != nil {
 		return err
-	}
-	if cfg.Scale.TimeOut <= 0 {
-		return fmt.Errorf("config scale timeOut is invalid")
 	}
 	if cfg.NodeDrain.Timeout <= 0 {
 		return fmt.Errorf("config nodeDrain timeOut is invalid")

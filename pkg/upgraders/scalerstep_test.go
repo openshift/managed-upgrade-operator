@@ -3,6 +3,7 @@ package upgraders
 import (
 	"context"
 	"fmt"
+
 	"github.com/openshift/managed-upgrade-operator/pkg/notifier"
 
 	. "github.com/onsi/ginkgo"
@@ -108,6 +109,12 @@ var _ = Describe("ScalerStep", func() {
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(ok).To(BeTrue())
 			})
+			It("Should fail when the scale timeout is not set in configmap", func() {
+				config.Scale.TimeOut = 0
+				ok, err := upgrader.EnsureExtraUpgradeWorkers(context.TODO(), logger)
+				Expect(err).NotTo(BeNil())
+				Expect(ok).NotTo(BeTrue())
+			})
 		})
 
 		Context("When capacity reservation is disabled", func() {
@@ -119,7 +126,19 @@ var _ = Describe("ScalerStep", func() {
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(ok).To(BeTrue())
 			})
-			It("Shoud not scale down extra nodes", func() {
+			It("Should not scale down extra nodes", func() {
+				ok, err := upgrader.RemoveExtraScaledNodes(context.TODO(), logger)
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(ok).To(BeTrue())
+			})
+			It("Scale up should not fail if scale timeout is not set in configmap", func() {
+				config.Scale.TimeOut = 0
+				ok, err := upgrader.EnsureExtraUpgradeWorkers(context.TODO(), logger)
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(ok).To(BeTrue())
+			})
+			It("Scale down should not fail if scale timeout is not set in configmap", func() {
+				config.Scale.TimeOut = 0
 				ok, err := upgrader.RemoveExtraScaledNodes(context.TODO(), logger)
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(ok).To(BeTrue())
