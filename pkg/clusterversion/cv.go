@@ -78,8 +78,6 @@ func (c *clusterVersionClient) EnsureDesiredConfig(uc *upgradev1alpha1.UpgradeCo
 		return false, err
 	}
 
-	desired := uc.Spec.Desired
-
 	// Check which upgrade spec source we are going to use
 	upgradeSource, err := checkUpgradeSource(uc)
 	if err != nil {
@@ -88,51 +86,18 @@ func (c *clusterVersionClient) EnsureDesiredConfig(uc *upgradev1alpha1.UpgradeCo
 	switch upgradeSource {
 	// Use image to upgrade if the spec.desired.image is present
 	case UpgradeWithImage:
-		if clusterVersion.Spec.DesiredUpdate == nil {
-			logger.Info(fmt.Sprintf("Setting ClusterVersion to Image %s", desired.Image))
-			clusterVersion.Spec.DesiredUpdate = &configv1.Update{Image: desired.Image}
-			err = c.client.Update(context.TODO(), clusterVersion)
-			if err != nil {
-				return false, err
-			}
-			return true, nil
-		}
-		return false, fmt.Errorf("clusterversion already had desiredUpdate set, might be pervious upgrade wasn't completed successfully")
-	// Use version + channel if image is not present
-	case UpgradeWithChannelVersion:
-		if clusterVersion.Spec.Channel != desired.Channel {
-			logger.Info(fmt.Sprintf("Setting ClusterVersion to Channel %s Version %s", desired.Channel, desired.Version))
-			clusterVersion.Spec.Channel = desired.Channel
-			err = c.client.Update(context.TODO(), clusterVersion)
-			if err != nil {
-				return false, err
-			}
-
-			// Retrieve the updated version
-			clusterVersion, err = c.GetClusterVersion()
-			if err != nil {
-				return false, err
-			}
-		}
-
-		// The CVO may need time sync the version before launching the upgrade
-		updateAvailable := false
-		for _, update := range clusterVersion.Status.AvailableUpdates {
-			if update.Version == desired.Version && update.Image != "" {
-				updateAvailable = true
-			}
-		}
-		if !updateAvailable {
-			return false, nil
-		}
-
-		clusterVersion.Spec.Overrides = []configv1.ComponentOverride{}
-		clusterVersion.Spec.DesiredUpdate = &configv1.Update{Version: uc.Spec.Desired.Version}
-		err = c.client.Update(context.TODO(), clusterVersion)
+		triggered, err := c.runUpgradeWithImage(clusterVersion, uc)
 		if err != nil {
 			return false, err
 		}
-		return true, nil
+		return triggered, err
+	// Use version + channel if image is not present
+	case UpgradeWithChannelVersion:
+		triggered, err := c.runUpgradeWithChannelVersion(clusterVersion, uc)
+		if err != nil {
+			return false, err
+		}
+		return triggered, nil
 	}
 
 	return false, fmt.Errorf("failed to update the clusterversion from the given upgradeconfig")
@@ -266,4 +231,56 @@ func checkUpgradeSource(uc *upgradev1alpha1.UpgradeConfig) (string, error) {
 	}
 
 	return "", fmt.Errorf("cannot find the correct upgrade spec source")
+}
+
+func (c *clusterVersionClient) runUpgradeWithImage(cv *configv1.ClusterVersion, uc *upgradev1alpha1.UpgradeConfig) (bool, error) {
+	desired := uc.Spec.Desired
+
+	if cv.Spec.DesiredUpdate == nil || cv.Spec.DesiredUpdate.Image != desired.Image {
+		logger.Info(fmt.Sprintf("Setting ClusterVersion to Image %s", desired.Image))
+		cv.Spec.DesiredUpdate = &configv1.Update{Image: desired.Image, Version: ""}
+		err := c.client.Update(context.TODO(), cv)
+		if err != nil {
+			return false, err
+		}
+	}
+	return true, nil
+}
+
+func (c *clusterVersionClient) runUpgradeWithChannelVersion(cv *configv1.ClusterVersion, uc *upgradev1alpha1.UpgradeConfig) (bool, error) {
+	desired := uc.Spec.Desired
+
+	if cv.Spec.Channel != desired.Channel {
+		logger.Info(fmt.Sprintf("Setting ClusterVersion to Channel %s Version %s", desired.Channel, desired.Version))
+		cv.Spec.Channel = desired.Channel
+		err := c.client.Update(context.TODO(), cv)
+		if err != nil {
+			return false, err
+		}
+
+		// Retrieve the updated version
+		cv, err = c.GetClusterVersion()
+		if err != nil {
+			return false, err
+		}
+	}
+
+	// The CVO may need time sync the version before launching the upgrade
+	updateAvailable := false
+	for _, update := range cv.Status.AvailableUpdates {
+		if update.Version == desired.Version && update.Image != "" {
+			updateAvailable = true
+		}
+	}
+	if !updateAvailable {
+		return false, nil
+	}
+
+	cv.Spec.Overrides = []configv1.ComponentOverride{}
+	cv.Spec.DesiredUpdate = &configv1.Update{Version: uc.Spec.Desired.Version}
+	err := c.client.Update(context.TODO(), cv)
+	if err != nil {
+		return false, err
+	}
+	return true, nil
 }
