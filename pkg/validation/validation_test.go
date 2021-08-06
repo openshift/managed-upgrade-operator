@@ -92,7 +92,7 @@ var _ = Describe("Validation of UpgradeConfig CR", func() {
 				testUpgradeConfig.Spec.UpgradeAt = "sometime tomorrow morning would be great thanks"
 
 				result, err := testValidator.IsValidUpgradeConfig(testClient, testUpgradeConfig, testClusterVersion, testLogger)
-				Expect(err).Should(BeNil())
+				Expect(err).ShouldNot(BeNil())
 				Expect(result.IsValid).Should(BeFalse())
 			})
 		})
@@ -115,7 +115,7 @@ var _ = Describe("Validation of UpgradeConfig CR", func() {
 				// Set version as non semver
 				testUpgradeConfig.Spec.Desired.Version = "not a correct semver"
 				result, err := testValidator.IsValidUpgradeConfig(testClient, testUpgradeConfig, testClusterVersion, testLogger)
-				Expect(err).Should(BeNil())
+				Expect(err).ShouldNot(BeNil())
 				Expect(result.IsValid).Should(BeFalse())
 			})
 		})
@@ -125,7 +125,7 @@ var _ = Describe("Validation of UpgradeConfig CR", func() {
 				testUpgradeConfig.Spec.Desired.Version = "4.4.4"
 				testClusterVersion.Status.History[0].Version = "not a correct semver"
 				result, err := testValidator.IsValidUpgradeConfig(testClient, testUpgradeConfig, testClusterVersion, testLogger)
-				Expect(err).Should(BeNil())
+				Expect(err).ShouldNot(BeNil())
 				Expect(result.IsValid).Should(BeFalse())
 			})
 		})
