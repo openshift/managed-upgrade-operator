@@ -266,5 +266,77 @@ var _ = Describe("ClusterVersion client and utils", func() {
 				})
 			})
 		})
+		Context("When setting the ClusterVersion image", func() {
+			Context("When the clusterversion desired image is missing", func() {
+				It("Sets the desired image from the value of upgradeconfig", func() {
+					clusterVersion := configv1.ClusterVersion{
+						Spec: configv1.ClusterVersionSpec{
+							Channel: upgradeConfig.Spec.Desired.Channel,
+							DesiredUpdate: &configv1.Update{
+								Version: "Some version",
+							},
+						},
+					}
+					upgradeConfig.Spec.Desired.Image = "quay.io/test/test-image"
+					gomock.InOrder(
+						mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, clusterVersion).Return(nil),
+						mockKubeClient.EXPECT().Update(gomock.Any(), gomock.Any()).DoAndReturn(
+							func(ctx context.Context, cv *configv1.ClusterVersion) error {
+								Expect(cv.Spec.DesiredUpdate.Image).To(Equal(upgradeConfig.Spec.Desired.Image))
+								Expect(cv.Spec.DesiredUpdate.Version).To(Equal(""))
+								return nil
+							}),
+					)
+					result, err := cvClient.EnsureDesiredConfig(upgradeConfig)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(result).To(BeTrue())
+				})
+			})
+			Context("When the clusterversion desired image does not match the upgradeconfig", func() {
+				It("Sets the desired image from the value of upgradeconfig", func() {
+					clusterVersion := configv1.ClusterVersion{
+						Spec: configv1.ClusterVersionSpec{
+							Channel: upgradeConfig.Spec.Desired.Channel,
+							DesiredUpdate: &configv1.Update{
+								Image: "quay.io/test/test-image2",
+							},
+						},
+					}
+					upgradeConfig.Spec.Desired.Image = "quay.io/test/test-image"
+					gomock.InOrder(
+						mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, clusterVersion).Return(nil),
+						mockKubeClient.EXPECT().Update(gomock.Any(), gomock.Any()).DoAndReturn(
+							func(ctx context.Context, cv *configv1.ClusterVersion) error {
+								Expect(cv.Spec.DesiredUpdate.Image).To(Equal(upgradeConfig.Spec.Desired.Image))
+								Expect(cv.Spec.DesiredUpdate.Version).To(Equal(""))
+								return nil
+							}),
+					)
+					result, err := cvClient.EnsureDesiredConfig(upgradeConfig)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(result).To(BeTrue())
+				})
+			})
+			Context("When the clusterversion desired image matches the upgradeconfig", func() {
+				It("Indicates that the cluster is upgraded or upgrading", func() {
+					clusterVersion := configv1.ClusterVersion{
+						Spec: configv1.ClusterVersionSpec{
+							Channel: upgradeConfig.Spec.Desired.Channel,
+							DesiredUpdate: &configv1.Update{
+								Image: "quay.io/test/test-image",
+							},
+						},
+					}
+					upgradeConfig.Spec.Desired.Image = "quay.io/test/test-image"
+					gomock.InOrder(
+						mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, clusterVersion).Return(nil),
+					)
+					hasCommenced, err := cvClient.HasUpgradeCommenced(upgradeConfig)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(hasCommenced).To(BeTrue())
+				})
+			})
+		})
 	})
+
 })
