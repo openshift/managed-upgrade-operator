@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
+	"github.com/openshift/managed-upgrade-operator/config"
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 	cv "github.com/openshift/managed-upgrade-operator/pkg/clusterversion"
 	"github.com/openshift/managed-upgrade-operator/pkg/configmanager"
@@ -140,7 +141,7 @@ func (s *upgradeConfigManager) StartSync(stopCh context.Context) {
 
 	metricsClient, err := s.metricsBuilder.NewClient(s.client)
 	if err != nil {
-		log.Error(err, "can't create metrics client")
+		log.Error(err, "can not create metrics client")
 		return
 	}
 
@@ -266,15 +267,18 @@ func (s *upgradeConfigManager) Refresh() (bool, error) {
 
 // Reads the UpgradeConfigManager's configuration
 func readConfigManagerConfig(client client.Client, cfb configmanager.ConfigManagerBuilder) (*UpgradeConfigManagerConfig, error) {
-	ns, err := util.GetOperatorNamespace()
-	if err != nil {
-		return nil, err
-	}
-	cfm := cfb.New(client, ns)
 	cfg := &UpgradeConfigManagerConfig{}
+
+	target := config.CMTarget{}
+	cmTarget, err := target.NewCMTarget()
+	if err != nil {
+		return cfg, err
+	}
+
+	cfm := cfb.New(client, cmTarget)
 	err = cfm.Into(cfg)
 	if err != nil {
-		return nil, err
+		return cfg, err
 	}
 	return cfg, cfg.IsValid()
 }

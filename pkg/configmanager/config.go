@@ -7,29 +7,20 @@ import (
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"github.com/openshift/managed-upgrade-operator/config"
-)
-
-const (
-	// CONFIG_MAP_NAME is the name of the operators config
-	CONFIG_MAP_NAME = config.OperatorName + "-config"
-	// CONFIG_PATH is the name of the config
-	CONFIG_PATH = "config.yaml"
 )
 
 // ConfigManagerBuilder is an interface describing the functions of a cluster upgrader.
 //go:generate mockgen -destination=mocks/configmanagerbuilder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/configmanager ConfigManagerBuilder
 type ConfigManagerBuilder interface {
-	New(client.Client, string) ConfigManager
+	New(client.Client, Target) ConfigManager
 }
 
 type configManagerBuilder struct{}
 
-func (*configManagerBuilder) New(c client.Client, ns string) ConfigManager {
+func (*configManagerBuilder) New(c client.Client, t Target) ConfigManager {
 	return &configManager{
-		client:    c,
-		namespace: ns,
+		client: c,
+		target: t,
 	}
 }
 
@@ -44,9 +35,15 @@ type ConfigManager interface {
 	Into(ConfigValidator) error
 }
 
+type Target struct {
+	Name      string
+	Namespace string
+	ConfigKey string
+}
+
 type configManager struct {
-	client    client.Client
-	namespace string
+	client client.Client
+	target Target
 }
 
 // ConfigValidator is an interface that validates MUO's config
@@ -56,14 +53,17 @@ type ConfigValidator interface {
 
 func (cm *configManager) Into(into ConfigValidator) error {
 	cfgMap := &corev1.ConfigMap{}
-	err := cm.client.Get(context.TODO(), client.ObjectKey{Name: CONFIG_MAP_NAME, Namespace: cm.namespace}, cfgMap)
+	err := cm.client.Get(context.TODO(), client.ObjectKey{Name: cm.target.Name, Namespace: cm.target.Namespace}, cfgMap)
 	if err != nil {
 		return err
 	}
-	yml := cfgMap.Data[CONFIG_PATH]
+
+	ck := cm.target.ConfigKey
+
+	yml := cfgMap.Data[ck]
 	err = yaml.Unmarshal([]byte(yml), into)
 	if err != nil {
-		return fmt.Errorf("Check config map %s for incorrect yaml formatting %s", CONFIG_MAP_NAME, err.Error())
+		return fmt.Errorf("check config map %s for incorrect yaml formatting %s", cm.target.Name, err.Error())
 	}
 
 	return into.IsValid()

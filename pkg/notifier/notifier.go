@@ -6,9 +6,9 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/openshift/managed-upgrade-operator/config"
 	"github.com/openshift/managed-upgrade-operator/pkg/configmanager"
 	"github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager"
-	"github.com/openshift/managed-upgrade-operator/util"
 )
 
 // Notifier is an interface that enables implementation of a Notifier
@@ -83,31 +83,36 @@ func (nb *notifierBuilder) New(client client.Client, cfgBuilder configmanager.Co
 
 // Read notifier configuration
 func readNotifierConfig(client client.Client, cfb configmanager.ConfigManagerBuilder) (*NotifierConfig, error) {
-	ns, err := util.GetOperatorNamespace()
-	if err != nil {
-		return nil, err
-	}
-	cfm := cfb.New(client, ns)
 	cfg := &NotifierConfig{}
+
+	target := config.CMTarget{}
+	cmTarget, err := target.NewCMTarget()
+	if err != nil {
+		return cfg, err
+	}
+
+	cfm := cfb.New(client, cmTarget)
 	err = cfm.Into(cfg)
 	if err != nil {
-		return nil, err
+		return cfg, err
 	}
 	return cfg, cfg.IsValid()
 }
 
 // Read OCM provider configuration
 func readOcmNotifierConfig(client client.Client, cfb configmanager.ConfigManagerBuilder) (*OcmNotifierConfig, error) {
-	// Fetch the provider config
-	ns, err := util.GetOperatorNamespace()
-	if err != nil {
-		return nil, err
-	}
-	cfm := cfb.New(client, ns)
 	cfg := &OcmNotifierConfig{}
+
+	target := config.CMTarget{}
+	cmTarget, err := target.NewCMTarget()
+	if err != nil {
+		return cfg, err
+	}
+
+	cfm := cfb.New(client, cmTarget)
 	err = cfm.Into(cfg)
 	if err != nil {
-		return nil, err
+		return cfg, err
 	}
 	return cfg, cfg.IsValid()
 }
