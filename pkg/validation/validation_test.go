@@ -1,12 +1,14 @@
 package validation
 
 import (
+	"net/http"
 	"time"
 
 	"github.com/blang/semver"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/ghttp"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	configv1 "github.com/openshift/api/config/v1"
@@ -31,6 +33,7 @@ var _ = Describe("Validation of UpgradeConfig CR", func() {
 		testClusterVersion    *configv1.ClusterVersion
 		testLogger            logr.Logger
 		testClient            client.Client
+		server                *ghttp.Server
 	)
 
 	BeforeEach(func() {
@@ -177,4 +180,96 @@ var _ = Describe("Validation of UpgradeConfig CR", func() {
 			})
 		})
 	})
+
+	Context("Validating image", func() {
+		Context("when the image format is valid", func() {
+			It("Should pass the validation", func() {
+				testImage := "example.com/test-ns/test-image@sha256:aaaabbbbccccddddeeeeffff111122223333444455556666aaaabbbbccccdddd"
+				err := imageValidation(testImage)
+				Expect(err).ShouldNot(HaveOccurred())
+			})
+		})
+		Context("when the image format is incorrect", func() {
+			It("Should fail validate if the image format is incorrect", func() {
+				testImage := "www.example.com/test"
+				err := imageValidation(testImage)
+				Expect(err).Should(HaveOccurred())
+			})
+		})
+	})
+
+	Context("Validating channel", func() {
+		Context("When the specified version is found in CVO", func() {
+			It("should pass the channel validation", func() {
+				cvoUpdates := []configv1.Update{
+					{
+						Version: "4.7.19",
+						Image:   "test.registry/test-namespace/test-image@sha256:eafdac268e1f65053de423ba4a028e8de5133ab78e7954d76ed838bcf5f4f666",
+					},
+					{
+						Version: "4.7.16",
+						Image:   "test.registry/test-namespace/test-image@sha256:3e59cff6101b0f0732540d9f2cf1fe9c7ea5ab1e8737df82e789eeb129d1a9af",
+					},
+				}
+				testUpgradeConfig.Spec.Desired.Version = "4.7.19"
+				err := channelValidation(testUpgradeConfig, cvoUpdates, testLogger)
+				Expect(err).ShouldNot(HaveOccurred())
+			})
+		})
+		Context("When the specified version is not found in CVO", func() {
+			It("should fail the channel validation", func() {
+				cvoUpdates := []configv1.Update{
+					{
+						Version: "4.7.19",
+						Image:   "test.registry/test-namespace/test-image@sha256:eafdac268e1f65053de423ba4a028e8de5133ab78e7954d76ed838bcf5f4f666",
+					},
+					{
+						Version: "4.7.16",
+						Image:   "test.registry/test-namespace/test-image@sha256:3e59cff6101b0f0732540d9f2cf1fe9c7ea5ab1e8737df82e789eeb129d1a9af",
+					},
+				}
+				testUpgradeConfig.Spec.Desired.Version = "4.7.18"
+				err := channelValidation(testUpgradeConfig, cvoUpdates, testLogger)
+				Expect(err).Should(HaveOccurred())
+			})
+		})
+	})
+	Context("Sending the http request to remote server", func() {
+		BeforeEach(func() {
+			server = ghttp.NewServer()
+		})
+		AfterEach(func() {
+			server.Close()
+		})
+		Context("When the server url is available", func() {
+			BeforeEach(func() {
+				statuscode := http.StatusOK
+				body := []byte("response body")
+				server.AppendHandlers(ghttp.CombineHandlers(
+					ghttp.VerifyRequest("GET", "/path"),
+					ghttp.RespondWithPtr(&statuscode, &body),
+				))
+			})
+			It("Will return the expected result", func() {
+				result, err := runHTTP("http://" + server.Addr() + "/path")
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(result).Should(ContainSubstring("body"))
+			})
+		})
+		Context("When the return code is non 200", func() {
+			BeforeEach(func() {
+				statuscode := http.StatusInternalServerError
+				body := []byte("body string")
+				server.AppendHandlers(ghttp.CombineHandlers(
+					ghttp.VerifyRequest("GET", "/path"),
+					ghttp.RespondWithPtr(&statuscode, &body),
+				))
+			})
+			It("Will report error", func() {
+				_, err := runHTTP("http://" + server.Addr() + "/path")
+				Expect(err).ShouldNot(BeNil())
+			})
+		})
+	})
+
 })

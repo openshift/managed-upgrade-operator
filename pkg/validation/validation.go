@@ -122,7 +122,15 @@ func (v *validator) IsValidUpgradeConfig(c client.Client, uC *upgradev1alpha1.Up
 
 	// Validate spec.desired.version and spec.desired.channel together when the image is absent
 	if ucVersion != "" && ucChannel != "" {
-		err = channelValidation(ucChannel, ucVersion, cV, logger)
+		cvoUpdates, err := fetchCVOUpdates(cV, uC)
+		if err != nil {
+			return ValidatorResult{
+				IsValid:           false,
+				IsAvailableUpdate: false,
+				Message:           err.Error(),
+			}, err
+		}
+		err = channelValidation(uC, cvoUpdates, logger)
 		if err != nil {
 			return ValidatorResult{
 				IsValid:           false,
@@ -254,7 +262,7 @@ func runHTTP(url string) ([]byte, error) {
 	}
 
 	if res.StatusCode != http.StatusOK {
-		return nil, getErr
+		return nil, fmt.Errorf("return code is not 200")
 	}
 
 	if res.Body != nil {
@@ -367,45 +375,55 @@ func versionValidation(ucVersion string, cV *configv1.ClusterVersion, logger log
 }
 
 // Validate the given spec.desired.channel
-func channelValidation(ucChannel, ucVersion string, cV *configv1.ClusterVersion, logger logr.Logger) error {
-	// Validate available version is in Cincinnati.
-	clusterId, err := uuid.Parse(string(cV.Spec.ClusterID))
-	if err != nil {
-		return err
-	}
-	upstreamURI, err := url.Parse(getUpstreamURL(cV))
-	if err != nil {
-		return err
-	}
-
-	cvVersion, _ := cv.GetCurrentVersion(cV)
-	parsedCvVersion, _ := semver.Parse(cvVersion)
-
-	updates, err := cincinnati.NewClient(clusterId).GetUpdates(upstreamURI.String(), ucChannel, parsedCvVersion)
-	if err != nil {
-		return err
-	}
-
-	var cvoUpdates []configv1.Update
-	for _, update := range updates {
-		cvoUpdates = append(cvoUpdates, configv1.Update{
-			Version: update.Version.String(),
-			Image:   update.Image,
-		})
-	}
+func channelValidation(uC *upgradev1alpha1.UpgradeConfig, cvoUpdates []configv1.Update, logger logr.Logger) error {
+	ucDesired := uC.Spec.Desired
 
 	// Check whether the desired version exists in availableUpdates
 	found := false
 	for _, v := range cvoUpdates {
-		if v.Version == ucVersion && !v.Force {
+		if v.Version == ucDesired.Version && !v.Force {
 			found = true
 		}
 	}
 
 	if !found {
-		logger.Info(fmt.Sprintf("Failed to find the desired version %s in channel %s", ucVersion, ucChannel))
-		return fmt.Errorf("cannot find version %s in available updates", ucVersion)
+		logger.Info(fmt.Sprintf("Failed to find the desired version %s in channel %s", ucDesired.Version, ucDesired.Channel))
+		return fmt.Errorf("cannot find version %s in available updates", ucDesired.Version)
 	}
 
 	return nil
+}
+
+// Fetch the available upgrade from upstream with the given version
+func fetchCVOUpdates(cV *configv1.ClusterVersion, uc *upgradev1alpha1.UpgradeConfig) ([]configv1.Update, error) {
+	clusterId, err := uuid.Parse(string(cV.Spec.ClusterID))
+	if err != nil {
+		return nil, err
+	}
+	upstreamURI, err := url.Parse(getUpstreamURL(cV))
+	if err != nil {
+		return nil, err
+	}
+
+	cvVersion, _ := cv.GetCurrentVersion(cV)
+	parsedCvVersion, _ := semver.Parse(cvVersion)
+
+	// Fetch available updates by version in Cincinnati.
+	updates, err := cincinnati.NewClient(clusterId).GetUpdates(upstreamURI.String(), uc.Spec.Desired.Channel, parsedCvVersion)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(updates) > 0 {
+		var cvoUpdates []configv1.Update
+		for _, update := range updates {
+			cvoUpdates = append(cvoUpdates, configv1.Update{
+				Version: update.Version.String(),
+				Image:   update.Image,
+			})
+		}
+		return cvoUpdates, err
+	}
+
+	return nil, fmt.Errorf("no available upgrade for the given clusterversion %s", cvVersion)
 }
