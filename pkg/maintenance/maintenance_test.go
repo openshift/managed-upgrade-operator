@@ -3,13 +3,17 @@ package maintenance
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/go-openapi/strfmt"
 	"github.com/golang/mock/gomock"
 	routev1 "github.com/openshift/api/route/v1"
+	"github.com/openshift/managed-upgrade-operator/config"
 	ammocks "github.com/openshift/managed-upgrade-operator/pkg/alertmanager/mocks"
+	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
 	"github.com/openshift/managed-upgrade-operator/util/mocks"
+	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	amv2Models "github.com/prometheus/alertmanager/api/v2/models"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -34,6 +38,9 @@ var _ = Describe("Alert Manager Maintenance Client", func() {
 		testVersion                 = "V-1.million.25"
 		testWorkerCount       int32 = 5
 		testNewWorkerCount    int32 = 4
+
+		// Certificate Authority
+		fakeCAMap = make(map[string]string)
 
 		// Create test silence created by the operator
 		testSilence = amv2Models.Silence{
@@ -70,6 +77,30 @@ var _ = Describe("Alert Manager Maintenance Client", func() {
 		silenceClient = ammocks.NewMockAlertManagerSilencer(mockCtrl)
 		maintenance = alertManagerMaintenance{client: silenceClient}
 		mockKubeClient = mocks.NewMockClient(mockCtrl)
+		fakeCAMap[metrics.MonitoringConfigField] = `
+-----BEGIN CERTIFICATE-----
+MIIDmTCCAoECFC/TvMvmk3V9QdPG4bPDIE085uvHMA0GCSqGSIb3DQEBCwUAMIGI
+MQswCQYDVQQGEwJBVTEMMAoGA1UECAwDUUxEMRAwDgYDVQQHDAdEb2dGaXNoMRcw
+FQYDVQQKDA5UcnVzdE1lSW1hQ2VydDEKMAgGA1UECwwBMzEUMBIGA1UEAwwLQ2Vy
+dCBDb2JhaW4xHjAcBgkqhkiG9w0BCQEWD2NlcnR5QHRocmVlLmxvbDAeFw0yMTA4
+MDMwOTE0MDlaFw00NjAzMjUwOTE0MDlaMIGIMQswCQYDVQQGEwJBVTEMMAoGA1UE
+CAwDUUxEMRAwDgYDVQQHDAdEb2dGaXNoMRcwFQYDVQQKDA5UcnVzdE1lSW1hQ2Vy
+dDEKMAgGA1UECwwBMzEUMBIGA1UEAwwLQ2VydCBDb2JhaW4xHjAcBgkqhkiG9w0B
+CQEWD2NlcnR5QHRocmVlLmxvbDCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoC
+ggEBAMuaiFMw3xVBI24xKlGAugnhEOwT0QhZkupwe3cBFasNmK85LBrNiBqBnbSi
+euf4uQj24eq9ot8Hz+OYKgt4NE8GadaOVd2s3SbHdJw6iMgZBpHI9spgXDV+k6nr
+g4Cd6fjORfJWzJWesg25hqbv7EYLNhL/O46ezR44fF2zXn+ktT0T7RKBzwF/q1ep
++yT2MmxBitN1QXvcOOcvGepgz059Ly98Il1WyhitCQfZBVWV+OLCrTLOck5maxVU
+T02AFq3ck0PLddsjFL43vsBFt6vJd5q2EBIdpr7Jh8wKpLLRLSIlwaeXvgRQrOes
+d+dHf230ifbyhwcK9kHZbs5RFBsCAwEAATANBgkqhkiG9w0BAQsFAAOCAQEAJWDm
+1ckuG0ssC0UvVGXOuYI7g44K6GvyZvFDx+YjhradSHYJruPz0QPyhGpwQdLmGuMA
+QXLZioEzgqxfAml7YXVOuXPipQIT0L52AtTlkhk+rtPEJUVK3uRcoj4glzJs9stk
+fDOG8bfDQiZUpNa0Ohwphyz4L1BuOPPBuHShBI1Iwad5r/ZxGzcll2pUgA9IOjB4
+RjP0ZHzlKcUJeESVpnPYrO4J5JxcTNEUJYW0zSTpuqEh7qiKZUaPf7c8KMsDco9T
+O3zCGH3n3V74P27js1duFytlfoGhTscwcByl500lT9fXq1QVPuSNXQIzYsnYTf8e
+SLKh9n6qnPj0Lef3Nw==
+-----END CERTIFICATE-----
+`
 	})
 
 	AfterEach(func() {
@@ -190,14 +221,53 @@ var _ = Describe("Alert Manager Maintenance Client", func() {
 		})
 	})
 	// Finding and removing all active maintenances
-	Context("Build Alert Manager", func() {
+	Context("Build Alert Manager in production", func() {
 		It("Build an Alert Manager Client and not return an error", func() {
+			var ammb alertManagerMaintenanceBuilder
+			mockSecretList := &corev1.SecretList{}
+			mockAmService := &corev1.Service{}
+			mockMonConfigMap := &corev1.ConfigMap{}
+			fakeMonConfigMap := &corev1.ConfigMap{
+				Data: fakeCAMap,
+			}
+
+			mockKubeClient.EXPECT().Get(context.TODO(), types.NamespacedName{Namespace: metrics.MonitoringNS, Name: alertManagerApp}, mockAmService)
+			mockKubeClient.EXPECT().List(context.TODO(), mockSecretList, &client.ListOptions{Namespace: metrics.MonitoringNS})
+			mockKubeClient.EXPECT().Get(context.TODO(), client.ObjectKey{Name: metrics.MonitoringCAConfigMapName, Namespace: metrics.MonitoringNS}, mockMonConfigMap).SetArg(2, *fakeMonConfigMap).Return(nil)
+
+			_, err := ammb.NewClient(mockKubeClient)
+			Expect(err).ShouldNot(HaveOccurred())
+		})
+	})
+	Context("Build Alert Manager for local development replicating production by using Services", func() {
+		It("Build an Alert Manager Client and not return an error", func() {
+			_ = os.Setenv(k8sutil.ForceRunModeEnv, string(k8sutil.LocalRunMode))
+			var ammb alertManagerMaintenanceBuilder
+			mockAmService := &corev1.Service{}
+			mockSecretList := &corev1.SecretList{}
+			mockMonConfigMap := &corev1.ConfigMap{}
+			fakeMonConfigMap := &corev1.ConfigMap{
+				Data: fakeCAMap,
+			}
+
+			mockKubeClient.EXPECT().Get(context.TODO(), types.NamespacedName{Namespace: metrics.MonitoringNS, Name: alertManagerApp}, mockAmService)
+			mockKubeClient.EXPECT().List(context.TODO(), mockSecretList, &client.ListOptions{Namespace: metrics.MonitoringNS})
+			mockKubeClient.EXPECT().Get(context.TODO(), client.ObjectKey{Name: metrics.MonitoringCAConfigMapName, Namespace: metrics.MonitoringNS}, mockMonConfigMap).SetArg(2, *fakeMonConfigMap).Return(nil)
+
+			_, err := ammb.NewClient(mockKubeClient)
+			Expect(err).ShouldNot(HaveOccurred())
+		})
+	})
+	Context("Build Alert Manager for local development not replicating production by using Routes", func() {
+		It("Build an Alert Manager Client and not return an error", func() {
+			_ = os.Setenv(k8sutil.ForceRunModeEnv, string(k8sutil.LocalRunMode))
+			_ = os.Setenv(config.EnvRoutes, "true")
 			var ammb alertManagerMaintenanceBuilder
 			mockAmRoute := &routev1.Route{}
 			mockSecretList := &corev1.SecretList{}
 
-			mockKubeClient.EXPECT().Get(context.TODO(), types.NamespacedName{Namespace: alertManagerNamespace, Name: alertManagerRouteName}, mockAmRoute)
-			mockKubeClient.EXPECT().List(context.TODO(), mockSecretList, &client.ListOptions{Namespace: alertManagerNamespace})
+			mockKubeClient.EXPECT().Get(context.TODO(), types.NamespacedName{Namespace: metrics.MonitoringNS, Name: alertManagerApp}, mockAmRoute)
+			mockKubeClient.EXPECT().List(context.TODO(), mockSecretList, &client.ListOptions{Namespace: metrics.MonitoringNS})
 
 			_, err := ammb.NewClient(mockKubeClient)
 			Expect(err).ShouldNot(HaveOccurred())
