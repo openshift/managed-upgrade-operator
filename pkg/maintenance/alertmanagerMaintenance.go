@@ -2,7 +2,9 @@ package maintenance
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -10,18 +12,17 @@ import (
 	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"
 	"github.com/hashicorp/go-multierror"
-	routev1 "github.com/openshift/api/route/v1"
-	"github.com/openshift/managed-upgrade-operator/config"
-	"github.com/openshift/managed-upgrade-operator/pkg/alertmanager"
 	amv2Models "github.com/prometheus/alertmanager/api/v2/models"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/openshift/managed-upgrade-operator/config"
+	"github.com/openshift/managed-upgrade-operator/pkg/alertmanager"
+	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
 )
 
 var (
-	alertManagerNamespace          = "openshift-monitoring"
-	alertManagerRouteName          = "alertmanager-main"
+	alertManagerApp                = "alertmanager-main"
 	alertManagerServiceAccountName = "prometheus-k8s"
 	alertManagerBasePath           = "/api/v2/"
 	controlPlaneSilenceCommentId   = "OSD control plane"
@@ -41,6 +42,20 @@ func (ammb *alertManagerMaintenanceBuilder) NewClient(client client.Client) (Mai
 		return nil, err
 	}
 
+	useRoutes := config.UseRoutes()
+	tlsConfig := &tls.Config{}
+
+	if !useRoutes {
+		tlsConfig, err = metrics.MonitoringTLSConfig(client)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	transport.Transport = &http.Transport{
+		TLSClientConfig: tlsConfig,
+	}
+
 	return &alertManagerMaintenance{
 		client: &alertmanager.AlertManagerSilenceClient{
 			Transport: transport,
@@ -54,18 +69,13 @@ type alertManagerMaintenance struct {
 }
 
 func getTransport(c client.Client) (*httptransport.Runtime, error) {
-	amRoute := &routev1.Route{}
-	err := c.Get(
-		context.TODO(),
-		types.NamespacedName{Namespace: alertManagerNamespace, Name: alertManagerRouteName},
-		amRoute,
-	)
+	networkTarget, err := metrics.NetworkTarget(c, metrics.MonitoringNS, alertManagerApp, "web")
 	if err != nil {
 		return nil, err
 	}
 
 	return httptransport.New(
-		amRoute.Spec.Host,
+		networkTarget,
 		alertManagerBasePath,
 		[]string{"https"},
 	), nil
@@ -76,7 +86,7 @@ func getAuthentication(c client.Client) (runtime.ClientAuthInfoWriter, error) {
 	err := c.List(
 		context.TODO(),
 		sl,
-		&client.ListOptions{Namespace: alertManagerNamespace},
+		&client.ListOptions{Namespace: metrics.MonitoringNS},
 	)
 	if err != nil {
 		return nil, err

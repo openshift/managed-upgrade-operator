@@ -1,6 +1,7 @@
 package config
 
 import (
+	"os"
 	"time"
 
 	"github.com/openshift/managed-upgrade-operator/pkg/configmanager"
@@ -18,6 +19,8 @@ const (
 	ConfigMapName string = OperatorName + "-config"
 	// ConfigField is the name of field within the ConfigMap
 	ConfigField string = "config.yaml"
+	// EnvRoutes is used to determine if routes should be used during development
+	EnvRoutes string = "ROUTES"
 )
 
 type CMTarget configmanager.Target
@@ -42,4 +45,8 @@ func (c *CMTarget) NewCMTarget() (configmanager.Target, error) {
 		Namespace: c.Namespace,
 		ConfigKey: c.ConfigKey,
 	}, err
+}
+
+func UseRoutes() bool {
+	return os.Getenv(EnvRoutes) == "true"
 }

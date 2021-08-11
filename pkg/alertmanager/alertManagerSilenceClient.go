@@ -38,8 +38,10 @@ func (ams *AlertManagerSilenceClient) Create(matchers amv2Models.Matchers, start
 				Matchers:  matchers,
 			},
 		},
-		Context:    context.TODO(),
-		HTTPClient: &http.Client{},
+		Context: context.TODO(),
+		HTTPClient: &http.Client{
+			Transport: ams.Transport.Transport,
+		},
 	}
 
 	silenceClient := amSilence.New(ams.Transport, strfmt.Default)
@@ -54,9 +56,11 @@ func (ams *AlertManagerSilenceClient) Create(matchers amv2Models.Matchers, start
 // List lists silences in Alertmanager instance defined in Transport
 func (ams *AlertManagerSilenceClient) List(filter []string) (*amSilence.GetSilencesOK, error) {
 	gParams := &amSilence.GetSilencesParams{
-		Filter:     filter,
-		Context:    context.TODO(),
-		HTTPClient: &http.Client{},
+		Filter:  filter,
+		Context: context.TODO(),
+		HTTPClient: &http.Client{
+			Transport: ams.Transport.Transport,
+		},
 	}
 
 	silenceClient := amSilence.New(ams.Transport, strfmt.Default)
@@ -71,9 +75,11 @@ func (ams *AlertManagerSilenceClient) List(filter []string) (*amSilence.GetSilen
 // Delete deletes silence in Alertmanager instance defined in Transport
 func (ams *AlertManagerSilenceClient) Delete(id string) error {
 	dParams := &amSilence.DeleteSilenceParams{
-		SilenceID:  strfmt.UUID(id),
-		Context:    context.TODO(),
-		HTTPClient: &http.Client{},
+		SilenceID: strfmt.UUID(id),
+		Context:   context.TODO(),
+		HTTPClient: &http.Client{
+			Transport: ams.Transport.Transport,
+		},
 	}
 
 	silenceClient := amSilence.New(ams.Transport, strfmt.Default)
@@ -89,9 +95,11 @@ func (ams *AlertManagerSilenceClient) Delete(id string) error {
 func (ams *AlertManagerSilenceClient) Update(id string, endsAt strfmt.DateTime) error {
 	silenceClient := amSilence.New(ams.Transport, strfmt.Default)
 	gParams := &amSilence.GetSilenceParams{
-		SilenceID:  strfmt.UUID(id),
-		Context:    context.TODO(),
-		HTTPClient: &http.Client{},
+		SilenceID: strfmt.UUID(id),
+		Context:   context.TODO(),
+		HTTPClient: &http.Client{
+			Transport: ams.Transport.Transport,
+		},
 	}
 	result, err := silenceClient.GetSilence(gParams)
 	if err != nil {
