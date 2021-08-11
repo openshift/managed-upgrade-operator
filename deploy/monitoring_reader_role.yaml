@@ -7,8 +7,10 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - configmaps  
   - serviceaccounts
   - secrets
+  - services
   verbs:
   - get
   - list
