@@ -3,6 +3,7 @@ package upgraders
 import (
 	"context"
 	"fmt"
+
 	"github.com/openshift/managed-upgrade-operator/pkg/notifier"
 
 	"github.com/go-logr/logr"
@@ -17,6 +18,11 @@ func (c *clusterUpgrader) EnsureExtraUpgradeWorkers(ctx context.Context, logger 
 	if !c.upgradeConfig.Spec.CapacityReservation {
 		logger.Info("Do not need to scale up extra node(s) since the capacity reservation is disabled")
 		return true, nil
+	}
+
+	configErr := c.config.Scale.IsValid()
+	if configErr != nil {
+		return false, configErr
 	}
 
 	upgradeCommenced, err := c.cvClient.HasUpgradeCommenced(c.upgradeConfig)
@@ -48,13 +54,17 @@ func (c *clusterUpgrader) EnsureExtraUpgradeWorkers(ctx context.Context, logger 
 	return isScaled, nil
 }
 
-
 // RemoveExtraScaledNodes will scale down the extra workers added pre upgrade.
 func (c *clusterUpgrader) RemoveExtraScaledNodes(ctx context.Context, logger logr.Logger) (bool, error) {
 	// Skip the step scale down worker node if capacity reservation is set to false
 	if !c.upgradeConfig.Spec.CapacityReservation {
 		logger.Info("Do not need to remove nodes since the capacity reservation is disabled")
 		return true, nil
+	}
+
+	configErr := c.config.Scale.IsValid()
+	if configErr != nil {
+		return false, configErr
 	}
 
 	nds, err := c.drainstrategyBuilder.NewNodeDrainStrategy(c.client, c.upgradeConfig, &c.config.NodeDrain)
@@ -77,4 +87,3 @@ func (c *clusterUpgrader) RemoveExtraScaledNodes(ctx context.Context, logger log
 
 	return isScaledDown, nil
 }
-
