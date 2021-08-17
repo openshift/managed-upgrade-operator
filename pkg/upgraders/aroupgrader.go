@@ -80,9 +80,8 @@ func NewAROUpgrader(c client.Client, cfm configmanager.ConfigManager, mc metrics
 }
 
 // UpgradeCluster performs the upgrade of the cluster and returns an indication of the
-// last-executed upgrade phase, the success condition of the phase, and any error associated
-// with the phase execution.
-func (u *aroUpgrader) UpgradeCluster(ctx context.Context, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (upgradev1alpha1.UpgradePhase, *upgradev1alpha1.UpgradeCondition, error) {
+// last-executed upgrade phase and any error associated with the phase execution.
+func (u *aroUpgrader) UpgradeCluster(ctx context.Context, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (upgradev1alpha1.UpgradePhase, error) {
 	u.upgradeConfig = upgradeConfig
 	return u.runSteps(ctx, logger, u.steps)
 }

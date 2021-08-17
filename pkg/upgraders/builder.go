@@ -15,7 +15,7 @@ import (
 // Interface describing the functions of a cluster upgrader.
 //go:generate mockgen -destination=mocks/cluster_upgrader.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/upgraders ClusterUpgrader
 type ClusterUpgrader interface {
-	UpgradeCluster(ctx context.Context, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (upgradev1alpha1.UpgradePhase, *upgradev1alpha1.UpgradeCondition, error)
+	UpgradeCluster(ctx context.Context, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (upgradev1alpha1.UpgradePhase, error)
 }
 
 // ClusterUpgraderBuilder enables an implementation of a ClusterUpgraderBuilder
