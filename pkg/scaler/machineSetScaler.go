@@ -181,7 +181,7 @@ func getExtraUpgradeNodes(c client.Client) (*corev1.NodeList, error) {
 
 	extraUpgradeNodes := &corev1.NodeList{}
 	for _, machine := range machines.Items {
-		if *machine.Status.Phase == string(corev1.NodeRunning) {
+		if *machine.Status.Phase == "Running" || *machine.Status.Phase == "Deleting" {
 			for _, node := range nodes.Items {
 				if node.Name == machine.Status.NodeRef.Name {
 					extraUpgradeNodes.Items = append(extraUpgradeNodes.Items, node)
