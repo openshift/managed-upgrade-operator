@@ -289,11 +289,10 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 func (r *ReconcileUpgradeConfig) upgradeCluster(upgrader cub.ClusterUpgrader, uc *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (reconcile.Result, error) {
 	me := &multierror.Error{}
 
-	phase, condition, err := upgrader.UpgradeCluster(context.TODO(), uc, logger)
+	phase, err := upgrader.UpgradeCluster(context.TODO(), uc, logger)
 	me = multierror.Append(err, me)
 
 	history := uc.Status.History.GetHistory(uc.Spec.Desired.Version)
-	history.Conditions = upgradev1alpha1.Conditions{*condition}
 	history.Phase = phase
 	if phase == upgradev1alpha1.UpgradePhaseUpgraded {
 		history.CompleteTime = &metav1.Time{Time: time.Now()}

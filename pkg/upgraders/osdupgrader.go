@@ -84,12 +84,11 @@ func NewOSDUpgrader(c client.Client, cfm configmanager.ConfigManager, mc metrics
 }
 
 // UpgradeCluster performs the upgrade of the cluster and returns an indication of the
-// last-executed upgrade phase, the success condition of the phase, and any error associated
-// with the phase execution.
+// last-executed upgrade phase and any error associated with the phase execution.
 //
 // The UpgradeCluster enforces OSD policy around expiring upgrades if they do not commence
 // within a given time period.
-func (u *osdUpgrader) UpgradeCluster(ctx context.Context, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (upgradev1alpha1.UpgradePhase, *upgradev1alpha1.UpgradeCondition, error) {
+func (u *osdUpgrader) UpgradeCluster(ctx context.Context, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (upgradev1alpha1.UpgradePhase, error) {
 	u.upgradeConfig = upgradeConfig
 
 	// OSD upgrader enforces a 'failure' policy if the upgrade does not commence within a time period
@@ -129,7 +128,7 @@ func shouldFailUpgrade(cvClient cv.ClusterVersion, cfg *upgraderConfig, upgradeC
 }
 
 // performUpgradeFailure carries out routines related to moving to an upgrade-failed state
-func performUpgradeFailure(c client.Client, metricsClient metrics.Metrics, s scaler.Scaler, nc eventmanager.EventManager, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (upgradev1alpha1.UpgradePhase, *upgradev1alpha1.UpgradeCondition, error) {
+func performUpgradeFailure(c client.Client, metricsClient metrics.Metrics, s scaler.Scaler, nc eventmanager.EventManager, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (upgradev1alpha1.UpgradePhase, error) {
 	// Set up return condition
 	h := upgradeConfig.Status.History.GetHistory(upgradeConfig.Spec.Desired.Version)
 	condition := &upgradev1alpha1.UpgradeCondition{
@@ -143,14 +142,16 @@ func performUpgradeFailure(c client.Client, metricsClient metrics.Metrics, s sca
 	_, err := s.EnsureScaleDownNodes(c, nil, logger)
 	if err != nil {
 		logger.Error(err, "Failed to scale down the temporary upgrade machine when upgrade failed")
-		return h.Phase, condition, nil
+		h.Conditions.SetCondition(*condition)
+		return h.Phase, nil
 	}
 
 	// Notify of failure
 	err = nc.Notify(notifier.MuoStateFailed)
 	if err != nil {
 		logger.Error(err, "Failed to notify of upgrade failure")
-		return h.Phase, condition, nil
+		h.Conditions.SetCondition(*condition)
+		return h.Phase, nil
 	}
 
 	// flag window breached metric
@@ -162,5 +163,7 @@ func performUpgradeFailure(c client.Client, metricsClient metrics.Metrics, s sca
 	// Update condition state to successful
 	condition.Status = corev1.ConditionTrue
 
-	return upgradev1alpha1.UpgradePhaseFailed, condition, nil
+	h.Conditions.SetCondition(*condition)
+
+	return upgradev1alpha1.UpgradePhaseFailed, nil
 }

@@ -58,16 +58,15 @@ type clusterUpgrader struct {
 }
 
 // runSteps runs the upgrader's upgrade steps and returns the last-executed
-// upgrade phase, the success condition of that phase, and any associated error
-func (c *clusterUpgrader) runSteps(ctx context.Context, logger logr.Logger, s []upgradesteps.UpgradeStep) (upgradev1alpha1.UpgradePhase, *upgradev1alpha1.UpgradeCondition, error) {
-	phase, condition, err := upgradesteps.Run(ctx, logger, s)
-	return phase, condition, err
+// upgrade phase and any associated error
+func (c *clusterUpgrader) runSteps(ctx context.Context, logger logr.Logger, s []upgradesteps.UpgradeStep) (upgradev1alpha1.UpgradePhase, error) {
+	phase, err := upgradesteps.Run(ctx, c.upgradeConfig, logger, s)
+	return phase, err
 }
 
 // UpgradeCluster performs the upgrade of the cluster and returns an indication of the
-// last-executed upgrade phase, the success condition of the phase, and any error associated
-// with the phase execution.
-func (c *clusterUpgrader) UpgradeCluster(ctx context.Context, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (upgradev1alpha1.UpgradePhase, *upgradev1alpha1.UpgradeCondition, error) {
+// last-executed upgrade phase and any error associated with the phase execution.
+func (c *clusterUpgrader) UpgradeCluster(ctx context.Context, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (upgradev1alpha1.UpgradePhase, error) {
 	c.upgradeConfig = upgradeConfig
 	return c.runSteps(ctx, logger, c.steps)
 }

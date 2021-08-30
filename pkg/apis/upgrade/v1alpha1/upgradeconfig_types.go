@@ -99,39 +99,33 @@ type UpgradeCondition struct {
 
 const (
 	// SendStartedNotification is an UpgradeConditionType
-	SendStartedNotification UpgradeConditionType = "SendStartedNotification"
-	// UpgradeDelayedCheck is an UpgradeConditionType
-	UpgradeDelayedCheck UpgradeConditionType = "UpgradeDelayedCheck"
-	// UpgradeValidated is an UpgradeConditionType
-	UpgradeValidated UpgradeConditionType = "Validation"
+	SendStartedNotification UpgradeConditionType = "StartedNotificationSent"
 	// UpgradePreHealthCheck is an UpgradeConditionType
-	UpgradePreHealthCheck UpgradeConditionType = "PreHealthCheck"
+	UpgradePreHealthCheck UpgradeConditionType = "ClusterHealthyBeforeUpgrade"
 	// ExtDepAvailabilityCheck is an UpgradeConditionType
-	ExtDepAvailabilityCheck UpgradeConditionType = "ExternalDependencyAvailabilityCheck"
+	ExtDepAvailabilityCheck UpgradeConditionType = "ExternalDependenciesAvailable"
 	// UpgradeScaleUpExtraNodes is an UpgradeConditionType
-	UpgradeScaleUpExtraNodes UpgradeConditionType = "ScaleUpExtraNodes"
+	UpgradeScaleUpExtraNodes UpgradeConditionType = "ComputeCapacityReserved"
 	// ControlPlaneMaintWindow is an UpgradeConditionType
-	ControlPlaneMaintWindow UpgradeConditionType = "ControlPlaneMaintWindow"
+	ControlPlaneMaintWindow UpgradeConditionType = "ControlPlaneMaintenanceWindowCreated"
 	// CommenceUpgrade is an UpgradeConditionType
-	CommenceUpgrade UpgradeConditionType = "CommenceUpgrade"
+	CommenceUpgrade UpgradeConditionType = "UpgradeCommenced"
 	// ControlPlaneUpgraded is an UpgradeConditionType
 	ControlPlaneUpgraded UpgradeConditionType = "ControlPlaneUpgraded"
 	// RemoveControlPlaneMaintWindow is an UpgradeConditionType
-	RemoveControlPlaneMaintWindow UpgradeConditionType = "RemoveControlPlaneMaintWindow"
+	RemoveControlPlaneMaintWindow UpgradeConditionType = "ControlPlaneMaintenanceWindowRemoved"
 	// WorkersMaintWindow is an UpgradeConditionType
-	WorkersMaintWindow UpgradeConditionType = "WorkersMaintWindow"
+	WorkersMaintWindow UpgradeConditionType = "WorkersMaintenanceWindowCreated"
 	// AllWorkerNodesUpgraded is an UpgradeConditionType
-	AllWorkerNodesUpgraded UpgradeConditionType = "AllWorkerNodesUpgraded"
+	AllWorkerNodesUpgraded UpgradeConditionType = "WorkerNodesUpgraded"
 	// RemoveExtraScaledNodes is an UpgradeConditionType
-	RemoveExtraScaledNodes UpgradeConditionType = "RemoveExtraScaledNodes"
-	// UpdateSubscriptions is an UpgradeConditionType
-	UpdateSubscriptions UpgradeConditionType = "UpdateSubscriptions"
+	RemoveExtraScaledNodes UpgradeConditionType = "ComputeCapacityRemoved"
 	// RemoveMaintWindow is an UpgradeConditionType
-	RemoveMaintWindow UpgradeConditionType = "RemoveMaintWindow"
+	RemoveMaintWindow UpgradeConditionType = "WorkersMaintenanceWindowRemoved"
 	// PostClusterHealthCheck is an UpgradeConditionType
-	PostClusterHealthCheck UpgradeConditionType = "PostClusterHealthCheck"
+	PostClusterHealthCheck UpgradeConditionType = "ClusterHealthyAfterUpgrade"
 	// SendCompletedNotification is an UpgradeConditionType
-	SendCompletedNotification UpgradeConditionType = "SendCompletedNotification"
+	SendCompletedNotification UpgradeConditionType = "CompletedNotificationSent"
 )
 
 // UpgradePhase is a Go string type.
