@@ -9,6 +9,15 @@ rules:
   resources:
   - pods
   - pods/finalizers
+  - services
+  - serviceaccounts
+  - services/finalizers
+  - endpoints
+  - persistentvolumeclaims
+  - events
+  - configmaps
+  - secrets
+  - nodes
   verbs:
   - create
   - delete
@@ -18,20 +27,25 @@ rules:
   - update
   - watch
 - apiGroups:
-  - ""
+  - apps
   resources:
-  - events
-  - nodes
+  - deployments
+  - deployments/finalizers
+  - daemonsets
+  - replicasets
+  - statefulsets
   verbs:
+  - create
+  - delete
   - get
   - list
+  - patch
+  - update
   - watch
 - apiGroups:
   - upgrade.managed.openshift.io
   resources:
-  - upgradeconfigs
-  - upgrade
-  - upgradeconfigs/status
+  - '*'
   verbs:
   - create
   - delete
@@ -43,8 +57,7 @@ rules:
 - apiGroups:
   - config.openshift.io
   resources:
-  - clusterversions
-  - clusteroperators
+  - '*'
   verbs:
   - get
   - list
@@ -57,14 +70,19 @@ rules:
   - machines
   - machinesets
   verbs:
-  - create
-  - delete
-  - get
-  - list
+  - '*'
 - apiGroups:
   - machineconfiguration.openshift.io
   resources:
   - machineconfigpools
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - route.openshift.io
+  resources:
+  - routes
   verbs:
   - get
   - list
@@ -80,11 +98,7 @@ rules:
   resources:
   - servicemonitors
   verbs:
-  - create
-  - update
-  - get
-  - list
-  - patch
+  - '*'
 - apiGroups:
   - policy
   resources:
