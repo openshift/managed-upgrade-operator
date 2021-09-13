@@ -63,6 +63,7 @@ spec:
                   is blocked by a Pod Disruption Budget, before that drain is forced.
                   Measured in minutes.
                 format: int32
+                minimum: 0
                 type: integer
               capacityReservation:
                 description: Specify if scaling up an extra node for capacity reservation
