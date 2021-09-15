@@ -25,7 +25,8 @@ type UpgradeConfigSpec struct {
 	// Specify the upgrade start time
 	UpgradeAt string `json:"upgradeAt"`
 
-	// The maximum grace period granted to a node whose drain is blocked by a Pod Disruption Budget, before that drain is forced. Measured in minutes.
+	// +kubebuilder:validation:Minimum:=0
+	// The maximum grace period granted to a node whose drain is blocked by a Pod Disruption Budget, before that drain is forced. Measured in minutes. The minimum accepted value is 0 and in this case it will trigger force drain after the expectedNodeDrainTime lapsed. 
 	PDBForceDrainTimeout int32 `json:"PDBForceDrainTimeout"`
 
 	// +kubebuilder:validation:Enum={"OSD","ARO"}
