@@ -7,7 +7,7 @@ require (
 	github.com/coreos/prometheus-operator v0.38.1-0.20200424145508-7e176fda06cc
 	github.com/go-logr/logr v0.4.0
 	github.com/go-openapi/runtime v0.19.4
-	github.com/go-openapi/strfmt v0.19.3
+	github.com/go-openapi/strfmt v0.19.5
 	github.com/go-resty/resty/v2 v2.6.0
 	github.com/golang/mock v1.4.4
 	github.com/google/uuid v1.1.2
@@ -19,8 +19,8 @@ require (
 	github.com/openshift/api v3.9.1-0.20190424152011-77b8897ec79a+incompatible
 	github.com/openshift/cluster-version-operator v3.11.1-0.20190629164025-08cac1c02538+incompatible
 	github.com/openshift/library-go v0.0.0-20210825122301-7f0bf922c345
-	github.com/openshift/machine-api-operator v0.2.1-0.20200226185612-9b0170a1ba07
-	github.com/openshift/machine-config-operator v0.0.1-0.20200913004441-7eba765c69c9
+	github.com/openshift/machine-api-operator v0.2.1-0.20210917195819-eb6706653664
+	github.com/openshift/machine-config-operator v0.0.1-0.20211002010814-6cf167014583
 	github.com/openshift/operator-custom-metrics v0.4.2
 	github.com/operator-framework/operator-sdk v0.18.2
 	github.com/prometheus/alertmanager v0.20.0
@@ -42,4 +42,6 @@ replace (
 	k8s.io/api => k8s.io/api v0.21.1
 	k8s.io/apimachinery => k8s.io/apimachinery v0.21.1
 	k8s.io/client-go => k8s.io/client-go v0.21.1
+	sigs.k8s.io/cluster-api-provider-aws => github.com/openshift/cluster-api-provider-aws v0.2.1-0.20201125052318-b85a18cbf338
+	sigs.k8s.io/cluster-api-provider-azure => github.com/openshift/cluster-api-provider-azure v0.0.0-20210209143830-3442c7a36c1e
 )
