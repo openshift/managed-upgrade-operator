@@ -25,6 +25,7 @@ const (
 	// Upgrade policy constants
 	TEST_OPERATOR_NAMESPACE         = "test-managed-upgrade-operator"
 	TEST_UPGRADEPOLICY_UPGRADETYPE  = "OSD"
+	TEST_UPGRADEPOLICY_ADDON        = "ADDON"
 	TEST_UPGRADEPOLICY_TIME         = "2020-06-20T00:00:00Z"
 	TEST_UPGRADEPOLICY_VERSION      = "4.4.5"
 	TEST_UPGRADEPOLICY_CHANNELGROUP = "fast"
@@ -98,6 +99,17 @@ var _ = Describe("OCM Client", func() {
 					NextRun:      TEST_UPGRADEPOLICY_TIME,
 					ClusterId:    TEST_CLUSTER_ID,
 				},
+				{
+					Id:           TEST_POLICY_ID_MANUAL,
+					Kind:         "UpgradePolicy",
+					Href:         "test",
+					Schedule:     "test",
+					ScheduleType: "manual",
+					UpgradeType:  TEST_UPGRADEPOLICY_ADDON,
+					Version:      TEST_UPGRADEPOLICY_VERSION,
+					NextRun:      TEST_UPGRADEPOLICY_TIME,
+					ClusterId:    TEST_CLUSTER_ID,
+				},
 			},
 		}
 		upgradePolicyStateResponse = UpgradePolicyState{
@@ -142,7 +154,7 @@ var _ = Describe("OCM Client", func() {
 	})
 
 	Context("When getting upgrade policies", func() {
-		It("returns the correct info", func() {
+		It("retrieves OSD type only", func() {
 
 			upResponder, _ := httpmock.NewJsonResponder(http.StatusOK, upgradePolicyListResponse)
 			upUrl := path.Join(CLUSTERS_V1_PATH, TEST_CLUSTER_ID, UPGRADEPOLICIES_V1_PATH)
@@ -150,7 +162,7 @@ var _ = Describe("OCM Client", func() {
 
 			result, err := oc.GetClusterUpgradePolicies(TEST_CLUSTER_ID)
 
-			Expect(*result).To(Equal(upgradePolicyListResponse))
+			Expect(result.Items[0]).To(Equal(upgradePolicyListResponse.Items[0]))
 			Expect(err).To(BeNil())
 		})
 	})
