@@ -111,7 +111,7 @@ var _ = Describe("Node scaling tests", func() {
 									MatchExpressions: nil,
 								},
 								Template: machineapi.MachineTemplateSpec{
-									ObjectMeta: metav1.ObjectMeta{
+									ObjectMeta: machineapi.ObjectMeta{
 										Labels: make(map[string]string),
 									},
 								},
