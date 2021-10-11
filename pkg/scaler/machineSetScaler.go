@@ -183,6 +183,9 @@ func getExtraUpgradeNodes(c client.Client) (*corev1.NodeList, error) {
 	for _, machine := range machines.Items {
 		if *machine.Status.Phase == "Running" || *machine.Status.Phase == "Deleting" {
 			for _, node := range nodes.Items {
+				if machine.Status.NodeRef == nil {
+					return nil, fmt.Errorf("an upgrade machine %v exists but has no node association", machine.Name)
+				}
 				if node.Name == machine.Status.NodeRef.Name {
 					extraUpgradeNodes.Items = append(extraUpgradeNodes.Items, node)
 				}
