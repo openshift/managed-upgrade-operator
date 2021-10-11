@@ -2,18 +2,18 @@ package drain
 
 import (
 	corev1 "k8s.io/api/core/v1"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
+	policyv1 "k8s.io/api/policy/v1"
 
 	"github.com/openshift/managed-upgrade-operator/pkg/pod"
 )
 
-func isPdbPod(pdbList *policyv1beta1.PodDisruptionBudgetList) pod.PodPredicate {
+func isPdbPod(pdbList *policyv1.PodDisruptionBudgetList) pod.PodPredicate {
 	return func(p corev1.Pod) bool {
 		return containsMatchLabel(p, pdbList)
 	}
 }
 
-func isNotPdbPod(pdbList *policyv1beta1.PodDisruptionBudgetList) pod.PodPredicate {
+func isNotPdbPod(pdbList *policyv1.PodDisruptionBudgetList) pod.PodPredicate {
 	return func(p corev1.Pod) bool {
 		return !containsMatchLabel(p, pdbList)
 	}
@@ -42,7 +42,7 @@ func isNotDaemonSet(pod corev1.Pod) bool {
 	return !isDaemonSet(pod)
 }
 
-func containsMatchLabel(p corev1.Pod, pdbList *policyv1beta1.PodDisruptionBudgetList) bool {
+func containsMatchLabel(p corev1.Pod, pdbList *policyv1.PodDisruptionBudgetList) bool {
 	isPdbPod := false
 	for _, pdb := range pdbList.Items {
 		for mlKey, mlValue := range pdb.Spec.Selector.MatchLabels {

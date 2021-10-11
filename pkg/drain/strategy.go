@@ -5,7 +5,7 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
+	policyv1 "k8s.io/api/policy/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
@@ -59,7 +59,7 @@ func newTimedStrategy(name string, description string, waitDuration time.Duratio
 
 // NewNodeDrainStrategy returns a NodeDrainStrategy
 func (dsb *drainStrategyBuilder) NewNodeDrainStrategy(c client.Client, uc *upgradev1alpha1.UpgradeConfig, cfg *NodeDrain) (NodeDrainStrategy, error) {
-	pdbList := &policyv1beta1.PodDisruptionBudgetList{}
+	pdbList := &policyv1.PodDisruptionBudgetList{}
 	err := c.List(context.TODO(), pdbList)
 	if err != nil {
 		return nil, err
