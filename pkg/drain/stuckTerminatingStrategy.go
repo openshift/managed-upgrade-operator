@@ -1,10 +1,7 @@
 package drain
 
 import (
-	"context"
-
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/fields"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/openshift/managed-upgrade-operator/pkg/pod"
@@ -16,7 +13,9 @@ type stuckTerminatingStrategy struct {
 }
 
 func (sts *stuckTerminatingStrategy) Execute(node *corev1.Node) (*DrainStrategyResult, error) {
-	podsStuckTerminating, err := sts.getPodList(node)
+	filters := append([]pod.PodPredicate{isOnNode(node), hasNoFinalizers, isTerminating}, sts.filters...)
+	podsStuckTerminating, err := pod.GetPodList(sts.client, node, filters)
+
 	if err != nil {
 		return nil, err
 	}
@@ -34,29 +33,11 @@ func (sts *stuckTerminatingStrategy) Execute(node *corev1.Node) (*DrainStrategyR
 }
 
 func (sts *stuckTerminatingStrategy) IsValid(node *corev1.Node) (bool, error) {
-	targetPods, err := sts.getPodList(node)
+	filters := append([]pod.PodPredicate{isOnNode(node), hasNoFinalizers, isTerminating}, sts.filters...)
+	targetPods, err := pod.GetPodList(sts.client, node, filters)
 	if err != nil {
 		return false, err
 	}
 
 	return len(targetPods.Items) > 0, nil
-}
-
-func (sts *stuckTerminatingStrategy) getPodList(node *corev1.Node) (*corev1.PodList, error) {
-
-	fieldSelector, err := fields.ParseSelector("spec.nodeName=" + node.Name)
-	if err != nil {
-		return nil, err
-	}
-
-	allPods := &corev1.PodList{}
-	err = sts.client.List(context.TODO(), allPods, &client.ListOptions{
-		FieldSelector: fieldSelector,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	filters := append([]pod.PodPredicate{isOnNode(node), hasNoFinalizers, isTerminating}, sts.filters...)
-	return pod.FilterPods(allPods, filters...), nil
 }

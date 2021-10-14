@@ -162,7 +162,8 @@ var _ = Describe("Remove Finalizer Strategy", func() {
 			gomock.InOrder(
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList),
 			)
-			_, err := rfs.getPodList(node)
+			_, err := pod.GetPodList(rfs.client, node, rfs.filters)
+
 			Expect(err).To(BeNil())
 		})
 
@@ -170,7 +171,8 @@ var _ = Describe("Remove Finalizer Strategy", func() {
 			gomock.InOrder(
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList).Return(fmt.Errorf("fake error")),
 			)
-			_, err := rfs.getPodList(node)
+			_, err := pod.GetPodList(rfs.client, node, rfs.filters)
+
 			Expect(err).To(HaveOccurred())
 			Expect(err).NotTo(BeNil())
 		})

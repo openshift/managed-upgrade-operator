@@ -1,10 +1,7 @@
 package drain
 
 import (
-	"context"
-
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/fields"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/openshift/managed-upgrade-operator/pkg/pod"
@@ -16,7 +13,8 @@ type podDeletionStrategy struct {
 }
 
 func (pds *podDeletionStrategy) Execute(node *corev1.Node) (*DrainStrategyResult, error) {
-	podsToDelete, err := pds.getPodList(node)
+	filters := append([]pod.PodPredicate{isOnNode(node)}, pds.filters...)
+	podsToDelete, err := pod.GetPodList(pds.client, node, filters)
 	if err != nil {
 		return nil, err
 	}
@@ -34,29 +32,11 @@ func (pds *podDeletionStrategy) Execute(node *corev1.Node) (*DrainStrategyResult
 }
 
 func (pds *podDeletionStrategy) IsValid(node *corev1.Node) (bool, error) {
-	targetPods, err := pds.getPodList(node)
+	filters := append([]pod.PodPredicate{isOnNode(node)}, pds.filters...)
+	targetPods, err := pod.GetPodList(pds.client, node, filters)
 	if err != nil {
 		return false, err
 	}
 
 	return len(targetPods.Items) > 0, nil
-}
-
-func (pds *podDeletionStrategy) getPodList(node *corev1.Node) (*corev1.PodList, error) {
-
-	fieldSelector, err := fields.ParseSelector("spec.nodeName=" + node.Name)
-	if err != nil {
-		return nil, err
-	}
-
-	allPods := &corev1.PodList{}
-	err = pds.client.List(context.TODO(), allPods, &client.ListOptions{
-		FieldSelector: fieldSelector,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	filters := append([]pod.PodPredicate{isOnNode(node)}, pds.filters...)
-	return pod.FilterPods(allPods, filters...), nil
 }

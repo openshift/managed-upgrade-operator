@@ -168,7 +168,7 @@ var _ = Describe("Stuck Terminating Strategy", func() {
 			gomock.InOrder(
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList),
 			)
-			_, err := sts.getPodList(node)
+			_, err := pod.GetPodList(sts.client, node, sts.filters)
 			Expect(err).To(BeNil())
 		})
 
@@ -176,7 +176,7 @@ var _ = Describe("Stuck Terminating Strategy", func() {
 			gomock.InOrder(
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList).Return(fmt.Errorf("fake error")),
 			)
-			_, err := sts.getPodList(node)
+			_, err := pod.GetPodList(sts.client, node, sts.filters)
 			Expect(err).To(HaveOccurred())
 			Expect(err).NotTo(BeNil())
 		})
