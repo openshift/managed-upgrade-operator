@@ -155,23 +155,4 @@ var _ = Describe("Pod Delete Strategy", func() {
 
 		})
 	})
-
-	Context("Get Pod List to be deleted", func() {
-		It("Returns list of pods with no errors", func() {
-			gomock.InOrder(
-				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList),
-			)
-			_, err := pod.GetPodList(pds.client, node, pds.filters)
-			Expect(err).To(BeNil())
-		})
-
-		It("Returns no pods if there is any error while listing pods", func() {
-			gomock.InOrder(
-				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList).Return(fmt.Errorf("fake error")),
-			)
-			_, err := pod.GetPodList(pds.client, node, pds.filters)
-			Expect(err).To(HaveOccurred())
-			Expect(err).NotTo(BeNil())
-		})
-	})
 })

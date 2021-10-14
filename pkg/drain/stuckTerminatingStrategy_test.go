@@ -162,23 +162,4 @@ var _ = Describe("Stuck Terminating Strategy", func() {
 
 		})
 	})
-
-	Context("Get Pod List with no finalizers and stuck in terminating state", func() {
-		It("Returns list of pods with no errors", func() {
-			gomock.InOrder(
-				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList),
-			)
-			_, err := pod.GetPodList(sts.client, node, sts.filters)
-			Expect(err).To(BeNil())
-		})
-
-		It("Returns no pods if there is any error while listing pods", func() {
-			gomock.InOrder(
-				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList).Return(fmt.Errorf("fake error")),
-			)
-			_, err := pod.GetPodList(sts.client, node, sts.filters)
-			Expect(err).To(HaveOccurred())
-			Expect(err).NotTo(BeNil())
-		})
-	})
 })
