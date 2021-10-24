@@ -93,12 +93,12 @@ func (s *ocmClient) GetCluster() (*ClusterInfo, error) {
 		Get(csUrl.String())
 
 	if err != nil {
-		return nil, fmt.Errorf("can't query OCM cluster service: %v", err)
+		return nil, fmt.Errorf("can't query OCM cluster service: request to '%v' returned error '%v'", csUrl.String(), err)
 	}
 
 	operationId := response.Header().Get(OPERATION_ID_HEADER)
 	if response.IsError() {
-		return nil, fmt.Errorf("received error code %v, operation id '%v'", response.StatusCode(), operationId)
+		return nil, fmt.Errorf("request to '%v' received error code %v, operation id '%v'", csUrl.String(), response.StatusCode(), operationId)
 	}
 
 	listResponse := response.Result().(*ClusterList)
@@ -130,11 +130,11 @@ func (s *ocmClient) GetClusterUpgradePolicies(clusterId string) (*UpgradePolicyL
 		Get(upUrl.String())
 
 	if err != nil {
-		return nil, fmt.Errorf("can't send notification: %v", err)
+		return nil, fmt.Errorf("can't pull upgrade policies: request to '%v' returned error '%v'", upUrl.String(), err)
 	}
 	operationId := response.Header().Get(OPERATION_ID_HEADER)
 	if response.IsError() {
-		return nil, fmt.Errorf("received error code '%v' from OCM upgrade policy service, operation id '%v'", response.StatusCode(), operationId)
+		return nil, fmt.Errorf("request to '%v' received error code '%v' from OCM upgrade policy service, operation id '%v'", upUrl.String(), response.StatusCode(), operationId)
 	}
 
 	upgradeResponse := response.Result().(*UpgradePolicyList)
@@ -164,11 +164,11 @@ func (s *ocmClient) SetState(value string, description string, policyId string, 
 		Patch(reqUrl.String())
 
 	if err != nil {
-		return fmt.Errorf("can't send notification: %v", err)
+		return fmt.Errorf("can't set upgrade policy state: request to '%v' returned error '%v'", reqUrl.String(), err)
 	}
 	operationId := response.Header().Get(OPERATION_ID_HEADER)
 	if response.IsError() {
-		return fmt.Errorf("received error code %v, operation id '%v'", response.StatusCode(), operationId)
+		return fmt.Errorf("request to '%v' received error code %v, operation id '%v'", reqUrl.String(), response.StatusCode(), operationId)
 	}
 
 	return nil
@@ -189,7 +189,7 @@ func (s *ocmClient) GetClusterUpgradePolicyState(policyId string, clusterId stri
 		Get(upUrl.String())
 
 	if err != nil {
-		return nil, fmt.Errorf("can't send notification: %v", err)
+		return nil, fmt.Errorf("can't pull upgrade policy state: request to '%v' returned error '%v'", upUrl.String(), err)
 	}
 	operationId := response.Header().Get(OPERATION_ID_HEADER)
 	if response.IsError() {
