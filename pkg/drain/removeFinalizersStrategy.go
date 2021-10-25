@@ -1,10 +1,7 @@
 package drain
 
 import (
-	"context"
-
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/fields"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/openshift/managed-upgrade-operator/pkg/pod"
@@ -16,7 +13,8 @@ type removeFinalizersStrategy struct {
 }
 
 func (rfs *removeFinalizersStrategy) Execute(node *corev1.Node) (*DrainStrategyResult, error) {
-	podsWithFinalizers, err := rfs.getPodList(node)
+	filters := append([]pod.PodPredicate{isOnNode(node), hasFinalizers}, rfs.filters...)
+	podsWithFinalizers, err := pod.GetPodList(rfs.client, node, filters)
 	if err != nil {
 		return nil, err
 	}
@@ -33,29 +31,12 @@ func (rfs *removeFinalizersStrategy) Execute(node *corev1.Node) (*DrainStrategyR
 }
 
 func (rfs *removeFinalizersStrategy) IsValid(node *corev1.Node) (bool, error) {
-	targetPods, err := rfs.getPodList(node)
+	filters := append([]pod.PodPredicate{isOnNode(node), hasFinalizers}, rfs.filters...)
+	targetPods, err := pod.GetPodList(rfs.client, node, filters)
+
 	if err != nil {
 		return false, err
 	}
 
 	return len(targetPods.Items) > 0, nil
-}
-
-func (rfs *removeFinalizersStrategy) getPodList(node *corev1.Node) (*corev1.PodList, error) {
-
-	fieldSelector, err := fields.ParseSelector("spec.nodeName=" + node.Name)
-	if err != nil {
-		return nil, err
-	}
-
-	allPods := &corev1.PodList{}
-	err = rfs.client.List(context.TODO(), allPods, &client.ListOptions{
-		FieldSelector: fieldSelector,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	filters := append([]pod.PodPredicate{isOnNode(node), hasFinalizers}, rfs.filters...)
-	return pod.FilterPods(allPods, filters...), nil
 }

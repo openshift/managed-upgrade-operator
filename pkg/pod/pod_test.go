@@ -1,6 +1,7 @@
 package pod
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/golang/mock/gomock"
@@ -24,6 +25,13 @@ var _ = Describe("Pod Filter", func() {
 		}
 		failPredicate PodPredicate = func(p corev1.Pod) bool {
 			return false
+		}
+		NODENAME = "n1"
+
+		node = &corev1.Node{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: NODENAME,
+			},
 		}
 	)
 
@@ -49,6 +57,37 @@ var _ = Describe("Pod Filter", func() {
 		It("should filter pods that do not match the predicate(s)", func() {
 			filteredPods := FilterPods(podList, passPredicate, failPredicate, passPredicate)
 			Expect(len(filteredPods.Items)).To(Equal(0))
+		})
+	})
+
+	Context("Listing", func() {
+		It("should return pods that match a predicate", func() {
+			mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, *podList)
+			filters := []PodPredicate{passPredicate}
+			podList, err := GetPodList(mockKubeClient, node, filters)
+			Expect(len(podList.Items)).To(Equal(len(podList.Items)))
+			Expect(err).To(BeNil())
+		})
+		It("should return pods that matches all predicates", func() {
+			mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, *podList)
+			filters := []PodPredicate{passPredicate, passPredicate}
+			podList, err := GetPodList(mockKubeClient, node, filters)
+			Expect(len(podList.Items)).To(Equal(len(podList.Items)))
+			Expect(err).To(BeNil())
+		})
+		It("should return no pods that do not match the predicate", func() {
+			mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, *podList)
+			filters := []PodPredicate{failPredicate}
+			podList, err := GetPodList(mockKubeClient, node, filters)
+			Expect(len(podList.Items)).To(Equal(0))
+			Expect(err).To(BeNil())
+		})
+		It("Returns no pods if there is any error while listing pods", func() {
+			mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, *podList).Return(fmt.Errorf("fake error"))
+			filters := []PodPredicate{failPredicate}
+			_, err := GetPodList(mockKubeClient, node, filters)
+			Expect(err).To(HaveOccurred())
+			Expect(err).NotTo(BeNil())
 		})
 	})
 

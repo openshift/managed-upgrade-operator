@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/go-multierror"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -87,4 +88,23 @@ func RemoveFinalizersFromPod(c client.Client, pl *corev1.PodList) (*RemoveFinali
 		Message:    fmt.Sprintf("Finalizers removed for pods: %s", strings.Join(podsWithFinalizersRemoved, ",")),
 		NumRemoved: len(podsWithFinalizersRemoved),
 	}, me.ErrorOrNil()
+}
+
+// Get pod list on a given node matching pod predicate
+func GetPodList(c client.Client, n *corev1.Node, filters []PodPredicate) (*corev1.PodList, error) {
+
+	fieldSelector, err := fields.ParseSelector("spec.nodeName=" + n.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	allPods := &corev1.PodList{}
+	err = c.List(context.TODO(), allPods, &client.ListOptions{
+		FieldSelector: fieldSelector,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return FilterPods(allPods, filters...), nil
 }

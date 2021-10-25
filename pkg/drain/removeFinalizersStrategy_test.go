@@ -156,23 +156,4 @@ var _ = Describe("Remove Finalizer Strategy", func() {
 
 		})
 	})
-
-	Context("Get Pod List with finalizers", func() {
-		It("Returns list of pods with no errors", func() {
-			gomock.InOrder(
-				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList),
-			)
-			_, err := rfs.getPodList(node)
-			Expect(err).To(BeNil())
-		})
-
-		It("Returns no pods if there is any error while listing pods", func() {
-			gomock.InOrder(
-				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList).Return(fmt.Errorf("fake error")),
-			)
-			_, err := rfs.getPodList(node)
-			Expect(err).To(HaveOccurred())
-			Expect(err).NotTo(BeNil())
-		})
-	})
 })
