@@ -149,7 +149,7 @@ func bootstrapMetrics() *ManagedOSMetrics {
 			}, nil),
 		extDepAvailCheck: prometheus.NewDesc(
 			prometheus.BuildFQName(MetricsNamespace, subSystemCondition, "external_dep_check_timestamp"),
-			helpPreHealthCheckTimestamp,
+			helpExtDepAvailabilityTimestamp,
 			[]string{
 				keyUpgradeConfigName,
 				keyVersion,
@@ -454,6 +454,5 @@ func (uc *UpgradeCollector) collectStatus(ucfg *upgradev1alpha1.UpgradeConfig, c
 			string(h.Phase),
 		)
 	}
-
 	return nil
 }
