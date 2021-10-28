@@ -65,12 +65,6 @@ func (dsb *drainStrategyBuilder) NewNodeDrainStrategy(c client.Client, uc *upgra
 		return nil, err
 	}
 
-	allPods := &corev1.PodList{}
-	err = c.List(context.TODO(), allPods)
-	if err != nil {
-		return nil, err
-	}
-
 	defaultOsdPodPredicates := []pod.PodPredicate{isNotDaemonSet}
 	isNotPdbPod := isNotPdbPod(pdbList)
 	isPdbPod := isPdbPod(pdbList)
