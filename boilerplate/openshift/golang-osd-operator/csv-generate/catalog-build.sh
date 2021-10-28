@@ -69,7 +69,7 @@ RUN initializer --permissive
 CMD ["registry-server", "-t", "/tmp/terminate.log"]
 EOF
 
-${CONTAINER_ENGINE} build -f $DOCKERFILE_REGISTRY --tag "${registry_image}:${operator_channel}-latest" .
+${CONTAINER_ENGINE} build --pull -f $DOCKERFILE_REGISTRY --tag "${registry_image}:${operator_channel}-latest" .
 
 if [ $? -ne 0 ] ; then
     echo "docker build failed, exiting..."
