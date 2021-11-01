@@ -26,7 +26,7 @@ type UpgradeConfigSpec struct {
 	UpgradeAt string `json:"upgradeAt"`
 
 	// +kubebuilder:validation:Minimum:=0
-	// The maximum grace period granted to a node whose drain is blocked by a Pod Disruption Budget, before that drain is forced. Measured in minutes. The minimum accepted value is 0 and in this case it will trigger force drain after the expectedNodeDrainTime lapsed. 
+	// The maximum grace period granted to a node whose drain is blocked by a Pod Disruption Budget, before that drain is forced. Measured in minutes. The minimum accepted value is 0 and in this case it will trigger force drain after the expectedNodeDrainTime lapsed.
 	PDBForceDrainTimeout int32 `json:"PDBForceDrainTimeout"`
 
 	// +kubebuilder:validation:Enum={"OSD","ARO"}
@@ -127,6 +127,8 @@ const (
 	PostClusterHealthCheck UpgradeConditionType = "ClusterHealthyAfterUpgrade"
 	// SendCompletedNotification is an UpgradeConditionType
 	SendCompletedNotification UpgradeConditionType = "CompletedNotificationSent"
+	// IsClusterUpgradable is an UpgradeConditionType
+	IsClusterUpgradable UpgradeConditionType = "IsClusterUpgradable"
 )
 
 // UpgradePhase is a Go string type.
