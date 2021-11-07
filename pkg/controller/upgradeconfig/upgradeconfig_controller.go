@@ -170,15 +170,12 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 
 		// Validate UpgradeConfig instance
 		validatorResult, err := validator.IsValidUpgradeConfig(r.client, instance, clusterVersion, reqLogger)
-		if err != nil {
-			reqLogger.Info("An error occurred while validating UpgradeConfig")
+		if !validatorResult.IsValid || err != nil {
+			reqLogger.Info(fmt.Sprintf("An error occurred while validating UpgradeConfig: %v", validatorResult.Message))
+			metricsClient.UpdateMetricValidationFailed(instance.Name)
 			return reconcile.Result{}, err
 		}
-		if !validatorResult.IsValid {
-			reqLogger.Info(validatorResult.Message)
-			metricsClient.UpdateMetricValidationFailed(instance.Name)
-			return reconcile.Result{}, nil
-		}
+
 		metricsClient.UpdateMetricValidationSucceeded(instance.Name)
 		if !validatorResult.IsAvailableUpdate {
 			reqLogger.Info(validatorResult.Message)
