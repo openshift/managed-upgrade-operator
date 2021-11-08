@@ -94,12 +94,3 @@ managed_upgrade_condition_workers_upgraded_timestamp
 managed_upgrade_condition_post_upgrade_healthcheck_timestamp
 
 ```
-		sendCompletedNotification: prometheus.NewDesc(
-			prometheus.BuildFQName(MetricsNamespace, subSystemCondition, "notification_complete_timestamp"),
-			helpSendCompletedNotificationTimestamp,
-			[]string{
-				keyUpgradeConfigName,
-				keyVersion,
-				keyDesiredVersion,
-				keyCondition,
-			}, nil),

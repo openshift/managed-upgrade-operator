@@ -3,6 +3,7 @@ package clusterversion
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"github.com/go-logr/logr"
 	configv1 "github.com/openshift/api/config/v1"
@@ -219,6 +220,43 @@ func GetCurrentVersion(clusterVersion *configv1.ClusterVersion) (string, error) 
 	}
 
 	return gotVersion, nil
+}
+
+// GetCurrentVersionMinusOne strings a latest version -1 as a string and error
+func GetCurrentVersionMinusOne(clusterVersion *configv1.ClusterVersion) (string, error) {
+	var gotVersionMinusOne string
+	var completedTimes []*metav1.Time
+
+	for _, history := range clusterVersion.Status.History {
+		if history.State == configv1.CompletedUpdate {
+			completedTimes = append(completedTimes, history.CompletionTime)
+		}
+	}
+
+	if len(completedTimes) <= 1 {
+		return gotVersionMinusOne, fmt.Errorf("cluster has only one version available")
+	}
+
+	// sort time from latest to earliest. Return 2nd index (latest -1)
+	sort.Slice(completedTimes, func(i, j int) bool {
+		return completedTimes[i].Time.After(completedTimes[j].Time)
+	})
+
+	currentMinusOneTime := completedTimes[1]
+
+	for _, history := range clusterVersion.Status.History {
+		if history.CompletionTime == currentMinusOneTime {
+			gotVersionMinusOne = history.Version
+			break
+		}
+	}
+
+	if len(gotVersionMinusOne) == 0 {
+		return gotVersionMinusOne, fmt.Errorf("failed to get current version - 1")
+	}
+	fmt.Println(gotVersionMinusOne)
+
+	return gotVersionMinusOne, nil
 }
 
 // check if we are using image or channel + version to upgrade

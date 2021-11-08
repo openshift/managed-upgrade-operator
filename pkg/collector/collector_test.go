@@ -35,25 +35,22 @@ var _ = Describe("Upgrade Conditions Collector", func() {
 		upgradeConfig    upgradev1alpha1.UpgradeConfig
 		upgradeCollector prometheus.Collector
 
-		// mockKubeClient           *mocks.MockClient
 		mockCtrl                 *gomock.Controller
 		mockUpgradeConfigManager *ucMgrMock.MockUpgradeConfigManager
 		mockCVClient             *cvMocks.MockClusterVersion
 		cv                       configv1.ClusterVersion
 
-		// expected       string
-		// metadata       string
-
-		testTime time.Time
+		testTime       time.Time
+		testTimeFuture time.Time
 	)
 
 	BeforeEach(func() {
 		_ = os.Setenv("OPERATOR_NAMESPACE", TEST_OPERATOR_NAMESPACE)
 		mockCtrl = gomock.NewController(GinkgoT())
-		// mockKubeClient = mocks.NewMockClient(mockCtrl)
 		mockUpgradeConfigManager = ucMgrMock.NewMockUpgradeConfigManager(mockCtrl)
 		mockCVClient = cvMocks.NewMockClusterVersion(mockCtrl)
 		testTime = time.Now()
+		testTimeFuture = time.Now().Add(time.Hour * 1)
 
 		upgradeConfig = upgradev1alpha1.UpgradeConfig{
 			ObjectMeta: metav1.ObjectMeta{
@@ -95,7 +92,8 @@ var _ = Describe("Upgrade Conditions Collector", func() {
 			},
 			Status: configv1.ClusterVersionStatus{
 				History: []configv1.UpdateHistory{
-					{State: configv1.CompletedUpdate, Version: "something"},
+					{State: configv1.CompletedUpdate, Version: TEST_UPGRADE_VERSION, CompletionTime: &metav1.Time{Time: testTime}},
+					{State: configv1.CompletedUpdate, Version: "new version", CompletionTime: &metav1.Time{Time: testTimeFuture}},
 				},
 			},
 		}
