@@ -8,16 +8,15 @@ import (
 	"github.com/go-logr/logr"
 	configv1 "github.com/openshift/api/config/v1"
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
-	cv "github.com/openshift/managed-upgrade-operator/pkg/clusterversion"
 )
 
 func (c *clusterUpgrader) IsUpgradeableVersion(ctx context.Context, logger logr.Logger) (bool, error) {
 	v := &configv1.ClusterVersion{}
-	currentVersion, err := cv.GetCurrentVersion(v)
+	currentVersion, err := c.cvClient.GetClusterVersion()
 	if err != nil {
 		return false, err
 	}
-	parsedCurrentVersion, err := semver.Parse(currentVersion)
+	parsedCurrentVersion, err := semver.Parse(currentVersion.Status.History[0].Version)
 	if err != nil {
 		return false, err
 	}
