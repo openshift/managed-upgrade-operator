@@ -20,6 +20,8 @@ const (
 	UPGRADE_EXTDEPCHECK_FAILED_DESC = "Cluster upgrade to version %s was cancelled during the External Dependency Availability Check step. A required external dependency of the upgrade was unavailable, so the upgrade did not proceed. Automated upgrades will be retried on their next scheduling cycle. If you have manually scheduled an upgrade instead, it must now be rescheduled."
 	// UPGRADE_SCALE_FAILED_DESC describes the upgrade scaling failed
 	UPGRADE_SCALE_FAILED_DESC = "Cluster upgrade to version %s was cancelled during the Scale-Up Worker Node step. A temporary additional worker node was unable to be created to temporarily house workloads, so the upgrade did not proceed. Automated upgrades will be retried on their next scheduling cycle. If you have manually scheduled an upgrade instead, it must now be rescheduled."
+	// UPGRADE_UPGRADEABLE_FAILED_DESC describes the upgradeable check failure
+	UPGRADE_UPGRADEABLE_FAILED_DESC = "Cluster upgrade to version %s was cancelled because manual acknowledgement is required concerning the removal of deprecated APIs. Please review the Knowledge Base article at https://access.redhat.com/articles/6329921 and perform the acknowledgement procedure if you are not using workloads that require the deprecated APIs and wish to proceed with the upgrade. Automated upgrades will be retried on their next scheduling cycle. If you have manually scheduled an upgrade instead, it must be rescheduled."
 
 	// UPGRADE_DEFAULT_DELAY_DESC describes the upgrade default delay
 	UPGRADE_DEFAULT_DELAY_DESC = "Cluster upgrade to version %s is experiencing a delay whilst it performs necessary pre-upgrade procedures. The upgrade will continue to retry. This is an informational notification and no action is required."
@@ -164,6 +166,8 @@ func createFailureDescription(uc *v1alpha1.UpgradeConfig) string {
 	}
 
 	switch failedCondition.Type {
+	case v1alpha1.IsClusterUpgradable:
+		description = fmt.Sprintf(UPGRADE_UPGRADEABLE_FAILED_DESC, uc.Spec.Desired.Version)
 	case v1alpha1.UpgradePreHealthCheck:
 		description = fmt.Sprintf(UPGRADE_PREHEALTHCHECK_FAILED_DESC, uc.Spec.Desired.Version)
 	case v1alpha1.ExtDepAvailabilityCheck:

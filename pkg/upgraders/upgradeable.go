@@ -11,64 +11,56 @@ import (
 	cv "github.com/openshift/managed-upgrade-operator/pkg/clusterversion"
 )
 
-func (c *clusterUpgrader) IsUpgradeable(ctx context.Context, logger logr.Logger) (bool, error) {
-	cV := &configv1.ClusterVersion{}
-	uC := &upgradev1alpha1.UpgradeConfig{}
+func (c *clusterUpgrader) IsUpgradeableVersion(ctx context.Context, logger logr.Logger) (bool, error) {
+	v := &configv1.ClusterVersion{}
+	currentVersion, err := cv.GetCurrentVersion(v)
+	if err != nil {
+		return false, err
+	}
+	parsedCurrentVersion, err := semver.Parse(currentVersion)
+	if err != nil {
+		return false, err
+	}
 
-	//Check if the cluster is already upgrading -
+	desiredVersion := c.upgradeConfig.Spec.Desired.Version
+	parsedDesiredVersion, err := semver.Parse(desiredVersion)
+	if err != nil {
+		return false, err
+	}
+
+	for _, condition := range v.Status.Conditions {
+		if condition.Type == configv1.OperatorUpgradeable {
+			if condition.Status == configv1.ConditionTrue {
+				return true, nil
+			}
+			if condition.Status == configv1.ConditionFalse {
+				// if the upgradeable is false then we need to check the current version with upgrade version for y-stream update
+				if parsedDesiredVersion.Major >= parsedCurrentVersion.Major && parsedDesiredVersion.Minor > parsedCurrentVersion.Minor {
+					return false, err
+				}
+				if parsedDesiredVersion.Major >= parsedCurrentVersion.Major && parsedDesiredVersion.Minor == parsedCurrentVersion.Minor {
+					return true, nil
+				}
+			}
+		}
+	}
+	return true, nil
+}
+
+func (c *clusterUpgrader) IsUpgradeable(ctx context.Context, logger logr.Logger) (bool, error) {
 	upgradeCommenced, err := c.cvClient.HasUpgradeCommenced(c.upgradeConfig)
 	if err != nil {
 		return false, err
 	}
 	if upgradeCommenced {
-		logger.Info(fmt.Sprintf("Skipping upgrade step %s", upgradev1alpha1.UpgradePreHealthCheck))
+		logger.Info(fmt.Sprintf("Skipping upgrade step %s", upgradev1alpha1.IsClusterUpgradable))
 		return true, nil
 	}
 
-	// get current clusterversion
-	cvVersion, err := cv.GetCurrentVersion(cV)
-	if err != nil {
-		logger.Error(err, "failed to get current cluster version")
+	output, err := c.IsUpgradeableVersion(ctx, logger)
+	if err != nil || !output {
 		return false, err
 	}
 
-	parsedCvVersion, err := semver.Parse(cvVersion)
-	if err != nil {
-		logger.Error(err, fmt.Sprintf("Failed to parse current cluster version %s as semver", cvVersion))
-		return false, err
-	}
-
-	// get the desired clusterversion from upgradeconfig
-	ucVersion := uC.Spec.Desired.Version
-	if err != nil {
-		logger.Error(err, "failed to get current upgrade config desired version")
-		return false, err
-	}
-
-	parsedUcVersion, err := semver.Parse(ucVersion)
-	if err != nil {
-		logger.Error(err, fmt.Sprintf("failed to parse upgrade config desired version %s as semver", ucVersion))
-		return false, err
-	}
-
-	// check if the clusterversion has "Upgradeable" else return true
-	for _, val := range cV.Status.Conditions {
-		if val.Type != configv1.OperatorUpgradeable {
-			return true, nil
-		}
-	}
-
-	for _, condition := range cV.Status.Conditions {
-		if condition.Type == configv1.OperatorUpgradeable && condition.Status == configv1.ConditionTrue {
-			return true, nil
-		} else if condition.Type == configv1.OperatorUpgradeable && condition.Status == configv1.ConditionFalse {
-			// if the upgradeable is false then we need to check the current version with upgrade version for y-stream update
-			if parsedUcVersion.Major >= parsedCvVersion.Major && parsedUcVersion.Minor > parsedCvVersion.Minor {
-				return false, err
-			} else if parsedUcVersion.Major >= parsedCvVersion.Major && parsedUcVersion.Minor == parsedCvVersion.Minor {
-				return true, nil
-			}
-		}
-	}
-	return false, nil
+	return true, nil
 }
