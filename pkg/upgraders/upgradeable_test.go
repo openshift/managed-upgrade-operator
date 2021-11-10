@@ -2,12 +2,14 @@ package upgraders
 
 import (
 	"context"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -27,6 +29,7 @@ import (
 var _ = Describe("UpgradableCheckStep", func() {
 	var (
 		logger logr.Logger
+
 		// mocks
 		mockKubeClient           *mocks.MockClient
 		mockCtrl                 *gomock.Controller
@@ -37,6 +40,7 @@ var _ = Describe("UpgradableCheckStep", func() {
 		mockCVClient             *cvMocks.MockClusterVersion
 		mockDrainStrategyBuilder *mockDrain.MockNodeDrainStrategyBuilder
 		mockEMClient             *emMocks.MockEventManager
+
 		// upgradeconfig to be used during tests
 		upgradeConfigName types.NamespacedName
 		upgradeConfig     *upgradev1alpha1.UpgradeConfig
@@ -44,6 +48,8 @@ var _ = Describe("UpgradableCheckStep", func() {
 		// upgrader to be used during tests
 		config   *upgraderConfig
 		upgrader *osdUpgrader
+
+		currentClusterVersion *configv1.ClusterVersion
 	)
 
 	BeforeEach(func() {
@@ -77,6 +83,29 @@ var _ = Describe("UpgradableCheckStep", func() {
 				upgradeConfig:        upgradeConfig,
 			},
 		}
+		currentClusterVersion = &configv1.ClusterVersion{
+			Status: configv1.ClusterVersionStatus{
+				Conditions: []configv1.ClusterOperatorStatusCondition{
+					{
+						Type:   configv1.OperatorUpgradeable,
+						Status: configv1.ConditionFalse,
+					},
+				},
+				History: []configv1.UpdateHistory{
+					{
+						State: "fakeState",
+						StartedTime: v1.Time{
+							Time: time.Now().UTC(),
+						},
+						CompletionTime: &v1.Time{
+							Time: time.Now().UTC(),
+						},
+						Version:  "fakeVersion",
+						Verified: false,
+					},
+				},
+			},
+		}
 	})
 
 	AfterEach(func() {
@@ -85,23 +114,17 @@ var _ = Describe("UpgradableCheckStep", func() {
 
 	Context("When running the IsUpgradable check", func() {
 		Context("When current 'y' stream version is lower then desired version", func() {
-			var clusterVersion *configv1.ClusterVersion
 			BeforeEach(func() {
-				clusterVersion = &configv1.ClusterVersion{
-					Status: configv1.ClusterVersionStatus{
-						History: []configv1.UpdateHistory{
-							{State: configv1.CompletedUpdate, Version: "1.2.2"},
-						},
-					},
-				}
+				upgradeConfig.Spec.Desired.Version = "1.2.3"
+				currentClusterVersion.Status.History = []configv1.UpdateHistory{{State: configv1.CompletedUpdate, Version: "1.1.3"}}
 			})
 			It("will not perform upgrade", func() {
 				gomock.InOrder(
 					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
-					mockCVClient.EXPECT().GetClusterVersion().Return(clusterVersion, nil),
+					mockCVClient.EXPECT().GetClusterVersion().Return(currentClusterVersion, nil),
 				)
 				result, err := upgrader.IsUpgradeable(context.TODO(), logger)
-				Expect(err).To(HaveOccurred())
+				Expect(err).ToNot(HaveOccurred())
 				Expect(result).To(BeFalse())
 			})
 		})
