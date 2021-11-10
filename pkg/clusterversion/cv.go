@@ -254,7 +254,6 @@ func GetCurrentVersionMinusOne(clusterVersion *configv1.ClusterVersion) (string,
 	if len(gotVersionMinusOne) == 0 {
 		return gotVersionMinusOne, fmt.Errorf("failed to get current version - 1")
 	}
-	fmt.Println(gotVersionMinusOne)
 
 	return gotVersionMinusOne, nil
 }

@@ -319,7 +319,6 @@ func (uc *UpgradeCollector) collectUpgradeConditions(ch chan<- prometheus.Metric
 	// Control plane has upgraded but metrics should retain appropriate
 	// version -> desired.version for designated upgrade
 	if upgradeConfig.Spec.Desired.Version == cvVersion {
-		fmt.Println("Checking if control plane version has upgraded matching UpgradeConfig desired Version")
 		cvVersion, err = cv.GetCurrentVersionMinusOne(clusterVersion)
 		if err != nil {
 			return err

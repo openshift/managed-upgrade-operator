@@ -14,6 +14,7 @@ import (
 	promtestutil "github.com/prometheus/client_golang/prometheus/testutil"
 
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
+	"github.com/openshift/managed-upgrade-operator/pkg/clusterversion"
 	cvMocks "github.com/openshift/managed-upgrade-operator/pkg/clusterversion/mocks"
 	"github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager"
 	ucMgrMock "github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager/mocks"
@@ -126,8 +127,11 @@ var _ = Describe("Upgrade Conditions Collector", func() {
 						mockUpgradeConfigManager.EXPECT().Get().Return(&upgradeConfig, nil),
 						mockCVClient.EXPECT().GetClusterVersion().Return(&cv, nil),
 					)
+					source_version, err := clusterversion.GetCurrentVersionMinusOne(&cv)
 					metricCount := promtestutil.CollectAndCount(upgradeCollector)
 					Expect(metricCount).NotTo(BeZero())
+					Expect(err).To(BeNil())
+					Expect(source_version).To(Equal(TEST_UPGRADE_VERSION))
 				})
 			})
 		})
