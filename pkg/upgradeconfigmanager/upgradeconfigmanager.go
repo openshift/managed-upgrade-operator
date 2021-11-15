@@ -222,6 +222,7 @@ func (s *upgradeConfigManager) Refresh() (bool, error) {
 	if len(configSpecs) == 0 {
 		if foundUpgradeConfig {
 			log.Info(fmt.Sprintf("Removing expired UpgradeConfig %s", currentUpgradeConfig.Name))
+			// TODO: should this write a cancelled condition to the upgradeConfig CR prior to deletion?
 			err = s.client.Delete(context.TODO(), currentUpgradeConfig)
 			if err != nil {
 				log.Error(err, "can't remove UpgradeConfig after finding no upgrade_policy")
