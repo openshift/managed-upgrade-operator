@@ -40,20 +40,10 @@ func (c *clusterUpgrader) IsUpgradeable(ctx context.Context, logger logr.Logger)
 		return false, err
 	}
 
+	// if the upgradeable is false then we need to check the current version with upgrade version for y-stream update
 	for _, condition := range clusterVersion.Status.Conditions {
-		if condition.Type == configv1.OperatorUpgradeable {
-			if condition.Status == configv1.ConditionTrue {
-				return true, nil
-			}
-			if condition.Status == configv1.ConditionFalse {
-				// if the upgradeable is false then we need to check the current version with upgrade version for y-stream update
-				if parsedDesiredVersion.Major >= parsedCurrentVersion.Major && parsedDesiredVersion.Minor > parsedCurrentVersion.Minor {
-					return false, nil
-				}
-				if parsedDesiredVersion.Major >= parsedCurrentVersion.Major && parsedDesiredVersion.Minor == parsedCurrentVersion.Minor {
-					return true, nil
-				}
-			}
+		if condition.Type == configv1.OperatorUpgradeable && condition.Status == configv1.ConditionFalse && parsedDesiredVersion.Major >= parsedCurrentVersion.Major && parsedDesiredVersion.Minor > parsedCurrentVersion.Minor {
+			return false, nil
 		}
 	}
 

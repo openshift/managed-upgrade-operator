@@ -128,6 +128,22 @@ var _ = Describe("UpgradableCheckStep", func() {
 				Expect(result).To(BeFalse())
 			})
 		})
+	})
 
+	Context("When the clusterversion does not have Upgradeable condition", func() {
+		BeforeEach(func() {
+			upgradeConfig.Spec.Desired.Version = "1.2.3"
+			currentClusterVersion.Status.History = []configv1.UpdateHistory{{State: configv1.CompletedUpdate, Version: "1.1.3"}}
+			currentClusterVersion.Status.Conditions = []configv1.ClusterOperatorStatusCondition{{Type: configv1.OperatorDegraded}}
+		})
+		It("will perform upgrade", func() {
+			gomock.InOrder(
+				mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
+				mockCVClient.EXPECT().GetClusterVersion().Return(currentClusterVersion, nil),
+			)
+			result, err := upgrader.IsUpgradeable(context.TODO(), logger)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(BeTrue())
+		})
 	})
 })
