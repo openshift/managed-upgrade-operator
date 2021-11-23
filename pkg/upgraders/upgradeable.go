@@ -43,7 +43,7 @@ func (c *clusterUpgrader) IsUpgradeable(ctx context.Context, logger logr.Logger)
 	// if the upgradeable is false then we need to check the current version with upgrade version for y-stream update
 	for _, condition := range clusterVersion.Status.Conditions {
 		if condition.Type == configv1.OperatorUpgradeable && condition.Status == configv1.ConditionFalse && parsedDesiredVersion.Major >= parsedCurrentVersion.Major && parsedDesiredVersion.Minor > parsedCurrentVersion.Minor {
-			return false, nil
+			return false, fmt.Errorf("Cluster upgrade to version %s is canceled with the reason of %s containing message that %s Automated upgrades will be retried on their next scheduling cycle. If you have manually scheduled an upgrade instead, it must be rescheduled.", desiredVersion, condition.Reason, condition.Message)
 		}
 	}
 

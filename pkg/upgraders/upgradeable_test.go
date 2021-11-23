@@ -87,8 +87,10 @@ var _ = Describe("UpgradableCheckStep", func() {
 			Status: configv1.ClusterVersionStatus{
 				Conditions: []configv1.ClusterOperatorStatusCondition{
 					{
-						Type:   configv1.OperatorUpgradeable,
-						Status: configv1.ConditionFalse,
+						Type:    configv1.OperatorUpgradeable,
+						Status:  configv1.ConditionFalse,
+						Reason:  "IsClusterUpgradable not done",
+						Message: "Kubernetes 1.22 and therefore OpenShift 4.9 remove several APIs which require admin consideration. Please see the knowledge article https://access.redhat.com/articles/6329921 for details and instructions.",
 					},
 				},
 				History: []configv1.UpdateHistory{
@@ -124,7 +126,7 @@ var _ = Describe("UpgradableCheckStep", func() {
 					mockCVClient.EXPECT().GetClusterVersion().Return(currentClusterVersion, nil),
 				)
 				result, err := upgrader.IsUpgradeable(context.TODO(), logger)
-				Expect(err).ToNot(HaveOccurred())
+				Expect(err).To(HaveOccurred())
 				Expect(result).To(BeFalse())
 			})
 		})
