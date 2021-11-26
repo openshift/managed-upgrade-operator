@@ -64,6 +64,7 @@ func NewOSDUpgrader(c client.Client, cfm configmanager.ConfigManager, mc metrics
 	steps := []upgradesteps.UpgradeStep{
 		upgradesteps.Action(string(upgradev1alpha1.SendStartedNotification), ou.SendStartedNotification),
 		upgradesteps.Action(string(upgradev1alpha1.SendStartedNotification), ou.UpgradeDelayedCheck),
+		upgradesteps.Action(string(upgradev1alpha1.IsClusterUpgradable), ou.IsUpgradeable),
 		upgradesteps.Action(string(upgradev1alpha1.UpgradePreHealthCheck), ou.PreUpgradeHealthCheck),
 		upgradesteps.Action(string(upgradev1alpha1.ExtDepAvailabilityCheck), ou.ExternalDependencyAvailabilityCheck),
 		upgradesteps.Action(string(upgradev1alpha1.UpgradeScaleUpExtraNodes), ou.EnsureExtraUpgradeWorkers),

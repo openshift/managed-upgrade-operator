@@ -164,6 +164,8 @@ func createFailureDescription(uc *v1alpha1.UpgradeConfig) string {
 	}
 
 	switch failedCondition.Type {
+	case v1alpha1.IsClusterUpgradable:
+		description = failedCondition.Message
 	case v1alpha1.UpgradePreHealthCheck:
 		description = fmt.Sprintf(UPGRADE_PREHEALTHCHECK_FAILED_DESC, uc.Spec.Desired.Version)
 	case v1alpha1.ExtDepAvailabilityCheck:
