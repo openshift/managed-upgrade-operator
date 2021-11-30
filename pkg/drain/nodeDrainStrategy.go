@@ -49,7 +49,7 @@ func (ds *osdDrainStrategy) Execute(node *corev1.Node) ([]*DrainStrategyResult, 
 				r, err := ds.GetStrategy().Execute(node)
 				me = multierror.Append(err, me)
 				if r.HasExecuted {
-					res = append(res, &DrainStrategyResult{Message: fmt.Sprintf("Drain strategy %s has been executed. %s", ds.GetDescription(), r.Message)})
+					res = append(res, &DrainStrategyResult{Message: fmt.Sprintf("Drain strategy %s has been executed after %s. %s", ds.GetDescription(), drainStrategyDuration(result.AddedAt), r.Message)})
 				}
 			}
 		}
@@ -129,6 +129,10 @@ func (ts *timedStrategy) GetStrategy() DrainStrategy {
 
 func isAfter(t *metav1.Time, d time.Duration) bool {
 	return t != nil && t.Add(d).Before(metav1.Now().Time)
+}
+
+func drainStrategyDuration(t *metav1.Time) time.Duration {
+	return (metav1.Now().Sub(t.Time))
 }
 
 func sortDuration(ts []TimedDrainStrategy) []TimedDrainStrategy {
