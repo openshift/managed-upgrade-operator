@@ -132,7 +132,7 @@ func isAfter(t *metav1.Time, d time.Duration) bool {
 }
 
 func drainStrategyDuration(t *metav1.Time) time.Duration {
-	return (metav1.Now().Sub(t.Time))
+	return (metav1.Now().Sub(t.Time).Round(time.Second))
 }
 
 func sortDuration(ts []TimedDrainStrategy) []TimedDrainStrategy {
