@@ -69,7 +69,7 @@ func (dsb *drainStrategyBuilder) NewNodeDrainStrategy(c client.Client, uc *upgra
 	isNotPdbPod := isNotPdbPod(pdbList)
 	isPdbPod := isPdbPod(pdbList)
 	defaultDuration := cfg.GetTimeOutDuration()
-	pdbDuration := uc.GetPDBDrainTimeoutDuration()
+	pdbDuration := uc.GetPDBDrainTimeoutDuration() + cfg.GetExpectedDrainDuration()
 	ts := []TimedDrainStrategy{
 		newTimedStrategy(defaultPodDeleteName, "Default pod deletion", defaultDuration, &podDeletionStrategy{
 			client:  c,
