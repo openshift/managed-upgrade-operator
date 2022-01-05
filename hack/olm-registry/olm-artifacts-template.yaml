@@ -136,3 +136,4 @@ objects:
           - kind: ServiceAccount
             name: managed-upgrade-operator
             namespace: openshift-managed-upgrade-operator
+
