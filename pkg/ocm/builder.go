@@ -3,6 +3,7 @@ package ocm
 import (
 	"fmt"
 	"net/url"
+	"os"
 
 	"github.com/go-resty/resty/v2"
 	"github.com/openshift/managed-upgrade-operator/util"
@@ -30,8 +31,18 @@ func (ocb *ocmClientBuilder) New(c client.Client, ocmBaseUrl *url.URL) (OcmClien
 		return nil, fmt.Errorf("failed to retrieve cluster access token")
 	}
 
+	// Inherit environment proxy config
+	var proxyURL *url.URL
+	proxy := getProxy()
+	if proxy != "" {
+		proxyURL, err = url.Parse(proxy)
+		if err != nil {
+			return nil, fmt.Errorf("invalid-formatted proxy: %v", err)
+		}
+	}
+
 	// Set up the HTTP client using the token
-	httpClient := resty.New().SetTransport(&ocmRoundTripper{authorization: *accessToken})
+	httpClient := resty.New().SetTransport(&ocmRoundTripper{authorization: *accessToken, proxy: proxyURL})
 
 	return &ocmClient{
 		client:     c,
@@ -39,4 +50,18 @@ func (ocb *ocmClientBuilder) New(c client.Client, ocmBaseUrl *url.URL) (OcmClien
 		httpClient: httpClient,
 	}, nil
 
+}
+
+func getProxy() string {
+	httpProxy := os.Getenv("HTTP_PROXY")
+	httpsProxy := os.Getenv("HTTPS_PROXY")
+
+	// Default to HTTPS_PROXY if available
+	if len(httpsProxy) > 0  {
+		return httpsProxy
+	}
+	if len(httpProxy) > 0 {
+		return httpProxy
+	}
+	return ""
 }
