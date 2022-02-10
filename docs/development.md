@@ -240,7 +240,15 @@ $ oc new-project test-managed-upgrade-operator
 
 ```shell
 oc create -f deploy/cluster_role.yaml
+oc create -f test/deploy/managed_upgrade_role.yaml
+oc create -f deploy/prometheus_role.yaml
 oc create -f test/deploy/cluster_role_binding.yaml
+oc create -f test/deploy/managed_upgrade_rolebinding.yaml
+oc create -f test/deploy/prometheus_rolebinding.yaml
+oc create -f test/deploy/monitoring_reader_role.yaml
+oc create -f test/deploy/pullsecret_reader_role.yaml
+oc create -f test/deploy/monitoring_reader_rolebinding.yaml
+oc create -f test/deploy/pullsecret_reader_rolebinding.yaml
 oc create -f test/deploy/service_account.yaml
 oc create -f test/deploy/managed-upgrade-operator-config.yaml
 ```
