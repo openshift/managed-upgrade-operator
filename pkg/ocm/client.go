@@ -54,6 +54,7 @@ type ocmClient struct {
 
 type ocmRoundTripper struct {
 	authorization util.AccessToken
+	proxy *url.URL
 }
 
 func (ort *ocmRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
@@ -61,6 +62,9 @@ func (ort *ocmRoundTripper) RoundTrip(req *http.Request) (*http.Response, error)
 	req.Header.Add("Authorization", authVal)
 	transport := http.Transport{
 		TLSHandshakeTimeout: time.Second * 5,
+	}
+	if ort.proxy != nil {
+		transport.Proxy = http.ProxyURL(ort.proxy)
 	}
 	return transport.RoundTrip(req)
 }
