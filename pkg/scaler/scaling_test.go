@@ -410,6 +410,62 @@ var _ = Describe("Node scaling tests", func() {
 				},
 			}
 		})
+		Context("When there's more nodes than machines in machinesets", func() {
+			It("Ignores the additional nodes", func() {
+				noUpgradeMachineSets := &machineapi.MachineSetList{
+					Items: []machineapi.MachineSet{},
+				}
+				var replicas int32 = 2
+				workerMachineSets := &machineapi.MachineSetList{
+					Items: []machineapi.MachineSet{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "test-machineset",
+								Namespace: MACHINE_API_NAMESPACE,
+							},
+							Spec: machineapi.MachineSetSpec{
+								Replicas: &replicas,
+							}},
+					},
+				}
+				nodelist := &corev1.NodeList{
+					Items: []corev1.Node{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "node1",
+							},
+						},
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "node2",
+							},
+						},
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "node3",
+							},
+						},
+					},
+				}
+
+				gomock.InOrder(
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
+						client.InNamespace(MACHINE_API_NAMESPACE),
+						client.MatchingLabels{LABEL_UPGRADE: "true"},
+					}).SetArg(1, *noUpgradeMachineSets),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
+						client.InNamespace(MACHINE_API_NAMESPACE),
+						NotMatchingLabels{LABEL_UPGRADE: "true"},
+					}).SetArg(1, *workerMachineSets),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
+						NotMatchingLabels{machinery.MasterLabel: ""},
+					}).SetArg(1, *nodelist),
+				)
+				result, err := scaler.EnsureScaleDownNodes(mockKubeClient, nil, logger)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(BeTrue())
+			})
+		})
 		Context("When the scaled machines can't be fetched", func() {
 			It("Indicates an error", func() {
 				fakeError := fmt.Errorf("fake error")

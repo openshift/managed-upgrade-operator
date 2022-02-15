@@ -113,6 +113,8 @@ func (s *machineSetScaler) EnsureScaleDownNodes(c client.Client, nds drain.NodeD
 	err = c.List(context.TODO(), originalMachineSets, []client.ListOption{
 		client.InNamespace(MACHINE_API_NAMESPACE),
 		NotMatchingLabels{LABEL_UPGRADE: "true"},
+		client.MatchingLabels{"hive.openshift.io/machine-pool": "worker"},
+		client.MatchingLabels{"hive.openshift.io/machine-pool": "infra"},
 	}...)
 	if err != nil {
 		logger.Error(err, "failed to get upgrade extra machinesets")
