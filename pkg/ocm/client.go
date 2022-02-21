@@ -12,6 +12,7 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/openshift/managed-upgrade-operator/util"
 )
@@ -28,6 +29,8 @@ const (
 	// UPGRADE_TYPE_OSD is the only supported type.
 	UPGRADE_TYPE_OSD = "OSD"
 )
+
+var log = logf.Log.WithName("ocm-client")
 
 var (
 	// ErrClusterIdNotFound is an error describing the cluster ID can not be found
@@ -54,7 +57,7 @@ type ocmClient struct {
 
 type ocmRoundTripper struct {
 	authorization util.AccessToken
-	proxy *url.URL
+	proxy         *url.URL
 }
 
 func (ort *ocmRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
@@ -105,6 +108,8 @@ func (s *ocmClient) GetCluster() (*ClusterInfo, error) {
 		return nil, fmt.Errorf("request to '%v' received error code %v, operation id '%v'", csUrl.String(), response.StatusCode(), operationId)
 	}
 
+	log.Info(fmt.Sprintf("request to '%v' received response code %v, operation id: '%v'", csUrl.String(), response.StatusCode(), operationId))
+
 	listResponse := response.Result().(*ClusterList)
 	if listResponse.Size != 1 || len(listResponse.Items) != 1 {
 		return nil, ErrClusterIdNotFound
@@ -140,6 +145,8 @@ func (s *ocmClient) GetClusterUpgradePolicies(clusterId string) (*UpgradePolicyL
 	if response.IsError() {
 		return nil, fmt.Errorf("request to '%v' received error code '%v' from OCM upgrade policy service, operation id '%v'", upUrl.String(), response.StatusCode(), operationId)
 	}
+
+	log.Info(fmt.Sprintf("request to '%v' received response code '%v' from OCM upgrade policy service, operation id: '%v'", upUrl.String(), response.StatusCode(), operationId))
 
 	upgradeResponse := response.Result().(*UpgradePolicyList)
 
