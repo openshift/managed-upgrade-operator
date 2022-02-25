@@ -468,12 +468,12 @@ var _ = Describe("Node scaling tests", func() {
 					}).Times(2),
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
 					client.InNamespace(MACHINE_API_NAMESPACE),
-					NotMatchingLabels{LABEL_UPGRADE: "true"},
+					client.MatchingLabels{LABEL_UPGRADE: "true"},
 				}).SetArg(1, *originalMachines),
 			)
 			result, err := scaler.EnsureScaleDownNodes(mockKubeClient, nil, logger)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(BeTrue())
+			Expect(result).To(BeFalse())
 		})
 		It("should apply drain strategies if NodeDrainStrategy exists", func() {
 			mockDrainStrategy := mockDrain.NewMockNodeDrainStrategy(mockCtrl)
@@ -495,6 +495,16 @@ var _ = Describe("Node scaling tests", func() {
 					},
 				},
 			}
+			nodes := &corev1.NodeList{
+				Items: []corev1.Node{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: node1Name,
+						},
+					},
+					{},
+				},
+			}
 			gomock.InOrder(
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
 					client.InNamespace(MACHINE_API_NAMESPACE),
@@ -512,12 +522,74 @@ var _ = Describe("Node scaling tests", func() {
 						Expect(found).To(BeTrue())
 						return nil
 					}).Times(2),
+				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, *nodes),
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, *upgradeMachines),
 				mockDrainStrategy.EXPECT().Execute(gomock.Any()).Return([]*drain.DrainStrategyResult{}, nil),
 				mockDrainStrategy.EXPECT().HasFailed(gomock.Any()).Return(false, nil),
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
 					client.InNamespace(MACHINE_API_NAMESPACE),
-					NotMatchingLabels{LABEL_UPGRADE: "true"},
+					client.MatchingLabels{LABEL_UPGRADE: "true"},
+				}).SetArg(1, *originalMachines),
+			)
+			result, err := scaler.EnsureScaleDownNodes(mockKubeClient, mockDrainStrategy, logger)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(BeFalse())
+		})
+		It("should apply drain strategies if NodeDrainStrategy exists Part 2", func() {
+			mockDrainStrategy := mockDrain.NewMockNodeDrainStrategy(mockCtrl)
+			var node1Name = "test-node-1"
+			var nodePhase = "Running"
+			originalMachines = &machineapi.MachineList{}
+			upgradeMachines := &machineapi.MachineList{
+				Items: []machineapi.Machine{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-machine-1",
+							Namespace: MACHINE_API_NAMESPACE,
+						},
+						Status: machineapi.MachineStatus{
+							NodeRef: &corev1.ObjectReference{
+								Name: node1Name,
+							},
+							Phase: &nodePhase,
+						},
+					},
+				},
+			}
+			nodes := &corev1.NodeList{
+				Items: []corev1.Node{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: node1Name,
+						},
+					},
+					{},
+				},
+			}
+			gomock.InOrder(
+				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
+					client.InNamespace(MACHINE_API_NAMESPACE),
+					client.MatchingLabels{LABEL_UPGRADE: "true"},
+				}).SetArg(1, *upgradeMachinesets),
+				// Verify that every specific machine returned to scale down actually does get deleted
+				mockKubeClient.EXPECT().Delete(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(ctx context.Context, set *machineapi.MachineSet) error {
+						found := false
+						for _, m := range upgradeMachinesets.Items {
+							if set.Name == m.Name {
+								found = true
+							}
+						}
+						Expect(found).To(BeTrue())
+						return nil
+					}).Times(2),
+				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, *nodes),
+				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, *upgradeMachines),
+				mockDrainStrategy.EXPECT().Execute(gomock.Any()).Return([]*drain.DrainStrategyResult{}, nil),
+				mockDrainStrategy.EXPECT().HasFailed(gomock.Any()).Return(false, nil),
+				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
+					client.InNamespace(MACHINE_API_NAMESPACE),
+					client.MatchingLabels{LABEL_UPGRADE: "true"},
 				}).SetArg(1, *originalMachines),
 			)
 			result, err := scaler.EnsureScaleDownNodes(mockKubeClient, mockDrainStrategy, logger)

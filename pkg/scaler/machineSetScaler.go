@@ -107,7 +107,7 @@ func (s *machineSetScaler) EnsureScaleDownNodes(c client.Client, nds drain.NodeD
 		}
 	}
 
-	//new scaler block to verify upgrade machines scaled down.
+	//scaler block to verify upgrade machines scaled down.
 	originalMachines := &machineapi.MachineList{}
 	err = c.List(context.TODO(), originalMachines, []client.ListOption{
 		client.InNamespace(MACHINE_API_NAMESPACE),
@@ -118,7 +118,11 @@ func (s *machineSetScaler) EnsureScaleDownNodes(c client.Client, nds drain.NodeD
 		return false, err
 	}
 
+	//check if upgrade machine are present in the cluster.
 	if len(originalMachines.Items) != 0 {
+		for _, um := range originalMachines.Items {
+			logger.Info(fmt.Sprintf("Found upgrade machines to be terminated :%v", &um))
+		}
 		return false, nil
 	}
 
