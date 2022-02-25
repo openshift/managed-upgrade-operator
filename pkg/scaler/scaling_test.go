@@ -453,7 +453,7 @@ var _ = Describe("Node scaling tests", func() {
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
 					client.InNamespace(MACHINE_API_NAMESPACE),
 					client.MatchingLabels{LABEL_UPGRADE: "true"},
-				}).AnyTimes().SetArg(1, *upgradeMachinesets),
+				}).Times(1).SetArg(1, *upgradeMachinesets),
 				// Verify that every specific machine returned to scale down actually does get deleted
 				mockKubeClient.EXPECT().Delete(gomock.Any(), gomock.Any()).DoAndReturn(
 					func(ctx context.Context, set *machineapi.MachineSet) error {
@@ -475,7 +475,7 @@ var _ = Describe("Node scaling tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(BeFalse())
 		})
-		It("should apply drain strategies if NodeDrainStrategy exists", func() {
+		It("Upgrade machine returned even after applying drain strategy", func() {
 			mockDrainStrategy := mockDrain.NewMockNodeDrainStrategy(mockCtrl)
 			var node1Name = "test-node-1"
 			var nodePhase = "Running"
@@ -535,7 +535,7 @@ var _ = Describe("Node scaling tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(BeFalse())
 		})
-		It("should apply drain strategies if NodeDrainStrategy exists Part 2", func() {
+		It("should apply drain strategies if NodeDrainStrategy exists", func() {
 			mockDrainStrategy := mockDrain.NewMockNodeDrainStrategy(mockCtrl)
 			var node1Name = "test-node-1"
 			var nodePhase = "Running"
