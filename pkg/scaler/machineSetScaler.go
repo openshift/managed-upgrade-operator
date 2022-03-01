@@ -15,7 +15,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/openshift/managed-upgrade-operator/pkg/drain"
-	"github.com/openshift/managed-upgrade-operator/pkg/machinery"
 )
 
 const (
@@ -108,33 +107,22 @@ func (s *machineSetScaler) EnsureScaleDownNodes(c client.Client, nds drain.NodeD
 		}
 	}
 
-	// MachineSets control workers and infras nodes.
-	originalMachineSets := &machineapi.MachineSetList{}
-	err = c.List(context.TODO(), originalMachineSets, []client.ListOption{
+	//scaler block to verify upgrade machines scaled down.
+	originalMachines := &machineapi.MachineList{}
+	err = c.List(context.TODO(), originalMachines, []client.ListOption{
 		client.InNamespace(MACHINE_API_NAMESPACE),
-		NotMatchingLabels{LABEL_UPGRADE: "true"},
+		client.MatchingLabels{LABEL_UPGRADE: "true"},
 	}...)
 	if err != nil {
-		logger.Error(err, "failed to get upgrade extra machinesets")
+		logger.Error(err, "Cannot get a list of extra upgrade machines")
 		return false, err
 	}
 
-	// Desired replicas should match worker and infra count of nodes.
-	nonMasterNodes := &corev1.NodeList{}
-	err = c.List(context.TODO(), nonMasterNodes, []client.ListOption{
-		NotMatchingLabels{machinery.MasterLabel: ""},
-	}...)
-	if err != nil {
-		logger.Error(err, "failed to list nodes")
-		return false, err
-	}
-
-	var desiredNodeCount int32 = 0
-	for _, ms := range originalMachineSets.Items {
-		desiredNodeCount += *ms.Spec.Replicas
-	}
-
-	if desiredNodeCount != int32(len(nonMasterNodes.Items)) {
+	//check if upgrade machine are present in the cluster.
+	if len(originalMachines.Items) != 0 {
+		for _, um := range originalMachines.Items {
+			logger.Info(fmt.Sprintf("Found upgrade machines to be terminated :%v", &um))
+		}
 		return false, nil
 	}
 
