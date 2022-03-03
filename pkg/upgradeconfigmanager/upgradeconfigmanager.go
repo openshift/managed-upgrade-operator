@@ -126,23 +126,27 @@ func (s *upgradeConfigManager) Get() (*upgradev1alpha1.UpgradeConfig, error) {
 
 // Syncs UpgradeConfigs from the spec provider periodically until the operator is killed or a message is sent on the stopCh
 func (s *upgradeConfigManager) StartSync(stopCh context.Context) {
-	log.Info("Starting the upgradeConfigManager")
-
-	// Read manager configuration
-	cfg, err := readConfigManagerConfig(s.client, s.configManagerBuilder)
-	if err == ErrNoConfigManagerDefined {
-		log.Info("No UpgradeConfig manager configuration defined, will not sync")
-		return
-	}
-	if err != nil {
-		log.Error(err, "can't read upgradeConfigManager configuration")
-		return
-	}
-
 	metricsClient, err := s.metricsBuilder.NewClient(s.client)
 	if err != nil {
 		log.Error(err, "can not create metrics client")
 		return
+	}
+
+	log.Info("Starting the upgradeConfigManager")
+	// Read manager configuration
+	var cfg *UpgradeConfigManagerConfig
+	foundCM := false
+	for !foundCM {
+		cfg, err = readConfigManagerConfig(s.client, s.configManagerBuilder)
+		if err == ErrNoConfigManagerDefined {
+			log.Info("No UpgradeConfig manager configuration defined, will not sync")
+		}
+		if err != nil {
+			log.Error(err, "can't read upgradeConfigManager configuration")
+			time.Sleep(1 * time.Minute)
+		} else {
+			foundCM = true
+		}
 	}
 
 	duration := durationWithJitter(INITIAL_SYNC_DURATION, JITTER_FACTOR)
