@@ -4,6 +4,10 @@ metadata:
   name: managed-upgrade-operator-config
 data:
   config.yaml: |
+    configManager:
+      source: LOCAL
+      localConfigName: managed-upgrade-config
+      watchInterval: 60
     maintenance:
       controlPlaneTime: 90
       ignoredAlerts:
