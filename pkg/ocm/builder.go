@@ -53,15 +53,10 @@ func (ocb *ocmClientBuilder) New(c client.Client, ocmBaseUrl *url.URL) (OcmClien
 }
 
 func getProxy() string {
-	httpProxy := os.Getenv("HTTP_PROXY")
-	httpsProxy := os.Getenv("HTTPS_PROXY")
-
 	// Default to HTTPS_PROXY if available
+	httpsProxy := os.Getenv("HTTPS_PROXY")
 	if len(httpsProxy) > 0  {
 		return httpsProxy
-	}
-	if len(httpProxy) > 0 {
-		return httpProxy
 	}
 	return ""
 }
