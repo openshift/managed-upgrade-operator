@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/openshift/managed-upgrade-operator/pkg/pod"
 	"github.com/openshift/managed-upgrade-operator/util/mocks"
@@ -19,6 +21,7 @@ import (
 var _ = Describe("Pod Delete Strategy", func() {
 
 	var (
+		logger         logr.Logger
 		mockCtrl       *gomock.Controller
 		mockKubeClient *mocks.MockClient
 		pds            *podDeletionStrategy
@@ -29,6 +32,7 @@ var _ = Describe("Pod Delete Strategy", func() {
 	BeforeEach(func() {
 		mockCtrl = gomock.NewController(GinkgoT())
 		mockKubeClient = mocks.NewMockClient(mockCtrl)
+		logger = logf.Log.WithName("pod delete strategy test logger")
 		node = &corev1.Node{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "n1",
@@ -77,7 +81,7 @@ var _ = Describe("Pod Delete Strategy", func() {
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList),
 				mockKubeClient.EXPECT().Delete(gomock.Any(), gomock.Any(), gomock.Any()),
 			)
-			result, err := pds.Execute(node)
+			result, err := pds.Execute(node, logger)
 			Expect(result.HasExecuted).To(BeTrue())
 			Expect(err).To(BeNil())
 		})
@@ -109,7 +113,7 @@ var _ = Describe("Pod Delete Strategy", func() {
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, noDeletePods),
 				mockKubeClient.EXPECT().Delete(gomock.Any(), gomock.Any(), gomock.Any()).Times(3),
 			)
-			result, err := pds.Execute(node)
+			result, err := pds.Execute(node, logger)
 			Expect(result.HasExecuted).To(BeFalse())
 			Expect(err).To(BeNil())
 		})
@@ -118,7 +122,7 @@ var _ = Describe("Pod Delete Strategy", func() {
 			gomock.InOrder(
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList).Return(fmt.Errorf("fake error")),
 			)
-			_, err := pds.Execute(node)
+			_, err := pds.Execute(node, logger)
 			Expect(err).To(HaveOccurred())
 			Expect(err).NotTo(BeNil())
 		})
@@ -128,7 +132,7 @@ var _ = Describe("Pod Delete Strategy", func() {
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList),
 				mockKubeClient.EXPECT().Delete(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("fake error")),
 			)
-			_, err := pds.Execute(node)
+			_, err := pds.Execute(node, logger)
 			Expect(err).To(HaveOccurred())
 			Expect(err).NotTo(BeNil())
 		})
@@ -139,7 +143,7 @@ var _ = Describe("Pod Delete Strategy", func() {
 			gomock.InOrder(
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList),
 			)
-			valid, err := pds.IsValid(node)
+			valid, err := pds.IsValid(node, logger)
 			Expect(valid).To(BeTrue())
 			Expect(err).To(BeNil())
 		})
@@ -148,7 +152,7 @@ var _ = Describe("Pod Delete Strategy", func() {
 			gomock.InOrder(
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList).Return(fmt.Errorf("fake error")),
 			)
-			valid, err := pds.IsValid(node)
+			valid, err := pds.IsValid(node, logger)
 			Expect(valid).To(BeFalse())
 			Expect(err).To(HaveOccurred())
 			Expect(err).NotTo(BeNil())

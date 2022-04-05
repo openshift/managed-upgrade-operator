@@ -1,6 +1,7 @@
 package drain
 
 import (
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -12,7 +13,7 @@ type stuckTerminatingStrategy struct {
 	filters []pod.PodPredicate
 }
 
-func (sts *stuckTerminatingStrategy) Execute(node *corev1.Node) (*DrainStrategyResult, error) {
+func (sts *stuckTerminatingStrategy) Execute(node *corev1.Node, logger logr.Logger) (*DrainStrategyResult, error) {
 	filters := append([]pod.PodPredicate{isOnNode(node), hasNoFinalizers, isTerminating}, sts.filters...)
 	podsStuckTerminating, err := pod.GetPodList(sts.client, node, filters)
 
@@ -21,7 +22,7 @@ func (sts *stuckTerminatingStrategy) Execute(node *corev1.Node) (*DrainStrategyR
 	}
 
 	gp := int64(0)
-	res, err := pod.DeletePods(sts.client, podsStuckTerminating, false, &client.DeleteOptions{GracePeriodSeconds: &gp})
+	res, err := pod.DeletePods(sts.client, logger, podsStuckTerminating, false, &client.DeleteOptions{GracePeriodSeconds: &gp})
 	if err != nil {
 		return nil, err
 	}
@@ -32,7 +33,7 @@ func (sts *stuckTerminatingStrategy) Execute(node *corev1.Node) (*DrainStrategyR
 	}, nil
 }
 
-func (sts *stuckTerminatingStrategy) IsValid(node *corev1.Node) (bool, error) {
+func (sts *stuckTerminatingStrategy) IsValid(node *corev1.Node, logger logr.Logger) (bool, error) {
 	filters := append([]pod.PodPredicate{isOnNode(node), hasNoFinalizers, isTerminating}, sts.filters...)
 	targetPods, err := pod.GetPodList(sts.client, node, filters)
 	if err != nil {

@@ -17,7 +17,7 @@ func (m *machinery) IsNodeCordoned(node *corev1.Node) *IsCordonedResult {
 	isCordoned := false
 	if node.Spec.Unschedulable && len(node.Spec.Taints) > 0 {
 		for _, n := range node.Spec.Taints {
-			if n.Effect == corev1.TaintEffectNoSchedule {
+			if n.Effect == corev1.TaintEffectNoSchedule && n.Key == corev1.TaintNodeUnschedulable {
 				isCordoned = true
 				cordonAddedTime = n.TimeAdded
 			}

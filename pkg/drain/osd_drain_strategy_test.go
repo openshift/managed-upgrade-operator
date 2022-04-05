@@ -1,8 +1,10 @@
 package drain
 
 import (
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"time"
 
+	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
@@ -20,6 +22,7 @@ import (
 var _ = Describe("OSD Drain Strategy", func() {
 
 	var (
+		logger              logr.Logger
 		mockCtrl            *gomock.Controller
 		mockKubeClient      *mocks.MockClient
 		mockMachineryClient *mockMachinery.MockMachinery
@@ -40,6 +43,7 @@ var _ = Describe("OSD Drain Strategy", func() {
 			mockStrategyOne = NewMockDrainStrategy(mockCtrl)
 			mockTimedDrainTwo = NewMockTimedDrainStrategy(mockCtrl)
 			mockStrategyTwo = NewMockDrainStrategy(mockCtrl)
+			logger = logf.Log.WithName("drain strategy test logger")
 		})
 		AfterEach(func() {
 			mockCtrl.Finish()
@@ -55,7 +59,7 @@ var _ = Describe("OSD Drain Strategy", func() {
 			gomock.InOrder(
 				mockMachineryClient.EXPECT().IsNodeCordoned(gomock.Any()).Return(&machinery.IsCordonedResult{IsCordoned: true, AddedAt: fiveMinsAgo}),
 			)
-			result, err := osdDrain.Execute(&corev1.Node{})
+			result, err := osdDrain.Execute(&corev1.Node{}, logger)
 			Expect(result).To(Not(BeNil()))
 			Expect(err).To(BeNil())
 			Expect(len(result)).To(Equal(0))
@@ -70,12 +74,12 @@ var _ = Describe("OSD Drain Strategy", func() {
 			fortyFiveMinsAgo := &metav1.Time{Time: time.Now().Add(-45 * time.Minute)}
 			gomock.InOrder(
 				mockMachineryClient.EXPECT().IsNodeCordoned(gomock.Any()).Return(&machinery.IsCordonedResult{IsCordoned: true, AddedAt: fortyFiveMinsAgo}),
-				mockTimedDrainOne.EXPECT().GetWaitDuration().Return(time.Minute*30),
+				mockTimedDrainOne.EXPECT().GetName().Return("test strategy"),
+				mockTimedDrainOne.EXPECT().GetWaitDuration().Return(time.Minute*30).Times(2),
 				mockTimedDrainOne.EXPECT().GetStrategy().Return(mockStrategyOne),
-				mockStrategyOne.EXPECT().Execute(gomock.Any()).Times(1).Return(&DrainStrategyResult{Message: "", HasExecuted: true}, nil),
-				mockTimedDrainOne.EXPECT().GetDescription().Times(1).Return("Drain one"),
+				mockStrategyOne.EXPECT().Execute(gomock.Any(), gomock.Any()).Times(1).Return(&DrainStrategyResult{Message: "", HasExecuted: true}, nil),
 			)
-			result, err := osdDrain.Execute(&corev1.Node{})
+			result, err := osdDrain.Execute(&corev1.Node{}, logger)
 			Expect(result).To(Not(BeNil()))
 			Expect(err).To(BeNil())
 			Expect(len(result)).To(Equal(1))
@@ -90,11 +94,12 @@ var _ = Describe("OSD Drain Strategy", func() {
 			fortyFiveMinsAgo := &metav1.Time{Time: time.Now().Add(-45 * time.Minute)}
 			gomock.InOrder(
 				mockMachineryClient.EXPECT().IsNodeCordoned(gomock.Any()).Return(&machinery.IsCordonedResult{IsCordoned: true, AddedAt: fortyFiveMinsAgo}),
-				mockTimedDrainOne.EXPECT().GetWaitDuration().Return(time.Minute*60),
-				mockStrategyOne.EXPECT().Execute(gomock.Any()).Times(0),
+				mockTimedDrainOne.EXPECT().GetWaitDuration().Return(time.Minute*60).Times(2),
+				mockStrategyOne.EXPECT().Execute(gomock.Any(), gomock.Any()).Times(0),
 				mockTimedDrainOne.EXPECT().GetDescription().Times(0).Return("Drain one"),
+				mockTimedDrainOne.EXPECT().GetName().Return("test strategy"),
 			)
-			result, err := osdDrain.Execute(&corev1.Node{})
+			result, err := osdDrain.Execute(&corev1.Node{}, logger)
 			Expect(result).To(Not(BeNil()))
 			Expect(err).To(BeNil())
 			Expect(len(result)).To(Equal(0))
@@ -109,17 +114,31 @@ var _ = Describe("OSD Drain Strategy", func() {
 			fortyFiveMinsAgo := &metav1.Time{Time: time.Now().Add(-45 * time.Minute)}
 			gomock.InOrder(
 				mockMachineryClient.EXPECT().IsNodeCordoned(gomock.Any()).Return(&machinery.IsCordonedResult{IsCordoned: true, AddedAt: fortyFiveMinsAgo}),
-				mockTimedDrainOne.EXPECT().GetWaitDuration().Return(time.Minute*30),
+				mockTimedDrainOne.EXPECT().GetName().Return("test strategy"),
+				mockTimedDrainOne.EXPECT().GetWaitDuration().Return(time.Minute*30).Times(2),
 				mockTimedDrainOne.EXPECT().GetStrategy().Return(mockStrategyOne),
-				mockStrategyOne.EXPECT().Execute(gomock.Any()).Times(1).Return(&DrainStrategyResult{Message: "", HasExecuted: true}, nil),
-				mockTimedDrainOne.EXPECT().GetDescription().Times(1).Return("Drain one"),
-				mockTimedDrainTwo.EXPECT().GetWaitDuration().Return(time.Minute*60),
-				mockStrategyTwo.EXPECT().Execute(gomock.Any()).Times(0),
+				mockStrategyOne.EXPECT().Execute(gomock.Any(), gomock.Any()).Times(1).Return(&DrainStrategyResult{Message: "", HasExecuted: true}, nil),
+				mockTimedDrainTwo.EXPECT().GetName().Return("test strategy"),
+				mockTimedDrainTwo.EXPECT().GetWaitDuration().Return(time.Minute*60).Times(2),
+				mockStrategyTwo.EXPECT().Execute(gomock.Any(), gomock.Any()).Times(0),
 			)
-			result, err := osdDrain.Execute(&corev1.Node{})
+			result, err := osdDrain.Execute(&corev1.Node{}, logger)
 			Expect(result).To(Not(BeNil()))
 			Expect(err).To(BeNil())
 			Expect(len(result)).To(Equal(1))
+		})
+		It("should return an error if the node drain time is nil", func() {
+			osdDrain = &osdDrainStrategy{
+				mockKubeClient,
+				mockMachineryClient,
+				&NodeDrain{},
+				[]TimedDrainStrategy{mockTimedDrainOne},
+			}
+			gomock.InOrder(
+				mockMachineryClient.EXPECT().IsNodeCordoned(gomock.Any()).Return(&machinery.IsCordonedResult{IsCordoned: true, AddedAt: nil}),
+			)
+			_, err := osdDrain.Execute(&corev1.Node{}, logger)
+			Expect(err).NotTo(BeNil())
 		})
 	})
 
@@ -146,7 +165,7 @@ var _ = Describe("OSD Drain Strategy", func() {
 				gomock.InOrder(
 					mockMachineryClient.EXPECT().IsNodeCordoned(gomock.Any()).Return(&machinery.IsCordonedResult{IsCordoned: true, AddedAt: notLongEnough}),
 				)
-				result, err := osdDrain.HasFailed(&corev1.Node{})
+				result, err := osdDrain.HasFailed(&corev1.Node{}, logger)
 				Expect(result).To(BeFalse())
 				Expect(err).To(BeNil())
 			})
@@ -155,7 +174,7 @@ var _ = Describe("OSD Drain Strategy", func() {
 				gomock.InOrder(
 					mockMachineryClient.EXPECT().IsNodeCordoned(gomock.Any()).Return(&machinery.IsCordonedResult{IsCordoned: true, AddedAt: tooLongAgo}),
 				)
-				result, err := osdDrain.HasFailed(&corev1.Node{})
+				result, err := osdDrain.HasFailed(&corev1.Node{}, logger)
 				Expect(result).To(BeTrue())
 				Expect(err).To(BeNil())
 			})
@@ -195,7 +214,7 @@ var _ = Describe("OSD Drain Strategy", func() {
 					mockTimedDrainTwo.EXPECT().GetWaitDuration().Return(mockTwoDuration),
 					mockTimedDrainTwo.EXPECT().GetWaitDuration().Return(mockTwoDuration),
 				)
-				result, err := osdDrain.HasFailed(&corev1.Node{})
+				result, err := osdDrain.HasFailed(&corev1.Node{}, logger)
 				Expect(result).To(BeTrue())
 				Expect(err).To(BeNil())
 			})
@@ -214,7 +233,7 @@ var _ = Describe("OSD Drain Strategy", func() {
 					mockTimedDrainTwo.EXPECT().GetWaitDuration().Return(mockTwoDuration),
 				)
 
-				result, _ := osdDrain.HasFailed(&corev1.Node{})
+				result, _ := osdDrain.HasFailed(&corev1.Node{}, logger)
 				Expect(result).To(BeTrue())
 			})
 			It("should not fail if there are pending strategies", func() {
@@ -229,10 +248,10 @@ var _ = Describe("OSD Drain Strategy", func() {
 					mockTimedDrainOne.EXPECT().GetWaitDuration().Return(mockOneDuration),
 					mockTimedDrainTwo.EXPECT().GetWaitDuration().Return(mockTwoDuration),
 					mockTimedDrainTwo.EXPECT().GetStrategy().Return(mockStrategyOne),
-					mockStrategyOne.EXPECT().IsValid(gomock.Any()).Return(true, nil),
+					mockStrategyOne.EXPECT().IsValid(gomock.Any(), gomock.Any()).Return(true, nil),
 				)
 
-				result, _ := osdDrain.HasFailed(&corev1.Node{})
+				result, _ := osdDrain.HasFailed(&corev1.Node{}, logger)
 				Expect(result).To(BeFalse())
 			})
 		})

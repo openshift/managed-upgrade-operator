@@ -8,6 +8,8 @@ import (
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/go-logr/logr"
+
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 	"github.com/openshift/managed-upgrade-operator/pkg/pod"
 )
@@ -21,15 +23,15 @@ type NodeDrainStrategyBuilder interface {
 // NodeDrainStrategy enables implementation for a NodeDrainStrategy
 //go:generate mockgen -destination=mocks/nodeDrainStrategy.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/drain NodeDrainStrategy
 type NodeDrainStrategy interface {
-	Execute(*corev1.Node) ([]*DrainStrategyResult, error)
-	HasFailed(*corev1.Node) (bool, error)
+	Execute(*corev1.Node, logr.Logger) ([]*DrainStrategyResult, error)
+	HasFailed(*corev1.Node, logr.Logger) (bool, error)
 }
 
 // DrainStrategy enables implementation for a DrainStrategy
 //go:generate mockgen -destination=./drainStrategyMock.go -package=drain -self_package=github.com/openshift/managed-upgrade-operator/pkg/drain github.com/openshift/managed-upgrade-operator/pkg/drain DrainStrategy
 type DrainStrategy interface {
-	Execute(*corev1.Node) (*DrainStrategyResult, error)
-	IsValid(*corev1.Node) (bool, error)
+	Execute(*corev1.Node, logr.Logger) (*DrainStrategyResult, error)
+	IsValid(*corev1.Node, logr.Logger) (bool, error)
 }
 
 // TimedDrainStrategy enables implementation for a TimedDrainStrategy

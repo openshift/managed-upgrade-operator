@@ -5,6 +5,7 @@
 package mocks
 
 import (
+	logr "github.com/go-logr/logr"
 	gomock "github.com/golang/mock/gomock"
 	drain "github.com/openshift/managed-upgrade-operator/pkg/drain"
 	v1 "k8s.io/api/core/v1"
@@ -35,31 +36,31 @@ func (m *MockNodeDrainStrategy) EXPECT() *MockNodeDrainStrategyMockRecorder {
 }
 
 // Execute mocks base method
-func (m *MockNodeDrainStrategy) Execute(arg0 *v1.Node) ([]*drain.DrainStrategyResult, error) {
+func (m *MockNodeDrainStrategy) Execute(arg0 *v1.Node, arg1 logr.Logger) ([]*drain.DrainStrategyResult, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Execute", arg0)
+	ret := m.ctrl.Call(m, "Execute", arg0, arg1)
 	ret0, _ := ret[0].([]*drain.DrainStrategyResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Execute indicates an expected call of Execute
-func (mr *MockNodeDrainStrategyMockRecorder) Execute(arg0 interface{}) *gomock.Call {
+func (mr *MockNodeDrainStrategyMockRecorder) Execute(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*MockNodeDrainStrategy)(nil).Execute), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*MockNodeDrainStrategy)(nil).Execute), arg0, arg1)
 }
 
 // HasFailed mocks base method
-func (m *MockNodeDrainStrategy) HasFailed(arg0 *v1.Node) (bool, error) {
+func (m *MockNodeDrainStrategy) HasFailed(arg0 *v1.Node, arg1 logr.Logger) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HasFailed", arg0)
+	ret := m.ctrl.Call(m, "HasFailed", arg0, arg1)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // HasFailed indicates an expected call of HasFailed
-func (mr *MockNodeDrainStrategyMockRecorder) HasFailed(arg0 interface{}) *gomock.Call {
+func (mr *MockNodeDrainStrategyMockRecorder) HasFailed(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasFailed", reflect.TypeOf((*MockNodeDrainStrategy)(nil).HasFailed), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasFailed", reflect.TypeOf((*MockNodeDrainStrategy)(nil).HasFailed), arg0, arg1)
 }

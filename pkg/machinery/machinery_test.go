@@ -81,7 +81,9 @@ var _ = Describe("Machinery client and utils", func() {
 				Spec: corev1.NodeSpec{
 					Unschedulable: true,
 					Taints: []corev1.Taint{
-						{Effect: corev1.TaintEffectNoSchedule},
+						{Effect: corev1.TaintEffectNoSchedule,
+							Key: corev1.TaintNodeUnschedulable,
+						},
 					},
 				},
 			}
@@ -102,6 +104,7 @@ var _ = Describe("Machinery client and utils", func() {
 					Unschedulable: true,
 					Taints: []corev1.Taint{
 						{Effect: corev1.TaintEffectNoSchedule,
+							Key:       corev1.TaintNodeUnschedulable,
 							TimeAdded: startTime},
 					},
 				},
@@ -109,6 +112,41 @@ var _ = Describe("Machinery client and utils", func() {
 			result := machineryClient.IsNodeCordoned(testNode)
 			Expect(result.IsCordoned).To(BeTrue())
 			Expect(result.AddedAt).To(Equal(startTime))
+		})
+	})
+
+	Context("When a node has multiple NoSchedule taints", func() {
+		startTime := &metav1.Time{Time: time.Now()}
+		testNode := &corev1.Node{
+			Spec: corev1.NodeSpec{
+				Unschedulable: true,
+				Taints:        []corev1.Taint{},
+			},
+		}
+		// Ensure that order is independent
+		taintTests := [][]corev1.Taint{
+			{
+				{Effect: corev1.TaintEffectNoSchedule,
+					Key:       corev1.TaintNodeUnschedulable,
+					TimeAdded: startTime},
+				{Effect: corev1.TaintEffectNoSchedule,
+					Key: "A different key"},
+			},
+			{
+				{Effect: corev1.TaintEffectNoSchedule,
+					Key: "A different key"},
+				{Effect: corev1.TaintEffectNoSchedule,
+					Key:       corev1.TaintNodeUnschedulable,
+					TimeAdded: startTime},
+			},
+		}
+		It("Uses the drain time from the correct taint", func() {
+			for _, taints := range taintTests {
+				testNode.Spec.Taints = taints
+				result := machineryClient.IsNodeCordoned(testNode)
+				Expect(result.IsCordoned).To(BeTrue())
+				Expect(result.AddedAt).To(Equal(startTime))
+			}
 		})
 	})
 })
