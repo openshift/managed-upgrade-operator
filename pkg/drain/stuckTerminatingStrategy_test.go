@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/openshift/managed-upgrade-operator/pkg/pod"
 	"github.com/openshift/managed-upgrade-operator/util/mocks"
@@ -19,6 +21,7 @@ import (
 var _ = Describe("Stuck Terminating Strategy", func() {
 
 	var (
+		logger         logr.Logger
 		mockCtrl       *gomock.Controller
 		mockKubeClient *mocks.MockClient
 		sts            *stuckTerminatingStrategy
@@ -31,6 +34,7 @@ var _ = Describe("Stuck Terminating Strategy", func() {
 	BeforeEach(func() {
 		mockCtrl = gomock.NewController(GinkgoT())
 		mockKubeClient = mocks.NewMockClient(mockCtrl)
+		logger = logf.Log.WithName("stuck terminating strategy test logger")
 		NODENAME = "n1"
 
 		node = &corev1.Node{
@@ -87,7 +91,7 @@ var _ = Describe("Stuck Terminating Strategy", func() {
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList),
 				mockKubeClient.EXPECT().Delete(gomock.Any(), gomock.Any(), gomock.Any()),
 			)
-			result, err := sts.Execute(node)
+			result, err := sts.Execute(node, logger)
 			Expect(result.HasExecuted).To(BeTrue())
 			Expect(err).To(BeNil())
 		})
@@ -116,7 +120,7 @@ var _ = Describe("Stuck Terminating Strategy", func() {
 			gomock.InOrder(
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, noTerminatingPods),
 			)
-			result, err := sts.Execute(node)
+			result, err := sts.Execute(node, logger)
 			Expect(result.HasExecuted).To(BeFalse())
 			Expect(err).To(BeNil())
 		})
@@ -125,7 +129,7 @@ var _ = Describe("Stuck Terminating Strategy", func() {
 			gomock.InOrder(
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList).Return(fmt.Errorf("fake error")),
 			)
-			_, err := sts.Execute(node)
+			_, err := sts.Execute(node, logger)
 			Expect(err).To(HaveOccurred())
 			Expect(err).NotTo(BeNil())
 		})
@@ -135,7 +139,7 @@ var _ = Describe("Stuck Terminating Strategy", func() {
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList),
 				mockKubeClient.EXPECT().Delete(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("fake error")),
 			)
-			_, err := sts.Execute(node)
+			_, err := sts.Execute(node, logger)
 			Expect(err).To(HaveOccurred())
 			Expect(err).NotTo(BeNil())
 		})
@@ -146,7 +150,7 @@ var _ = Describe("Stuck Terminating Strategy", func() {
 			gomock.InOrder(
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList),
 			)
-			valid, err := sts.IsValid(node)
+			valid, err := sts.IsValid(node, logger)
 			Expect(valid).To(BeTrue())
 			Expect(err).To(BeNil())
 		})
@@ -155,7 +159,7 @@ var _ = Describe("Stuck Terminating Strategy", func() {
 			gomock.InOrder(
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList).Return(fmt.Errorf("fake error")),
 			)
-			valid, err := sts.IsValid(node)
+			valid, err := sts.IsValid(node, logger)
 			Expect(valid).To(BeFalse())
 			Expect(err).To(HaveOccurred())
 			Expect(err).NotTo(BeNil())

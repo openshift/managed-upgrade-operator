@@ -524,8 +524,8 @@ var _ = Describe("Node scaling tests", func() {
 					}).Times(2),
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, *nodes),
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, *upgradeMachines),
-				mockDrainStrategy.EXPECT().Execute(gomock.Any()).Return([]*drain.DrainStrategyResult{}, nil),
-				mockDrainStrategy.EXPECT().HasFailed(gomock.Any()).Return(false, nil),
+				mockDrainStrategy.EXPECT().Execute(gomock.Any(), gomock.Any()).Return([]*drain.DrainStrategyResult{}, nil),
+				mockDrainStrategy.EXPECT().HasFailed(gomock.Any(), gomock.Any()).Return(false, nil),
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
 					client.InNamespace(MACHINE_API_NAMESPACE),
 					client.MatchingLabels{LABEL_UPGRADE: "true"},
@@ -585,8 +585,8 @@ var _ = Describe("Node scaling tests", func() {
 					}).Times(2),
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any()).SetArg(1, *nodes),
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, *upgradeMachines),
-				mockDrainStrategy.EXPECT().Execute(gomock.Any()).Return([]*drain.DrainStrategyResult{}, nil),
-				mockDrainStrategy.EXPECT().HasFailed(gomock.Any()).Return(false, nil),
+				mockDrainStrategy.EXPECT().Execute(gomock.Any(), gomock.Any()).Return([]*drain.DrainStrategyResult{}, nil),
+				mockDrainStrategy.EXPECT().HasFailed(gomock.Any(), gomock.Any()).Return(false, nil),
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
 					client.InNamespace(MACHINE_API_NAMESPACE),
 					client.MatchingLabels{LABEL_UPGRADE: "true"},

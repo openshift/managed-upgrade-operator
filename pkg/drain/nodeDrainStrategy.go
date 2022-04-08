@@ -5,6 +5,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-multierror"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,19 +39,29 @@ type osdDrainStrategy struct {
 	timedDrainStrategies []TimedDrainStrategy
 }
 
-func (ds *osdDrainStrategy) Execute(node *corev1.Node) ([]*DrainStrategyResult, error) {
+func (ds *osdDrainStrategy) Execute(node *corev1.Node, logger logr.Logger) ([]*DrainStrategyResult, error) {
 	result := ds.machinery.IsNodeCordoned(node)
 	me := &multierror.Error{}
 	res := []*DrainStrategyResult{}
 	if result.IsCordoned {
+		// A cordoned node with an unknown drain time should be treated as an error
+		if result.AddedAt == nil {
+			return nil, fmt.Errorf("cannot determine drain commencement time for node %v", node.Name)
+		}
 		me := &multierror.Error{}
 		for _, ds := range ds.timedDrainStrategies {
+			dsName := ds.GetName()
+			expectedTime := result.AddedAt.Add(ds.GetWaitDuration())
+			drainStrategyMsg := fmt.Sprintf("drain strategy %v for node %v, commencing drain at %v, execution expected after %v", dsName, node.Name, result.AddedAt, expectedTime)
 			if isAfter(result.AddedAt, ds.GetWaitDuration()) {
-				r, err := ds.GetStrategy().Execute(node)
+				logger.Info(fmt.Sprintf("Executing %s", drainStrategyMsg))
+				r, err := ds.GetStrategy().Execute(node, logger)
 				me = multierror.Append(err, me)
 				if r.HasExecuted {
-					res = append(res, &DrainStrategyResult{Message: fmt.Sprintf("Drain strategy %s has been executed after %s. %s", ds.GetDescription(), drainStrategyDuration(result.AddedAt), r.Message)})
+					res = append(res, &DrainStrategyResult{Message: fmt.Sprintf("Executed %s . Result: %s", drainStrategyMsg, r.Message)})
 				}
+			} else {
+				logger.Info(fmt.Sprintf("Will not yet execute %s", drainStrategyMsg))
 			}
 		}
 	}
@@ -58,7 +69,7 @@ func (ds *osdDrainStrategy) Execute(node *corev1.Node) ([]*DrainStrategyResult, 
 	return res, me.ErrorOrNil()
 }
 
-func (ds *osdDrainStrategy) HasFailed(node *corev1.Node) (bool, error) {
+func (ds *osdDrainStrategy) HasFailed(node *corev1.Node, logger logr.Logger) (bool, error) {
 	result := ds.machinery.IsNodeCordoned(node)
 	if result.AddedAt == nil {
 		return false, nil
@@ -81,7 +92,7 @@ func (ds *osdDrainStrategy) HasFailed(node *corev1.Node) (bool, error) {
 	pendingStrategies := sortedStrategies[currentStrategyIndex:]
 	var validPendingStrategies []TimedDrainStrategy
 	for _, tds := range pendingStrategies {
-		isValid, err := tds.GetStrategy().IsValid(node)
+		isValid, err := tds.GetStrategy().IsValid(node, logger)
 		if err != nil {
 			return false, err
 		}
@@ -129,10 +140,6 @@ func (ts *timedStrategy) GetStrategy() DrainStrategy {
 
 func isAfter(t *metav1.Time, d time.Duration) bool {
 	return t != nil && t.Add(d).Before(metav1.Now().Time)
-}
-
-func drainStrategyDuration(t *metav1.Time) time.Duration {
-	return (metav1.Now().Sub(t.Time).Round(time.Second))
 }
 
 func sortDuration(ts []TimedDrainStrategy) []TimedDrainStrategy {

@@ -1,6 +1,7 @@
 package drain
 
 import (
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -12,7 +13,7 @@ type podDeletionStrategy struct {
 	filters []pod.PodPredicate
 }
 
-func (pds *podDeletionStrategy) Execute(node *corev1.Node) (*DrainStrategyResult, error) {
+func (pds *podDeletionStrategy) Execute(node *corev1.Node, logger logr.Logger) (*DrainStrategyResult, error) {
 	filters := append([]pod.PodPredicate{isOnNode(node)}, pds.filters...)
 	podsToDelete, err := pod.GetPodList(pds.client, node, filters)
 	if err != nil {
@@ -20,7 +21,7 @@ func (pds *podDeletionStrategy) Execute(node *corev1.Node) (*DrainStrategyResult
 	}
 
 	gp := int64(0)
-	res, err := pod.DeletePods(pds.client, podsToDelete, true, &client.DeleteOptions{GracePeriodSeconds: &gp})
+	res, err := pod.DeletePods(pds.client, logger, podsToDelete, true, &client.DeleteOptions{GracePeriodSeconds: &gp})
 	if err != nil {
 		return nil, err
 	}
@@ -31,7 +32,7 @@ func (pds *podDeletionStrategy) Execute(node *corev1.Node) (*DrainStrategyResult
 	}, nil
 }
 
-func (pds *podDeletionStrategy) IsValid(node *corev1.Node) (bool, error) {
+func (pds *podDeletionStrategy) IsValid(node *corev1.Node, logger logr.Logger) (bool, error) {
 	filters := append([]pod.PodPredicate{isOnNode(node)}, pds.filters...)
 	targetPods, err := pod.GetPodList(pds.client, node, filters)
 	if err != nil {

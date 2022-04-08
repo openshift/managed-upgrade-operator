@@ -1,6 +1,7 @@
 package drain
 
 import (
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -12,14 +13,14 @@ type removeFinalizersStrategy struct {
 	filters []pod.PodPredicate
 }
 
-func (rfs *removeFinalizersStrategy) Execute(node *corev1.Node) (*DrainStrategyResult, error) {
+func (rfs *removeFinalizersStrategy) Execute(node *corev1.Node, logger logr.Logger) (*DrainStrategyResult, error) {
 	filters := append([]pod.PodPredicate{isOnNode(node), hasFinalizers}, rfs.filters...)
 	podsWithFinalizers, err := pod.GetPodList(rfs.client, node, filters)
 	if err != nil {
 		return nil, err
 	}
 
-	res, err := pod.RemoveFinalizersFromPod(rfs.client, podsWithFinalizers)
+	res, err := pod.RemoveFinalizersFromPod(rfs.client, logger, podsWithFinalizers)
 	if err != nil {
 		return nil, err
 	}
@@ -30,7 +31,7 @@ func (rfs *removeFinalizersStrategy) Execute(node *corev1.Node) (*DrainStrategyR
 	}, nil
 }
 
-func (rfs *removeFinalizersStrategy) IsValid(node *corev1.Node) (bool, error) {
+func (rfs *removeFinalizersStrategy) IsValid(node *corev1.Node, logger logr.Logger) (bool, error) {
 	filters := append([]pod.PodPredicate{isOnNode(node), hasFinalizers}, rfs.filters...)
 	targetPods, err := pod.GetPodList(rfs.client, node, filters)
 

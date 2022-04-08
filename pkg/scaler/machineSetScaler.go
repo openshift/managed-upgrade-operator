@@ -280,7 +280,7 @@ func nodesAreReady(c client.Client, timeOut time.Duration, upgradeMachinesets ma
 
 func handleDrainStrategy(c client.Client, nds drain.NodeDrainStrategy, nodes corev1.NodeList, logger logr.Logger) (bool, error) {
 	for _, n := range nodes.Items {
-		res, err := nds.Execute(&n)
+		res, err := nds.Execute(&n, logger)
 		for _, r := range res {
 			logger.Info(r.Message)
 		}
@@ -289,7 +289,7 @@ func handleDrainStrategy(c client.Client, nds drain.NodeDrainStrategy, nodes cor
 		}
 	}
 	for _, n := range nodes.Items {
-		hasFailed, err := nds.HasFailed(&n)
+		hasFailed, err := nds.HasFailed(&n, logger)
 		if err != nil {
 			return false, err
 		}

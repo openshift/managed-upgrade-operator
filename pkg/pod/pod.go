@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-multierror"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -40,17 +41,20 @@ type DeleteResult struct {
 }
 
 // DeletePods attempts to delete a given PodList and returns a DeleteResult and error
-func DeletePods(c client.Client, pl *corev1.PodList, ignoreAlreadyDeleting bool, options ...client.DeleteOption) (*DeleteResult, error) {
+func DeletePods(c client.Client, logger logr.Logger, pl *corev1.PodList, ignoreAlreadyDeleting bool, options ...client.DeleteOption) (*DeleteResult, error) {
 	me := &multierror.Error{}
 	var podsMarkedForDeletion []string
 	for _, p := range pl.Items {
 		if !ignoreAlreadyDeleting || p.DeletionTimestamp == nil {
+			logger.Info(fmt.Sprintf("Applying pod deletion drain strategy to pod %v/%v", p.Namespace, p.Name))
 			err := c.Delete(context.TODO(), &p, options...)
 			if err != nil {
 				me = multierror.Append(err, me)
 			} else {
 				podsMarkedForDeletion = append(podsMarkedForDeletion, p.Name)
 			}
+		} else {
+			logger.Info(fmt.Sprintf("Ignoring deleting pod %v because it is already being deleted", p.Name))
 		}
 	}
 
@@ -67,11 +71,12 @@ type RemoveFinalizersResult struct {
 }
 
 // RemoveFinalizersFromPod attempts to remove the finalizers from a given PodList and returns a RemoveFinalizersResult and error
-func RemoveFinalizersFromPod(c client.Client, pl *corev1.PodList) (*RemoveFinalizersResult, error) {
+func RemoveFinalizersFromPod(c client.Client, logger logr.Logger, pl *corev1.PodList) (*RemoveFinalizersResult, error) {
 	var podsWithFinalizersRemoved []string
 	me := &multierror.Error{}
 	for _, p := range pl.Items {
 		if len(p.ObjectMeta.GetFinalizers()) != 0 {
+			logger.Info(fmt.Sprintf("Applying remove finalizer strategy to pod %v/%v", p.Namespace, p.Name))
 			emptyFinalizer := make([]string, 0)
 			p.ObjectMeta.SetFinalizers(emptyFinalizer)
 

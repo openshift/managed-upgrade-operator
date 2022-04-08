@@ -156,7 +156,7 @@ func (r *ReconcileNodeKeeper) Reconcile(ctx context.Context, request reconcile.R
 		reqLogger.Error(err, "Error while executing drain.")
 		return reconcile.Result{}, err
 	}
-	res, err := drainStrategy.Execute(node)
+	res, err := drainStrategy.Execute(node, reqLogger)
 	for _, r := range res {
 		reqLogger.Info(r.Message)
 	}
@@ -164,7 +164,7 @@ func (r *ReconcileNodeKeeper) Reconcile(ctx context.Context, request reconcile.R
 		return reconcile.Result{}, err
 	}
 
-	hasFailed, err := drainStrategy.HasFailed(node)
+	hasFailed, err := drainStrategy.HasFailed(node, reqLogger)
 	if err != nil {
 		return reconcile.Result{}, err
 	}

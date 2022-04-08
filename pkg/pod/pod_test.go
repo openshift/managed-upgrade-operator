@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/openshift/managed-upgrade-operator/util/mocks"
 )
@@ -17,6 +19,7 @@ import (
 var _ = Describe("Pod Filter", func() {
 
 	var (
+		logger         logr.Logger
 		podList        *corev1.PodList
 		mockKubeClient *mocks.MockClient
 		mockCtrl       *gomock.Controller
@@ -43,6 +46,7 @@ var _ = Describe("Pod Filter", func() {
 				{}, {}, {},
 			},
 		}
+		logger = logf.Log.WithName("pod utility test logger")
 	})
 
 	Context("Filtering", func() {
@@ -127,7 +131,7 @@ var _ = Describe("Pod Filter", func() {
 
 		It("Should remove finalizers if they exist", func() {
 			mockKubeClient.EXPECT().Update(gomock.Any(), gomock.Any()).Times(2)
-			result, err := RemoveFinalizersFromPod(mockKubeClient, podList)
+			result, err := RemoveFinalizersFromPod(mockKubeClient, logger, podList)
 			Expect(err).To(BeNil())
 			Expect(result.NumRemoved).To(Equal(2))
 		})
@@ -166,14 +170,14 @@ var _ = Describe("Pod Filter", func() {
 			It("Should not attempt to re-delete deleting pods", func() {
 				gp := int64(0)
 				mockKubeClient.EXPECT().Delete(gomock.Any(), gomock.Any(), gomock.Any()).Times(2)
-				result, err := DeletePods(mockKubeClient, podList, true, &client.DeleteOptions{GracePeriodSeconds: &gp})
+				result, err := DeletePods(mockKubeClient, logger, podList, true, &client.DeleteOptions{GracePeriodSeconds: &gp})
 				Expect(err).To(BeNil())
 				Expect(result.NumMarkedForDeletion).To(Equal(1))
 			})
 			It("Should attempt to re-delete deleting pods if asked", func() {
 				gp := int64(0)
 				mockKubeClient.EXPECT().Delete(gomock.Any(), gomock.Any(), gomock.Any()).Times(3)
-				result, err := DeletePods(mockKubeClient, podList, false, &client.DeleteOptions{GracePeriodSeconds: &gp})
+				result, err := DeletePods(mockKubeClient, logger, podList, false, &client.DeleteOptions{GracePeriodSeconds: &gp})
 				Expect(err).To(BeNil())
 				Expect(result.NumMarkedForDeletion).To(Equal(3))
 			})

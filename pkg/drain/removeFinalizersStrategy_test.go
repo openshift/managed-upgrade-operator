@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/openshift/managed-upgrade-operator/pkg/pod"
 	"github.com/openshift/managed-upgrade-operator/util/mocks"
@@ -23,6 +25,7 @@ const (
 var _ = Describe("Remove Finalizer Strategy", func() {
 
 	var (
+		logger         logr.Logger
 		mockCtrl       *gomock.Controller
 		mockKubeClient *mocks.MockClient
 		rfs            *removeFinalizersStrategy
@@ -33,6 +36,7 @@ var _ = Describe("Remove Finalizer Strategy", func() {
 	BeforeEach(func() {
 		mockCtrl = gomock.NewController(GinkgoT())
 		mockKubeClient = mocks.NewMockClient(mockCtrl)
+		logger = logf.Log.WithName("remove finalizer strategy test logger")
 		node = &corev1.Node{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: NODENAME,
@@ -89,7 +93,7 @@ var _ = Describe("Remove Finalizer Strategy", func() {
 						return nil
 					}),
 			)
-			result, err := rfs.Execute(node)
+			result, err := rfs.Execute(node, logger)
 			Expect(result.HasExecuted).To(BeTrue())
 			Expect(err).To(BeNil())
 		})
@@ -110,7 +114,7 @@ var _ = Describe("Remove Finalizer Strategy", func() {
 			gomock.InOrder(
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, noFinalizerPods),
 			)
-			result, err := rfs.Execute(node)
+			result, err := rfs.Execute(node, logger)
 			Expect(result.HasExecuted).To(BeFalse())
 			Expect(err).To(BeNil())
 		})
@@ -119,7 +123,7 @@ var _ = Describe("Remove Finalizer Strategy", func() {
 			gomock.InOrder(
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList).Return(fmt.Errorf("fake error")),
 			)
-			_, err := rfs.Execute(node)
+			_, err := rfs.Execute(node, logger)
 			Expect(err).To(HaveOccurred())
 			Expect(err).NotTo(BeNil())
 		})
@@ -129,7 +133,7 @@ var _ = Describe("Remove Finalizer Strategy", func() {
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList),
 				mockKubeClient.EXPECT().Update(gomock.Any(), gomock.Any()).Return(fmt.Errorf("fake error")),
 			)
-			_, err := rfs.Execute(node)
+			_, err := rfs.Execute(node, logger)
 			Expect(err).To(HaveOccurred())
 			Expect(err).NotTo(BeNil())
 		})
@@ -140,7 +144,7 @@ var _ = Describe("Remove Finalizer Strategy", func() {
 			gomock.InOrder(
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList),
 			)
-			valid, err := rfs.IsValid(node)
+			valid, err := rfs.IsValid(node, logger)
 			Expect(valid).To(BeTrue())
 			Expect(err).To(BeNil())
 		})
@@ -149,7 +153,7 @@ var _ = Describe("Remove Finalizer Strategy", func() {
 			gomock.InOrder(
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList).Return(fmt.Errorf("fake error")),
 			)
-			valid, err := rfs.IsValid(node)
+			valid, err := rfs.IsValid(node, logger)
 			Expect(valid).To(BeFalse())
 			Expect(err).To(HaveOccurred())
 			Expect(err).NotTo(BeNil())
