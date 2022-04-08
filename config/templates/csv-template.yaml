@@ -7,7 +7,7 @@ metadata:
     categories: A list of comma separated categories that your operator falls under.
     certified: "false"
     description: Operator providing managed upgrades for OpenShift 4
-    containerImage: quay.io/app-sre/managed-upgrade-operator:latest
+    containerImage: quay.io/app-sre/managed-upgrade-operator:v0.1.809-46d986a
     support: Red Hat OpenShift SRE
 spec:
   displayName: managed-upgrade-operator
