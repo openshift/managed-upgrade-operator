@@ -4,6 +4,7 @@
   - [Development Environment Setup](#development-environment-setup)
     - [golang](#golang)
     - [operator-sdk](#operator-sdk)
+  - [Makefile](#makefile)
   - [Dependencies](#dependencies)
   - [Linting](#linting)
   - [Testing](#testing)
@@ -253,7 +254,16 @@ oc create -f test/deploy/service_account.yaml
 oc create -f test/deploy/managed-upgrade-operator-config.yaml
 ```
 
-- Set `test/deploy/operator.yaml` to use `quay.io/<QUAY_USERNAME>/managed-upgrade-operator:latest` container image and create deployment configuration
+- Set `test/deploy/operator.yaml` to use `quay.io/<QUAY_USERNAME>/managed-upgrade-operator:latest` container image and create deployment configuration by updating the `image` field:
+
+```bash
+      containers:
+        - name: managed-upgrade-operator
+          # Update the line below
+          image: quay.io/<QUAY_USERNAME>/managed-upgrade-operator:latest
+```
+
+- Then create the `Deployment` resource:
 
 ```shell
 oc create -f test/deploy/operator.yaml
