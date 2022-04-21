@@ -11,6 +11,7 @@ import (
 	"github.com/jpillora/backoff"
 
 	v1 "github.com/openshift/api/config/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -302,8 +303,13 @@ func durationWithJitter(t time.Duration, factor float64) time.Duration {
 func upgradeInProgress(uc *upgradev1alpha1.UpgradeConfig, cvClient cv.ClusterVersion) (bool, error) {
 	// First check all the UpgradeConfigs
 	phase := getCurrentUpgradeConfigPhase(uc)
-	if phase == upgradev1alpha1.UpgradePhaseUpgrading {
-		return true, nil
+	history := uc.Status.History.GetHistory(uc.Spec.Desired.Version)
+	if phase == upgradev1alpha1.UpgradePhaseUpgrading && history != nil {
+		for _, condition := range history.Conditions {
+			if condition.Status == corev1.ConditionTrue {
+				return true, nil
+			}
+		}
 	}
 
 	// Then check CVO

@@ -7,6 +7,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	configv1 "github.com/openshift/api/config/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -124,12 +125,64 @@ var _ = Describe("UpgradeConfigManager", func() {
 		})
 
 		It("will indicate correctly if UpgradeConfig says so", func() {
+			cv := &configv1.ClusterVersion{
+				Spec: configv1.ClusterVersionSpec{
+					DesiredUpdate: &configv1.Update{Version: TEST_UPGRADE_VERSION},
+					Channel:       TEST_UPGRADE_CHANNEL,
+				},
+				Status: configv1.ClusterVersionStatus{
+					Conditions: []configv1.ClusterOperatorStatusCondition{
+						{
+							Type:   configv1.OperatorProgressing,
+							Status: configv1.ConditionTrue,
+						},
+					},
+				},
+			}
 			upgradeConfig.Status.History = []upgradev1alpha1.UpgradeHistory{
 				{
 					Version: TEST_UPGRADE_VERSION,
 					Phase:   upgradev1alpha1.UpgradePhaseUpgrading,
 				},
 			}
+			gomock.InOrder(
+				mockCVClient.EXPECT().GetClusterVersion().Return(cv, nil),
+			)
+			inprogress, err := upgradeInProgress(&upgradeConfig, mockCVClient)
+			Expect(err).To(BeNil())
+			Expect(inprogress).To(BeTrue())
+		})
+
+		It("will indicate correctly if UpgradeConfig has no true condition", func() {
+			cv := &configv1.ClusterVersion{
+				Spec: configv1.ClusterVersionSpec{
+					DesiredUpdate: &configv1.Update{Version: TEST_UPGRADE_VERSION},
+					Channel:       TEST_UPGRADE_CHANNEL,
+				},
+				Status: configv1.ClusterVersionStatus{
+					Conditions: []configv1.ClusterOperatorStatusCondition{
+						{
+							Type:   configv1.OperatorProgressing,
+							Status: configv1.ConditionTrue,
+						},
+					},
+				},
+			}
+			upgradeConfig.Status.History = []upgradev1alpha1.UpgradeHistory{
+				{
+					Version: TEST_UPGRADE_VERSION,
+					Phase:   upgradev1alpha1.UpgradePhaseUpgrading,
+					Conditions: []upgradev1alpha1.UpgradeCondition{
+						{
+							Type:   upgradev1alpha1.SendStartedNotification,
+							Status: corev1.ConditionFalse,
+						},
+					},
+				},
+			}
+			gomock.InOrder(
+				mockCVClient.EXPECT().GetClusterVersion().Return(cv, nil),
+			)
 			inprogress, err := upgradeInProgress(&upgradeConfig, mockCVClient)
 			Expect(err).To(BeNil())
 			Expect(inprogress).To(BeTrue())
@@ -220,6 +273,20 @@ var _ = Describe("UpgradeConfigManager", func() {
 		})
 
 		It("should not proceed if an upgrade is occurring", func() {
+			cv := &configv1.ClusterVersion{
+				Spec: configv1.ClusterVersionSpec{
+					DesiredUpdate: &configv1.Update{Version: TEST_UPGRADE_VERSION},
+					Channel:       TEST_UPGRADE_CHANNEL,
+				},
+				Status: configv1.ClusterVersionStatus{
+					Conditions: []configv1.ClusterOperatorStatusCondition{
+						{
+							Type:   configv1.OperatorProgressing,
+							Status: configv1.ConditionTrue,
+						},
+					},
+				},
+			}
 			upgradeConfig.Status.History = []upgradev1alpha1.UpgradeHistory{
 				{
 					Version: TEST_UPGRADE_VERSION,
@@ -229,6 +296,7 @@ var _ = Describe("UpgradeConfigManager", func() {
 			gomock.InOrder(
 				mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, upgradeConfig).Return(nil),
 				mockCVClientBuilder.EXPECT().New(gomock.Any()).Return(mockCVClient),
+				mockCVClient.EXPECT().GetClusterVersion().Return(cv, nil),
 			)
 			changed, err := manager.Refresh()
 			Expect(err).To(BeNil())
