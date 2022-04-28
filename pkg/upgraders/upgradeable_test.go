@@ -2,9 +2,11 @@ package upgraders
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
 	"github.com/go-logr/logr"
@@ -108,6 +110,9 @@ var _ = Describe("UpgradableCheckStep", func() {
 				},
 			},
 		}
+
+		upgradeConfig.Spec.Desired.Version = "1.2.3"
+		currentClusterVersion.Status.History = []configv1.UpdateHistory{{State: configv1.CompletedUpdate, Version: "1.1.3"}}
 	})
 
 	AfterEach(func() {
@@ -116,31 +121,47 @@ var _ = Describe("UpgradableCheckStep", func() {
 
 	Context("When running the IsUpgradable check", func() {
 		Context("When current 'y' stream version is lower then desired version", func() {
-			BeforeEach(func() {
-				upgradeConfig.Spec.Desired.Version = "1.2.3"
-				currentClusterVersion.Status.History = []configv1.UpdateHistory{{State: configv1.CompletedUpdate, Version: "1.1.3"}}
-			})
-			It("will not perform upgrade", func() {
-				gomock.InOrder(
-					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
-					mockCVClient.EXPECT().GetClusterVersion().Return(currentClusterVersion, nil),
-				)
-				result, err := upgrader.IsUpgradeable(context.TODO(), logger)
-				Expect(err).To(HaveOccurred())
-				Expect(result).To(BeFalse())
-			})
+			DescribeTable("will not perform upgrade",
+				func(infraConfig *configv1.Infrastructure, kbArticleNumber int) {
+					gomock.InOrder(
+						mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
+						mockCVClient.EXPECT().GetClusterVersion().Return(currentClusterVersion, nil),
+						mockKubeClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Name: "cluster"}, gomock.Any()).SetArg(2, *infraConfig),
+					)
+					result, err := upgrader.IsUpgradeable(context.TODO(), logger)
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).Should(MatchRegexp(fmt.Sprintf("Cluster upgrade maintenance to version .* has been cancelled due to unacknowledged user actions. See https://access.redhat.com/solutions/%d for more details.", kbArticleNumber)))
+					Expect(result).To(BeFalse())
+				},
+
+				Entry("OSD case", &configv1.Infrastructure{}, upgradeCancelledArticleNumberForOSD),
+				Entry("ROSA case",
+					&configv1.Infrastructure{
+						Status: configv1.InfrastructureStatus{
+							PlatformStatus: &configv1.PlatformStatus{
+								AWS: &configv1.AWSPlatformStatus{
+									ResourceTags: []configv1.AWSResourceTag{{
+										Key: "red-hat-clustertype",
+										Value: "rosa",
+									}},
+								},
+							},
+						},
+					},
+					upgradeCancelledArticleNumberForROSA,
+				),
+			)
 		})
 
 		Context("When Upgradeable condition exists and is set to true", func() {
 			BeforeEach(func() {
-				upgradeConfig.Spec.Desired.Version = "1.2.3"
-				currentClusterVersion.Status.History = []configv1.UpdateHistory{{State: configv1.CompletedUpdate, Version: "1.1.3"}}
 				currentClusterVersion.Status.Conditions = []configv1.ClusterOperatorStatusCondition{{Type: configv1.OperatorUpgradeable, Status: configv1.ConditionTrue}}
 			})
 			It("will perform upgrade", func() {
 				gomock.InOrder(
 					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
 					mockCVClient.EXPECT().GetClusterVersion().Return(currentClusterVersion, nil),
+					mockKubeClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Name: "cluster"}, gomock.Any()),
 				)
 				result, err := upgrader.IsUpgradeable(context.TODO(), logger)
 				Expect(err).ToNot(HaveOccurred())
@@ -150,14 +171,13 @@ var _ = Describe("UpgradableCheckStep", func() {
 
 		Context("When the clusterversion does not have Upgradeable condition", func() {
 			BeforeEach(func() {
-				upgradeConfig.Spec.Desired.Version = "1.2.3"
-				currentClusterVersion.Status.History = []configv1.UpdateHistory{{State: configv1.CompletedUpdate, Version: "1.1.3"}}
 				currentClusterVersion.Status.Conditions = []configv1.ClusterOperatorStatusCondition{{Type: configv1.OperatorDegraded}}
 			})
 			It("will perform upgrade", func() {
 				gomock.InOrder(
 					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
 					mockCVClient.EXPECT().GetClusterVersion().Return(currentClusterVersion, nil),
+					mockKubeClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Name: "cluster"}, gomock.Any()),
 				)
 				result, err := upgrader.IsUpgradeable(context.TODO(), logger)
 				Expect(err).ToNot(HaveOccurred())
