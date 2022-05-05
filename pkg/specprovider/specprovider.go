@@ -44,22 +44,22 @@ func (ppb *specProviderBuilder) New(client client.Client, builder configmanager.
 	switch strings.ToUpper(cfg.ConfigManager.Source) {
 	case "OCM":
 		logf.Log.Info("Using OCM as the upgrade config provider")
-		cfg, err := readOcmProviderConfig(client, builder)
+		providerCfg, err := readOcmProviderConfig(client, builder)
 		if err != nil {
 			return nil, err
 		}
-		mgr, err := ocmprovider.New(client, cfg.GetOCMBaseURL())
+		mgr, err := ocmprovider.New(client, cfg.GetUpgradeType(), providerCfg.GetOCMBaseURL())
 		if err != nil {
 			return nil, err
 		}
 		return mgr, nil
 	case "LOCAL":
 		logf.Log.Info("Using local CR as the upgrade config provider")
-		cfg, err := readLocalProviderConfig(client, builder)
+		providerCfg, err := readLocalProviderConfig(client, builder)
 		if err != nil {
 			return nil, err
 		}
-		provider, err := localprovider.New(client, cfg.ConfigManager.LocalConfigName)
+		provider, err := localprovider.New(client, providerCfg.ConfigManager.LocalConfigName)
 		if err != nil {
 			return nil, err
 		}

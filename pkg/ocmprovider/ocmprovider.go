@@ -26,15 +26,16 @@ var (
 )
 
 // New returns a new ocmProvider
-func New(client client.Client, ocmBaseUrl *url.URL) (*ocmProvider, error) {
+func New(client client.Client, upgradeType upgradev1alpha1.UpgradeType, ocmBaseUrl *url.URL) (*ocmProvider, error) {
 
 	ocmClient, err := ocm.NewBuilder().New(client, ocmBaseUrl)
 	if err != nil {
 		return nil, err
 	}
 	return &ocmProvider{
-		client:    client,
-		ocmClient: ocmClient,
+		client:      client,
+		ocmClient:   ocmClient,
+		upgradeType: upgradeType,
 	}, nil
 }
 
@@ -43,6 +44,8 @@ type ocmProvider struct {
 	client client.Client
 	// OCM client
 	ocmClient ocm.OcmClient
+	// upgrader that the upgradeconfig spec should use
+	upgradeType upgradev1alpha1.UpgradeType
 }
 
 // Returns an indication of if the upgrade config had changed during the refresh,
@@ -95,7 +98,7 @@ func (s *ocmProvider) Get() ([]upgradev1alpha1.UpgradeConfigSpec, error) {
 		}
 
 		// Apply the next occurring Upgrade policy to the clusters UpgradeConfig CR.
-		specs, err := buildUpgradeConfigSpecs(nextOccurringUpgradePolicy, cluster, s.client)
+		specs, err := buildUpgradeConfigSpecs(nextOccurringUpgradePolicy, cluster, s.upgradeType)
 		if err != nil {
 			log.Error(err, "cannot build UpgradeConfigs from policy")
 			return nil, ErrProcessingPolicies
@@ -153,7 +156,7 @@ func isActionableUpgradePolicy(up *ocm.UpgradePolicy, state *ocm.UpgradePolicySt
 // Applies the supplied Upgrade Policy to the cluster in the form of an UpgradeConfig
 // Returns an indication of if the policy being applied differs to the existing UpgradeConfig,
 // and indication of error if one occurs.
-func buildUpgradeConfigSpecs(upgradePolicy *ocm.UpgradePolicy, cluster *ocm.ClusterInfo, c client.Client) ([]upgradev1alpha1.UpgradeConfigSpec, error) {
+func buildUpgradeConfigSpecs(upgradePolicy *ocm.UpgradePolicy, cluster *ocm.ClusterInfo, upgradeType upgradev1alpha1.UpgradeType) ([]upgradev1alpha1.UpgradeConfigSpec, error) {
 
 	upgradeConfigSpecs := make([]upgradev1alpha1.UpgradeConfigSpec, 0)
 
@@ -176,7 +179,7 @@ func buildUpgradeConfigSpecs(upgradePolicy *ocm.UpgradePolicy, cluster *ocm.Clus
 		},
 		UpgradeAt:            upgradePolicy.NextRun,
 		PDBForceDrainTimeout: int32(cluster.NodeDrainGracePeriod.Value),
-		Type:                 upgradev1alpha1.UpgradeType(upgradePolicy.UpgradeType),
+		Type:                 upgradeType,
 		CapacityReservation:  capacityReservation,
 	}
 	upgradeConfigSpecs = append(upgradeConfigSpecs, upgradeConfigSpec)

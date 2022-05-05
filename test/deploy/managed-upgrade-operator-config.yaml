@@ -4,6 +4,7 @@ metadata:
   name: managed-upgrade-operator-config
 data:
   config.yaml: |
+    upgradeType: OSD
     configManager:
       source: LOCAL
       localConfigName: managed-upgrade-config
