@@ -26,8 +26,6 @@ const (
 	UPGRADEPOLICIES_V1_PATH = "upgrade_policies"
 	// STATE_V1_PATH sub-path to the policy state service
 	STATE_V1_PATH = "state"
-	// UPGRADE_TYPE_OSD is the only supported type.
-	UPGRADE_TYPE_OSD = "OSD"
 )
 
 var log = logf.Log.WithName("ocm-client")
@@ -131,8 +129,6 @@ func (s *ocmClient) GetClusterUpgradePolicies(clusterId string) (*UpgradePolicyL
 		SetQueryParams(map[string]string{
 			"page": "1",
 			"size": "1",
-			// OCM also provides types [ADDON, CVE] which are currently unsupported.
-			"search": fmt.Sprintf("upgrade_type = '%s'", UPGRADE_TYPE_OSD),
 		}).
 		SetResult(&UpgradePolicyList{}).
 		ExpectContentType("application/json").

@@ -28,6 +28,17 @@ TBD
 
 
 ## Configurable knobs
+
+#### upgradeType
+
+This defines which upgrader MUO should use to upgrade the cluster.
+
+Valid options are:
+- [ARO](https://github.com/openshift/managed-upgrade-operator/blob/master/pkg/upgraders/aroupgrader.go)
+- [OSD](https://github.com/openshift/managed-upgrade-operator/blob/master/pkg/upgraders/osdupgrader.go)
+
+If this field is not present or is an empty value, the ARO upgrader is used by default.
+
 #### configManager
 
 Please refer to the doc [`configmanager`](./configmanager.md)

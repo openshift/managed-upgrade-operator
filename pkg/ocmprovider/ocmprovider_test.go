@@ -22,7 +22,7 @@ const (
 
 	// Upgrade policy constants
 	TEST_OPERATOR_NAMESPACE                 = "test-managed-upgrade-operator"
-	TEST_UPGRADEPOLICY_UPGRADETYPE          = "OSD"
+	TEST_UPGRADEPOLICY_UPGRADETYPE          = "TEST_UPGRADE_TYPE"
 	TEST_UPGRADEPOLICY_TIME                 = "2020-06-20T00:00:00Z"
 	TEST_UPGRADEPOLICY_TIME_NEXT_OCCURRING  = "2020-05-20T00:00:00Z"
 	TEST_UPGRADEPOLICY_VERSION              = "4.4.5"
@@ -46,8 +46,9 @@ var _ = Describe("OCM Provider", func() {
 		mockKubeClient = mocks.NewMockClient(mockCtrl)
 		mockOcmClient = mockOcm.NewMockOcmClient(mockCtrl)
 		provider = &ocmProvider{
-			client:    mockKubeClient,
-			ocmClient: mockOcmClient,
+			client:      mockKubeClient,
+			ocmClient:   mockOcmClient,
+			upgradeType: TEST_UPGRADEPOLICY_UPGRADETYPE,
 		}
 		upgradePolicyListResponse = ocm.UpgradePolicyList{
 			Kind:  "UpgradePolicyList",
@@ -61,7 +62,6 @@ var _ = Describe("OCM Provider", func() {
 					Href:         "test",
 					Schedule:     "test",
 					ScheduleType: "manual",
-					UpgradeType:  TEST_UPGRADEPOLICY_UPGRADETYPE,
 					Version:      TEST_UPGRADEPOLICY_VERSION,
 					NextRun:      TEST_UPGRADEPOLICY_TIME,
 					ClusterId:    TEST_CLUSTER_ID,
@@ -129,7 +129,6 @@ var _ = Describe("OCM Provider", func() {
 						Href:         "test",
 						Schedule:     "test",
 						ScheduleType: "manual",
-						UpgradeType:  TEST_UPGRADEPOLICY_UPGRADETYPE,
 						Version:      TEST_UPGRADEPOLICY_VERSION,
 						NextRun:      TEST_UPGRADEPOLICY_TIME,
 						ClusterId:    TEST_CLUSTER_ID,
@@ -185,7 +184,6 @@ var _ = Describe("OCM Provider", func() {
 						Href:         "test",
 						Schedule:     "test",
 						ScheduleType: "manual",
-						UpgradeType:  TEST_UPGRADEPOLICY_UPGRADETYPE,
 						Version:      TEST_UPGRADEPOLICY_VERSION,
 						NextRun:      TEST_UPGRADEPOLICY_TIME,
 						ClusterId:    TEST_CLUSTER_ID_MULTI_POLICIES,
@@ -196,7 +194,6 @@ var _ = Describe("OCM Provider", func() {
 						Href:         "test",
 						Schedule:     "3 5 5 * *",
 						ScheduleType: "automatic",
-						UpgradeType:  TEST_UPGRADEPOLICY_UPGRADETYPE,
 						Version:      TEST_UPGRADEPOLICY_VERSION,
 						NextRun:      TEST_UPGRADEPOLICY_TIME_NEXT_OCCURRING,
 						ClusterId:    TEST_CLUSTER_ID_MULTI_POLICIES,
