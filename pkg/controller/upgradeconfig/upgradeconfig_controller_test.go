@@ -11,6 +11,7 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -127,7 +128,7 @@ var _ = Describe("UpgradeConfigController", func() {
 				gomock.InOrder(
 					mockEMBuilder.EXPECT().NewManager(gomock.Any()).Return(mockEMClient, nil),
 					mockKubeClient.EXPECT().Get(gomock.Any(), upgradeConfigName, gomock.Any()).SetArg(2, *upgradeConfig).Return(notFound),
-					mockMetricsClient.EXPECT().ResetAllMetrics(),
+					mockMetricsClient.EXPECT().ResetEphemeralMetrics(),
 				)
 				result, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: upgradeConfigName})
 				Expect(err).NotTo(HaveOccurred())
@@ -635,6 +636,27 @@ var _ = Describe("UpgradeConfigController", func() {
 						Expect(result.Requeue).To(BeFalse())
 						Expect(result.RequeueAfter).To(Equal(upgradingReconcileTime))
 					})
+				})
+			})
+
+			Context("When the upgrade phase is Upgraded", func() {
+				BeforeEach(func() {
+					upgradeConfig.Status.History[0].Phase = upgradev1alpha1.UpgradePhaseUpgraded
+					upgradeConfig.Status.History[0].StartTime = &metav1.Time{ Time: time.Now() }
+					upgradeConfig.Status.History[0].CompleteTime = &metav1.Time{ Time: time.Now() }
+				})
+				It("reports metrics", func() {
+					gomock.InOrder(
+						mockEMBuilder.EXPECT().NewManager(gomock.Any()).Return(mockEMClient, nil),
+						mockKubeClient.EXPECT().Get(gomock.Any(), upgradeConfigName, gomock.Any()).SetArg(2, *upgradeConfig),
+						mockClusterUpgraderBuilder.EXPECT().NewClient(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), upgradeConfig.Spec.Type).Times(0),
+						mockMetricsClient.EXPECT().AlertsFromUpgrade(gomock.Any(), gomock.Any()),
+						mockMetricsClient.EXPECT().UpdateMetricUpgradeResult(gomock.Any(), gomock.Any(), gomock.Any()),
+					)
+					result, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: upgradeConfigName})
+					Expect(err).NotTo(HaveOccurred())
+					Expect(result.Requeue).To(BeFalse())
+					Expect(result.RequeueAfter).To(BeZero())
 				})
 			})
 

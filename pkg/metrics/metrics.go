@@ -28,6 +28,7 @@ const (
 	metricsTag = "upgradeoperator"
 	nameLabel  = "upgradeconfig_name"
 	nodeLabel  = "node_name"
+	alertsLabel = "alerts"
 
 	Namespace = "upgradeoperator"
 	Subsystem = "upgrade"
@@ -50,6 +51,15 @@ const (
 	clusterSVCSuffix          = ".svc.cluster.local"
 )
 
+// Alerts sourced from https://github.com/openshift/managed-cluster-config/blob/master/deploy/sre-prometheus/100-managed-upgrade-operator.PrometheusRule.yaml
+var pagingAlerts = []string{
+	"UpgradeConfigValidationFailedSRE",
+	"UpgradeClusterCheckFailedSRE",
+	"UpgradeControlPlaneUpgradeTimeoutSRE",
+	"UpgradeNodeUpgradeTimeoutSRE",
+	"UpgradeNodeDrainFailedSRE",
+}
+
 //go:generate mockgen -destination=mocks/metrics.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/metrics Metrics
 type Metrics interface {
 	UpdateMetricValidationFailed(string)
@@ -70,8 +80,10 @@ type Metrics interface {
 	ResetMetricNodeDrainFailed(string)
 	ResetAllMetricNodeDrainFailed()
 	ResetFailureMetrics()
-	ResetAllMetrics()
+	ResetEphemeralMetrics()
 	UpdateMetricNotificationEventSent(string, string, string)
+	UpdateMetricUpgradeResult(string, string, []string)
+	AlertsFromUpgrade(time.Time, time.Time) ([]string, error)
 	IsAlertFiring(alert string, checkedNS, ignoredNS []string) (bool, error)
 	IsMetricNotificationEventSentSet(upgradeConfigName string, event string, version string) (bool, error)
 	IsClusterVersionAtVersion(version string) (bool, error)
@@ -217,8 +229,14 @@ var (
 		Name:      "upgrade_notification",
 		Help:      "Notification event raised",
 	}, []string{nameLabel, eventLabel, VersionLabel})
+	metricUpgradeResult = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Subsystem: metricsTag,
+		Name:      "upgrade_result",
+		Help:      "Alerts fired during latest upgrade",
+	}, []string{nameLabel, VersionLabel, alertsLabel})
 
-	metricsList = []*prometheus.GaugeVec{
+	// ephemeralMetrics defines temporary metrics whose data should be cleared when an upgrade completes
+	ephemeralMetrics = []*prometheus.GaugeVec{
 		metricValidationFailed,
 		metricClusterCheckFailed,
 		metricScalingFailed,
@@ -229,6 +247,12 @@ var (
 		metricNodeDrainFailed,
 		metricUpgradeNotification,
 	}
+
+	// persistentMetrics defines metrics whose data should not be cleared when an upgrade completes
+	persistentMetrics = []*prometheus.GaugeVec{
+		metricUpgradeResult,
+	}
+	metricsList = append(ephemeralMetrics, persistentMetrics...)
 )
 
 func init() {
@@ -345,9 +369,21 @@ func (c *Counter) UpdateMetricNotificationEventSent(upgradeConfigName string, ev
 		float64(1))
 }
 
-// ResetAllMetrics will reset all the metrics
-func (c *Counter) ResetAllMetrics() {
-	for _, m := range metricsList {
+func (c *Counter) UpdateMetricUpgradeResult(name string, version string, alerts []string) {
+	val := float64(1)
+	if len(alerts) > 0 {
+		val = float64(0)
+	}
+	metricUpgradeResult.With(prometheus.Labels{
+		nameLabel: name,
+		VersionLabel: version,
+		alertsLabel: strings.Join(alerts, ","),
+	}).Set(val)
+}
+
+// ResetEphemeralMetrics will reset all ephemeral metrics
+func (c *Counter) ResetEphemeralMetrics() {
+	for _, m := range ephemeralMetrics {
 		m.Reset()
 	}
 }
@@ -391,6 +427,23 @@ func (c *Counter) IsClusterVersionAtVersion(version string) (bool, error) {
 	}
 
 	return false, nil
+}
+
+// AlertsFromUpgrade reports any primary-paging critical alerts that were fired from managed-upgrade-operator during the last upgrade.
+func (c *Counter) AlertsFromUpgrade(upgradeStart time.Time, upgradeEnd time.Time) ([]string, error) {
+	timeSinceUpgrade := time.Since(upgradeEnd).Truncate(time.Second)
+	upgradeDuration := upgradeEnd.Sub(upgradeStart)
+	cpMetrics, err := c.Query(fmt.Sprintf(`max_over_time(ALERTS{alertstate="firing",severity="critical",alertname=~"%s"}[%s] offset %s)`, strings.Join(pagingAlerts, "|"), upgradeDuration.String(), timeSinceUpgrade.String()))
+	if err != nil {
+		return []string{}, err
+	}
+
+	firedAlerts := []string{}
+	for _, result := range cpMetrics.Data.Result {
+		firedAlerts = append(firedAlerts, result.Metric["alertname"])
+	}
+
+	return firedAlerts, nil
 }
 
 func (c *Counter) IsAlertFiring(alert string, checkedNS, ignoredNS []string) (bool, error) {
