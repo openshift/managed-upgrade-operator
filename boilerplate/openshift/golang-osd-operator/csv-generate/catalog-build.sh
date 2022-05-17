@@ -65,6 +65,9 @@ EOF
 cat <<EOF > $DOCKERFILE_REGISTRY
 FROM quay.io/openshift/origin-operator-registry:4.8.0
 COPY $SAAS_OPERATOR_DIR manifests
+USER 0
+RUN pip3 install urllib3==1.26.9 pip==21.3.1
+USER 1001
 RUN initializer --permissive
 CMD ["registry-server", "-t", "/tmp/terminate.log"]
 EOF
