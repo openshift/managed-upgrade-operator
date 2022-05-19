@@ -1,3 +1,5 @@
+FIPS_ENABLED=true
+
 include boilerplate/generated-includes.mk
 
 OPERATOR_NAME=managed-upgrade-operator
