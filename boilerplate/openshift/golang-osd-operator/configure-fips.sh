@@ -15,4 +15,4 @@ fi
 
 echo "Writing fips file at $MAIN_DIR/fips.go"
 
-cp $CONVENTION_DIR/fips.go "$MAIN_DIR/fips.go"
+cp $CONVENTION_DIR/fips.go.tmplt "$MAIN_DIR/fips.go"
