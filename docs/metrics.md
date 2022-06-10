@@ -7,10 +7,16 @@ The Managed Upgrade Operator reports the following metrics via direct instrument
 - `upgradeoperator_upgradeconfig_validation_failed`: If failed to validate the upgrade config `value > 0`
 - `upgradeoperator_cluster_check_failed`: If failed on the cluster check step `value > 0`
 - `upgradeoperator_scaling_failed`: If failed to scale up extra workers `value > 0`
-- `upgradeoperator_controlplane_timeout`: If ontrol plane upgrade timeout `value > 0`
+- `upgradeoperator_controlplane_timeout`: If control plane upgrade timeout `value > 0`
 - `upgradeoperator_worker_timeout`: If worker nodes upgrade timeout `value > 0`
 - `upgradeoperator_node_drain_timeout`: If node cannot be drained successfully in time `value > 0`
 - `upgradeoperator_upgradeconfig_synced`: If upgradeConfig has not been synced in time `value > 0`
+
+## Metrics for fleet-wide monitoring
+
+The following metrics are forwarded to Observatorium-MST for fleetwide monitoring via grafana
+
+- `upgradeoperator_upgrade_result`: Contains results from the previous upgrade. If upgrade fired a paging alert `value == 0` and the `alerts` field contains the name of alerts fired
 
 ## Metrics for upgrade conditions and state
 

@@ -130,8 +130,8 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
-			metricsClient.ResetAllMetrics()
-			reqLogger.Info("Reset all the metrics due to no upgrade config present.")
+			metricsClient.ResetEphemeralMetrics()
+			reqLogger.Info("Reset metrics due to no upgrade config present.")
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
@@ -272,7 +272,8 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 		return r.upgradeCluster(upgrader, instance, reqLogger)
 	case upgradev1alpha1.UpgradePhaseUpgraded:
 		reqLogger.Info("Cluster is already upgraded")
-		return reconcile.Result{}, nil
+		err = reportUpgradeMetrics(metricsClient, instance.Name, instance.Spec.Desired.Version, history.StartTime.Time, history.CompleteTime.Time)
+		return reconcile.Result{}, err
 	case upgradev1alpha1.UpgradePhaseFailed:
 		reqLogger.Info("Cluster has failed to upgrade")
 		return reconcile.Result{}, nil
@@ -299,6 +300,17 @@ func (r *ReconcileUpgradeConfig) upgradeCluster(upgrader cub.ClusterUpgrader, uc
 	me = multierror.Append(err, me)
 
 	return reconcile.Result{RequeueAfter: 1 * time.Minute}, me.ErrorOrNil()
+}
+
+// reportUpgradeMetrics updates prometheus with statistics from the latest upgrade
+func reportUpgradeMetrics(metricsClient metrics.Metrics, name string, version string, upgradeStart time.Time, upgradeEnd time.Time) error {
+	upgradeAlerts, err := metricsClient.AlertsFromUpgrade(upgradeStart, upgradeEnd)
+	if err != nil {
+		return err
+	}
+
+	metricsClient.UpdateMetricUpgradeResult(name, version, upgradeAlerts)
+	return nil
 }
 
 // ManagedUpgradePredicate is used for managing predicates of the UpgradeConfig

@@ -8,6 +8,7 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	metrics "github.com/openshift/managed-upgrade-operator/pkg/metrics"
 	reflect "reflect"
+	time "time"
 )
 
 // MockMetrics is a mock of Metrics interface
@@ -31,6 +32,21 @@ func NewMockMetrics(ctrl *gomock.Controller) *MockMetrics {
 // EXPECT returns an object that allows the caller to indicate expected use
 func (m *MockMetrics) EXPECT() *MockMetricsMockRecorder {
 	return m.recorder
+}
+
+// AlertsFromUpgrade mocks base method
+func (m *MockMetrics) AlertsFromUpgrade(arg0, arg1 time.Time) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AlertsFromUpgrade", arg0, arg1)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AlertsFromUpgrade indicates an expected call of AlertsFromUpgrade
+func (mr *MockMetricsMockRecorder) AlertsFromUpgrade(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AlertsFromUpgrade", reflect.TypeOf((*MockMetrics)(nil).AlertsFromUpgrade), arg0, arg1)
 }
 
 // IsAlertFiring mocks base method
@@ -105,16 +121,16 @@ func (mr *MockMetricsMockRecorder) ResetAllMetricNodeDrainFailed() *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResetAllMetricNodeDrainFailed", reflect.TypeOf((*MockMetrics)(nil).ResetAllMetricNodeDrainFailed))
 }
 
-// ResetAllMetrics mocks base method
-func (m *MockMetrics) ResetAllMetrics() {
+// ResetEphemeralMetrics mocks base method
+func (m *MockMetrics) ResetEphemeralMetrics() {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "ResetAllMetrics")
+	m.ctrl.Call(m, "ResetEphemeralMetrics")
 }
 
-// ResetAllMetrics indicates an expected call of ResetAllMetrics
-func (mr *MockMetricsMockRecorder) ResetAllMetrics() *gomock.Call {
+// ResetEphemeralMetrics indicates an expected call of ResetEphemeralMetrics
+func (mr *MockMetricsMockRecorder) ResetEphemeralMetrics() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResetAllMetrics", reflect.TypeOf((*MockMetrics)(nil).ResetAllMetrics))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResetEphemeralMetrics", reflect.TypeOf((*MockMetrics)(nil).ResetEphemeralMetrics))
 }
 
 // ResetFailureMetrics mocks base method
@@ -271,6 +287,18 @@ func (m *MockMetrics) UpdateMetricUpgradeControlPlaneTimeout(arg0, arg1 string) 
 func (mr *MockMetricsMockRecorder) UpdateMetricUpgradeControlPlaneTimeout(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricUpgradeControlPlaneTimeout", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricUpgradeControlPlaneTimeout), arg0, arg1)
+}
+
+// UpdateMetricUpgradeResult mocks base method
+func (m *MockMetrics) UpdateMetricUpgradeResult(arg0, arg1 string, arg2 []string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "UpdateMetricUpgradeResult", arg0, arg1, arg2)
+}
+
+// UpdateMetricUpgradeResult indicates an expected call of UpdateMetricUpgradeResult
+func (mr *MockMetricsMockRecorder) UpdateMetricUpgradeResult(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricUpgradeResult", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricUpgradeResult), arg0, arg1, arg2)
 }
 
 // UpdateMetricUpgradeWindowBreached mocks base method
