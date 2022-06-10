@@ -20,7 +20,6 @@ var log = logf.Log.WithName("ocm-config-getter")
 var (
 	ErrProviderUnavailable = fmt.Errorf("OCM Provider unavailable")
 	ErrClusterIdNotFound   = fmt.Errorf("cluster ID can't be found")
-	ErrMissingChannelGroup = fmt.Errorf("channel group not returned or empty")
 	ErrRetrievingPolicies  = fmt.Errorf("could not retrieve provider upgrade policies")
 	ErrProcessingPolicies  = fmt.Errorf("could not process provider upgrade policies")
 )
@@ -66,9 +65,6 @@ func (s *ocmProvider) Get() ([]upgradev1alpha1.UpgradeConfigSpec, error) {
 	// In case a response was returned that has no cluster ID
 	if cluster.Id == "" {
 		return nil, ErrClusterIdNotFound
-	}
-	if cluster.Version.ChannelGroup == "" {
-		return nil, ErrMissingChannelGroup
 	}
 
 	// Retrieve the cluster's available upgrade policies from Cluster Services
@@ -189,6 +185,12 @@ func buildUpgradeConfigSpecs(upgradePolicy *ocm.UpgradePolicy, cluster *ocm.Clus
 
 // Infers a CVO channel name from the channel group and TO desired version edges
 func inferUpgradeChannelFromChannelGroup(channelGroup string, toVersion string) (*string, error) {
+
+	// Set our channelGroup to "stable" if it's empty or we can't find one
+	// This is required for MUO support on ARO as OCM does not inform ARO clusters of a channel group
+	if channelGroup == "" {
+		channelGroup = "stable"
+	}
 
 	toSV, err := semver.Parse(toVersion)
 	if err != nil {

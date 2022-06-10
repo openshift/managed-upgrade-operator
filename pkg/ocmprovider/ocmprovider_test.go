@@ -94,6 +94,13 @@ var _ = Describe("OCM Provider", func() {
 			_, err := inferUpgradeChannelFromChannelGroup(channelGroup, version)
 			Expect(err).NotTo(BeNil())
 		})
+		It("Sets the channel to stable if the channel group is empty", func() {
+			version := "4.9.1"
+			channelGroup := ""
+			channel, err := inferUpgradeChannelFromChannelGroup(channelGroup, version)
+			Expect(*channel).To(Equal("stable-4.9"))
+			Expect(err).To(BeNil())
+		})
 
 	})
 
