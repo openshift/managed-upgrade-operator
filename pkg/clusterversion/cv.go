@@ -275,8 +275,8 @@ func (c *clusterVersionClient) runUpgradeWithImage(cv *configv1.ClusterVersion, 
 
 	if cv.Spec.DesiredUpdate == nil || cv.Spec.DesiredUpdate.Image != desired.Image {
 		logger.Info(fmt.Sprintf("Setting ClusterVersion to Image %s", desired.Image))
-		cv.Spec.DesiredUpdate = &configv1.Update{Image: desired.Image, Version: ""}
-		err := c.client.Update(context.TODO(), cv)
+		patch := []byte(fmt.Sprintf(`{"spec":{"desiredUpdate":{"image": "%s", "version": "" }}}`, desired.Image))
+		err := c.client.Patch(context.TODO(), cv, client.RawPatch(types.StrategicMergePatchType, patch))
 		if err != nil {
 			return false, err
 		}
@@ -289,8 +289,8 @@ func (c *clusterVersionClient) runUpgradeWithChannelVersion(cv *configv1.Cluster
 
 	if cv.Spec.Channel != desired.Channel {
 		logger.Info(fmt.Sprintf("Setting ClusterVersion to Channel %s Version %s", desired.Channel, desired.Version))
-		cv.Spec.Channel = desired.Channel
-		err := c.client.Update(context.TODO(), cv)
+		patch := []byte(fmt.Sprintf(`{"spec":{"Channel": "%s" }}`, desired.Channel))
+		err := c.client.Patch(context.TODO(), cv, client.RawPatch(types.StrategicMergePatchType, patch))
 		if err != nil {
 			return false, err
 		}
@@ -314,8 +314,8 @@ func (c *clusterVersionClient) runUpgradeWithChannelVersion(cv *configv1.Cluster
 	}
 
 	cv.Spec.Overrides = []configv1.ComponentOverride{}
-	cv.Spec.DesiredUpdate = &configv1.Update{Version: uc.Spec.Desired.Version}
-	err := c.client.Update(context.TODO(), cv)
+	patch := []byte(fmt.Sprintf(`{"spec":{"DesiredUpdate":{"Version": "%s" }}}`, desired.Version))
+	err := c.client.Patch(context.TODO(), cv, client.RawPatch(types.StrategicMergePatchType, patch))
 	if err != nil {
 		return false, err
 	}
