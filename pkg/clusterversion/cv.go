@@ -314,7 +314,7 @@ func (c *clusterVersionClient) runUpgradeWithChannelVersion(cv *configv1.Cluster
 	}
 
 	cv.Spec.Overrides = []configv1.ComponentOverride{}
-	patch := []byte(fmt.Sprintf(`{"spec":{"desiredUpdate":{"version":"%s"}}}`, desired.Version))
+	patch := []byte(fmt.Sprintf(`{"spec":{"desiredUpdate":{"version":"%s","image":""}}}`, desired.Version))
 	err := c.client.Patch(context.TODO(), cv, client.RawPatch(types.StrategicMergePatchType, patch))
 	if err != nil {
 		return false, err

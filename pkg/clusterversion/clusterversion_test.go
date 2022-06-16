@@ -109,7 +109,7 @@ var _ = Describe("ClusterVersion client and utils", func() {
 						},
 					}
 					channelPatch := client.RawPatch(types.StrategicMergePatchType, []byte(fmt.Sprintf(`{"spec":{"channel":"%s"}}`, upgradeConfig.Spec.Desired.Channel)))
-					versionPatch := client.RawPatch(types.StrategicMergePatchType, []byte(fmt.Sprintf(`{"spec":{"desiredUpdate":{"version":"%s"}}}`, upgradeConfig.Spec.Desired.Version)))
+					versionPatch := client.RawPatch(types.StrategicMergePatchType, []byte(fmt.Sprintf(`{"spec":{"desiredUpdate":{"version":"%s","image":""}}}`, upgradeConfig.Spec.Desired.Version)))
 					gomock.InOrder(
 						mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, clusterVersion).Return(nil),
 						mockKubeClient.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
@@ -146,7 +146,7 @@ var _ = Describe("ClusterVersion client and utils", func() {
 							},
 						},
 					}
-					versionPatch := client.RawPatch(types.StrategicMergePatchType, []byte(fmt.Sprintf(`{"spec":{"desiredUpdate":{"version":"%s"}}}`, upgradeConfig.Spec.Desired.Version)))
+					versionPatch := client.RawPatch(types.StrategicMergePatchType, []byte(fmt.Sprintf(`{"spec":{"desiredUpdate":{"version":"%s","image":""}}}`, upgradeConfig.Spec.Desired.Version)))
 					gomock.InOrder(
 						mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, clusterVersion).Return(nil),
 						mockKubeClient.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
@@ -179,7 +179,7 @@ var _ = Describe("ClusterVersion client and utils", func() {
 							},
 						},
 					}
-					versionPatch := client.RawPatch(types.StrategicMergePatchType, []byte(fmt.Sprintf(`{"spec":{"desiredUpdate":{"version":"%s"}}}`, upgradeConfig.Spec.Desired.Version)))
+					versionPatch := client.RawPatch(types.StrategicMergePatchType, []byte(fmt.Sprintf(`{"spec":{"desiredUpdate":{"version":"%s","image":""}}}`, upgradeConfig.Spec.Desired.Version)))
 					gomock.InOrder(
 						mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, clusterVersion).Return(nil),
 						mockKubeClient.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
