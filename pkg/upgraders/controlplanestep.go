@@ -43,14 +43,22 @@ func (c *clusterUpgrader) ControlPlaneUpgraded(ctx context.Context, logger logr.
 
 	isCompleted := c.cvClient.HasUpgradeCompleted(clusterVersion, c.upgradeConfig)
 	history := cv.GetHistory(clusterVersion, c.upgradeConfig.Spec.Desired.Version)
+	var upgradeStartTime time.Time
+	var controlPlaneCompleteTime time.Time
 	if history == nil {
-		return false, err
+		upgradeStartTime, err = time.Parse(time.RFC3339, c.upgradeConfig.Spec.UpgradeAt)
+		if err != nil {
+			return false, err //handle error later
+		}
+	} else {
+		upgradeStartTime = history.StartedTime.Time
+		if !history.CompletionTime.IsZero() {
+			controlPlaneCompleteTime = history.CompletionTime.Time
+		}
 	}
 
-	upgradeStartTime := history.StartedTime
-	controlPlaneCompleteTime := history.CompletionTime
 	upgradeTimeout := c.config.Maintenance.GetControlPlaneDuration()
-	if !upgradeStartTime.IsZero() && controlPlaneCompleteTime == nil && time.Now().After(upgradeStartTime.Add(upgradeTimeout)) {
+	if !upgradeStartTime.IsZero() && controlPlaneCompleteTime.IsZero() && time.Now().After(upgradeStartTime.Add(upgradeTimeout)) {
 		logger.Info("Control plane upgrade timeout")
 		c.metrics.UpdateMetricUpgradeControlPlaneTimeout(c.upgradeConfig.Name, c.upgradeConfig.Spec.Desired.Version)
 	}
