@@ -48,7 +48,7 @@ func (c *clusterUpgrader) ControlPlaneUpgraded(ctx context.Context, logger logr.
 	if history == nil {
 		upgradeStartTime, err = time.Parse(time.RFC3339, c.upgradeConfig.Spec.UpgradeAt)
 		if err != nil {
-			return false, err //handle error later
+			return false, err //error parsing time string
 		}
 	} else {
 		upgradeStartTime = history.StartedTime.Time
