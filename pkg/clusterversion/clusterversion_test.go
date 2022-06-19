@@ -2,6 +2,8 @@ package clusterversion
 
 import (
 	"context"
+	"fmt"
+	"reflect"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
@@ -12,6 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 	testStructs "github.com/openshift/managed-upgrade-operator/util/mocks/structs"
@@ -105,13 +108,19 @@ var _ = Describe("ClusterVersion client and utils", func() {
 							},
 						},
 					}
+					channelPatch := client.RawPatch(types.MergePatchType, []byte(fmt.Sprintf(`{"spec":{"channel":"%s"}}`, upgradeConfig.Spec.Desired.Channel)))
+					versionPatch := client.RawPatch(types.MergePatchType, []byte(fmt.Sprintf(`{"spec":{"desiredUpdate":{"version":"%s","image":null}}}`, upgradeConfig.Spec.Desired.Version)))
 					gomock.InOrder(
 						mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, clusterVersion).Return(nil),
-						mockKubeClient.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil),
+						mockKubeClient.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+							func(ctx context.Context, cv *configv1.ClusterVersion, p client.Patch) error {
+								Expect(reflect.DeepEqual(p, channelPatch)).To(BeTrue())
+								return nil
+							}),
 						mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, updatedClusterVersion).Return(nil),
-						mockKubeClient.EXPECT().Update(gomock.Any(), gomock.Any()).DoAndReturn(
-							func(ctx context.Context, cv *configv1.ClusterVersion) error {
-								Expect(cv.Spec.Channel).To(Equal(upgradeConfig.Spec.Desired.Channel))
+						mockKubeClient.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+							func(ctx context.Context, cv *configv1.ClusterVersion, p client.Patch) error {
+								Expect(reflect.DeepEqual(p, versionPatch)).To(BeTrue())
 								return nil
 							}),
 					)
@@ -137,12 +146,12 @@ var _ = Describe("ClusterVersion client and utils", func() {
 							},
 						},
 					}
+					versionPatch := client.RawPatch(types.MergePatchType, []byte(fmt.Sprintf(`{"spec":{"desiredUpdate":{"version":"%s","image":null}}}`, upgradeConfig.Spec.Desired.Version)))
 					gomock.InOrder(
 						mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, clusterVersion).Return(nil),
-						mockKubeClient.EXPECT().Update(gomock.Any(), gomock.Any()).DoAndReturn(
-							func(ctx context.Context, cv *configv1.ClusterVersion) error {
-								Expect(cv.Spec.DesiredUpdate.Version).To(Equal(upgradeConfig.Spec.Desired.Version))
-								Expect(cv.Spec.Channel).To(Equal(upgradeConfig.Spec.Desired.Channel))
+						mockKubeClient.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+							func(ctx context.Context, cv *configv1.ClusterVersion, p client.Patch) error {
+								Expect(reflect.DeepEqual(p, versionPatch)).To(BeTrue())
 								return nil
 							}),
 					)
@@ -170,12 +179,12 @@ var _ = Describe("ClusterVersion client and utils", func() {
 							},
 						},
 					}
+					versionPatch := client.RawPatch(types.MergePatchType, []byte(fmt.Sprintf(`{"spec":{"desiredUpdate":{"version":"%s","image":null}}}`, upgradeConfig.Spec.Desired.Version)))
 					gomock.InOrder(
 						mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, clusterVersion).Return(nil),
-						mockKubeClient.EXPECT().Update(gomock.Any(), gomock.Any()).DoAndReturn(
-							func(ctx context.Context, cv *configv1.ClusterVersion) error {
-								Expect(cv.Spec.DesiredUpdate.Version).To(Equal(upgradeConfig.Spec.Desired.Version))
-								Expect(cv.Spec.Channel).To(Equal(upgradeConfig.Spec.Desired.Channel))
+						mockKubeClient.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+							func(ctx context.Context, cv *configv1.ClusterVersion, p client.Patch) error {
+								Expect(reflect.DeepEqual(p, versionPatch)).To(BeTrue())
 								return nil
 							}),
 					)
@@ -278,12 +287,12 @@ var _ = Describe("ClusterVersion client and utils", func() {
 						},
 					}
 					upgradeConfig.Spec.Desired.Image = "quay.io/test/test-image"
+					updatePatch := client.RawPatch(types.MergePatchType, []byte(fmt.Sprintf(`{"spec":{"desiredUpdate":{"image":"%s","version":null}}}`, upgradeConfig.Spec.Desired.Image)))
 					gomock.InOrder(
 						mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, clusterVersion).Return(nil),
-						mockKubeClient.EXPECT().Update(gomock.Any(), gomock.Any()).DoAndReturn(
-							func(ctx context.Context, cv *configv1.ClusterVersion) error {
-								Expect(cv.Spec.DesiredUpdate.Image).To(Equal(upgradeConfig.Spec.Desired.Image))
-								Expect(cv.Spec.DesiredUpdate.Version).To(Equal(""))
+						mockKubeClient.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+							func(ctx context.Context, cv *configv1.ClusterVersion, p client.Patch) error {
+								Expect(reflect.DeepEqual(p, updatePatch)).To(BeTrue())
 								return nil
 							}),
 					)
@@ -303,12 +312,12 @@ var _ = Describe("ClusterVersion client and utils", func() {
 						},
 					}
 					upgradeConfig.Spec.Desired.Image = "quay.io/test/test-image"
+					updatePatch := client.RawPatch(types.MergePatchType, []byte(fmt.Sprintf(`{"spec":{"desiredUpdate":{"image":"%s","version":null}}}`, upgradeConfig.Spec.Desired.Image)))
 					gomock.InOrder(
 						mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, clusterVersion).Return(nil),
-						mockKubeClient.EXPECT().Update(gomock.Any(), gomock.Any()).DoAndReturn(
-							func(ctx context.Context, cv *configv1.ClusterVersion) error {
-								Expect(cv.Spec.DesiredUpdate.Image).To(Equal(upgradeConfig.Spec.Desired.Image))
-								Expect(cv.Spec.DesiredUpdate.Version).To(Equal(""))
+						mockKubeClient.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+							func(ctx context.Context, cv *configv1.ClusterVersion, p client.Patch) error {
+								Expect(reflect.DeepEqual(p, updatePatch)).To(BeTrue())
 								return nil
 							}),
 					)
