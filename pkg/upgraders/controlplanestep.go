@@ -42,30 +42,26 @@ func (c *clusterUpgrader) ControlPlaneUpgraded(ctx context.Context, logger logr.
 	}
 
 	isCompleted := c.cvClient.HasUpgradeCompleted(clusterVersion, c.upgradeConfig)
+	if isCompleted {
+		c.metrics.ResetMetricUpgradeControlPlaneTimeout(c.upgradeConfig.Name, c.upgradeConfig.Spec.Desired.Version)
+		return true, nil
+	}
+
 	history := cv.GetHistory(clusterVersion, c.upgradeConfig.Spec.Desired.Version)
 	var upgradeStartTime time.Time
-	var controlPlaneCompleteTime time.Time
-	if history == nil {
+	if history != nil && !history.StartedTime.IsZero() {
+		upgradeStartTime = history.StartedTime.Time
+	} else {
 		upgradeStartTime, err = time.Parse(time.RFC3339, c.upgradeConfig.Spec.UpgradeAt)
 		if err != nil {
 			return false, err //error parsing time string
 		}
-	} else {
-		upgradeStartTime = history.StartedTime.Time
-		if !history.CompletionTime.IsZero() {
-			controlPlaneCompleteTime = history.CompletionTime.Time
-		}
 	}
 
 	upgradeTimeout := c.config.Maintenance.GetControlPlaneDuration()
-	if !upgradeStartTime.IsZero() && controlPlaneCompleteTime.IsZero() && time.Now().After(upgradeStartTime.Add(upgradeTimeout)) {
+	if !upgradeStartTime.IsZero() && time.Now().After(upgradeStartTime.Add(upgradeTimeout)) {
 		logger.Info("Control plane upgrade timeout")
 		c.metrics.UpdateMetricUpgradeControlPlaneTimeout(c.upgradeConfig.Name, c.upgradeConfig.Spec.Desired.Version)
-	}
-
-	if isCompleted {
-		c.metrics.ResetMetricUpgradeControlPlaneTimeout(c.upgradeConfig.Name, c.upgradeConfig.Spec.Desired.Version)
-		return true, nil
 	}
 
 	return false, nil

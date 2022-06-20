@@ -124,7 +124,6 @@ var _ = Describe("ControlPlaneStep", func() {
 		Context("When that version is not recorded in clusterversion's history", func() {
 			var clusterVersion *configv1.ClusterVersion
 			BeforeEach(func() {
-				upgradeConfig.Spec.UpgradeAt = time.Now().Add(-300 * time.Minute).Format(time.RFC3339)
 				clusterVersion = &configv1.ClusterVersion{
 					Status: configv1.ClusterVersionStatus{
 						History: []configv1.UpdateHistory{
@@ -134,15 +133,36 @@ var _ = Describe("ControlPlaneStep", func() {
 					},
 				}
 			})
-			It("Sets the start time of the upgrade to the start time in the config", func() {
-				gomock.InOrder(
-					mockCVClient.EXPECT().GetClusterVersion().Return(clusterVersion, nil),
-					mockCVClient.EXPECT().HasUpgradeCompleted(gomock.Any(), gomock.Any()).Return(false),
-					mockMetricsClient.EXPECT().UpdateMetricUpgradeControlPlaneTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version),
-				)
-				result, err := upgrader.ControlPlaneUpgraded(context.TODO(), logger)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(result).To(BeFalse())
+
+			Context("When the upgrade window has expired", func() {
+				BeforeEach(func() {
+					upgradeConfig.Spec.UpgradeAt = time.Now().Add(-300 * time.Minute).Format(time.RFC3339)
+				})
+				It("Sets the upgrade timeout flag", func() {
+					gomock.InOrder(
+						mockCVClient.EXPECT().GetClusterVersion().Return(clusterVersion, nil),
+						mockCVClient.EXPECT().HasUpgradeCompleted(gomock.Any(), gomock.Any()).Return(false),
+						mockMetricsClient.EXPECT().UpdateMetricUpgradeControlPlaneTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version),
+					)
+					result, err := upgrader.ControlPlaneUpgraded(context.TODO(), logger)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(result).To(BeFalse())
+				})
+			})
+
+			Context("When the upgrade window has not yet expired", func() {
+				BeforeEach(func() {
+					upgradeConfig.Spec.UpgradeAt = time.Now().Add(-30 * time.Minute).Format(time.RFC3339)
+				})
+				It("Does not set the upgrade timeout flag", func() {
+					gomock.InOrder(
+						mockCVClient.EXPECT().GetClusterVersion().Return(clusterVersion, nil),
+						mockCVClient.EXPECT().HasUpgradeCompleted(gomock.Any(), gomock.Any()).Return(false),
+					)
+					result, err := upgrader.ControlPlaneUpgraded(context.TODO(), logger)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(result).To(BeFalse())
+				})
 			})
 		})
 
