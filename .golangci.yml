@@ -3,6 +3,8 @@ run:
   concurrency: 1
   modules-download-mode: readonly
 linters:
+  enable:
+    - gosec
   disable:
     - depguard
     - gochecknoglobals
