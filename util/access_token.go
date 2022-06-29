@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	pullSecretKey     = ".dockerconfigjson"
+	pullSecretKey     = ".dockerconfigjson" //#nosec G101 -- This is a false positive
 	pullSecretAuthKey = "cloud.openshift.com"
 )
 
