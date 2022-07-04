@@ -160,11 +160,14 @@ func (s *upgradeConfigManager) StartSync(stopCh context.Context) {
 			if err != nil {
 				waitDuration := s.backoffCounter.Duration()
 				log.Error(err, fmt.Sprintf("unable to refresh upgrade config, retrying in %v", waitDuration))
+				// Remove after UpdateMetricUpgradeConfigSyncTimestamp in use
 				metricsClient.UpdateMetricUpgradeConfigSynced(UPGRADECONFIG_CR_NAME)
 				duration = durationWithJitter(waitDuration, JITTER_FACTOR)
 			} else {
 				s.backoffCounter.Reset()
+				// Remove after UpdateMetricUpgradeConfigSyncTimestamp in use
 				metricsClient.ResetMetricUpgradeConfigSynced(UPGRADECONFIG_CR_NAME)
+				metricsClient.UpdateMetricUpgradeConfigSyncTimestamp(UPGRADECONFIG_CR_NAME, time.Now())
 				duration = durationWithJitter(cfg.GetWatchInterval(), JITTER_FACTOR)
 			}
 		case <-stopCh.Done():

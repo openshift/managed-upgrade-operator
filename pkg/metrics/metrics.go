@@ -24,10 +24,10 @@ import (
 )
 
 const (
-	eventLabel = "event"
-	metricsTag = "upgradeoperator"
-	nameLabel  = "upgradeconfig_name"
-	nodeLabel  = "node_name"
+	eventLabel  = "event"
+	metricsTag  = "upgradeoperator"
+	nameLabel   = "upgradeconfig_name"
+	nodeLabel   = "node_name"
 	alertsLabel = "alerts"
 
 	Namespace = "upgradeoperator"
@@ -71,6 +71,7 @@ type Metrics interface {
 	UpdateMetricUpgradeWindowNotBreached(string)
 	UpdateMetricUpgradeConfigSynced(string)
 	ResetMetricUpgradeConfigSynced(string)
+	UpdateMetricUpgradeConfigSyncTimestamp(string, time.Time)
 	UpdateMetricUpgradeWindowBreached(string)
 	UpdateMetricUpgradeControlPlaneTimeout(string, string)
 	ResetMetricUpgradeControlPlaneTimeout(string, string)
@@ -234,6 +235,11 @@ var (
 		Name:      "upgrade_result",
 		Help:      "Alerts fired during latest upgrade",
 	}, []string{nameLabel, VersionLabel, alertsLabel})
+	metricUpgradeConfigSyncTimestamp = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Subsystem: metricsTag,
+		Name:      "upgradeconfig_sync_timestamp",
+		Help:      "UpgradeConfig has been synced successfully with timestamp",
+	}, []string{nameLabel})
 
 	// ephemeralMetrics defines temporary metrics whose data should be cleared when an upgrade completes
 	ephemeralMetrics = []*prometheus.GaugeVec{
@@ -246,6 +252,7 @@ var (
 		metricUpgradeWorkerTimeout,
 		metricNodeDrainFailed,
 		metricUpgradeNotification,
+		metricUpgradeConfigSyncTimestamp,
 	}
 
 	// persistentMetrics defines metrics whose data should not be cleared when an upgrade completes
@@ -297,12 +304,18 @@ func (c *Counter) UpdateMetricScalingSucceeded(upgradeConfigName string) {
 		float64(0))
 }
 
+//Remove after UpdateMetricUpgradeConfigSyncTimestamp in use
 func (c *Counter) UpdateMetricUpgradeConfigSynced(name string) {
 	metricUpgradeConfigSynced.With(prometheus.Labels{nameLabel: name}).Set(float64(1))
 }
 
+//Remove after UpdateMetricUpgradeConfigSyncTimestamp in use
 func (c *Counter) ResetMetricUpgradeConfigSynced(name string) {
 	metricUpgradeConfigSynced.With(prometheus.Labels{nameLabel: name}).Set(float64(0))
+}
+
+func (c *Counter) UpdateMetricUpgradeConfigSyncTimestamp(name string, time time.Time) {
+	metricUpgradeConfigSyncTimestamp.With(prometheus.Labels{nameLabel: name}).Set(float64(time.Unix()))
 }
 
 func (c *Counter) UpdateMetricUpgradeControlPlaneTimeout(upgradeConfigName, version string) {
@@ -375,9 +388,9 @@ func (c *Counter) UpdateMetricUpgradeResult(name string, version string, alerts 
 		val = float64(0)
 	}
 	metricUpgradeResult.With(prometheus.Labels{
-		nameLabel: name,
+		nameLabel:    name,
 		VersionLabel: version,
-		alertsLabel: strings.Join(alerts, ","),
+		alertsLabel:  strings.Join(alerts, ","),
 	}).Set(val)
 }
 

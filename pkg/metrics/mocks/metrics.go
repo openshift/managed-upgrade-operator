@@ -265,6 +265,18 @@ func (mr *MockMetricsMockRecorder) UpdateMetricScalingSucceeded(arg0 interface{}
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricScalingSucceeded", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricScalingSucceeded), arg0)
 }
 
+// UpdateMetricUpgradeConfigSyncTimestamp mocks base method
+func (m *MockMetrics) UpdateMetricUpgradeConfigSyncTimestamp(arg0 string, arg1 time.Time) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "UpdateMetricUpgradeConfigSyncTimestamp", arg0, arg1)
+}
+
+// UpdateMetricUpgradeConfigSyncTimestamp indicates an expected call of UpdateMetricUpgradeConfigSyncTimestamp
+func (mr *MockMetricsMockRecorder) UpdateMetricUpgradeConfigSyncTimestamp(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricUpgradeConfigSyncTimestamp", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricUpgradeConfigSyncTimestamp), arg0, arg1)
+}
+
 // UpdateMetricUpgradeConfigSynced mocks base method
 func (m *MockMetrics) UpdateMetricUpgradeConfigSynced(arg0 string) {
 	m.ctrl.T.Helper()
