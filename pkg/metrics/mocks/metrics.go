@@ -157,18 +157,6 @@ func (mr *MockMetricsMockRecorder) ResetMetricNodeDrainFailed(arg0 interface{}) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResetMetricNodeDrainFailed", reflect.TypeOf((*MockMetrics)(nil).ResetMetricNodeDrainFailed), arg0)
 }
 
-// ResetMetricUpgradeConfigSynced mocks base method
-func (m *MockMetrics) ResetMetricUpgradeConfigSynced(arg0 string) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "ResetMetricUpgradeConfigSynced", arg0)
-}
-
-// ResetMetricUpgradeConfigSynced indicates an expected call of ResetMetricUpgradeConfigSynced
-func (mr *MockMetricsMockRecorder) ResetMetricUpgradeConfigSynced(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResetMetricUpgradeConfigSynced", reflect.TypeOf((*MockMetrics)(nil).ResetMetricUpgradeConfigSynced), arg0)
-}
-
 // ResetMetricUpgradeControlPlaneTimeout mocks base method
 func (m *MockMetrics) ResetMetricUpgradeControlPlaneTimeout(arg0, arg1 string) {
 	m.ctrl.T.Helper()
@@ -275,18 +263,6 @@ func (m *MockMetrics) UpdateMetricUpgradeConfigSyncTimestamp(arg0 string, arg1 t
 func (mr *MockMetricsMockRecorder) UpdateMetricUpgradeConfigSyncTimestamp(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricUpgradeConfigSyncTimestamp", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricUpgradeConfigSyncTimestamp), arg0, arg1)
-}
-
-// UpdateMetricUpgradeConfigSynced mocks base method
-func (m *MockMetrics) UpdateMetricUpgradeConfigSynced(arg0 string) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "UpdateMetricUpgradeConfigSynced", arg0)
-}
-
-// UpdateMetricUpgradeConfigSynced indicates an expected call of UpdateMetricUpgradeConfigSynced
-func (mr *MockMetricsMockRecorder) UpdateMetricUpgradeConfigSynced(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricUpgradeConfigSynced", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricUpgradeConfigSynced), arg0)
 }
 
 // UpdateMetricUpgradeControlPlaneTimeout mocks base method
