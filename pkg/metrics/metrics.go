@@ -69,8 +69,6 @@ type Metrics interface {
 	UpdateMetricScalingFailed(string)
 	UpdateMetricScalingSucceeded(string)
 	UpdateMetricUpgradeWindowNotBreached(string)
-	UpdateMetricUpgradeConfigSynced(string)
-	ResetMetricUpgradeConfigSynced(string)
 	UpdateMetricUpgradeConfigSyncTimestamp(string, time.Time)
 	UpdateMetricUpgradeWindowBreached(string)
 	UpdateMetricUpgradeControlPlaneTimeout(string, string)
@@ -205,11 +203,6 @@ var (
 		Name:      "upgrade_window_breached",
 		Help:      "Failed to commence upgrade during the upgrade window",
 	}, []string{nameLabel})
-	metricUpgradeConfigSynced = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Subsystem: metricsTag,
-		Name:      "upgradeconfig_synced",
-		Help:      "UpgradeConfig has not been synced in time",
-	}, []string{nameLabel})
 	metricUpgradeControlPlaneTimeout = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Subsystem: metricsTag,
 		Name:      "controlplane_timeout",
@@ -247,7 +240,6 @@ var (
 		metricClusterCheckFailed,
 		metricScalingFailed,
 		metricUpgradeWindowBreached,
-		metricUpgradeConfigSynced,
 		metricUpgradeControlPlaneTimeout,
 		metricUpgradeWorkerTimeout,
 		metricNodeDrainFailed,
@@ -302,16 +294,6 @@ func (c *Counter) UpdateMetricScalingSucceeded(upgradeConfigName string) {
 	metricScalingFailed.With(prometheus.Labels{
 		nameLabel: upgradeConfigName}).Set(
 		float64(0))
-}
-
-//Remove after UpdateMetricUpgradeConfigSyncTimestamp in use
-func (c *Counter) UpdateMetricUpgradeConfigSynced(name string) {
-	metricUpgradeConfigSynced.With(prometheus.Labels{nameLabel: name}).Set(float64(1))
-}
-
-//Remove after UpdateMetricUpgradeConfigSyncTimestamp in use
-func (c *Counter) ResetMetricUpgradeConfigSynced(name string) {
-	metricUpgradeConfigSynced.With(prometheus.Labels{nameLabel: name}).Set(float64(0))
 }
 
 func (c *Counter) UpdateMetricUpgradeConfigSyncTimestamp(name string, time time.Time) {
