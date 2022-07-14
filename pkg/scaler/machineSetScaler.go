@@ -61,6 +61,7 @@ func (s *machineSetScaler) EnsureScaleUpNodes(c client.Client, timeOut time.Dura
 	}
 	if created {
 		// New machineset created, machines must not ready at the moment, so skip following steps
+		logger.Info("created upgrade machinesets, will re-check their state on reconcile")
 		return false, nil
 	}
 
@@ -69,6 +70,7 @@ func (s *machineSetScaler) EnsureScaleUpNodes(c client.Client, timeOut time.Dura
 		return false, err
 	}
 	if !allNodeReady {
+		logger.Info("not all nodes in the upgrade machinesets are ready yet")
 		return false, nil
 	}
 

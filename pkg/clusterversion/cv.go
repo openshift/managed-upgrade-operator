@@ -173,6 +173,7 @@ func (c *clusterVersionClient) HasUpgradeCommenced(uc *upgradev1alpha1.UpgradeCo
 	// When using image to upgrade
 	case UpgradeWithImage:
 		if !isEqualImage(clusterVersion, uc) {
+			logger.Info(fmt.Sprintf("ClusterVersion is not yet set to Image %s", uc.Spec.Desired.Image))
 			return false, nil
 		} else {
 			logger.Info(fmt.Sprintf("ClusterVersion is already set to Image %s", uc.Spec.Desired.Image))
@@ -310,6 +311,7 @@ func (c *clusterVersionClient) runUpgradeWithChannelVersion(cv *configv1.Cluster
 		}
 	}
 	if !updateAvailable {
+		logger.Info(fmt.Sprintf("clusterversion does not have desired version %s in its AvailableUpdates, will not continue", desired.Version))
 		return false, nil
 	}
 

@@ -28,6 +28,7 @@ func (c *clusterUpgrader) CommenceUpgrade(ctx context.Context, logger logr.Logge
 
 	isComplete, err := c.cvClient.EnsureDesiredConfig(c.upgradeConfig)
 	if err != nil {
+		logger.Info("clusterversion has not been updated to desired version, will retry on next reconcile")
 		return false, err
 	}
 
