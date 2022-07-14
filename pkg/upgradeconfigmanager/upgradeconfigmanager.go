@@ -234,6 +234,7 @@ func (s *upgradeConfigManager) Refresh() (bool, error) {
 			}
 			return true, nil
 		}
+		log.Info("no provider specs found and no UpgradeConfig on cluster, nothing to do")
 		return false, nil
 	}
 

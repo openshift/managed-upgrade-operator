@@ -2,6 +2,7 @@ package upgraders
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -52,6 +53,7 @@ func (c *clusterUpgrader) UpgradeDelayedCheck(ctx context.Context, logger logr.L
 	// Get the managed upgrade start time from the upgrade config history
 	h := c.upgradeConfig.Status.History.GetHistory(c.upgradeConfig.Spec.Desired.Version)
 	if h == nil {
+		logger.Info(fmt.Sprintf("no upgrade start time found for version %s in UpgradeConfig history yet", c.upgradeConfig.Spec.Desired.Version))
 		return false, nil
 	}
 	startTime := h.StartTime.Time
@@ -66,4 +68,3 @@ func (c *clusterUpgrader) UpgradeDelayedCheck(ctx context.Context, logger logr.L
 	}
 	return true, nil
 }
-
