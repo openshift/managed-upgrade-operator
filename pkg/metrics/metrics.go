@@ -548,32 +548,44 @@ func (c *Counter) Query(query string) (*AlertResponse, error) {
 }
 
 func prometheusToken(c client.Client) (*string, error) {
-	sa := &corev1.ServiceAccount{}
-	err := c.Get(context.TODO(), types.NamespacedName{Namespace: MonitoringNS, Name: promApp}, sa)
+	token, err := prometheusTokenFromContainer()
+	if err == nil {
+		return token, nil
+	}
+	return prometheusTokenFromSecret(c)
+}
+
+func prometheusTokenFromSecret(c client.Client) (*string, error) {
+	sl := &corev1.SecretList{}
+	err := c.List(context.TODO(), sl, client.InNamespace(MonitoringNS))
 	if err != nil {
-		return nil, fmt.Errorf("unable to fetch prometheus-k8s service account: %s", err)
+		return nil, err
 	}
 
-	tokenSecret := ""
-	for _, secret := range sa.Secrets {
+	token := ""
+	for _, secret := range sl.Items {
 		if strings.HasPrefix(secret.Name, "prometheus-k8s-token") {
-			tokenSecret = secret.Name
+			tokendata := secret.Data[corev1.ServiceAccountTokenKey]
+			token = string(tokendata)
+			break
 		}
 	}
-	if len(tokenSecret) == 0 {
+
+	if len(token) == 0 {
 		return nil, fmt.Errorf("failed to find token secret for prometheus-k8s SA")
 	}
 
-	secret := &corev1.Secret{}
-	err = c.Get(context.TODO(), types.NamespacedName{Namespace: MonitoringNS, Name: tokenSecret}, secret)
+	return &token, nil
+}
+
+func prometheusTokenFromContainer() (*string, error) {
+	token, err := ioutil.ReadFile("/run/secrets/kubernetes.io/serviceaccount/token")
 	if err != nil {
-		return nil, fmt.Errorf("unable to fetch secret %s: %s", tokenSecret, err)
+		return nil, err
 	}
 
-	token := secret.Data[corev1.ServiceAccountTokenKey]
-	stringToken := string(token)
-
-	return &stringToken, nil
+	tokenstring := string(token)
+	return &tokenstring, nil
 }
 
 type AlertResponse struct {
