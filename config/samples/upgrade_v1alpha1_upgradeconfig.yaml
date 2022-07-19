@@ -1,0 +1,6 @@
+apiVersion: upgrade.managed.openshift.io/v1alpha1
+kind: UpgradeConfig
+metadata:
+  name: upgradeconfig-sample
+spec:
+  # TODO(user): Add fields here

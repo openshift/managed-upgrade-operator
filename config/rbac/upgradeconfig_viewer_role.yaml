@@ -1,0 +1,20 @@
+# permissions for end users to view upgradeconfigs.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: upgradeconfig-viewer-role
+rules:
+- apiGroups:
+  - upgrade.managed.openshift.io
+  resources:
+  - upgradeconfigs
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - upgrade.managed.openshift.io
+  resources:
+  - upgradeconfigs/status
+  verbs:
+  - get

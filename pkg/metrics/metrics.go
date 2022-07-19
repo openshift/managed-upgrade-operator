@@ -15,7 +15,7 @@ import (
 
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/openshift/managed-upgrade-operator/config"
-	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
+	"github.com/operator-framework/operator-sdk/internal/util/k8sutil"
 	"github.com/prometheus/client_golang/prometheus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"

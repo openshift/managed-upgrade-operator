@@ -12,7 +12,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
+	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/api/v1alpha1"
 	cvMocks "github.com/openshift/managed-upgrade-operator/pkg/clusterversion/mocks"
 	configMocks "github.com/openshift/managed-upgrade-operator/pkg/configmanager/mocks"
 	ppMocks "github.com/openshift/managed-upgrade-operator/pkg/specprovider/mocks"

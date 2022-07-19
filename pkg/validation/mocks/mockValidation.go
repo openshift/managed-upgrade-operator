@@ -8,7 +8,7 @@ import (
 	logr "github.com/go-logr/logr"
 	gomock "github.com/golang/mock/gomock"
 	v1 "github.com/openshift/api/config/v1"
-	v1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
+	v1alpha1 "github.com/openshift/managed-upgrade-operator/api/v1alpha1"
 	validation "github.com/openshift/managed-upgrade-operator/pkg/validation"
 	reflect "reflect"
 	client "sigs.k8s.io/controller-runtime/pkg/client"

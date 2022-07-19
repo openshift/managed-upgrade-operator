@@ -12,7 +12,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	configv1 "github.com/openshift/api/config/v1"
-	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
+	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/api/v1alpha1"
 	testStructs "github.com/openshift/managed-upgrade-operator/util/mocks/structs"
 
 	"k8s.io/apimachinery/pkg/types"

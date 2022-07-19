@@ -3,7 +3,7 @@ package eventmanager
 import (
 	"fmt"
 
-	"github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
+	"github.com/openshift/managed-upgrade-operator/api/v1alpha1"
 	"github.com/openshift/managed-upgrade-operator/pkg/configmanager"
 	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
 	"github.com/openshift/managed-upgrade-operator/pkg/notifier"

@@ -19,7 +19,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/openshift/managed-upgrade-operator/config"
-	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
+	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/api/v1alpha1"
 	cv "github.com/openshift/managed-upgrade-operator/pkg/clusterversion"
 	"github.com/openshift/managed-upgrade-operator/pkg/configmanager"
 	"github.com/openshift/managed-upgrade-operator/pkg/metrics"

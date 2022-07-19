@@ -19,7 +19,7 @@ import (
 	"github.com/openshift/cluster-version-operator/pkg/cincinnati"
 	"github.com/openshift/library-go/pkg/image/dockerv1client"
 	imagereference "github.com/openshift/library-go/pkg/image/reference"
-	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
+	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/api/v1alpha1"
 	cv "github.com/openshift/managed-upgrade-operator/pkg/clusterversion"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )

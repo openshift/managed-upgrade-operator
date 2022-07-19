@@ -13,7 +13,7 @@ import (
 	ammocks "github.com/openshift/managed-upgrade-operator/pkg/alertmanager/mocks"
 	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
 	"github.com/openshift/managed-upgrade-operator/util/mocks"
-	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
+	"github.com/operator-framework/operator-sdk/internal/util/k8sutil"
 	amv2Models "github.com/prometheus/alertmanager/api/v2/models"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"

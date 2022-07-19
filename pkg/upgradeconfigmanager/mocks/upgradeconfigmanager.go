@@ -7,7 +7,7 @@ package mocks
 import (
 	context "context"
 	gomock "github.com/golang/mock/gomock"
-	v1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
+	v1alpha1 "github.com/openshift/managed-upgrade-operator/api/v1alpha1"
 	reflect "reflect"
 )
 

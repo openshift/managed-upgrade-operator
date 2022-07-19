@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
+	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/api/v1alpha1"
 )
 
 var _ = Describe("Scheduler", func() {

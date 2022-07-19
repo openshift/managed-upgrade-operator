@@ -8,7 +8,7 @@ import (
 	"github.com/openshift/managed-upgrade-operator/pkg/ocm"
 	"k8s.io/apimachinery/pkg/types"
 
-	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
+	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/api/v1alpha1"
 	mockOcm "github.com/openshift/managed-upgrade-operator/pkg/ocm/mocks"
 	mockUCMgr "github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager/mocks"
 	"github.com/openshift/managed-upgrade-operator/util/mocks"
