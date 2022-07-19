@@ -548,14 +548,6 @@ func (c *Counter) Query(query string) (*AlertResponse, error) {
 }
 
 func prometheusToken(c client.Client) (*string, error) {
-	token, err := prometheusTokenFromContainer()
-	if err == nil {
-		return token, nil
-	}
-	return prometheusTokenFromSecret(c)
-}
-
-func prometheusTokenFromSecret(c client.Client) (*string, error) {
 	sl := &corev1.SecretList{}
 	err := c.List(context.TODO(), sl, client.InNamespace(MonitoringNS))
 	if err != nil {
@@ -576,16 +568,6 @@ func prometheusTokenFromSecret(c client.Client) (*string, error) {
 	}
 
 	return &token, nil
-}
-
-func prometheusTokenFromContainer() (*string, error) {
-	token, err := ioutil.ReadFile("/run/secrets/kubernetes.io/serviceaccount/token")
-	if err != nil {
-		return nil, err
-	}
-
-	tokenstring := string(token)
-	return &tokenstring, nil
 }
 
 type AlertResponse struct {
