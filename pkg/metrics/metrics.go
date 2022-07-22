@@ -15,7 +15,7 @@ import (
 
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/openshift/managed-upgrade-operator/config"
-	"github.com/operator-framework/operator-sdk/internal/util/k8sutil"
+	"github.com/openshift/managed-upgrade-operator/util"
 	"github.com/prometheus/client_golang/prometheus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -481,7 +481,7 @@ func GetService(c client.Client, namespace, svcName, portName string) (string, e
 }
 
 func isRunModeLocal() bool {
-	return os.Getenv(k8sutil.ForceRunModeEnv) == string(k8sutil.LocalRunMode)
+	return os.Getenv(util.ForceRunModeEnv) == string(util.LocalRunMode)
 }
 
 // NetworkTarget returns a host:port address that represents either a kubernetes route or service

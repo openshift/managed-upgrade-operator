@@ -419,7 +419,7 @@ func fetchCVOUpdates(cV *configv1.ClusterVersion, uc *upgradev1alpha1.UpgradeCon
 		for _, update := range updates {
 			cvoUpdates = append(cvoUpdates, configv1.Update{
 				Version: update.Version.String(),
-				Image:   update.Image,
+				Image:   update.Payload,
 			})
 		}
 		return cvoUpdates, err

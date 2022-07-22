@@ -9,9 +9,9 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/onsi/gomega/gstruct"
 	configv1 "github.com/openshift/api/config/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -642,8 +642,8 @@ var _ = Describe("UpgradeConfigController", func() {
 			Context("When the upgrade phase is Upgraded", func() {
 				BeforeEach(func() {
 					upgradeConfig.Status.History[0].Phase = upgradev1alpha1.UpgradePhaseUpgraded
-					upgradeConfig.Status.History[0].StartTime = &metav1.Time{ Time: time.Now() }
-					upgradeConfig.Status.History[0].CompleteTime = &metav1.Time{ Time: time.Now() }
+					upgradeConfig.Status.History[0].StartTime = &metav1.Time{Time: time.Now()}
+					upgradeConfig.Status.History[0].CompleteTime = &metav1.Time{Time: time.Now()}
 				})
 				It("reports metrics", func() {
 					gomock.InOrder(
