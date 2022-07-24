@@ -10,12 +10,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	controllerruntime "sigs.k8s.io/controller-runtime"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
@@ -29,64 +28,18 @@ import (
 
 var log = logf.Log.WithName("controller_nodekeeper")
 
-// Add creates a new NodeKeeper Controller and adds it to the Manager. The Manager will set fields on the Controller
-// and Start it when the Manager is Started.
-func Add(mgr manager.Manager) error {
-	kubeConfig := controllerruntime.GetConfigOrDie()
-	c, err := client.New(kubeConfig, client.Options{})
-	if err != nil {
-		return err
-	}
-	return add(mgr, newReconciler(mgr, c))
-}
-
-// newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager, client client.Client) reconcile.Reconciler {
-	return &ReconcileNodeKeeper{
-		client:                      client,
-		configManagerBuilder:        configmanager.NewBuilder(),
-		machinery:                   machinery.NewMachinery(),
-		metricsClientBuilder:        metrics.NewBuilder(),
-		drainstrategyBuilder:        drain.NewBuilder(),
-		upgradeConfigManagerBuilder: upgradeconfigmanager.NewBuilder(),
-		scheme:                      mgr.GetScheme(),
-	}
-}
-
-// add adds a new Controller to mgr with r as the reconcile.Reconciler
-func add(mgr manager.Manager, r reconcile.Reconciler) error {
-	// Create a new controller
-	c, err := controller.New("nodekeeper-controller", mgr, controller.Options{Reconciler: r})
-	if err != nil {
-		return err
-	}
-
-	// Watch for changes to primary resource Node, status change will not trigger a reconcile
-	err = c.Watch(
-		&source.Kind{Type: &corev1.Node{}},
-		&handler.EnqueueRequestForObject{},
-		IgnoreMasterPredicate)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // blank assignment to verify that ReconcileNodeKeeper implements reconcile.Reconciler
 var _ reconcile.Reconciler = &ReconcileNodeKeeper{}
 
 // ReconcileNodeKeeper reconciles a NodeKeeper object
 type ReconcileNodeKeeper struct {
-	// This client, initialized using mgr.Client() above, is a split client
-	// that reads objects from the cache and writes to the apiserver
-	client                      client.Client
-	configManagerBuilder        configmanager.ConfigManagerBuilder
-	machinery                   machinery.Machinery
-	metricsClientBuilder        metrics.MetricsBuilder
-	drainstrategyBuilder        drain.NodeDrainStrategyBuilder
-	upgradeConfigManagerBuilder upgradeconfigmanager.UpgradeConfigManagerBuilder
-	scheme                      *runtime.Scheme
+	Client                      client.Client
+	ConfigManagerBuilder        configmanager.ConfigManagerBuilder
+	Machinery                   machinery.Machinery
+	MetricsClientBuilder        metrics.MetricsBuilder
+	DrainstrategyBuilder        drain.NodeDrainStrategyBuilder
+	UpgradeConfigManagerBuilder upgradeconfigmanager.UpgradeConfigManagerBuilder
+	Scheme                      *runtime.Scheme
 }
 
 // Reconcile Note:
@@ -95,7 +48,7 @@ type ReconcileNodeKeeper struct {
 func (r *ReconcileNodeKeeper) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Name", request.Name)
 
-	upgradeConfigManagerClient, err := r.upgradeConfigManagerBuilder.NewManager(r.client)
+	upgradeConfigManagerClient, err := r.UpgradeConfigManagerBuilder.NewManager(r.Client)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -107,7 +60,7 @@ func (r *ReconcileNodeKeeper) Reconcile(ctx context.Context, request reconcile.R
 		return reconcile.Result{}, err
 	}
 
-	upgradeResult, err := r.machinery.IsUpgrading(r.client, "worker")
+	upgradeResult, err := r.Machinery.IsUpgrading(r.Client, "worker")
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -119,7 +72,7 @@ func (r *ReconcileNodeKeeper) Reconcile(ctx context.Context, request reconcile.R
 
 	// Fetch the Node instance
 	node := &corev1.Node{}
-	err = r.client.Get(context.TODO(), request.NamespacedName, node)
+	err = r.Client.Get(context.TODO(), request.NamespacedName, node)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return reconcile.Result{}, nil
@@ -128,8 +81,8 @@ func (r *ReconcileNodeKeeper) Reconcile(ctx context.Context, request reconcile.R
 		return reconcile.Result{}, err
 	}
 
-	result := r.machinery.IsNodeCordoned(node)
-	metricsClient, err := r.metricsClientBuilder.NewClient(r.client)
+	result := r.Machinery.IsNodeCordoned(node)
+	metricsClient, err := r.MetricsClientBuilder.NewClient(r.Client)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -144,14 +97,14 @@ func (r *ReconcileNodeKeeper) Reconcile(ctx context.Context, request reconcile.R
 		return reconcile.Result{}, err
 	}
 
-	cfm := r.configManagerBuilder.New(r.client, cmTarget)
+	cfm := r.ConfigManagerBuilder.New(r.Client, cmTarget)
 	cfg := &nodeKeeperConfig{}
 	err = cfm.Into(cfg)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	drainStrategy, err := r.drainstrategyBuilder.NewNodeDrainStrategy(r.client, uc, &cfg.NodeDrain)
+	drainStrategy, err := r.DrainstrategyBuilder.NewNodeDrainStrategy(r.Client, uc, &cfg.NodeDrain)
 	if err != nil {
 		reqLogger.Error(err, "Error while executing drain.")
 		return reconcile.Result{}, err
@@ -175,4 +128,12 @@ func (r *ReconcileNodeKeeper) Reconcile(ctx context.Context, request reconcile.R
 	}
 
 	return reconcile.Result{RequeueAfter: time.Minute * 1}, nil
+}
+
+// SetupWithManager sets up the controller with the Manager.
+func (r *ReconcileNodeKeeper) SetupWithManager(mgr ctrl.Manager) error {
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&corev1.Node{}).
+		Watches(&source.Kind{Type: &corev1.Node{}}, &handler.EnqueueRequestForObject{}, builder.WithPredicates(IgnoreMasterPredicate)).
+		Complete(r)
 }

@@ -130,7 +130,7 @@ var _ = Describe("Node scaling tests", func() {
 					}).SetArg(1, *originalMachineSets),
 				)
 				mockKubeClient.EXPECT().Create(gomock.Any(), gomock.Any()).DoAndReturn(
-					func(ctx context.Context, ms *machineapi.MachineSet) error {
+					func(ctx context.Context, ms *machineapi.MachineSet, co ...client.CreateOption) error {
 						Expect(ms.Name).To(Equal(originalMachineSets.Items[0].Name + "-upgrade"))
 						Expect(ms.Namespace).To(Equal(originalMachineSets.Items[0].Namespace))
 						Expect(ms.Labels[LABEL_UPGRADE]).To(Equal("true"))
@@ -456,7 +456,7 @@ var _ = Describe("Node scaling tests", func() {
 				}).Times(1).SetArg(1, *upgradeMachinesets),
 				// Verify that every specific machine returned to scale down actually does get deleted
 				mockKubeClient.EXPECT().Delete(gomock.Any(), gomock.Any()).DoAndReturn(
-					func(ctx context.Context, set *machineapi.MachineSet) error {
+					func(ctx context.Context, set *machineapi.MachineSet, do ...client.DeleteOption) error {
 						found := false
 						for _, m := range upgradeMachinesets.Items {
 							if set.Name == m.Name {
@@ -512,7 +512,7 @@ var _ = Describe("Node scaling tests", func() {
 				}).SetArg(1, *upgradeMachinesets),
 				// Verify that every specific machine returned to scale down actually does get deleted
 				mockKubeClient.EXPECT().Delete(gomock.Any(), gomock.Any()).DoAndReturn(
-					func(ctx context.Context, set *machineapi.MachineSet) error {
+					func(ctx context.Context, set *machineapi.MachineSet, do ...client.DeleteOption) error {
 						found := false
 						for _, m := range upgradeMachinesets.Items {
 							if set.Name == m.Name {
@@ -573,7 +573,7 @@ var _ = Describe("Node scaling tests", func() {
 				}).SetArg(1, *upgradeMachinesets),
 				// Verify that every specific machine returned to scale down actually does get deleted
 				mockKubeClient.EXPECT().Delete(gomock.Any(), gomock.Any()).DoAndReturn(
-					func(ctx context.Context, set *machineapi.MachineSet) error {
+					func(ctx context.Context, set *machineapi.MachineSet, do ...client.DeleteOption) error {
 						found := false
 						for _, m := range upgradeMachinesets.Items {
 							if set.Name == m.Name {

@@ -9,6 +9,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/openshift/managed-upgrade-operator/pkg/pod"
@@ -88,7 +89,7 @@ var _ = Describe("Remove Finalizer Strategy", func() {
 			gomock.InOrder(
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList),
 				mockKubeClient.EXPECT().Update(gomock.Any(), gomock.Any()).DoAndReturn(
-					func(ctx context.Context, pod *corev1.Pod) error {
+					func(ctx context.Context, pod *corev1.Pod, uo ...client.UpdateOption) error {
 						Expect(len(pod.ObjectMeta.Finalizers)).To(Equal(0))
 						return nil
 					}),

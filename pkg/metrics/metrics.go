@@ -94,11 +94,13 @@ type MetricsBuilder interface {
 	NewClient(c client.Client) (Metrics, error)
 }
 
-func NewBuilder() MetricsBuilder {
-	return &metricsBuilder{}
+func NewBuilder(c client.Client) MetricsBuilder {
+	return &metricsBuilder{Client: c}
 }
 
-type metricsBuilder struct{}
+type metricsBuilder struct {
+	Client client.Client
+}
 
 func (mb *metricsBuilder) NewClient(c client.Client) (Metrics, error) {
 	promTarget, err := NetworkTarget(c, MonitoringNS, promApp, "web")

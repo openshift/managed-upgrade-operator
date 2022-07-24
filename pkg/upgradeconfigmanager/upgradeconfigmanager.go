@@ -18,8 +18,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/openshift/managed-upgrade-operator/config"
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/api/v1alpha1"
+	"github.com/openshift/managed-upgrade-operator/config"
 	cv "github.com/openshift/managed-upgrade-operator/pkg/clusterversion"
 	"github.com/openshift/managed-upgrade-operator/pkg/configmanager"
 	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
@@ -70,11 +70,13 @@ type UpgradeConfigManagerBuilder interface {
 }
 
 // NewBuilder returns an upgradeConfigManagerBuilder
-func NewBuilder() UpgradeConfigManagerBuilder {
-	return &upgradeConfigManagerBuilder{}
+func NewBuilder(c client.Client) UpgradeConfigManagerBuilder {
+	return &upgradeConfigManagerBuilder{Client: c}
 }
 
-type upgradeConfigManagerBuilder struct{}
+type upgradeConfigManagerBuilder struct {
+	Client client.Client
+}
 
 type upgradeConfigManager struct {
 	client               client.Client
@@ -88,9 +90,9 @@ type upgradeConfigManager struct {
 func (ucb *upgradeConfigManagerBuilder) NewManager(client client.Client) (UpgradeConfigManager, error) {
 
 	spBuilder := specprovider.NewBuilder()
-	cvBuilder := cv.NewBuilder()
-	cmBuilder := configmanager.NewBuilder()
-	mBuilder := metrics.NewBuilder()
+	cvBuilder := cv.NewBuilder(client)
+	cmBuilder := configmanager.NewBuilder(client)
+	mBuilder := metrics.NewBuilder(client)
 	b := &backoff.Backoff{
 		Min:    1 * time.Minute,
 		Max:    1 * time.Hour,

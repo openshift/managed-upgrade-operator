@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/api/v1alpha1"
 	cvMocks "github.com/openshift/managed-upgrade-operator/pkg/clusterversion/mocks"
@@ -324,7 +325,7 @@ var _ = Describe("UpgradeConfigManager", func() {
 				mockSPClientBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockSPClient, nil),
 				mockSPClient.EXPECT().Get().Return([]upgradev1alpha1.UpgradeConfigSpec{}, nil),
 				mockKubeClient.EXPECT().Delete(gomock.Any(), gomock.Any()).DoAndReturn(
-					func(ctx context.Context, uc *upgradev1alpha1.UpgradeConfig) error {
+					func(ctx context.Context, uc *upgradev1alpha1.UpgradeConfig, do ...client.DeleteOption) error {
 						Expect(uc.Name).To(Equal(TEST_UPGRADECONFIG_CR))
 						Expect(uc.Namespace).To(Equal(TEST_OPERATOR_NAMESPACE))
 						Expect(string(uc.Spec.Type)).To(Equal(TEST_UPGRADE_TYPE))
@@ -370,7 +371,7 @@ var _ = Describe("UpgradeConfigManager", func() {
 				mockSPClientBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockSPClient, nil),
 				mockSPClient.EXPECT().Get().Return(upgradeConfigSpecs, nil),
 				mockKubeClient.EXPECT().Create(gomock.Any(), gomock.Any()).DoAndReturn(
-					func(ctx context.Context, uc *upgradev1alpha1.UpgradeConfig) error {
+					func(ctx context.Context, uc *upgradev1alpha1.UpgradeConfig, co ...client.CreateOption) error {
 						Expect(uc.Name).To(Equal(UPGRADECONFIG_CR_NAME))
 						Expect(uc.Namespace).To(Equal(TEST_OPERATOR_NAMESPACE))
 						Expect(string(uc.Spec.Type)).To(Equal(TEST_UPGRADE_TYPE))
@@ -419,7 +420,7 @@ var _ = Describe("UpgradeConfigManager", func() {
 				mockKubeClient.EXPECT().Delete(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil),
 				mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(notFound),
 				mockKubeClient.EXPECT().Create(gomock.Any(), gomock.Any()).DoAndReturn(
-					func(ctx context.Context, uc *upgradev1alpha1.UpgradeConfig) error {
+					func(ctx context.Context, uc *upgradev1alpha1.UpgradeConfig, co ...client.CreateOption) error {
 						Expect(uc.Name).To(Equal(TEST_UPGRADECONFIG_CR))
 						Expect(uc.Namespace).To(Equal(TEST_OPERATOR_NAMESPACE))
 						Expect(string(uc.Spec.Type)).To(Equal(TEST_UPGRADE_TYPE))

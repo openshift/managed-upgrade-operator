@@ -46,7 +46,9 @@ type clusterVersionClient struct {
 	client client.Client
 }
 
-type clusterVersionClientBuilder struct{}
+type clusterVersionClientBuilder struct {
+	Client client.Client
+}
 
 // NewCVClient returns a ClusterVersion interface
 func NewCVClient(c client.Client) ClusterVersion {
@@ -54,8 +56,8 @@ func NewCVClient(c client.Client) ClusterVersion {
 }
 
 // NewBuilder returns a CluserVersionBuilder type
-func NewBuilder() ClusterVersionBuilder {
-	return &clusterVersionClientBuilder{}
+func NewBuilder(c client.Client) ClusterVersionBuilder {
+	return &clusterVersionClientBuilder{Client: c}
 }
 
 func (cvb *clusterVersionClientBuilder) New(c client.Client) ClusterVersion {

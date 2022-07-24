@@ -51,7 +51,7 @@ func NewAROUpgrader(c client.Client, cfm configmanager.ConfigManager, mc metrics
 			notifier:             notifier,
 			config:               cfg,
 			scaler:               scaler.NewScaler(),
-			drainstrategyBuilder: drain.NewBuilder(),
+			drainstrategyBuilder: drain.NewBuilder(c),
 			maintenance:          m,
 			machinery:            machinery.NewMachinery(),
 			availabilityCheckers: acs,

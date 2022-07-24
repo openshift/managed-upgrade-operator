@@ -2,6 +2,7 @@ package upgraders
 
 import (
 	"context"
+
 	"github.com/go-logr/logr"
 	"github.com/openshift/managed-upgrade-operator/pkg/eventmanager"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -25,11 +26,13 @@ type ClusterUpgraderBuilder interface {
 }
 
 // NewBuilder returns a clusterUpgraderBuilder
-func NewBuilder() ClusterUpgraderBuilder {
-	return &clusterUpgraderBuilder{}
+func NewBuilder(c client.Client) ClusterUpgraderBuilder {
+	return &clusterUpgraderBuilder{Client: c}
 }
 
-type clusterUpgraderBuilder struct{}
+type clusterUpgraderBuilder struct {
+	Client client.Client
+}
 
 func (cub *clusterUpgraderBuilder) NewClient(c client.Client, cfm configmanager.ConfigManager, mc metrics.Metrics, nc eventmanager.EventManager, upgradeType upgradev1alpha1.UpgradeType) (ClusterUpgrader, error) {
 	switch upgradeType {

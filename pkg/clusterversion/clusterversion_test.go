@@ -113,13 +113,13 @@ var _ = Describe("ClusterVersion client and utils", func() {
 					gomock.InOrder(
 						mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, clusterVersion).Return(nil),
 						mockKubeClient.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
-							func(ctx context.Context, cv *configv1.ClusterVersion, p client.Patch) error {
+							func(ctx context.Context, cv *configv1.ClusterVersion, p client.Patch, po ...client.PatchOption) error {
 								Expect(reflect.DeepEqual(p, channelPatch)).To(BeTrue())
 								return nil
 							}),
 						mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, updatedClusterVersion).Return(nil),
 						mockKubeClient.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
-							func(ctx context.Context, cv *configv1.ClusterVersion, p client.Patch) error {
+							func(ctx context.Context, cv *configv1.ClusterVersion, p client.Patch, po ...client.PatchOption) error {
 								Expect(reflect.DeepEqual(p, versionPatch)).To(BeTrue())
 								return nil
 							}),
@@ -150,7 +150,7 @@ var _ = Describe("ClusterVersion client and utils", func() {
 					gomock.InOrder(
 						mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, clusterVersion).Return(nil),
 						mockKubeClient.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
-							func(ctx context.Context, cv *configv1.ClusterVersion, p client.Patch) error {
+							func(ctx context.Context, cv *configv1.ClusterVersion, p client.Patch, po ...client.PatchOption) error {
 								Expect(reflect.DeepEqual(p, versionPatch)).To(BeTrue())
 								return nil
 							}),
@@ -183,7 +183,7 @@ var _ = Describe("ClusterVersion client and utils", func() {
 					gomock.InOrder(
 						mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, clusterVersion).Return(nil),
 						mockKubeClient.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
-							func(ctx context.Context, cv *configv1.ClusterVersion, p client.Patch) error {
+							func(ctx context.Context, cv *configv1.ClusterVersion, p client.Patch, po ...client.PatchOption) error {
 								Expect(reflect.DeepEqual(p, versionPatch)).To(BeTrue())
 								return nil
 							}),
@@ -291,7 +291,7 @@ var _ = Describe("ClusterVersion client and utils", func() {
 					gomock.InOrder(
 						mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, clusterVersion).Return(nil),
 						mockKubeClient.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
-							func(ctx context.Context, cv *configv1.ClusterVersion, p client.Patch) error {
+							func(ctx context.Context, cv *configv1.ClusterVersion, p client.Patch, po ...client.PatchOption) error {
 								Expect(reflect.DeepEqual(p, updatePatch)).To(BeTrue())
 								return nil
 							}),
@@ -316,7 +316,7 @@ var _ = Describe("ClusterVersion client and utils", func() {
 					gomock.InOrder(
 						mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, clusterVersion).Return(nil),
 						mockKubeClient.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
-							func(ctx context.Context, cv *configv1.ClusterVersion, p client.Patch) error {
+							func(ctx context.Context, cv *configv1.ClusterVersion, p client.Patch, po ...client.PatchOption) error {
 								Expect(reflect.DeepEqual(p, updatePatch)).To(BeTrue())
 								return nil
 							}),

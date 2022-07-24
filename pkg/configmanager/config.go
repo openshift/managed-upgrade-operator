@@ -15,7 +15,9 @@ type ConfigManagerBuilder interface {
 	New(client.Client, Target) ConfigManager
 }
 
-type configManagerBuilder struct{}
+type configManagerBuilder struct {
+	Client client.Client
+}
 
 func (*configManagerBuilder) New(c client.Client, t Target) ConfigManager {
 	return &configManager{
@@ -25,8 +27,8 @@ func (*configManagerBuilder) New(c client.Client, t Target) ConfigManager {
 }
 
 // NewBuilder returns a new configManagerBuilder
-func NewBuilder() ConfigManagerBuilder {
-	return &configManagerBuilder{}
+func NewBuilder(c client.Client) ConfigManagerBuilder {
+	return &configManagerBuilder{Client: c}
 }
 
 // ConfigManager is an interface describing the functions of a cluster upgrader.

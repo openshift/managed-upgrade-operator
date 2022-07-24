@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
@@ -13,12 +14,10 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	controllerruntime "sigs.k8s.io/controller-runtime"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
@@ -38,67 +37,21 @@ var (
 	log = logf.Log.WithName("controller_upgradeconfig")
 )
 
-// Add creates a new UpgradeConfig Controller and adds it to the Manager. The Manager will set fields on the Controller
-// and Start it when the Manager is Started.
-func Add(mgr manager.Manager) error {
-	kubeConfig := controllerruntime.GetConfigOrDie()
-	c, err := client.New(kubeConfig, client.Options{})
-	if err != nil {
-		return err
-	}
-	return add(mgr, newReconciler(mgr, c))
-}
-
-// newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager, client client.Client) reconcile.Reconciler {
-	return &ReconcileUpgradeConfig{
-		client:                 client,
-		scheme:                 mgr.GetScheme(),
-		metricsClientBuilder:   metrics.NewBuilder(),
-		clusterUpgraderBuilder: cub.NewBuilder(),
-		validationBuilder:      validation.NewBuilder(),
-		configManagerBuilder:   configmanager.NewBuilder(),
-		scheduler:              scheduler.NewScheduler(),
-		cvClientBuilder:        cv.NewBuilder(),
-		eventManagerBuilder:    eventmanager.NewBuilder(),
-		ucMgrBuilder:           ucmgr.NewBuilder(),
-	}
-}
-
-// add adds a new Controller to mgr with r as the reconcile.Reconciler
-func add(mgr manager.Manager, r reconcile.Reconciler) error {
-	// Create a new controller
-	c, err := controller.New("upgradeconfig-controller", mgr, controller.Options{Reconciler: r})
-	if err != nil {
-		return err
-	}
-
-	// Watch for changes to primary resource UpgradeConfig, status change will not trigger a reconcile
-	err = c.Watch(&source.Kind{Type: &upgradev1alpha1.UpgradeConfig{}}, &handler.EnqueueRequestForObject{}, StatusChangedPredicate, ManagedUpgradePredicate)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // blank assignment to verify that ReconcileUpgradeConfig implements reconcile.Reconciler
 var _ reconcile.Reconciler = &ReconcileUpgradeConfig{}
 
 // ReconcileUpgradeConfig reconciles a UpgradeConfig object
 type ReconcileUpgradeConfig struct {
-	// This client, initialized using mgr.Client() above, is a split client
-	// that reads objects from the cache and writes to the apiserver
-	client                 client.Client
-	scheme                 *runtime.Scheme
-	metricsClientBuilder   metrics.MetricsBuilder
-	clusterUpgraderBuilder cub.ClusterUpgraderBuilder
-	validationBuilder      validation.ValidationBuilder
-	configManagerBuilder   configmanager.ConfigManagerBuilder
-	scheduler              scheduler.Scheduler
-	cvClientBuilder        cv.ClusterVersionBuilder
-	eventManagerBuilder    eventmanager.EventManagerBuilder
-	ucMgrBuilder           ucmgr.UpgradeConfigManagerBuilder
+	Client                 client.Client
+	Scheme                 *runtime.Scheme
+	MetricsClientBuilder   metrics.MetricsBuilder
+	ClusterUpgraderBuilder cub.ClusterUpgraderBuilder
+	ValidationBuilder      validation.ValidationBuilder
+	ConfigManagerBuilder   configmanager.ConfigManagerBuilder
+	Scheduler              scheduler.Scheduler
+	CvClientBuilder        cv.ClusterVersionBuilder
+	EventManagerBuilder    eventmanager.EventManagerBuilder
+	UcMgrBuilder           ucmgr.UpgradeConfigManagerBuilder
 }
 
 // Reconcile reads that state of the cluster for a UpgradeConfig object and makes changes based on the state read
@@ -111,20 +64,20 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 	reqLogger.Info("Reconciling UpgradeConfig")
 
 	// Initialise metrics
-	metricsClient, err := r.metricsClientBuilder.NewClient(r.client)
+	metricsClient, err := r.MetricsClientBuilder.NewClient(r.Client)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
 	// Initialise event manager
-	eventClient, err := r.eventManagerBuilder.NewManager(r.client)
+	eventClient, err := r.EventManagerBuilder.NewManager(r.Client)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
 	// Fetch the UpgradeConfig instance
 	instance := &upgradev1alpha1.UpgradeConfig{}
-	err = r.client.Get(context.TODO(), request.NamespacedName, instance)
+	err = r.Client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -143,7 +96,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 		history = &upgradev1alpha1.UpgradeHistory{Version: instance.Spec.Desired.Version, Phase: upgradev1alpha1.UpgradePhaseNew}
 		history.Conditions = upgradev1alpha1.NewConditions()
 		instance.Status.History = append([]upgradev1alpha1.UpgradeHistory{*history}, instance.Status.History...)
-		err := r.client.Status().Update(context.TODO(), instance)
+		err := r.Client.Status().Update(context.TODO(), instance)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -156,20 +109,20 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 		reqLogger.Info("Validating UpgradeConfig")
 
 		// Get current ClusterVersion
-		cvClient := r.cvClientBuilder.New(r.client)
+		cvClient := r.CvClientBuilder.New(r.Client)
 		clusterVersion, err := cvClient.GetClusterVersion()
 		if err != nil {
 			return reconcile.Result{}, err
 		}
 
 		// Build a Validator
-		validator, err := r.validationBuilder.NewClient()
+		validator, err := r.ValidationBuilder.NewClient()
 		if err != nil {
 			return reconcile.Result{}, err
 		}
 
 		// Validate UpgradeConfig instance
-		validatorResult, err := validator.IsValidUpgradeConfig(r.client, instance, clusterVersion, reqLogger)
+		validatorResult, err := validator.IsValidUpgradeConfig(r.Client, instance, clusterVersion, reqLogger)
 		if !validatorResult.IsValid || err != nil {
 			reqLogger.Info(fmt.Sprintf("An error occurred while validating UpgradeConfig: %v", validatorResult.Message))
 			metricsClient.UpdateMetricValidationFailed(instance.Name)
@@ -189,7 +142,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 			return reconcile.Result{}, err
 		}
 
-		cfm := r.configManagerBuilder.New(r.client, cmTarget)
+		cfm := r.ConfigManagerBuilder.New(r.Client, cmTarget)
 		cfg := &config{}
 		err = cfm.Into(cfg)
 		if err != nil {
@@ -197,9 +150,9 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 		}
 
 		reqLogger.Info(fmt.Sprintf("Checking if cluster can commence %s upgrade.", instance.Spec.Type))
-		schedulerResult := r.scheduler.IsReadyToUpgrade(instance, cfg.GetUpgradeWindowTimeOutDuration())
+		schedulerResult := r.Scheduler.IsReadyToUpgrade(instance, cfg.GetUpgradeWindowTimeOutDuration())
 		if schedulerResult.IsReady {
-			ucMgr, err := r.ucMgrBuilder.NewManager(r.client)
+			ucMgr, err := r.UcMgrBuilder.NewManager(r.Client)
 			if err != nil {
 				return reconcile.Result{}, err
 			}
@@ -218,7 +171,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 				return reconcile.Result{}, nil
 			}
 
-			upgrader, err := r.clusterUpgraderBuilder.NewClient(r.client, cfm, metricsClient, eventClient, instance.Spec.Type)
+			upgrader, err := r.ClusterUpgraderBuilder.NewClient(r.Client, cfm, metricsClient, eventClient, instance.Spec.Type)
 
 			if err != nil {
 				return reconcile.Result{}, err
@@ -230,7 +183,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 			history.Version = instance.Spec.Desired.Version
 
 			instance.Status.History.SetHistory(*history)
-			err = r.client.Status().Update(context.TODO(), instance)
+			err = r.Client.Status().Update(context.TODO(), instance)
 			if err != nil {
 				return reconcile.Result{}, err
 			}
@@ -241,7 +194,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 
 		history.Phase = upgradev1alpha1.UpgradePhasePending
 		instance.Status.History.SetHistory(*history)
-		err = r.client.Status().Update(context.TODO(), instance)
+		err = r.Client.Status().Update(context.TODO(), instance)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -264,8 +217,8 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 			return reconcile.Result{}, err
 		}
 
-		cfm := r.configManagerBuilder.New(r.client, cmTarget)
-		upgrader, err := r.clusterUpgraderBuilder.NewClient(r.client, cfm, metricsClient, eventClient, instance.Spec.Type)
+		cfm := r.ConfigManagerBuilder.New(r.Client, cmTarget)
+		upgrader, err := r.ClusterUpgraderBuilder.NewClient(r.Client, cfm, metricsClient, eventClient, instance.Spec.Type)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -296,7 +249,7 @@ func (r *ReconcileUpgradeConfig) upgradeCluster(upgrader cub.ClusterUpgrader, uc
 		history.CompleteTime = &metav1.Time{Time: time.Now()}
 	}
 	uc.Status.History.SetHistory(*history)
-	err = r.client.Status().Update(context.TODO(), uc)
+	err = r.Client.Status().Update(context.TODO(), uc)
 	me = multierror.Append(err, me)
 
 	return reconcile.Result{RequeueAfter: 1 * time.Minute}, me.ErrorOrNil()
@@ -332,4 +285,13 @@ var ManagedUpgradePredicate = predicate.Funcs{
 
 func isManagedUpgrade(name string) bool {
 	return name == ucmgr.UPGRADECONFIG_CR_NAME
+}
+
+// SetupWithManager sets up the controller with the Manager.
+func (r *ReconcileUpgradeConfig) SetupWithManager(mgr ctrl.Manager) error {
+
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&upgradev1alpha1.UpgradeConfig{}).
+		Watches(&source.Kind{Type: &upgradev1alpha1.UpgradeConfig{}}, &handler.EnqueueRequestForObject{}, builder.WithPredicates(StatusChangedPredicate, ManagedUpgradePredicate)).
+		Complete(r)
 }
