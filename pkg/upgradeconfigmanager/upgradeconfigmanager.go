@@ -70,13 +70,11 @@ type UpgradeConfigManagerBuilder interface {
 }
 
 // NewBuilder returns an upgradeConfigManagerBuilder
-func NewBuilder(c client.Client) UpgradeConfigManagerBuilder {
-	return &upgradeConfigManagerBuilder{Client: c}
+func NewBuilder() UpgradeConfigManagerBuilder {
+	return &upgradeConfigManagerBuilder{}
 }
 
-type upgradeConfigManagerBuilder struct {
-	Client client.Client
-}
+type upgradeConfigManagerBuilder struct{}
 
 type upgradeConfigManager struct {
 	client               client.Client
@@ -90,9 +88,9 @@ type upgradeConfigManager struct {
 func (ucb *upgradeConfigManagerBuilder) NewManager(client client.Client) (UpgradeConfigManager, error) {
 
 	spBuilder := specprovider.NewBuilder()
-	cvBuilder := cv.NewBuilder(client)
-	cmBuilder := configmanager.NewBuilder(client)
-	mBuilder := metrics.NewBuilder(client)
+	cvBuilder := cv.NewBuilder()
+	cmBuilder := configmanager.NewBuilder()
+	mBuilder := metrics.NewBuilder()
 	b := &backoff.Backoff{
 		Min:    1 * time.Minute,
 		Max:    1 * time.Hour,

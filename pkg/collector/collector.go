@@ -82,7 +82,7 @@ type UpgradeCollector struct {
 
 // Consturct a new UpgradeCollector and return to caller.
 func NewUpgradeCollector(c client.Client) (prometheus.Collector, error) {
-	upgradeConfigManager, err := upgradeconfigmanager.NewBuilder(c).NewManager(c)
+	upgradeConfigManager, err := upgradeconfigmanager.NewBuilder().NewManager(c)
 	if err != nil {
 		return nil, err
 	}

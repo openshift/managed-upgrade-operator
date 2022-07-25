@@ -44,13 +44,11 @@ type TimedDrainStrategy interface {
 }
 
 // NewBuilder returns a drainStrategyBuilder
-func NewBuilder(c client.Client) NodeDrainStrategyBuilder {
-	return &drainStrategyBuilder{Client: c}
+func NewBuilder() NodeDrainStrategyBuilder {
+	return &drainStrategyBuilder{}
 }
 
-type drainStrategyBuilder struct {
-	Client client.Client
-}
+type drainStrategyBuilder struct{}
 
 func newTimedStrategy(name string, description string, waitDuration time.Duration, strategy DrainStrategy) TimedDrainStrategy {
 	return &timedStrategy{

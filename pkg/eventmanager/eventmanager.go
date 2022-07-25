@@ -46,13 +46,11 @@ type EventManagerBuilder interface {
 }
 
 // NewBuilder returns an eventManagerBuilder
-func NewBuilder(c client.Client) EventManagerBuilder {
-	return &eventManagerBuilder{Client: c}
+func NewBuilder() EventManagerBuilder {
+	return &eventManagerBuilder{}
 }
 
-type eventManagerBuilder struct {
-	Client client.Client
-}
+type eventManagerBuilder struct{}
 
 type eventManager struct {
 	client               client.Client
@@ -63,13 +61,13 @@ type eventManager struct {
 }
 
 func (emb *eventManagerBuilder) NewManager(client client.Client) (EventManager, error) {
-	cmBuilder := configmanager.NewBuilder(client)
-	ucb := upgradeconfigmanager.NewBuilder(client)
-	ucm, err := upgradeconfigmanager.NewBuilder(client).NewManager(client)
+	cmBuilder := configmanager.NewBuilder()
+	ucb := upgradeconfigmanager.NewBuilder()
+	ucm, err := upgradeconfigmanager.NewBuilder().NewManager(client)
 	if err != nil {
 		return nil, err
 	}
-	metricsClient, err := metrics.NewBuilder(client).NewClient(client)
+	metricsClient, err := metrics.NewBuilder().NewClient(client)
 	if err != nil {
 		return nil, err
 	}

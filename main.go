@@ -28,7 +28,6 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
@@ -102,25 +101,18 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Create a separate client for the OAH Builder
-	kubeConfig := ctrl.GetConfigOrDie()
-	handlerClient, err := client.New(kubeConfig, client.Options{Scheme: mgr.GetScheme()})
-	if err != nil {
-		os.Exit(1)
-	}
-
 	// Add UpgradeConfig controller to the manager
 	if err = (&upgradeconfig.ReconcileUpgradeConfig{
 		Client:                 mgr.GetClient(),
 		Scheme:                 mgr.GetScheme(),
-		MetricsClientBuilder:   metrics.NewBuilder(handlerClient),
-		ClusterUpgraderBuilder: cub.NewBuilder(handlerClient),
-		ValidationBuilder:      validation.NewBuilder(handlerClient),
-		ConfigManagerBuilder:   configmanager.NewBuilder(handlerClient),
+		MetricsClientBuilder:   metrics.NewBuilder(),
+		ClusterUpgraderBuilder: cub.NewBuilder(),
+		ValidationBuilder:      validation.NewBuilder(),
+		ConfigManagerBuilder:   configmanager.NewBuilder(),
 		Scheduler:              scheduler.NewScheduler(),
-		CvClientBuilder:        cv.NewBuilder(handlerClient),
-		EventManagerBuilder:    eventmanager.NewBuilder(handlerClient),
-		UcMgrBuilder:           ucm.NewBuilder(handlerClient),
+		CvClientBuilder:        cv.NewBuilder(),
+		EventManagerBuilder:    eventmanager.NewBuilder(),
+		UcMgrBuilder:           ucm.NewBuilder(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "UpgradeConfig")
 		os.Exit(1)
@@ -130,11 +122,11 @@ func main() {
 	if err = (&nodekeeper.ReconcileNodeKeeper{
 		Client:                      mgr.GetClient(),
 		Scheme:                      mgr.GetScheme(),
-		ConfigManagerBuilder:        configmanager.NewBuilder(handlerClient),
+		ConfigManagerBuilder:        configmanager.NewBuilder(),
 		Machinery:                   machinery.NewMachinery(),
-		MetricsClientBuilder:        metrics.NewBuilder(handlerClient),
-		DrainstrategyBuilder:        drain.NewBuilder(handlerClient),
-		UpgradeConfigManagerBuilder: upgradeconfigmanager.NewBuilder(handlerClient),
+		MetricsClientBuilder:        metrics.NewBuilder(),
+		DrainstrategyBuilder:        drain.NewBuilder(),
+		UpgradeConfigManagerBuilder: upgradeconfigmanager.NewBuilder(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "NodeKeeper")
 		os.Exit(1)
@@ -144,7 +136,7 @@ func main() {
 	if err = (&machineconfigpool.ReconcileMachineConfigPool{
 		Client:                      mgr.GetClient(),
 		Scheme:                      mgr.GetScheme(),
-		UpgradeConfigManagerBuilder: ucm.NewBuilder(handlerClient),
+		UpgradeConfigManagerBuilder: ucm.NewBuilder(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "MachineConfigPool")
 		os.Exit(1)

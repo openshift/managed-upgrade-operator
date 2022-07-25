@@ -54,7 +54,7 @@ func NewOSDUpgrader(c client.Client, cfm configmanager.ConfigManager, mc metrics
 			notifier:             notifier,
 			config:               cfg,
 			scaler:               scaler.NewScaler(),
-			drainstrategyBuilder: drain.NewBuilder(c),
+			drainstrategyBuilder: drain.NewBuilder(),
 			maintenance:          m,
 			machinery:            machinery.NewMachinery(),
 			availabilityCheckers: acs,

@@ -29,8 +29,8 @@ const (
 )
 
 // NewBuilder returns a validationBuilder object that implements the ValidationBuilder interface.
-func NewBuilder(c client.Client) ValidationBuilder {
-	return &validationBuilder{Client: c}
+func NewBuilder() ValidationBuilder {
+	return &validationBuilder{}
 }
 
 // Validator knows how to validate UpgradeConfig CRs.
@@ -195,9 +195,7 @@ type ValidationBuilder interface {
 
 // validationBuilder is an empty struct that enables instantiation of this type and its
 // implemented interface.
-type validationBuilder struct {
-	Client client.Client
-}
+type validationBuilder struct{}
 
 // NewClient returns a Validator interface or an error if one occurs.
 func (vb *validationBuilder) NewClient() (Validator, error) {

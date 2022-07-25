@@ -26,13 +26,11 @@ type ClusterUpgraderBuilder interface {
 }
 
 // NewBuilder returns a clusterUpgraderBuilder
-func NewBuilder(c client.Client) ClusterUpgraderBuilder {
-	return &clusterUpgraderBuilder{Client: c}
+func NewBuilder() ClusterUpgraderBuilder {
+	return &clusterUpgraderBuilder{}
 }
 
-type clusterUpgraderBuilder struct {
-	Client client.Client
-}
+type clusterUpgraderBuilder struct{}
 
 func (cub *clusterUpgraderBuilder) NewClient(c client.Client, cfm configmanager.ConfigManager, mc metrics.Metrics, nc eventmanager.EventManager, upgradeType upgradev1alpha1.UpgradeType) (ClusterUpgrader, error) {
 	switch upgradeType {
