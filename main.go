@@ -33,6 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/api/v1alpha1"
+	"github.com/openshift/managed-upgrade-operator/controllers/machineconfigpool"
 	"github.com/openshift/managed-upgrade-operator/controllers/nodekeeper"
 	"github.com/openshift/managed-upgrade-operator/controllers/upgradeconfig"
 	cv "github.com/openshift/managed-upgrade-operator/pkg/clusterversion"
@@ -47,6 +48,8 @@ import (
 	cub "github.com/openshift/managed-upgrade-operator/pkg/upgraders"
 	"github.com/openshift/managed-upgrade-operator/pkg/validation"
 	"github.com/openshift/managed-upgrade-operator/util"
+
+	machineconfigapi "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -57,7 +60,7 @@ var (
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-
+	utilruntime.Must(machineconfigapi.AddToScheme(scheme))
 	utilruntime.Must(upgradev1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
@@ -138,7 +141,7 @@ func main() {
 	}
 
 	// Add MachineConfigPool controller to the manager
-	if err = (&nodekeeper.ReconcileNodeKeeper{
+	if err = (&machineconfigpool.ReconcileMachineConfigPool{
 		Client:                      mgr.GetClient(),
 		Scheme:                      mgr.GetScheme(),
 		UpgradeConfigManagerBuilder: ucm.NewBuilder(handlerClient),
