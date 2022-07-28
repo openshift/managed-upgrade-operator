@@ -38,6 +38,7 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -73,6 +74,8 @@ import (
 
 	monitoringv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 	monclientv1 "github.com/coreos/prometheus-operator/pkg/client/versioned/typed/monitoring/v1"
+	configv1 "github.com/openshift/api/config/v1"
+	machineapi "github.com/openshift/api/machine/v1beta1"
 
 	routev1 "github.com/openshift/api/route/v1"
 
@@ -95,6 +98,8 @@ func init() {
 	utilruntime.Must(upgradev1alpha1.AddToScheme(scheme))
 	utilruntime.Must(monitoringv1.AddToScheme(scheme))
 	utilruntime.Must(routev1.AddToScheme(scheme))
+	utilruntime.Must(configv1.AddToScheme(scheme))
+	utilruntime.Must(machineapi.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -155,6 +160,9 @@ func main() {
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "312e6264.managed.openshift.io",
 		SyncPeriod:             &syncPeriod,
+		NewClient: func(_ cache.Cache, config *rest.Config, options client.Options, uncachedObjects ...client.Object) (client.Client, error) {
+			return client.New(config, options)
+		},
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")

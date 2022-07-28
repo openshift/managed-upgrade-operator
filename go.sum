@@ -220,6 +220,7 @@ github.com/blang/semver v3.1.0+incompatible/go.mod h1:kRBLl5iJ+tD4TcOOxsy/0fnweb
 github.com/blang/semver v3.5.0+incompatible/go.mod h1:kRBLl5iJ+tD4TcOOxsy/0fnwebNt5EWlYSAyrTnjyyk=
 github.com/blang/semver v3.5.1+incompatible h1:cQNTCjp13qL8KC3Nbxr/y2Bqb63oX6wdnnjpJbkM4JQ=
 github.com/blang/semver v3.5.1+incompatible/go.mod h1:kRBLl5iJ+tD4TcOOxsy/0fnwebNt5EWlYSAyrTnjyyk=
+github.com/blang/semver/v4 v4.0.0 h1:1PFHFE6yCCTv8C1TeyNNarDzntLi7wMI5i/pzqYIsAM=
 github.com/blang/semver/v4 v4.0.0/go.mod h1:IbckMUScFkM3pff0VJDNKRiT6TG/YpiHIM2yvyW5YoQ=
 github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869/go.mod h1:Ekp36dRnpXw/yCqJaO+ZrUyxD+3VXMFFr56k5XYrpB4=
 github.com/bombsimon/wsl/v3 v3.3.0/go.mod h1:st10JtZYLE4D5sC7b8xV4zTKZwAQjCH/Hy2Pm1FNZIc=
@@ -1146,6 +1147,7 @@ github.com/mtrmac/gpgme v0.1.2/go.mod h1:GYYHnGSuS7HK3zVS2n3y73y0okK/BeKzwnn5jgi
 github.com/munnerz/goautoneg v0.0.0-20120707110453-a547fc61f48d/go.mod h1:+n7T8mK8HuQTcFwEeznm/DIxMOiR9yIdICNftLE1DvQ=
 github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822/go.mod h1:+n7T8mK8HuQTcFwEeznm/DIxMOiR9yIdICNftLE1DvQ=
 github.com/mwitkow/go-conntrack v0.0.0-20161129095857-cc309e4a2223/go.mod h1:qRWi+5nqEBWmkhHvq77mSJWrCKwh8bxhgT7d/eI7P4U=
+github.com/mwitkow/go-conntrack v0.0.0-20190716064945-2f068394615f h1:KUppIJq7/+SVif2QVs3tOP0zanoHgBEVAwHxUSIzRqU=
 github.com/mwitkow/go-conntrack v0.0.0-20190716064945-2f068394615f/go.mod h1:qRWi+5nqEBWmkhHvq77mSJWrCKwh8bxhgT7d/eI7P4U=
 github.com/mwitkow/go-proto-validators v0.0.0-20180403085117-0950a7990007/go.mod h1:m2XC9Qq0AlmmVksL6FktJCdTYyLk7V3fKyp0sl1yWQo=
 github.com/mwitkow/go-proto-validators v0.2.0/go.mod h1:ZfA1hW+UH/2ZHOWvQ3HnQaU0DtnpXu850MZiy+YUgcc=
@@ -1227,10 +1229,12 @@ github.com/opencontainers/selinux v1.8.2/go.mod h1:MUIHuUEvKB1wtJjQdOyYRgOnLD2xA
 github.com/openshift/api v0.0.0-20220414050251-a83e6f8f1d50 h1:pg/cKeyO01QHvZNM8dvqVutf6shn+H1ZVPi83uyGil8=
 github.com/openshift/api v0.0.0-20220414050251-a83e6f8f1d50/go.mod h1:F/eU6jgr6Q2VhMu1mSpMmygxAELd7+BUxs3NHZ25jV4=
 github.com/openshift/build-machinery-go v0.0.0-20200211121458-5e3d6e570160/go.mod h1:1CkcsT3aVebzRBzVTSbiKSkJMsC/CASqxesfqEMfJEc=
+github.com/openshift/build-machinery-go v0.0.0-20210806203541-4ea9b6da3a37/go.mod h1:b1BuldmJlbA/xYtdZvKi+7j5YGB44qJUJDZ9zwiNCfE=
 github.com/openshift/build-machinery-go v0.0.0-20211213093930-7e33a7eb4ce3/go.mod h1:b1BuldmJlbA/xYtdZvKi+7j5YGB44qJUJDZ9zwiNCfE=
 github.com/openshift/client-go v0.0.0-20211209144617-7385dd6338e3/go.mod h1:cwhyki5lqBmrT0m8Im+9I7PGFaraOzcYPtEz93RcsGY=
-github.com/openshift/cluster-version-operator v3.11.0+incompatible h1:oJsk35UlfDSlcATjp1wTqhIOJ1MpIp81nzBenOQTd5U=
-github.com/openshift/cluster-version-operator v3.11.0+incompatible/go.mod h1:0BbpR1mrN0F2ZRae5N1XHcytmkvVPaeKgSQwRRBWugc=
+github.com/openshift/cluster-version-operator v1.0.1-0.20220719135954-288bd4d114f6 h1:7CG3PZJluqzOkiiEHL9n+u2RA95oOJ90q26YW/I8glg=
+github.com/openshift/cluster-version-operator v1.0.1-0.20220719135954-288bd4d114f6/go.mod h1:29BjfODOHA3C7n7YMJ5Gl2HJWsF3gUbqRPNzBDHWLjA=
+github.com/openshift/library-go v0.0.0-20211209153216-ed9bc958bd8a/go.mod h1:M/Gi/GUUrMdSS07nrYtTiK43J6/VUAyk/+IfN4ZqUY4=
 github.com/openshift/library-go v0.0.0-20211220195323-eca2c467c492 h1:oj/rSQqVWVj6YJUydZwLz2frrJreiyI4oa9g/YPgMsM=
 github.com/openshift/library-go v0.0.0-20211220195323-eca2c467c492/go.mod h1:4UQ9snU1vg53fyTpHQw3vLPiAxI8ub5xrc+y8KPQQFs=
 github.com/openshift/machine-config-operator v0.0.1-0.20220719025305-3b880dbaa15f h1:JWYt08O0z0SyGBl6spZcd/B6l9KcI2Mg+191Vh3sSzs=

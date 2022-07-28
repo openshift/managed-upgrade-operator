@@ -9,9 +9,10 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"runtime"
 	"time"
 
-	"github.com/blang/semver"
+	"github.com/blang/semver/v4"
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
 
@@ -408,8 +409,11 @@ func fetchCVOUpdates(cV *configv1.ClusterVersion, uc *upgradev1alpha1.UpgradeCon
 	cvVersion, _ := cv.GetCurrentVersion(cV)
 	parsedCvVersion, _ := semver.Parse(cvVersion)
 
+	transport := &http.Transport{}
+	ctx := context.TODO()
+
 	// Fetch available updates by version in Cincinnati.
-	updates, err := cincinnati.NewClient(clusterId).GetUpdates(upstreamURI.String(), uc.Spec.Desired.Channel, parsedCvVersion)
+	_, updates, _, err := cincinnati.NewClient(clusterId, transport).GetUpdates(ctx, upstreamURI, runtime.GOARCH, uc.Spec.Desired.Channel, parsedCvVersion)
 	if err != nil {
 		return nil, err
 	}
@@ -418,8 +422,8 @@ func fetchCVOUpdates(cV *configv1.ClusterVersion, uc *upgradev1alpha1.UpgradeCon
 		var cvoUpdates []configv1.Update
 		for _, update := range updates {
 			cvoUpdates = append(cvoUpdates, configv1.Update{
-				Version: update.Version.String(),
-				Image:   update.Payload,
+				Version: update.Version,
+				Image:   update.Image,
 			})
 		}
 		return cvoUpdates, err

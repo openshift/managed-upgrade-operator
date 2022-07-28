@@ -1,6 +1,7 @@
 package scheduler
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -51,6 +52,6 @@ func (s *scheduler) IsReadyToUpgrade(upgradeConfig *upgradev1alpha1.UpgradeConfi
 
 	// It hasn't reached the upgrade window yet
 	pendingTime := upgradeTime.Sub(now)
-	logger.Info("Upgrade is scheduled in %d hours %d mins", int(pendingTime.Hours()), int(pendingTime.Minutes())-(int(pendingTime.Hours())*60))
+	logger.Info(fmt.Sprintf("Upgrade is scheduled in %d hours %d mins", int(pendingTime.Hours()), int(pendingTime.Minutes())-(int(pendingTime.Hours())*60)))
 	return SchedulerResult{IsReady: false, IsBreached: false, TimeUntilUpgrade: pendingTime}
 }
