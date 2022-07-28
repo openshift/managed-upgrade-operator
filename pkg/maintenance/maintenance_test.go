@@ -11,8 +11,8 @@ import (
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/openshift/managed-upgrade-operator/config"
 	ammocks "github.com/openshift/managed-upgrade-operator/pkg/alertmanager/mocks"
+	"github.com/openshift/managed-upgrade-operator/pkg/k8sutil"
 	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
-	"github.com/openshift/managed-upgrade-operator/util"
 	"github.com/openshift/managed-upgrade-operator/util/mocks"
 	amv2Models "github.com/prometheus/alertmanager/api/v2/models"
 	corev1 "k8s.io/api/core/v1"
@@ -241,7 +241,7 @@ SLKh9n6qnPj0Lef3Nw==
 	})
 	Context("Build Alert Manager for local development replicating production by using Services", func() {
 		It("Build an Alert Manager Client and not return an error", func() {
-			_ = os.Setenv(util.ForceRunModeEnv, string(util.LocalRunMode))
+			_ = os.Setenv(k8sutil.ForceRunModeEnv, string(k8sutil.LocalRunMode))
 			var ammb alertManagerMaintenanceBuilder
 			mockAmService := &corev1.Service{}
 			mockSecretList := &corev1.SecretList{}
@@ -260,7 +260,7 @@ SLKh9n6qnPj0Lef3Nw==
 	})
 	Context("Build Alert Manager for local development not replicating production by using Routes", func() {
 		It("Build an Alert Manager Client and not return an error", func() {
-			_ = os.Setenv(util.ForceRunModeEnv, string(util.LocalRunMode))
+			_ = os.Setenv(k8sutil.ForceRunModeEnv, string(k8sutil.LocalRunMode))
 			_ = os.Setenv(config.EnvRoutes, "true")
 			var ammb alertManagerMaintenanceBuilder
 			mockAmRoute := &routev1.Route{}
