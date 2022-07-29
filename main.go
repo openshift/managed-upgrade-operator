@@ -44,6 +44,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 
 	zaplogfmt "github.com/sykesm/zap-logfmt"
 	uzap "go.uber.org/zap"
@@ -266,8 +267,26 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Define stopCh which we'll use to notify the upgradeConfigManager (and any other routine)
+	// to stop work. This channel can also be used to signal routines to complete any cleanup
+	// work
+	stopCh := signals.SetupSignalHandler()
+
+	upgradeConfigManagerClient, err := client.New(cfg, client.Options{})
+	if err != nil {
+		log.Error(err, "unable to create configmanager client")
+		os.Exit(1)
+	}
+
+	ucMgr, err := upgradeconfigmanager.NewBuilder().NewManager(upgradeConfigManagerClient)
+	if err != nil {
+		log.Error(err, "can't read config manager configuration")
+	}
+	log.Info("Starting UpgradeConfig manager")
+	go ucMgr.StartSync(stopCh)
+
 	setupLog.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+	if err := mgr.Start(stopCh); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
