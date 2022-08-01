@@ -1,94 +1,85 @@
-# managed-upgrade-operator
-// TODO(user): Add simple overview of use/purpose
+# Managed Upgrade Operator
 
-## Description
-// TODO(user): An in-depth paragraph about your project and overview of use
+[![Go Report Card](https://goreportcard.com/badge/github.com/openshift/managed-upgrade-operator)](https://goreportcard.com/report/github.com/openshift/managed-upgrade-operator)
+[![codecov](https://codecov.io/gh/openshift/managed-upgrade-operator/branch/master/graph/badge.svg)](https://codecov.io/gh/openshift/managed-upgrade-operator)
+[![GoDoc](https://godoc.org/github.com/openshift/managed-upgrade-operator?status.svg)](https://pkg.go.dev/mod/github.com/openshift/managed-upgrade-operator)
+[![License](https://img.shields.io/:license-apache-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0.html)
 
-## Getting Started
-You’ll need a Kubernetes cluster to run against. You can use [KIND](https://sigs.k8s.io/kind) to get a local cluster for testing, or run against a remote cluster.
-**Note:** Your controller will automatically use the current context in your kubeconfig file (i.e. whatever cluster `kubectl cluster-info` shows).
+----
 
-### Running on the cluster
-1. Install Instances of Custom Resources:
+The _Managed Upgrade Operator_ has been created for the [OpenShift Dedicated Platform](https://docs.openshift.com/dedicated/4/) (OSD) to manage the orchestration of automated in-place cluster upgrades.
 
-```sh
-kubectl apply -f config/samples/
+Whilst the operator's job is to invoke a cluster upgrade, it does not perform any activities of the cluster upgrade process itself. This remains the responsibility of the OpenShift Container Platform. The operator's goal is to satisfy the operating conditions that a managed cluster must hold, both pre- and post-invocation of the cluster upgrade. 
+
+Examples of activities that are not core to an OpenShift upgrade process but could be handled by the operator include:
+ 
+* Pre and post-upgrade health checks.
+* Worker capacity scaling during the upgrade period.
+* Alerting silence window management.
+
+If you like to contribute to the Managed Upgrade Operator, please read our [Contribution Policy](./docs/contributing.md) first.
+
+----
+
+* [Info](#info)
+   * [Documentation](#documentation)
+      * [For Developers](#for-developers)
+   * [Workflow - UpgradeConfig](#workflow---upgradeconfig)
+      * [Example CR](#example-input-custom-resource)
+      
+# Info
+
+## Documentation
+
+* [FAQ](./docs/faq.md) -- Frequently Asked Questions.
+
+### For Developers
+
+* [Design](./docs/design.md) -- Describes the interaction between the operator and the custom resource definition.
+* [Development](./docs/development.md) -- Instructions for developing and deploying the operator.
+* [Metrics](./docs/metrics.md) -- Prometheus metrics produced by the operator. 
+* [Testing](./docs/testing.md) -- Instructions for writing tests.
+
+## Workflow - UpgradeConfig
+
+1. The operator watches all namespaces for an `UpgradeConfig` resource.
+2. When an `UpgradeConfig` is found or modified, the operator checks the Status History to determine if this upgrade has been applied to the cluster.
+     * If the `UpgradeConfig` history indicates that the cluster has been successfully upgraded to the defined version, no further action is taken.
+3. If there is no previous history for this `UpgradeConfig`, or if it indicates that the upgrade is New, Pending or Ongoing, the operator creates a [ClusterUpgrader](pkg/cluster_upgrader/cluster_upgrader.go) to either initiate a new upgrade or or maintain an ongoing upgrade.             
+4. The ClusterUpgrader runs through an ordered series of upgrade steps, executing them or waiting for them to complete. 
+     * As steps are launched or complete, they are added to the `UpgradeConfig`'s Status History. 
+5. Once all steps have been completed, the upgrade is considered complete and a Status History entry is written to indicate that the `UpgradeConfig` has been applied.
+
+## Sample UpgradeConfig CR definition
+
+### Example 1 - OSD upgrade using to version 4.4.6 using fast channel
+
+```yaml
+apiVersion: upgrade.managed.openshift.io/v1alpha1
+kind: UpgradeConfig
+metadata:
+  name: managed-upgrade-config
+spec:
+  type: "OSD"
+  upgradeAt: "2020-01-01T00:00:00Z"
+  PDBForceDrainTimeout: 60
+  capacityReservation: true
+  desired:
+    channel: "fast-4.4"
+    version: "4.4.6"
 ```
 
-2. Build and push your image to the location specified by `IMG`:
-	
-```sh
-make docker-build docker-push IMG=<some-registry>/managed-upgrade-operator:tag
+### Example 2 - OSD upgrade using to 4.7.13 using image digest
+
+```yaml
+apiVersion: upgrade.managed.openshift.io/v1alpha1
+kind: UpgradeConfig
+metadata:
+  name: managed-upgrade-config
+spec:
+  type: "OSD"
+  upgradeAt: "2021-01-01T00:00:00Z"
+  PDBForceDrainTimeout: 60
+  desired:
+    image: "quay.io/openshift-release-dev/ocp-release@sha256:783a2c963f35ccab38e82e6a8c7fa954c3a4551e07d2f43c06098828dd986ed4"
 ```
-	
-3. Deploy the controller to the cluster with the image specified by `IMG`:
-
-```sh
-make deploy IMG=<some-registry>/managed-upgrade-operator:tag
-```
-
-### Uninstall CRDs
-To delete the CRDs from the cluster:
-
-```sh
-make uninstall
-```
-
-### Undeploy controller
-UnDeploy the controller to the cluster:
-
-```sh
-make undeploy
-```
-
-## Contributing
-// TODO(user): Add detailed information on how you would like others to contribute to this project
-
-### How it works
-This project aims to follow the Kubernetes [Operator pattern](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/)
-
-It uses [Controllers](https://kubernetes.io/docs/concepts/architecture/controller/) 
-which provides a reconcile function responsible for synchronizing resources untile the desired state is reached on the cluster 
-
-### Test It Out
-1. Install the CRDs into the cluster:
-
-```sh
-make install
-```
-
-2. Run your controller (this will run in the foreground, so switch to a new terminal if you want to leave it running):
-
-```sh
-make run
-```
-
-**NOTE:** You can also run this in one step by running: `make install run`
-
-### Modifying the API definitions
-If you are editing the API definitions, generate the manifests such as CRs or CRDs using:
-
-```sh
-make manifests
-```
-
-**NOTE:** Run `make --help` for more information on all potential `make` targets
-
-More information can be found via the [Kubebuilder Documentation](https://book.kubebuilder.io/introduction.html)
-
-## License
-
-Copyright 2022.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-
