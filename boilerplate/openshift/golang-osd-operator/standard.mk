@@ -70,7 +70,7 @@ REGISTRY_USER ?=
 REGISTRY_TOKEN ?=
 
 BINFILE=build/_output/bin/$(OPERATOR_NAME)
-MAINPACKAGE = ./main.go
+MAINPACKAGE = ./
 API_DIR = $(NEW_API_DIR)
 ifeq ($(USE_OLD_SDK), TRUE)
 MAINPACKAGE = ./cmd/manager
