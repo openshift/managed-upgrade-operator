@@ -73,10 +73,11 @@ import (
 
 	opmetrics "github.com/openshift/operator-custom-metrics/pkg/metrics"
 
-	monitoringv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
-	monclientv1 "github.com/coreos/prometheus-operator/pkg/client/versioned/typed/monitoring/v1"
 	configv1 "github.com/openshift/api/config/v1"
 	machineapi "github.com/openshift/api/machine/v1beta1"
+
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	monclientv1 "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned/typed/monitoring/v1"
 
 	routev1 "github.com/openshift/api/route/v1"
 
@@ -98,9 +99,9 @@ func init() {
 	utilruntime.Must(machineconfigapi.AddToScheme(scheme))
 	utilruntime.Must(upgradev1alpha1.AddToScheme(scheme))
 	utilruntime.Must(monitoringv1.AddToScheme(scheme))
-	utilruntime.Must(routev1.AddToScheme(scheme))
-	utilruntime.Must(configv1.AddToScheme(scheme))
-	utilruntime.Must(machineapi.AddToScheme(scheme))
+	utilruntime.Must(routev1.Install(scheme))
+	utilruntime.Must(configv1.Install(scheme))
+	utilruntime.Must(machineapi.Install(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -144,13 +145,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := monitoringv1.AddToScheme(clientgoscheme.Scheme); err != nil {
-		setupLog.Error(err, "unable to add monitoringv1 scheme")
-		os.Exit(1)
-	}
-
 	// This set the sync period to 5m
-	syncPeriod := time.Duration(muocfg.SyncPeriodDefault)
+	syncPeriod := muocfg.SyncPeriodDefault
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Namespace:              operatorNS,

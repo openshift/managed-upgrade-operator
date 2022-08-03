@@ -98,7 +98,6 @@ require (
 require (
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/blang/semver/v4 v4.0.0
-	github.com/coreos/prometheus-operator v0.38.1-0.20200424145508-7e176fda06cc
 	github.com/go-logr/logr v1.2.3
 	github.com/go-openapi/runtime v0.23.1
 	github.com/go-openapi/strfmt v0.21.2
@@ -112,7 +111,9 @@ require (
 	github.com/openshift/cluster-version-operator v1.0.1-0.20220719135954-288bd4d114f6
 	github.com/openshift/library-go v0.0.0-20211220195323-eca2c467c492
 	github.com/openshift/machine-config-operator v0.0.1-0.20220719025305-3b880dbaa15f
-	github.com/openshift/operator-custom-metrics v0.4.2
+	github.com/openshift/operator-custom-metrics v0.5.0
+	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.58.0
+	github.com/prometheus-operator/prometheus-operator/pkg/client v0.58.0
 	github.com/prometheus/alertmanager v0.24.0
 	github.com/prometheus/client_golang v1.12.1
 	github.com/sykesm/zap-logfmt v0.0.4
