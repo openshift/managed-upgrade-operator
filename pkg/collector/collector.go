@@ -342,6 +342,7 @@ func (uc *UpgradeCollector) collectUpgradeConditions(ch chan<- prometheus.Metric
 	// Collect metrics based on observing availble conditions in the target
 	// versions upgrade history.
 	for _, c := range h.Conditions {
+		c := c
 		switch c.Type {
 		case upgradev1alpha1.SendStartedNotification:
 			collectCondition(&c, uc.managedMetrics.sendStartedNotification, upgradeConfig, cvVersion, ch)

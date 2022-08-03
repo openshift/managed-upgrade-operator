@@ -293,7 +293,7 @@ func readConfigManagerConfig(client client.Client, cfb configmanager.ConfigManag
 // and returns the result.
 // Adapted from https://github.com/kamilsk/retry/blob/v5/jitter/
 func durationWithJitter(t time.Duration, factor float64) time.Duration {
-	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
+	rnd := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 	min := int64(math.Floor(float64(t) * (1 - factor)))
 	max := int64(math.Ceil(float64(t) * (1 + factor)))
 	return time.Duration(rnd.Int63n(max-min) + min)

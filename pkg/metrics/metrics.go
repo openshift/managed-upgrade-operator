@@ -112,7 +112,9 @@ func (mb *metricsBuilder) NewClient(c client.Client) (Metrics, error) {
 	}
 
 	useRoutes := config.UseRoutes()
-	tlsConfig := &tls.Config{}
+	tlsConfig := &tls.Config{
+		MinVersion: tls.VersionTLS12,
+	}
 
 	if !useRoutes {
 		tlsConfig, err = MonitoringTLSConfig(c)
