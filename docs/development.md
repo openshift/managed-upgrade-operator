@@ -28,7 +28,7 @@ A recent Go distribution (>=1.17) with enabled Go modules.
 
 ```shell
 $ go version
-go version go1.18.4 linux/amd64
+go version go1.17.11 linux/amd64
 ```
 
 ### operator-sdk
