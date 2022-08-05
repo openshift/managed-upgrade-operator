@@ -24,11 +24,11 @@ This document should entail all you need to develop this operator locally.
 
 ### golang
 
-A recent Go distribution (>=1.13) with enabled Go modules.
+A recent Go distribution (>=1.17) with enabled Go modules.
 
 ```shell
 $ go version
-go version go1.16.3 linux/amd64
+go version go1.18.4 linux/amd64
 ```
 
 ### operator-sdk
@@ -36,11 +36,11 @@ go version go1.16.3 linux/amd64
 The Operator is being developed based on the [Operators SDK](https://github.com/operator-framework/operator-sdk).
 Ensure this is installed and available in your `$PATH`.
 
-[v0.18.2](https://github.com/operator-framework/operator-sdk/releases/tag/v0.18.2) is being used for `managed-upgrade-operator` development.
+[v1.21.0](https://github.com/operator-framework/operator-sdk/releases/tag/v1.21.0) is being used for `managed-upgrade-operator` development.
 
 ```shell
 $ operator-sdk version
-operator-sdk version: "v0.18.2", commit: "f059b5e17447b0bbcef50846859519340c17ffad", kubernetes version: "v1.18.2", go version: "go1.13.10 linux/amd64"
+operator-sdk version: "v1.21.0", commit: "89d21a133750aee994476736fa9523656c793588", kubernetes version: "1.23", go version: "go1.17.10", GOOS: "linux", GOARCH: "amd64"
 ```
 
 ## Makefile
@@ -58,10 +58,7 @@ go-check                         Golang linting and other static analysis
 go-test                          runs go test across operator
 boilerplate-update               Make boilerplate update itself
 help                             Show this help screen.
-run-routes                       Same as `run`, however will use ROUTE objects to contact prometheus and alertmanager. Use of routes is non-standard but convenient for local development.
-run-standard-routes              Run locally with openshift-managed-upgrade-operator as OPERATOR_NAMESPACE and use of non-standard routes.
-run-standard                     Run locally with openshift-managed-upgrade-operator as OPERATOR_NAMESPACE.
-run                              Wrapper around operator sdk run. Requires OPERATOR_NAMESPACE to be set. See run-standard for defaults.
+run                              Run operator locally against the configured Kubernetes cluster in ~/.kube/config
 tools                            Install local go tools for MUO
 ```
 
