@@ -211,7 +211,7 @@ $ OPERATOR_NAMESPACE=managed-upgrade-operator make run-routes
 - Build the image. In this example, we will use [Quay](http://quay.io/) as the container registry for our image:
 
 ```shell
-$ operator-sdk build quay.io/<QUAY_USERNAME>/managed-upgrade-operator:latest
+$ make docker-build IMG=quay.io/<QUAY_USERNAME>/managed-upgrade-operator:latest
 ```
 
 - Setup [quay](./quay.md) registry and push the image:
