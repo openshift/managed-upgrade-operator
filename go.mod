@@ -112,6 +112,7 @@ require (
 	github.com/openshift/library-go v0.0.0-20211220195323-eca2c467c492
 	github.com/openshift/machine-config-operator v0.0.1-0.20220719025305-3b880dbaa15f
 	github.com/openshift/operator-custom-metrics v0.5.0
+	github.com/operator-framework/operator-lib v0.11.0
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.58.0
 	github.com/prometheus-operator/prometheus-operator/pkg/client v0.58.0
 	github.com/prometheus/alertmanager v0.24.0

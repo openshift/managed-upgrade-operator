@@ -9,28 +9,30 @@ import (
 )
 
 // IgnoreMasterPredicate holds predicate funcs
-var IgnoreMasterPredicate = predicate.Funcs{
-	UpdateFunc: func(e event.UpdateEvent) bool {
-		newNode, ok := e.ObjectNew.(*corev1.Node)
-		if !ok {
-			return false
-		}
-		nodeLabels := newNode.GetLabels()
-		return !hasMasterLabel(nodeLabels)
-	},
-	// Create is required to avoid reconciliation at controller initialisation.
-	CreateFunc: func(e event.CreateEvent) bool {
-		nodeLabels := e.Object.GetLabels()
-		return !hasMasterLabel(nodeLabels)
-	},
-	DeleteFunc: func(e event.DeleteEvent) bool {
-		nodeLabels := e.Object.GetLabels()
-		return !hasMasterLabel(nodeLabels)
-	},
-	GenericFunc: func(e event.GenericEvent) bool {
-		nodeLabels := e.Object.GetLabels()
-		return !hasMasterLabel(nodeLabels)
-	},
+func IgnoreMasterPredicate() predicate.Predicate {
+	return predicate.Funcs{
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			newNode, ok := e.ObjectNew.(*corev1.Node)
+			if !ok {
+				return false
+			}
+			nodeLabels := newNode.GetLabels()
+			return !hasMasterLabel(nodeLabels)
+		},
+		// Create is required to avoid reconciliation at controller initialisation.
+		CreateFunc: func(e event.CreateEvent) bool {
+			nodeLabels := e.Object.GetLabels()
+			return !hasMasterLabel(nodeLabels)
+		},
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			nodeLabels := e.Object.GetLabels()
+			return !hasMasterLabel(nodeLabels)
+		},
+		GenericFunc: func(e event.GenericEvent) bool {
+			nodeLabels := e.Object.GetLabels()
+			return !hasMasterLabel(nodeLabels)
+		},
+	}
 }
 
 func hasMasterLabel(nodeLabels map[string]string) bool {

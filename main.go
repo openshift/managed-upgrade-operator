@@ -73,6 +73,8 @@ import (
 
 	opmetrics "github.com/openshift/operator-custom-metrics/pkg/metrics"
 
+	"github.com/operator-framework/operator-lib/leader"
+
 	configv1 "github.com/openshift/api/config/v1"
 	machineapi "github.com/openshift/api/machine/v1beta1"
 
@@ -166,6 +168,13 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Ensure lock for leader election
+	err = leader.Become(context.TODO(), "managed-upgrade-operator-lock")
+	if err != nil {
+		setupLog.Error(err, "failed to create leader lock")
+		os.Exit(1)
+	}
+
 	// Add UpgradeConfig controller to the manager
 	if err = (&upgradeconfig.ReconcileUpgradeConfig{
 		Client:                 mgr.GetClient(),
@@ -223,7 +232,7 @@ func main() {
 	}
 
 	// Add the Custom Metrics Service
-	metricsClient, err := client.New(cfg, client.Options{})
+	metricsClient, err := client.New(cfg, client.Options{Scheme: mgr.GetScheme()})
 	if err != nil {
 		log.Error(err, "unable to create k8s client for upgrade metrics")
 		os.Exit(1)
@@ -268,7 +277,7 @@ func main() {
 	// work
 	stopCh := signals.SetupSignalHandler()
 
-	upgradeConfigManagerClient, err := client.New(cfg, client.Options{})
+	upgradeConfigManagerClient, err := client.New(cfg, client.Options{Scheme: mgr.GetScheme()})
 	if err != nil {
 		log.Error(err, "unable to create configmanager client")
 		os.Exit(1)

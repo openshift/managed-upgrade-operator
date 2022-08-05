@@ -5,19 +5,15 @@ import (
 	"time"
 
 	machineconfigapi "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
+	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/api/v1alpha1"
+	ucm "github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
-
-	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/api/v1alpha1"
-	ucm "github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager"
 )
 
 var log = logf.Log.WithName("controller_machineconfigpool")
@@ -93,6 +89,6 @@ func (r *ReconcileMachineConfigPool) Reconcile(ctx context.Context, request reco
 func (r *ReconcileMachineConfigPool) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&machineconfigapi.MachineConfigPool{}).
-		Watches(&source.Kind{Type: &machineconfigapi.MachineConfigPool{}}, &handler.EnqueueRequestForObject{}, builder.WithPredicates(isWorkerPredicate)).
+		WithEventFilter(isWorkerPredicate()).
 		Complete(r)
 }

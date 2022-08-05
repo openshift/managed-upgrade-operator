@@ -5,22 +5,11 @@ import (
 	"fmt"
 	"time"
 
-	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-multierror"
-	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
-
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/api/v1alpha1"
 	muocfg "github.com/openshift/managed-upgrade-operator/config"
 	cv "github.com/openshift/managed-upgrade-operator/pkg/clusterversion"
@@ -31,6 +20,13 @@ import (
 	ucmgr "github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager"
 	cub "github.com/openshift/managed-upgrade-operator/pkg/upgraders"
 	"github.com/openshift/managed-upgrade-operator/pkg/validation"
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 var (
@@ -267,20 +263,22 @@ func reportUpgradeMetrics(metricsClient metrics.Metrics, name string, version st
 }
 
 // ManagedUpgradePredicate is used for managing predicates of the UpgradeConfig
-var ManagedUpgradePredicate = predicate.Funcs{
-	UpdateFunc: func(e event.UpdateEvent) bool {
-		return isManagedUpgrade(e.ObjectNew.GetName())
-	},
-	// Create is required to avoid reconciliation at controller initialisation.
-	CreateFunc: func(e event.CreateEvent) bool {
-		return isManagedUpgrade(e.Object.GetName())
-	},
-	DeleteFunc: func(e event.DeleteEvent) bool {
-		return isManagedUpgrade(e.Object.GetName())
-	},
-	GenericFunc: func(e event.GenericEvent) bool {
-		return isManagedUpgrade(e.Object.GetName())
-	},
+func ManagedUpgradePredicate() predicate.Predicate {
+	return predicate.Funcs{
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			return isManagedUpgrade(e.ObjectNew.GetName())
+		},
+		// Create is required to avoid reconciliation at controller initialisation.
+		CreateFunc: func(e event.CreateEvent) bool {
+			return isManagedUpgrade(e.Object.GetName())
+		},
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			return isManagedUpgrade(e.Object.GetName())
+		},
+		GenericFunc: func(e event.GenericEvent) bool {
+			return isManagedUpgrade(e.Object.GetName())
+		},
+	}
 }
 
 func isManagedUpgrade(name string) bool {
@@ -292,6 +290,7 @@ func (r *ReconcileUpgradeConfig) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&upgradev1alpha1.UpgradeConfig{}).
-		Watches(&source.Kind{Type: &upgradev1alpha1.UpgradeConfig{}}, &handler.EnqueueRequestForObject{}, builder.WithPredicates(StatusChangedPredicate, ManagedUpgradePredicate)).
+		WithEventFilter(StatusChangedPredicate()).
+		WithEventFilter(ManagedUpgradePredicate()).
 		Complete(r)
 }
