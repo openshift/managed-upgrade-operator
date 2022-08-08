@@ -31,6 +31,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apiruntime "k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -224,16 +225,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Add the Metrics Service and ServiceMonitor
-	if err := addMetrics(ctx, cfg); err != nil {
-		log.Error(err, "Metrics service is not added.")
-		os.Exit(1)
-	}
-
 	// Add the Custom Metrics Service
 	metricsClient, err := client.New(cfg, client.Options{Scheme: mgr.GetScheme()})
 	if err != nil {
 		log.Error(err, "unable to create k8s client for upgrade metrics")
+		os.Exit(1)
+	}
+
+	// Add the Metrics Service and ServiceMonitor
+	if err := addMetrics(ctx, metricsClient, cfg); err != nil {
+		log.Error(err, "Metrics service is not added.")
 		os.Exit(1)
 	}
 
@@ -298,7 +299,7 @@ func main() {
 
 // addMetrics will create the Services and Service Monitors to allow the operator export the metrics by using
 // the Prometheus operator
-func addMetrics(ctx context.Context, cfg *rest.Config) error {
+func addMetrics(ctx context.Context, cl client.Client, cfg *rest.Config) error {
 	// Get the namespace the operator is currently deployed in.
 	operatorNs, err := k8sutil.GetOperatorNamespace()
 	if err != nil {
@@ -314,6 +315,18 @@ func addMetrics(ctx context.Context, cfg *rest.Config) error {
 	service, err := opmetrics.GenerateService(metricsPort, "http-metrics", operatorName+"-metrics", operatorNs, map[string]string{"name": operatorName})
 	if err != nil {
 		log.Info("Could not create metrics Service", "error", err.Error())
+		return err
+	}
+
+	log.Info(fmt.Sprintf("Attempting to create service %s", service.Name))
+	err = cl.Create(ctx, service)
+	if err != nil {
+		if !apierrors.IsAlreadyExists(err) {
+			log.Error(err, "Could not create metrics service")
+			return err
+		} else {
+			log.Info("Metrics service already exists, will not create")
+		}
 	}
 
 	services := []*corev1.Service{service}
