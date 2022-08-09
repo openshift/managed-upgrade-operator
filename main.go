@@ -169,9 +169,17 @@ func main() {
 	}
 
 	// Ensure lock for leader election
-	err = leader.Become(context.TODO(), "managed-upgrade-operator-lock")
-	if err != nil {
-		setupLog.Error(err, "failed to create leader lock")
+	_, err = k8sutil.GetOperatorNamespace()
+	if err == nil {
+		err = leader.Become(context.TODO(), "managed-upgrade-operator-lock")
+		if err != nil {
+			setupLog.Error(err, "failed to create leader lock")
+			os.Exit(1)
+		}
+	} else if err == k8sutil.ErrRunLocal || err == k8sutil.ErrNoNamespace {
+		setupLog.Info("Skipping leader election; not running in a cluster.")
+	} else {
+		setupLog.Error(err, "Failed to get operator namespace")
 		os.Exit(1)
 	}
 
