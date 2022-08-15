@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	machineapi "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
+	machineapi "github.com/openshift/api/machine/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -90,6 +90,7 @@ func (s *machineSetScaler) EnsureScaleDownNodes(c client.Client, nds drain.NodeD
 	}
 
 	for _, ms := range upgradeMachinesets.Items {
+		ms := ms
 		if ms.ObjectMeta.DeletionTimestamp == nil {
 			err = c.Delete(context.TODO(), &ms)
 			if err != nil {
@@ -123,6 +124,7 @@ func (s *machineSetScaler) EnsureScaleDownNodes(c client.Client, nds drain.NodeD
 	//check if upgrade machine are present in the cluster.
 	if len(originalMachines.Items) != 0 {
 		for _, um := range originalMachines.Items {
+			um := um
 			logger.Info(fmt.Sprintf("Found upgrade machines to be terminated :%v", &um))
 		}
 		return false, nil
@@ -282,6 +284,7 @@ func nodesAreReady(c client.Client, timeOut time.Duration, upgradeMachinesets ma
 
 func handleDrainStrategy(c client.Client, nds drain.NodeDrainStrategy, nodes corev1.NodeList, logger logr.Logger) (bool, error) {
 	for _, n := range nodes.Items {
+		n := n
 		res, err := nds.Execute(&n, logger)
 		for _, r := range res {
 			logger.Info(r.Message)
@@ -291,6 +294,7 @@ func handleDrainStrategy(c client.Client, nds drain.NodeDrainStrategy, nodes cor
 		}
 	}
 	for _, n := range nodes.Items {
+		n := n
 		hasFailed, err := nds.HasFailed(&n, logger)
 		if err != nil {
 			return false, err

@@ -12,7 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
+	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/api/v1alpha1"
 	ac "github.com/openshift/managed-upgrade-operator/pkg/availabilitychecks"
 	acMocks "github.com/openshift/managed-upgrade-operator/pkg/availabilitychecks/mocks"
 	cvMocks "github.com/openshift/managed-upgrade-operator/pkg/clusterversion/mocks"

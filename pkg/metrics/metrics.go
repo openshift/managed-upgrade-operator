@@ -15,7 +15,7 @@ import (
 
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/openshift/managed-upgrade-operator/config"
-	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
+	"github.com/openshift/managed-upgrade-operator/pkg/k8sutil"
 	"github.com/prometheus/client_golang/prometheus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -112,7 +112,9 @@ func (mb *metricsBuilder) NewClient(c client.Client) (Metrics, error) {
 	}
 
 	useRoutes := config.UseRoutes()
-	tlsConfig := &tls.Config{}
+	tlsConfig := &tls.Config{
+		MinVersion: tls.VersionTLS12,
+	}
 
 	if !useRoutes {
 		tlsConfig, err = MonitoringTLSConfig(c)

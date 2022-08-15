@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
+	"github.com/openshift/managed-upgrade-operator/api/v1alpha1"
 	"github.com/openshift/managed-upgrade-operator/pkg/ocm"
 	mockOcm "github.com/openshift/managed-upgrade-operator/pkg/ocm/mocks"
 	"github.com/openshift/managed-upgrade-operator/util/mocks"

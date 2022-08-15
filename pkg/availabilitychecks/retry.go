@@ -20,7 +20,7 @@ func retry(attempts int, sleep time.Duration, f func() error) error {
 		}
 
 		if attempts--; attempts > 0 {
-			jitter := time.Duration(rand.Int63n(int64(sleep)))
+			jitter := time.Duration(rand.Int63n(int64(sleep))) //nolint:gosec
 			sleep = sleep + jitter/2
 
 			time.Sleep(sleep)

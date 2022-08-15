@@ -43,7 +43,9 @@ func (ammb *alertManagerMaintenanceBuilder) NewClient(client client.Client) (Mai
 	}
 
 	useRoutes := config.UseRoutes()
-	tlsConfig := &tls.Config{}
+	tlsConfig := &tls.Config{
+		MinVersion: tls.VersionTLS12,
+	}
 
 	if !useRoutes {
 		tlsConfig, err = metrics.MonitoringTLSConfig(client)

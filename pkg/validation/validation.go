@@ -9,9 +9,10 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"runtime"
 	"time"
 
-	"github.com/blang/semver"
+	"github.com/blang/semver/v4"
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
 
@@ -19,7 +20,7 @@ import (
 	"github.com/openshift/cluster-version-operator/pkg/cincinnati"
 	"github.com/openshift/library-go/pkg/image/dockerv1client"
 	imagereference "github.com/openshift/library-go/pkg/image/reference"
-	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
+	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/api/v1alpha1"
 	cv "github.com/openshift/managed-upgrade-operator/pkg/clusterversion"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -408,8 +409,11 @@ func fetchCVOUpdates(cV *configv1.ClusterVersion, uc *upgradev1alpha1.UpgradeCon
 	cvVersion, _ := cv.GetCurrentVersion(cV)
 	parsedCvVersion, _ := semver.Parse(cvVersion)
 
+	transport := &http.Transport{}
+	ctx := context.TODO()
+
 	// Fetch available updates by version in Cincinnati.
-	updates, err := cincinnati.NewClient(clusterId).GetUpdates(upstreamURI.String(), uc.Spec.Desired.Channel, parsedCvVersion)
+	_, updates, _, err := cincinnati.NewClient(clusterId, transport).GetUpdates(ctx, upstreamURI, runtime.GOARCH, uc.Spec.Desired.Channel, parsedCvVersion)
 	if err != nil {
 		return nil, err
 	}
@@ -418,7 +422,7 @@ func fetchCVOUpdates(cV *configv1.ClusterVersion, uc *upgradev1alpha1.UpgradeCon
 		var cvoUpdates []configv1.Update
 		for _, update := range updates {
 			cvoUpdates = append(cvoUpdates, configv1.Update{
-				Version: update.Version.String(),
+				Version: update.Version,
 				Image:   update.Image,
 			})
 		}

@@ -8,7 +8,7 @@ import (
 	"github.com/blang/semver"
 	"github.com/go-logr/logr"
 	configv1 "github.com/openshift/api/config/v1"
-	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
+	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/api/v1alpha1"
 	cv "github.com/openshift/managed-upgrade-operator/pkg/clusterversion"
 
 	"k8s.io/apimachinery/pkg/types"

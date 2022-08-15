@@ -18,8 +18,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
+	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/api/v1alpha1"
 	"github.com/openshift/managed-upgrade-operator/config"
-	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
 	cv "github.com/openshift/managed-upgrade-operator/pkg/clusterversion"
 	"github.com/openshift/managed-upgrade-operator/pkg/configmanager"
 	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
@@ -293,7 +293,7 @@ func readConfigManagerConfig(client client.Client, cfb configmanager.ConfigManag
 // and returns the result.
 // Adapted from https://github.com/kamilsk/retry/blob/v5/jitter/
 func durationWithJitter(t time.Duration, factor float64) time.Duration {
-	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
+	rnd := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 	min := int64(math.Floor(float64(t) * (1 - factor)))
 	max := int64(math.Ceil(float64(t) * (1 + factor)))
 	return time.Duration(rnd.Int63n(max-min) + min)

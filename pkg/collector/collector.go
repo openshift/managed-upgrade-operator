@@ -8,7 +8,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
+	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/api/v1alpha1"
 	cv "github.com/openshift/managed-upgrade-operator/pkg/clusterversion"
 	"github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager"
 )
@@ -342,6 +342,7 @@ func (uc *UpgradeCollector) collectUpgradeConditions(ch chan<- prometheus.Metric
 	// Collect metrics based on observing availble conditions in the target
 	// versions upgrade history.
 	for _, c := range h.Conditions {
+		c := c
 		switch c.Type {
 		case upgradev1alpha1.SendStartedNotification:
 			collectCondition(&c, uc.managedMetrics.sendStartedNotification, upgradeConfig, cvVersion, ch)

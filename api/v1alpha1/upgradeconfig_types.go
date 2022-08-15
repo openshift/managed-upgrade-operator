@@ -149,7 +149,7 @@ const (
 	UpgradePhaseUnknown UpgradePhase = "Unknown"
 )
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
 
 // UpgradeConfig is the Schema for the upgradeconfigs API
 // +kubebuilder:subresource:status
@@ -173,7 +173,7 @@ func (uc *UpgradeConfig) GetPDBDrainTimeoutDuration() time.Duration {
 	return time.Duration(uc.Spec.PDBForceDrainTimeout) * time.Minute
 }
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
 
 // UpgradeConfigList contains a list of UpgradeConfig
 type UpgradeConfigList struct {

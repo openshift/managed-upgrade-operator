@@ -1,11 +1,17 @@
 package scheduler
 
 import (
+	"fmt"
 	"time"
 
-	"github.com/prometheus/common/log"
+	"github.com/go-logr/logr"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
+	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/api/v1alpha1"
+)
+
+var (
+	logger logr.Logger = logf.Log.WithName("scheduler")
 )
 
 // Scheduler is an interface that enables implementations of type Scheduler
@@ -31,7 +37,7 @@ type SchedulerResult struct {
 func (s *scheduler) IsReadyToUpgrade(upgradeConfig *upgradev1alpha1.UpgradeConfig, timeOut time.Duration) SchedulerResult {
 	upgradeTime, err := time.Parse(time.RFC3339, upgradeConfig.Spec.UpgradeAt)
 	if err != nil {
-		log.Error(err, "failed to parse spec.upgradeAt", upgradeConfig.Spec.UpgradeAt)
+		logger.Error(err, "failed to parse spec.upgradeAt", upgradeConfig.Spec.UpgradeAt)
 		return SchedulerResult{IsReady: false, IsBreached: false, TimeUntilUpgrade: 0}
 	}
 	now := time.Now()
@@ -46,6 +52,6 @@ func (s *scheduler) IsReadyToUpgrade(upgradeConfig *upgradev1alpha1.UpgradeConfi
 
 	// It hasn't reached the upgrade window yet
 	pendingTime := upgradeTime.Sub(now)
-	log.Infof("Upgrade is scheduled in %d hours %d mins", int(pendingTime.Hours()), int(pendingTime.Minutes())-(int(pendingTime.Hours())*60))
+	logger.Info(fmt.Sprintf("Upgrade is scheduled in %d hours %d mins", int(pendingTime.Hours()), int(pendingTime.Minutes())-(int(pendingTime.Hours())*60)))
 	return SchedulerResult{IsReady: false, IsBreached: false, TimeUntilUpgrade: pendingTime}
 }

@@ -7,7 +7,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/golang/mock/gomock"
-	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/pkg/apis/upgrade/v1alpha1"
+	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/api/v1alpha1"
 	configMock "github.com/openshift/managed-upgrade-operator/pkg/configmanager/mocks"
 	metricsMock "github.com/openshift/managed-upgrade-operator/pkg/metrics/mocks"
 	"github.com/openshift/managed-upgrade-operator/pkg/notifier"
