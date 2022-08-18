@@ -100,3 +100,10 @@ rules:
   - get
   - list
   - watch
+- apiGroups:
+  - "fileintegrity.openshift.io"
+  resources:
+  - fileintegrities
+  verbs:
+  - get
+  - update
