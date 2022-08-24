@@ -91,7 +91,7 @@ var _ = Describe("PostUpgradeStep", func() {
 			BeforeEach(func() {
 				testConfig.Config.OcmBaseURL = "https://api.openshift.com"
 				testOperatorConfig.Data["config.yaml"] = `
-                  configManager: 
+                  configManager:
                     source: ` + testConfig.Config.Source + `
                     ocmBaseUrl: ` + testConfig.Config.OcmBaseURL
 			})
@@ -111,7 +111,7 @@ var _ = Describe("PostUpgradeStep", func() {
 		BeforeEach(func() {
 			testConfig.Config.Source = "TEST"
 			testOperatorConfig.Data["config.yaml"] = `
-              configManager: 
+              configManager:
                 source: ` + testConfig.Config.Source + `
                 ocmBaseUrl: ` + testConfig.Config.OcmBaseURL
 		})

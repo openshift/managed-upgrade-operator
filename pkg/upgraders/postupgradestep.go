@@ -3,13 +3,8 @@ package upgraders
 import (
 	"context"
 	"fmt"
-	"net/url"
-	"strings"
 
 	"github.com/go-logr/logr"
-	"github.com/openshift/managed-upgrade-operator/config"
-	"gopkg.in/yaml.v2"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -23,63 +18,17 @@ const (
 
 var reinitAnnotation = map[string]string{"file-integrity.openshift.io/re-init": ""}
 
-// ugConfigManager stores the configManager section of the upgradeconfig manager configmap
-type ugConfigManager struct {
-	Source     string `yaml:"source"`
-	OcmBaseURL string `yaml:"ocmBaseUrl"`
-}
-
-// ugConfigManagerSpec stores the config.yaml section of the upgradeconfig manager configmap
-type ugConfigManagerSpec struct {
-	Config ugConfigManager `yaml:"configManager"`
-}
-
 // PostUpgradeProcedures are any misc tasks that are needed to be completed after an upgrade has finished to ensure healthy state
 // Currently the only task is to reinit file integrity operator due to changes that come from upgrades
 func (c *clusterUpgrader) PostUpgradeProcedures(ctx context.Context, logger logr.Logger) (bool, error) {
 
-	frCluster, err := c.frClusterCheck(ctx)
-	if err != nil {
-		return false, err
-	}
-	if !frCluster {
+	if !c.config.Environment.IsFedramp() {
 		logger.Info("Non-FedRAMP environment...skipping PostUpgradeFIOReInit ")
 		return true, nil
 	}
-	err = c.postUpgradeFIOReInit(ctx, logger)
+	err := c.postUpgradeFIOReInit(ctx, logger)
 	if err != nil {
 		return false, err
-	}
-	return true, nil
-}
-
-// frClusterCheck checks to see if the upgrading cluster is a FedRAMP cluster to determine if we need to re-init the File Integrity Operator
-func (c *clusterUpgrader) frClusterCheck(ctx context.Context) (bool, error) {
-	ocmConfig := &corev1.ConfigMap{}
-	err := c.client.Get(context.TODO(), client.ObjectKey{Namespace: config.OperatorNamespace, Name: config.ConfigMapName}, ocmConfig)
-
-	if err != nil {
-		return false, fmt.Errorf("failed to fetch %s config map to parse: %v", config.ConfigMapName, err)
-	}
-
-	var cm ugConfigManagerSpec
-	data := fmt.Sprint(ocmConfig.Data["config.yaml"])
-	err = yaml.Unmarshal([]byte(data), &cm)
-
-	if err != nil {
-		return false, fmt.Errorf("failed to parse %s config map for OCM URL: %v", config.ConfigMapName, err)
-	}
-
-	if cm.Config.Source == "OCM" {
-		ocmBaseUrl, err := url.Parse(cm.Config.OcmBaseURL)
-		if err != nil {
-			return false, fmt.Errorf("failed to parse %s config map for OCM URL: %v", config.ConfigMapName, err)
-		}
-		if !strings.Contains(ocmBaseUrl.Host, frOCMBaseDomain) {
-			return false, nil
-		}
-	} else {
-		return false, nil
 	}
 	return true, nil
 }
