@@ -37,3 +37,5 @@ data:
       - openshift-customer-monitoring
       - openshift-operators
       - openshift-redhat-marketplace
+    environment:
+      fedramp: false

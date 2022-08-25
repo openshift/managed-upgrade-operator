@@ -6,9 +6,6 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/openshift/managed-upgrade-operator/config"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -18,9 +15,8 @@ import (
 var _ = Describe("PostUpgradeStep", func() {
 
 	var (
-		testConfig         *ugConfigManagerSpec
-		testOperatorConfig *corev1.ConfigMap
 		testUpgrader       *clusterUpgrader
+		testUpgraderConfig *upgraderConfig
 		log                logr.Logger
 		testFileIntegrity  *unstructured.Unstructured
 		configClient       *fake.ClientBuilder
@@ -30,25 +26,6 @@ var _ = Describe("PostUpgradeStep", func() {
 	BeforeEach(func() {
 		log = logf.Log.WithName("upgrader-test-logger")
 
-		testConfig = &ugConfigManagerSpec{
-			Config: ugConfigManager{
-				Source:     "OCM",
-				OcmBaseURL: "https://api.openshiftusgov.com",
-			},
-		}
-
-		testOperatorConfig = &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      config.ConfigMapName,
-				Namespace: config.OperatorNamespace,
-			},
-			Data: map[string]string{
-				"config.yaml": `
-                  configManager:
-                    source: ` + testConfig.Config.Source + `
-                    ocmBaseUrl: ` + testConfig.Config.OcmBaseURL,
-			},
-		}
 		testFileIntegrity = &unstructured.Unstructured{}
 		testFileIntegrity.SetGroupVersionKind(schema.GroupVersionKind{
 			Group:   "fileintegrity.openshift.io",
@@ -64,63 +41,35 @@ var _ = Describe("PostUpgradeStep", func() {
 			},
 		}
 
-		configClient = fake.NewClientBuilder().WithRuntimeObjects(testOperatorConfig)
+		configClient = fake.NewClientBuilder()
 		fioClient = fake.NewClientBuilder().WithRuntimeObjects(testFileIntegrity)
 
 	})
 
-	Context("When the managed-upgrade-operator-config Source is OCM", func() {
-		Context("When the OCM Base URL belongs to FedRAMP", func() {
-			It("FIO should be re-initialized", func() {
-				Expect(testConfig.Config.Source).To(Equal("OCM"))
-				Expect(testConfig.Config.OcmBaseURL).To(Equal("https://api.openshiftusgov.com"))
+	Context("When the managed-upgrade-operator-config is configured with fedramp as true", func() {
+		It("FIO should be re-initialized", func() {
+			testUpgraderConfig = &upgraderConfig{Environment: environment{Fedramp: true}}
+			testUpgrader = &clusterUpgrader{client: configClient.Build(), config: testUpgraderConfig}
 
-				testUpgrader = &clusterUpgrader{client: configClient.Build()}
+			isFr := testUpgrader.config.Environment.IsFedramp()
+			Expect(isFr).To(BeTrue())
 
-				isFr, err := testUpgrader.frClusterCheck(context.TODO())
-				Expect(isFr).To(BeTrue())
-				Expect(err).NotTo(HaveOccurred())
-
-				testUpgrader.client = fioClient.Build()
-				err = testUpgrader.postUpgradeFIOReInit(context.TODO(), log)
-				Expect(err).NotTo(HaveOccurred())
-
-			})
-		})
-		Context("When the OCM Base URL does not belong to FedRAMP", func() {
-			BeforeEach(func() {
-				testConfig.Config.OcmBaseURL = "https://api.openshift.com"
-				testOperatorConfig.Data["config.yaml"] = `
-                  configManager:
-                    source: ` + testConfig.Config.Source + `
-                    ocmBaseUrl: ` + testConfig.Config.OcmBaseURL
-			})
-			It("FIO re-init step should be skipped", func() {
-				Expect(testConfig.Config.Source).To(Equal("OCM"))
-				Expect(testConfig.Config.OcmBaseURL).NotTo(Equal("https://api.openshiftusgov.com"))
-
-				testUpgrader = &clusterUpgrader{client: configClient.Build()}
-				isFr, err := testUpgrader.frClusterCheck(context.TODO())
-				Expect(isFr).To(BeFalse())
-				Expect(err).NotTo(HaveOccurred())
-			})
+			testUpgrader.client = fioClient.Build()
+			err := testUpgrader.postUpgradeFIOReInit(context.TODO(), log)
+			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 
-	Context("When the managed-upgrade-operator-config Source is not OCM", func() {
-		BeforeEach(func() {
-			testConfig.Config.Source = "TEST"
-			testOperatorConfig.Data["config.yaml"] = `
-              configManager:
-                source: ` + testConfig.Config.Source + `
-                ocmBaseUrl: ` + testConfig.Config.OcmBaseURL
-		})
-		It("FIO re-init step should be skipped", func() {
-			Expect(testConfig.Config.Source).NotTo(Equal("OCM"))
+	Context("When the managed-upgrade-operator-config is configured with fedramp as false", func() {
+		It("FIO should not be re-initialized", func() {
+			testUpgraderConfig = &upgraderConfig{Environment: environment{Fedramp: false}}
+			testUpgrader = &clusterUpgrader{client: configClient.Build(), config: testUpgraderConfig}
 
-			testUpgrader = &clusterUpgrader{client: configClient.Build()}
-			isFr, err := testUpgrader.frClusterCheck(context.TODO())
+			isFr := testUpgrader.config.Environment.IsFedramp()
 			Expect(isFr).To(BeFalse())
+
+			testUpgrader.client = fioClient.Build()
+			err := testUpgrader.postUpgradeFIOReInit(context.TODO(), log)
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
