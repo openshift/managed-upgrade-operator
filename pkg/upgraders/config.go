@@ -15,6 +15,7 @@ type upgraderConfig struct {
 	HealthCheck                    healthCheck                       `yaml:"healthCheck"`
 	ExtDependencyAvailabilityCheck ac.ExtDependencyAvailabilityCheck `yaml:"extDependencyAvailabilityChecks"`
 	UpgradeWindow                  upgradeWindow                     `yaml:"upgradeWindow"`
+	Environment                    environment                       `yaml:"environment"`
 }
 
 type maintenanceConfig struct {
@@ -95,4 +96,12 @@ func (cfg *upgraderConfig) IsValid() error {
 
 func (cfg *upgraderConfig) GetScaleDuration() time.Duration {
 	return time.Duration(cfg.Scale.TimeOut) * time.Minute
+}
+
+type environment struct {
+	Fedramp bool `yaml:"fedramp"`
+}
+
+func (cfg *environment) IsFedramp() bool {
+	return cfg.Fedramp
 }

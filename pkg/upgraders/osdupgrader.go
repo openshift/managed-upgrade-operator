@@ -77,6 +77,7 @@ func NewOSDUpgrader(c client.Client, cfm configmanager.ConfigManager, mc metrics
 		upgradesteps.Action(string(upgradev1alpha1.RemoveExtraScaledNodes), ou.RemoveExtraScaledNodes),
 		upgradesteps.Action(string(upgradev1alpha1.RemoveMaintWindow), ou.RemoveMaintWindow),
 		upgradesteps.Action(string(upgradev1alpha1.PostClusterHealthCheck), ou.PostUpgradeHealthCheck),
+		upgradesteps.Action(string(upgradev1alpha1.PostUpgradeProcedures), ou.PostUpgradeProcedures),
 		upgradesteps.Action(string(upgradev1alpha1.SendCompletedNotification), ou.SendCompletedNotification),
 	}
 	ou.steps = steps

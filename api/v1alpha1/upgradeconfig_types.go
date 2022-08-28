@@ -125,6 +125,8 @@ const (
 	RemoveMaintWindow UpgradeConditionType = "WorkersMaintenanceWindowRemoved"
 	// PostClusterHealthCheck is an UpgradeConditionType
 	PostClusterHealthCheck UpgradeConditionType = "ClusterHealthyAfterUpgrade"
+	// PostUpgradeProcedures is an UpgradeConditionType
+	PostUpgradeProcedures UpgradeConditionType = "PostUpgradeTasksCompleted"
 	// SendCompletedNotification is an UpgradeConditionType
 	SendCompletedNotification UpgradeConditionType = "CompletedNotificationSent"
 	// IsClusterUpgradable is an UpgradeConditionType
