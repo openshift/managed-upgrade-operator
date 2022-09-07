@@ -414,7 +414,9 @@ func collectCondition(c *upgradev1alpha1.UpgradeCondition, promDesc *prometheus.
 
 func (uc *UpgradeCollector) collectSpec(ucfg *upgradev1alpha1.UpgradeConfig, cvV string, ch chan<- prometheus.Metric) error {
 	h := ucfg.Status.History.GetHistory(ucfg.Spec.Desired.Version)
-
+	if h == nil {
+		return fmt.Errorf("not able to fetch upgrade history")
+	}
 	upgradeTime, err := time.Parse(time.RFC3339, ucfg.Spec.UpgradeAt)
 	if err != nil {
 		return err
@@ -436,13 +438,14 @@ func (uc *UpgradeCollector) collectSpec(ucfg *upgradev1alpha1.UpgradeConfig, cvV
 		cvV,
 		ucfg.Spec.Desired.Version,
 	)
-
 	return nil
 }
 
 func (uc *UpgradeCollector) collectStatus(ucfg *upgradev1alpha1.UpgradeConfig, cvV string, ch chan<- prometheus.Metric) error {
 	h := ucfg.Status.History.GetHistory(ucfg.Spec.Desired.Version)
-
+	if h == nil {
+		return fmt.Errorf("not able to fetch upgrade history")
+	}
 	if h.StartTime != nil {
 		ch <- prometheus.MustNewConstMetric(
 			uc.managedMetrics.startTime,
