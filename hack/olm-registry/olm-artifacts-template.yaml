@@ -60,6 +60,8 @@ objects:
           metadata:
             name: managed-upgrade-operator-og
             namespace: openshift-managed-upgrade-operator
+            annotations:
+              olm.operatorframework.io/exclude-global-namespace-resolution: 'true'
           spec:
             targetNamespaces:
               - openshift-managed-upgrade-operator
@@ -82,7 +84,7 @@ objects:
           - apiGroups:
             - ""
             resources:
-            - configmaps  
+            - configmaps
             - serviceaccounts
             - secrets
             - services
