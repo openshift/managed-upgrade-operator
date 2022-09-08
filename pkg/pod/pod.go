@@ -50,6 +50,7 @@ func DeletePods(c client.Client, logger logr.Logger, pl *corev1.PodList, ignoreA
 			logger.Info(fmt.Sprintf("Applying pod deletion drain strategy to pod %v/%v", p.Namespace, p.Name))
 			err := c.Delete(context.TODO(), &p, options...)
 			if err != nil {
+				logger.Error(err, fmt.Sprintf("failed to delete the pod %v/%v", p.Namespace, p.Name))
 				me = multierror.Append(err, me)
 			} else {
 				podsMarkedForDeletion = append(podsMarkedForDeletion, p.Name)
@@ -84,6 +85,7 @@ func RemoveFinalizersFromPod(c client.Client, logger logr.Logger, pl *corev1.Pod
 
 			err := c.Update(context.TODO(), &p)
 			if err != nil {
+				logger.Error(err, fmt.Sprintf("failed to remove finalizer from the pod %v/%v", p.Namespace, p.Name))
 				me = multierror.Append(err, me)
 			} else {
 				podsWithFinalizersRemoved = append(podsWithFinalizersRemoved, p.Name)

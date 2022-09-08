@@ -1,8 +1,10 @@
 package drain
 
 import (
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"fmt"
 	"time"
+
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
@@ -135,9 +137,28 @@ var _ = Describe("OSD Drain Strategy", func() {
 				[]TimedDrainStrategy{mockTimedDrainOne},
 			}
 			gomock.InOrder(
-				mockMachineryClient.EXPECT().IsNodeCordoned(gomock.Any()).Return(&machinery.IsCordonedResult{IsCordoned: true, AddedAt: nil}),
+				mockMachineryClient.EXPECT().IsNodeCordoned(gomock.Any()).Times(1).Return(&machinery.IsCordonedResult{IsCordoned: true, AddedAt: nil}),
 			)
 			_, err := osdDrain.Execute(&corev1.Node{}, logger)
+			Expect(err).NotTo(BeNil())
+		})
+		It("should return an error if the node drain strategy fails", func() {
+			osdDrain = &osdDrainStrategy{
+				mockKubeClient,
+				mockMachineryClient,
+				&NodeDrain{},
+				[]TimedDrainStrategy{mockTimedDrainOne},
+			}
+			fortyFiveMinsAgo := &metav1.Time{Time: time.Now().Add(-45 * time.Minute)}
+			gomock.InOrder(
+				mockMachineryClient.EXPECT().IsNodeCordoned(gomock.Any()).Return(&machinery.IsCordonedResult{IsCordoned: true, AddedAt: fortyFiveMinsAgo}),
+				mockTimedDrainOne.EXPECT().GetName().Return("test strategy"),
+				mockTimedDrainOne.EXPECT().GetWaitDuration().Return(time.Minute*30).Times(2),
+				mockTimedDrainOne.EXPECT().GetStrategy().Return(mockStrategyOne),
+				mockStrategyOne.EXPECT().Execute(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("fake error")),
+			)
+			_, err := osdDrain.Execute(&corev1.Node{}, logger)
+			Expect(err).To(HaveOccurred())
 			Expect(err).NotTo(BeNil())
 		})
 	})

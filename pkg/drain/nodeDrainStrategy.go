@@ -56,6 +56,9 @@ func (ds *osdDrainStrategy) Execute(node *corev1.Node, logger logr.Logger) ([]*D
 			if isAfter(result.AddedAt, ds.GetWaitDuration()) {
 				logger.Info(fmt.Sprintf("Executing %s", drainStrategyMsg))
 				r, err := ds.GetStrategy().Execute(node, logger)
+				if err != nil {
+					return nil, err
+				}
 				me = multierror.Append(err, me)
 				if r.HasExecuted {
 					res = append(res, &DrainStrategyResult{Message: fmt.Sprintf("Executed %s . Result: %s", drainStrategyMsg, r.Message)})
