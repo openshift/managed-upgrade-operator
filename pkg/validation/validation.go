@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/openshift/managed-upgrade-operator/pkg/configmanager"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -40,7 +41,10 @@ type Validator interface {
 	IsValidUpgradeConfig(c client.Client, uC *upgradev1alpha1.UpgradeConfig, cV *configv1.ClusterVersion, logger logr.Logger) (ValidatorResult, error)
 }
 
-type validator struct{}
+type validator struct {
+	// Indicates that Cincinnati version validation should be performed
+	Cincinnati bool
+}
 
 // ValidatorResult returns a type that enables validation of upgradeconfigs
 type ValidatorResult struct {
@@ -121,8 +125,28 @@ func (v *validator) IsValidUpgradeConfig(c client.Client, uC *upgradev1alpha1.Up
 		return validationPassed, nil
 	}
 
-	// Validate spec.desired.version and spec.desired.channel together when the image is absent
-	if ucVersion != "" && ucChannel != "" {
+	// If there's no version and channel either, this is invalid
+	if ucVersion == "" && ucChannel == "" {
+		// Return invalid by default
+		return ValidatorResult{
+			IsValid:           false,
+			IsAvailableUpdate: false,
+			Message:           "Not able to validate the upgrade config, either image or (channel + version) needs to be provided",
+		}, nil
+	}
+
+	// For all versions, first verify it's an actual upgrade and not a same-version or downgrade
+	versionValid, versionAvailable, err := versionValidation(ucVersion, cV, logger)
+	if err != nil {
+		return ValidatorResult{
+			IsValid:           versionValid,
+			IsAvailableUpdate: versionAvailable,
+			Message:           err.Error(),
+		}, err
+	}
+
+	// For y-stream upgrades only, verify the upgrade edge in Cincinnati
+	if v.Cincinnati && ucChannel != cV.Spec.Channel {
 		cvoUpdates, err := fetchCVOUpdates(cV, uC)
 		if err != nil {
 			return ValidatorResult{
@@ -139,23 +163,24 @@ func (v *validator) IsValidUpgradeConfig(c client.Client, uC *upgradev1alpha1.Up
 				Message:           err.Error(),
 			}, err
 		}
-		versionValid, versionAvailable, err := versionValidation(ucVersion, cV, logger)
-		if err != nil {
+	} else {
+		// Just check that CVO reports it as an available update
+		updateAvailable := false
+		for _, update := range cV.Status.AvailableUpdates {
+			if update.Version == uC.Spec.Desired.Version {
+				updateAvailable = true
+			}
+		}
+		if !updateAvailable {
 			return ValidatorResult{
-				IsValid:           versionValid,
-				IsAvailableUpdate: versionAvailable,
-				Message:           err.Error(),
+				IsValid:           false,
+				IsAvailableUpdate: false,
+				Message:           fmt.Sprintf("version %s not found in clusterversion AvailableUpdates", uC.Spec.Desired.Version),
 			}, err
 		}
-		return validationPassed, nil
 	}
 
-	// Return invalid by default
-	return ValidatorResult{
-		IsValid:           false,
-		IsAvailableUpdate: false,
-		Message:           "Not able to validate the upgrade config, either image or (channel + version) needs to be provided",
-	}, nil
+	return validationPassed, nil
 }
 
 // compareVersions accepts desiredVersion and currentVersion strings as versions, converts
@@ -191,7 +216,7 @@ func getUpstreamURL(cV *configv1.ClusterVersion) string {
 // ValidationBuilder is a interface that enables ValidationBuiler implementations
 //go:generate mockgen -destination=mocks/mockValidationBuilder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/validation ValidationBuilder
 type ValidationBuilder interface {
-	NewClient() (Validator, error)
+	NewClient(configmanager.ConfigManager) (Validator, error)
 }
 
 // validationBuilder is an empty struct that enables instantiation of this type and its
@@ -199,8 +224,16 @@ type ValidationBuilder interface {
 type validationBuilder struct{}
 
 // NewClient returns a Validator interface or an error if one occurs.
-func (vb *validationBuilder) NewClient() (Validator, error) {
-	return &validator{}, nil
+func (vb *validationBuilder) NewClient(cfm configmanager.ConfigManager) (Validator, error) {
+	cfg := &ValidationConfig{}
+	err := cfm.Into(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	return &validator{
+		Cincinnati: cfg.Validation.Cincinnati,
+	}, nil
 }
 
 // fetchImageVersion function returns the image version from the image digest

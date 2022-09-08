@@ -43,6 +43,30 @@ If this field is not present or is an empty value, the ARO upgrader is used by d
 
 Please refer to the doc [`configmanager`](./configmanager.md)
 
+#### validation
+
+| Key        | Description                                                             |
+|------------|-------------------------------------------------------------------------|
+| cincinnati | Use Cincinnati to validate upgrade hops during UpgradeConfig validation |
+
+Example:
+```
+    validation:
+      cincinnati: true
+```
+
+#### environment
+
+| Key     | Description                                |
+|---------|--------------------------------------------|
+| fedramp | MUO is deployed into a Fedramp environment |
+
+Example:
+```
+    environment:
+      fedramp: true
+```
+
 #### maintenance
 
 | Key | Description |
