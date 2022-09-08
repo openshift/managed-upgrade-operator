@@ -104,6 +104,20 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 	case upgradev1alpha1.UpgradePhaseNew, upgradev1alpha1.UpgradePhasePending:
 		reqLogger.Info("Validating UpgradeConfig")
 
+		// Set up the ConfigManager and load MUO config
+		target := muocfg.CMTarget{Namespace: request.Namespace}
+		cmTarget, err := target.NewCMTarget()
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+
+		cfm := r.ConfigManagerBuilder.New(r.Client, cmTarget)
+		cfg := &config{}
+		err = cfm.Into(cfg)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+
 		// Get current ClusterVersion
 		cvClient := r.CvClientBuilder.New(r.Client)
 		clusterVersion, err := cvClient.GetClusterVersion()
@@ -112,7 +126,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 		}
 
 		// Build a Validator
-		validator, err := r.ValidationBuilder.NewClient()
+		validator, err := r.ValidationBuilder.NewClient(cfm)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -131,19 +145,6 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 			return reconcile.Result{}, nil
 		}
 		reqLogger.Info("UpgradeConfig validated and confirmed for upgrade.")
-
-		target := muocfg.CMTarget{Namespace: request.Namespace}
-		cmTarget, err := target.NewCMTarget()
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-
-		cfm := r.ConfigManagerBuilder.New(r.Client, cmTarget)
-		cfg := &config{}
-		err = cfm.Into(cfg)
-		if err != nil {
-			return reconcile.Result{}, err
-		}
 
 		reqLogger.Info(fmt.Sprintf("Checking if cluster can commence %s upgrade.", instance.Spec.Type))
 		schedulerResult := r.Scheduler.IsReadyToUpgrade(instance, cfg.GetUpgradeWindowTimeOutDuration())

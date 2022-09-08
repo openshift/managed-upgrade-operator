@@ -6,6 +6,7 @@ package mocks
 
 import (
 	gomock "github.com/golang/mock/gomock"
+	configmanager "github.com/openshift/managed-upgrade-operator/pkg/configmanager"
 	validation "github.com/openshift/managed-upgrade-operator/pkg/validation"
 	reflect "reflect"
 )
@@ -34,16 +35,16 @@ func (m *MockValidationBuilder) EXPECT() *MockValidationBuilderMockRecorder {
 }
 
 // NewClient mocks base method
-func (m *MockValidationBuilder) NewClient() (validation.Validator, error) {
+func (m *MockValidationBuilder) NewClient(arg0 configmanager.ConfigManager) (validation.Validator, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "NewClient")
+	ret := m.ctrl.Call(m, "NewClient", arg0)
 	ret0, _ := ret[0].(validation.Validator)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // NewClient indicates an expected call of NewClient
-func (mr *MockValidationBuilderMockRecorder) NewClient() *gomock.Call {
+func (mr *MockValidationBuilderMockRecorder) NewClient(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewClient", reflect.TypeOf((*MockValidationBuilder)(nil).NewClient))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewClient", reflect.TypeOf((*MockValidationBuilder)(nil).NewClient), arg0)
 }

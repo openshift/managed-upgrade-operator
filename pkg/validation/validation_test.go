@@ -272,4 +272,15 @@ var _ = Describe("Validation of UpgradeConfig CR", func() {
 		})
 	})
 
+	Context("When there is no upgrade version information in the UpgradeConfig", func() {
+		It("should return an error", func() {
+			// Set UpgradeAt as non RFC3339 format
+			testUpgradeConfig.Spec.Desired.Image = ""
+			testUpgradeConfig.Spec.Desired.Version = ""
+			testUpgradeConfig.Spec.Desired.Channel = ""
+
+			result, _ := testValidator.IsValidUpgradeConfig(testClient, testUpgradeConfig, testClusterVersion, testLogger)
+			Expect(result.IsValid).Should(BeFalse())
+		})
+	})
 })
