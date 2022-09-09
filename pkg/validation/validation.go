@@ -163,8 +163,10 @@ func (v *validator) IsValidUpgradeConfig(c client.Client, uC *upgradev1alpha1.Up
 				Message:           err.Error(),
 			}, err
 		}
-	} else {
-		// Just check that CVO reports it as an available update
+	}
+
+	// For z-stream upgrades only, verify that CVO knows about the version already
+	if ucChannel == cV.Spec.Channel {
 		updateAvailable := false
 		for _, update := range cV.Status.AvailableUpdates {
 			if update.Version == uC.Spec.Desired.Version {
