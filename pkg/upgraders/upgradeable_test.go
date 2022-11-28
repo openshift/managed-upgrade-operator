@@ -2,7 +2,6 @@ package upgraders
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -91,7 +90,7 @@ var _ = Describe("UpgradableCheckStep", func() {
 					{
 						Type:    configv1.OperatorUpgradeable,
 						Status:  configv1.ConditionFalse,
-						Reason:  "IsClusterUpgradable not done",
+						Reason:  "AdminAckRequired",
 						Message: "Kubernetes 1.22 and therefore OpenShift 4.9 remove several APIs which require admin consideration. Please see the knowledge article https://access.redhat.com/articles/6329921 for details and instructions.",
 					},
 				},
@@ -130,26 +129,9 @@ var _ = Describe("UpgradableCheckStep", func() {
 					)
 					result, err := upgrader.IsUpgradeable(context.TODO(), logger)
 					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).Should(MatchRegexp(fmt.Sprintf("Cluster upgrade maintenance to version .* has been cancelled due to unacknowledged user actions. See https://access.redhat.com/solutions/%d for more details.", kbArticleNumber)))
+					Expect(err.Error()).Should(MatchRegexp("Cluster upgrade to version .* has been cancelled: AdminAckRequired: Kubernetes 1.22 and therefore OpenShift 4.9 remove several APIs which require admin consideration. Please see the knowledge article https://access.redhat.com/articles/6329921 for details and instructions."))
 					Expect(result).To(BeFalse())
 				},
-
-				Entry("OSD case", &configv1.Infrastructure{}, upgradeCancelledArticleNumberForOSD),
-				Entry("ROSA case",
-					&configv1.Infrastructure{
-						Status: configv1.InfrastructureStatus{
-							PlatformStatus: &configv1.PlatformStatus{
-								AWS: &configv1.AWSPlatformStatus{
-									ResourceTags: []configv1.AWSResourceTag{{
-										Key: "red-hat-clustertype",
-										Value: "rosa",
-									}},
-								},
-							},
-						},
-					},
-					upgradeCancelledArticleNumberForROSA,
-				),
 			)
 		})
 
@@ -161,7 +143,6 @@ var _ = Describe("UpgradableCheckStep", func() {
 				gomock.InOrder(
 					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
 					mockCVClient.EXPECT().GetClusterVersion().Return(currentClusterVersion, nil),
-					mockKubeClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Name: "cluster"}, gomock.Any()),
 				)
 				result, err := upgrader.IsUpgradeable(context.TODO(), logger)
 				Expect(err).ToNot(HaveOccurred())
@@ -177,7 +158,6 @@ var _ = Describe("UpgradableCheckStep", func() {
 				gomock.InOrder(
 					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
 					mockCVClient.EXPECT().GetClusterVersion().Return(currentClusterVersion, nil),
-					mockKubeClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Name: "cluster"}, gomock.Any()),
 				)
 				result, err := upgrader.IsUpgradeable(context.TODO(), logger)
 				Expect(err).ToNot(HaveOccurred())
