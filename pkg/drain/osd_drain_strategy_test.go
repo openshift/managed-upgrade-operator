@@ -9,7 +9,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
+	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/openshift/managed-upgrade-operator/pkg/machinery"
@@ -288,13 +288,13 @@ var _ = Describe("OSD Drain Strategy", func() {
 				pdbPodName  = "test-pdb-pod"
 				pdbAppKey   = "app"
 				pdbAppValue = "app1"
-				pdbList     *policyv1beta1.PodDisruptionBudgetList
+				pdbList     *policyv1.PodDisruptionBudgetList
 			)
 			BeforeEach(func() {
-				pdbList = &policyv1beta1.PodDisruptionBudgetList{
-					Items: []policyv1beta1.PodDisruptionBudget{
+				pdbList = &policyv1.PodDisruptionBudgetList{
+					Items: []policyv1.PodDisruptionBudget{
 						{
-							Spec: policyv1beta1.PodDisruptionBudgetSpec{
+							Spec: policyv1.PodDisruptionBudgetSpec{
 								Selector: &metav1.LabelSelector{
 									MatchLabels: map[string]string{
 										pdbAppKey: pdbAppValue,
@@ -303,7 +303,7 @@ var _ = Describe("OSD Drain Strategy", func() {
 							},
 						},
 						{
-							Spec: policyv1beta1.PodDisruptionBudgetSpec{
+							Spec: policyv1.PodDisruptionBudgetSpec{
 								Selector: &metav1.LabelSelector{
 									MatchLabels: map[string]string{
 										"non-existent-pod-selector": "",

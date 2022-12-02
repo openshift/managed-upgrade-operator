@@ -5,6 +5,7 @@
 package mocks
 
 import (
+	logr "github.com/go-logr/logr"
 	gomock "github.com/golang/mock/gomock"
 	v1alpha1 "github.com/openshift/managed-upgrade-operator/api/v1alpha1"
 	drain "github.com/openshift/managed-upgrade-operator/pkg/drain"
@@ -36,16 +37,16 @@ func (m *MockNodeDrainStrategyBuilder) EXPECT() *MockNodeDrainStrategyBuilderMoc
 }
 
 // NewNodeDrainStrategy mocks base method
-func (m *MockNodeDrainStrategyBuilder) NewNodeDrainStrategy(arg0 client.Client, arg1 *v1alpha1.UpgradeConfig, arg2 *drain.NodeDrain) (drain.NodeDrainStrategy, error) {
+func (m *MockNodeDrainStrategyBuilder) NewNodeDrainStrategy(arg0 client.Client, arg1 logr.Logger, arg2 *v1alpha1.UpgradeConfig, arg3 *drain.NodeDrain) (drain.NodeDrainStrategy, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "NewNodeDrainStrategy", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "NewNodeDrainStrategy", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(drain.NodeDrainStrategy)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // NewNodeDrainStrategy indicates an expected call of NewNodeDrainStrategy
-func (mr *MockNodeDrainStrategyBuilderMockRecorder) NewNodeDrainStrategy(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockNodeDrainStrategyBuilderMockRecorder) NewNodeDrainStrategy(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewNodeDrainStrategy", reflect.TypeOf((*MockNodeDrainStrategyBuilder)(nil).NewNodeDrainStrategy), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewNodeDrainStrategy", reflect.TypeOf((*MockNodeDrainStrategyBuilder)(nil).NewNodeDrainStrategy), arg0, arg1, arg2, arg3)
 }

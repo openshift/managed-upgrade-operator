@@ -100,7 +100,7 @@ func (r *ReconcileNodeKeeper) Reconcile(ctx context.Context, request reconcile.R
 		return reconcile.Result{}, err
 	}
 
-	drainStrategy, err := r.DrainstrategyBuilder.NewNodeDrainStrategy(r.Client, uc, &cfg.NodeDrain)
+	drainStrategy, err := r.DrainstrategyBuilder.NewNodeDrainStrategy(r.Client, reqLogger, uc, &cfg.NodeDrain)
 	if err != nil {
 		reqLogger.Error(err, "Error while executing drain.")
 		return reconcile.Result{}, err
