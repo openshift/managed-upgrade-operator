@@ -5,7 +5,8 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
+	policyv1 "k8s.io/api/policy/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/go-logr/logr"
@@ -15,12 +16,14 @@ import (
 )
 
 // NodeDrainStrategyBuilder enables implementation for a NodeDrainStrategyBuilder
+//
 //go:generate mockgen -destination=mocks/nodeDrainStrategyBuilder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/drain NodeDrainStrategyBuilder
 type NodeDrainStrategyBuilder interface {
-	NewNodeDrainStrategy(c client.Client, uc *upgradev1alpha1.UpgradeConfig, cfg *NodeDrain) (NodeDrainStrategy, error)
+	NewNodeDrainStrategy(c client.Client, logger logr.Logger, uc *upgradev1alpha1.UpgradeConfig, cfg *NodeDrain) (NodeDrainStrategy, error)
 }
 
 // NodeDrainStrategy enables implementation for a NodeDrainStrategy
+//
 //go:generate mockgen -destination=mocks/nodeDrainStrategy.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/drain NodeDrainStrategy
 type NodeDrainStrategy interface {
 	Execute(*corev1.Node, logr.Logger) ([]*DrainStrategyResult, error)
@@ -28,6 +31,7 @@ type NodeDrainStrategy interface {
 }
 
 // DrainStrategy enables implementation for a DrainStrategy
+//
 //go:generate mockgen -destination=./drainStrategyMock.go -package=drain -self_package=github.com/openshift/managed-upgrade-operator/pkg/drain github.com/openshift/managed-upgrade-operator/pkg/drain DrainStrategy
 type DrainStrategy interface {
 	Execute(*corev1.Node, logr.Logger) (*DrainStrategyResult, error)
@@ -35,6 +39,7 @@ type DrainStrategy interface {
 }
 
 // TimedDrainStrategy enables implementation for a TimedDrainStrategy
+//
 //go:generate mockgen -destination=./timedDrainStrategyMock.go -package=drain -self_package=github.com/openshift/managed-upgrade-operator/pkg/drain github.com/openshift/managed-upgrade-operator/pkg/drain TimedDrainStrategy
 type TimedDrainStrategy interface {
 	GetWaitDuration() time.Duration
@@ -60,11 +65,15 @@ func newTimedStrategy(name string, description string, waitDuration time.Duratio
 }
 
 // NewNodeDrainStrategy returns a NodeDrainStrategy
-func (dsb *drainStrategyBuilder) NewNodeDrainStrategy(c client.Client, uc *upgradev1alpha1.UpgradeConfig, cfg *NodeDrain) (NodeDrainStrategy, error) {
-	pdbList := &policyv1beta1.PodDisruptionBudgetList{}
+func (dsb *drainStrategyBuilder) NewNodeDrainStrategy(c client.Client, logger logr.Logger, uc *upgradev1alpha1.UpgradeConfig, cfg *NodeDrain) (NodeDrainStrategy, error) {
+	pdbList := &policyv1.PodDisruptionBudgetList{}
 	err := c.List(context.TODO(), pdbList)
 	if err != nil {
-		return nil, err
+		if apierrors.IsNotFound(err) {
+			logger.Info("unable to list PodDisruptionBudgets/v1")
+		} else {
+			return nil, err
+		}
 	}
 
 	defaultOsdPodPredicates := []pod.PodPredicate{isNotDaemonSet}

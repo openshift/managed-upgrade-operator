@@ -67,7 +67,7 @@ func (c *clusterUpgrader) RemoveExtraScaledNodes(ctx context.Context, logger log
 		return false, configErr
 	}
 
-	nds, err := c.drainstrategyBuilder.NewNodeDrainStrategy(c.client, c.upgradeConfig, &c.config.NodeDrain)
+	nds, err := c.drainstrategyBuilder.NewNodeDrainStrategy(c.client, logger, c.upgradeConfig, &c.config.NodeDrain)
 	if err != nil {
 		return false, err
 	}
