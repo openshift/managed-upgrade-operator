@@ -430,7 +430,7 @@ func (c *Counter) IsClusterVersionAtVersion(version string) (bool, error) {
 func (c *Counter) AlertsFromUpgrade(upgradeStart time.Time, upgradeEnd time.Time) ([]string, error) {
 	timeSinceUpgrade := time.Since(upgradeEnd).Truncate(time.Second)
 	upgradeDuration := upgradeEnd.Sub(upgradeStart)
-	cpMetrics, err := c.Query(fmt.Sprintf(`max_over_time(ALERTS{alertstate="firing",severity="critical",alertname=~"%s"}[%s] offset %s)`, strings.Join(pagingAlerts, "|"), upgradeDuration.String(), timeSinceUpgrade.String()))
+	cpMetrics, err := c.Query(fmt.Sprintf(`sum by (alertname) (max_over_time(ALERTS{alertstate="firing",severity="critical",alertname=~"%s"}[%s] offset %s))`, strings.Join(pagingAlerts, "|"), upgradeDuration.String(), timeSinceUpgrade.String()))
 	if err != nil {
 		return []string{}, err
 	}
