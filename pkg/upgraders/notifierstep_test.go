@@ -3,14 +3,11 @@ package upgraders
 import (
 	"context"
 	"fmt"
-	"time"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -135,82 +132,6 @@ var _ = Describe("NotifierStep", func() {
 			result, err := upgrader.SendCompletedNotification(context.TODO(), logger)
 			Expect(err).To(HaveOccurred())
 			Expect(result).To(BeFalse())
-		})
-	})
-
-	Context("When running the send-delayed-notification phase", func() {
-		Context("when the upgrade hasn't yet started", func() {
-			Context("when the upgrade is delayed", func() {
-				BeforeEach(func() {
-					upgradeConfig.Status.History = []upgradev1alpha1.UpgradeHistory{
-						{
-							Version:   upgradeConfig.Spec.Desired.Version,
-							Phase:     upgradev1alpha1.UpgradePhaseUpgrading,
-							StartTime: &metav1.Time{Time: time.Now().Add(-1 * time.Hour)},
-						},
-					}
-				})
-				Context("when the delay trigger is 0", func() {
-					BeforeEach(func() {
-						config.UpgradeWindow.DelayTrigger = 0
-					})
-					It("will not notify as delayed", func() {
-						gomock.InOrder(
-							mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
-						)
-						result, err := upgrader.UpgradeDelayedCheck(context.TODO(), logger)
-						Expect(err).NotTo(HaveOccurred())
-						Expect(result).To(BeTrue())
-					})
-				})
-				It("will send a notification", func() {
-					gomock.InOrder(
-						mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
-						mockEMClient.EXPECT().Notify(notifier.MuoStateDelayed).Return(nil),
-					)
-					result, err := upgrader.UpgradeDelayedCheck(context.TODO(), logger)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(result).To(BeTrue())
-				})
-				It("will fail if a notification can't be sent", func() {
-					fakeError := fmt.Errorf("fake error")
-					gomock.InOrder(
-						mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
-						mockEMClient.EXPECT().Notify(notifier.MuoStateDelayed).Return(fakeError),
-					)
-					result, err := upgrader.UpgradeDelayedCheck(context.TODO(), logger)
-					Expect(err).To(HaveOccurred())
-					Expect(result).To(BeFalse())
-				})
-			})
-			Context("when the upgrade is not delayed", func() {
-				BeforeEach(func() {
-					upgradeConfig.Status.History = []upgradev1alpha1.UpgradeHistory{
-						{
-							Version:   upgradeConfig.Spec.Desired.Version,
-							Phase:     upgradev1alpha1.UpgradePhaseUpgrading,
-							StartTime: &metav1.Time{Time: time.Now()},
-						},
-					}
-				})
-				It("will not send a notification", func() {
-					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil)
-					result, err := upgrader.UpgradeDelayedCheck(context.TODO(), logger)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(result).To(BeTrue())
-				})
-			})
-		})
-		Context("when the upgrade has started", func() {
-			BeforeEach(func() {
-				upgradeConfig.Spec.UpgradeAt = time.Now().Add(-1 * time.Hour).Format(time.RFC3339)
-			})
-			It("will not send a notification", func() {
-				mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(true, nil)
-				result, err := upgrader.UpgradeDelayedCheck(context.TODO(), logger)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(result).To(BeTrue())
-			})
 		})
 	})
 })
