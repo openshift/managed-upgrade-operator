@@ -394,6 +394,7 @@ func (c *Counter) ResetFailureMetrics() {
 		metricUpgradeControlPlaneTimeout,
 		metricUpgradeWorkerTimeout,
 		metricNodeDrainFailed,
+		metricUpgradeNotification,
 	}
 	for _, m := range failureMetricsList {
 		m.Reset()
