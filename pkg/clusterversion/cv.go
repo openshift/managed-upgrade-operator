@@ -305,6 +305,8 @@ func (c *clusterVersionClient) runUpgradeWithChannelVersion(cv *configv1.Cluster
 
 	// The CVO may need time sync the version before launching the upgrade
 	updateAvailable := false
+	// to upgrade to a version that is not recommended we must set the image
+	image := ""
 	for _, update := range cv.Status.AvailableUpdates {
 		if update.Version == desired.Version && update.Image != "" {
 			updateAvailable = true
@@ -314,6 +316,7 @@ func (c *clusterVersionClient) runUpgradeWithChannelVersion(cv *configv1.Cluster
 	for _, update := range cv.Status.ConditionalUpdates {
 		if update.Release.Version == desired.Version && update.Release.Image != "" {
 			updateAvailable = true
+			image = update.Release.Image
 		}
 	}
 	if !updateAvailable {
@@ -323,6 +326,9 @@ func (c *clusterVersionClient) runUpgradeWithChannelVersion(cv *configv1.Cluster
 
 	cv.Spec.Overrides = []configv1.ComponentOverride{}
 	desiredVersion := []byte(fmt.Sprintf(`{"spec":{"desiredUpdate":{"version":"%s","image":null}}}`, desired.Version))
+	if image != "" {
+		desiredVersion = []byte(fmt.Sprintf(`{"spec":{"desiredUpdate":{"version":"%s","image":"%s"}}}`, desired.Version, image))
+	}
 	err := c.client.Patch(context.TODO(), cv, client.RawPatch(types.MergePatchType, desiredVersion))
 	if err != nil {
 		return false, err

@@ -86,6 +86,42 @@ var _ = Describe("ClusterVersion client and utils", func() {
 		})
 
 		Context("When setting the ClusterVersions version", func() {
+			Context("When the version is conditional", func() {
+				It("Updates the cluster's update image", func() {
+					clusterVersion := configv1.ClusterVersion{
+						Spec: configv1.ClusterVersionSpec{
+							Channel:       upgradeConfig.Spec.Desired.Channel,
+							DesiredUpdate: nil,
+						},
+						Status: configv1.ClusterVersionStatus{
+							ConditionalUpdates: []configv1.ConditionalUpdate{
+								{
+									Release: configv1.Release{
+										Version: upgradeConfig.Spec.Desired.Version,
+										Image:   "quay.io/this-doesnt-exist",
+									},
+								},
+							},
+						},
+					}
+
+					versionPatch := client.RawPatch(types.MergePatchType, []byte(fmt.Sprintf(`{"spec":{"desiredUpdate":{"version":"%s","image":"%s"}}}`, upgradeConfig.Spec.Desired.Version, clusterVersion.Status.ConditionalUpdates[0].Release.Image)))
+					gomock.InOrder(
+						mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, clusterVersion).Return(nil),
+						mockKubeClient.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+							func(ctx context.Context, cv *configv1.ClusterVersion, p client.Patch, po ...client.PatchOption) error {
+								Expect(reflect.DeepEqual(p, versionPatch)).To(BeTrue())
+								return nil
+							}),
+					)
+					isCompleted, err := cvClient.EnsureDesiredConfig(upgradeConfig)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(isCompleted).To(BeTrue())
+				})
+			})
+		})
+
+		Context("When setting the ClusterVersions version", func() {
 			Context("When the cluster is not on the same channel as the UpgradeConfig", func() {
 				It("Updates the cluster's update channel", func() {
 					clusterVersion := configv1.ClusterVersion{
