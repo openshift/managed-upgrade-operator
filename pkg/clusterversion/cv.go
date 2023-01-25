@@ -310,6 +310,12 @@ func (c *clusterVersionClient) runUpgradeWithChannelVersion(cv *configv1.Cluster
 			updateAvailable = true
 		}
 	}
+	// CIS managed conditional risks we accept, MUO must permit any conditional update
+	for _, update := range cv.Status.ConditionalUpdates {
+		if update.Release.Version == desired.Version && update.Release.Image != "" {
+			updateAvailable = true
+		}
+	}
 	if !updateAvailable {
 		logger.Info(fmt.Sprintf("clusterversion does not have desired version %s in its AvailableUpdates, will not continue", desired.Version))
 		return false, nil
