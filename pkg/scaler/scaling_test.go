@@ -18,7 +18,7 @@ import (
 	mockDrain "github.com/openshift/managed-upgrade-operator/pkg/drain/mocks"
 	"github.com/openshift/managed-upgrade-operator/util/mocks"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
