@@ -5,13 +5,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/openshift/managed-upgrade-operator/pkg/configmanager"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
 	"runtime"
 	"time"
+
+	"github.com/openshift/managed-upgrade-operator/pkg/configmanager"
 
 	"github.com/blang/semver/v4"
 	"github.com/go-logr/logr"
@@ -168,16 +169,26 @@ func (v *validator) IsValidUpgradeConfig(c client.Client, uC *upgradev1alpha1.Up
 	// For z-stream upgrades only, verify that CVO knows about the version already
 	if ucChannel == cV.Spec.Channel {
 		updateAvailable := false
+		// Check if the version is in the AvailableUpdates list
 		for _, update := range cV.Status.AvailableUpdates {
 			if update.Version == uC.Spec.Desired.Version {
 				updateAvailable = true
 			}
 		}
+		// Check if the version is in the ConditionalUpdates list if the version wasn't found in AvailableUpdates
+		if !updateAvailable {
+			for _, update := range cV.Status.ConditionalUpdates {
+				if update.Release.Version == uC.Spec.Desired.Version {
+					updateAvailable = true
+				}
+			}
+		}
+		// If the version isn't in either list, then it's not a valid upgrade
 		if !updateAvailable {
 			return ValidatorResult{
 				IsValid:           false,
 				IsAvailableUpdate: false,
-				Message:           fmt.Sprintf("version %s not found in clusterversion AvailableUpdates", uC.Spec.Desired.Version),
+				Message:           fmt.Sprintf("version %s not found in clusterversion available or conditional updates", uC.Spec.Desired.Version),
 			}, err
 		}
 	}
@@ -377,24 +388,24 @@ func versionValidation(ucVersion string, cV *configv1.ClusterVersion, logger log
 	parsedUcVersion, err := semver.Parse(ucVersion)
 	if err != nil {
 		logger.Error(err, fmt.Sprintf("failed to parse upgrade config desired version %s as semver", ucVersion))
-		return false, false, err
+		return false, false, fmt.Errorf("failed to parse upgrade config desired version %s as semver: %w", ucVersion, err)
 	}
 
 	cvVersion, err := cv.GetCurrentVersion(cV)
 	if err != nil {
 		logger.Error(err, "failed to get current cluster version during validation")
-		return false, false, err
+		return false, false, fmt.Errorf("failed to get current cluster version during validation: %w", err)
 	}
 	parsedCvVersion, err := semver.Parse(cvVersion)
 	if err != nil {
-		logger.Error(err, fmt.Sprintf("Failed to parse current cluster version %s as semver", cvVersion))
-		return false, false, err
+		logger.Error(err, fmt.Sprintf("failed to parse current cluster version %s as semver", cvVersion))
+		return false, false, fmt.Errorf("failed to parse current cluster version %s as semver: %w", cvVersion, err)
 	}
 
 	// Compare versions to ascertain if upgrade should proceed.
 	versionComparison, err := compareVersions(parsedUcVersion, parsedCvVersion, logger)
 	if err != nil {
-		return false, false, err
+		return false, false, fmt.Errorf("failed to compare versions: %w", err)
 	}
 	switch versionComparison {
 	case VersionUnknown:

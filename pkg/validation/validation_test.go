@@ -110,6 +110,58 @@ var _ = Describe("Validation of UpgradeConfig CR", func() {
 				Expect(err).ShouldNot(BeNil())
 				Expect(result.IsValid).Should(BeFalse())
 			})
+			It("Version available in AvailableUpdates", func() {
+				testUpgradeConfig.Spec.Desired.Version = "4.4.4"
+				testUpgradeConfig.Spec.Desired.Channel = "stable-4.4"
+				testClusterVersion.Spec.Channel = "stable-4.4"
+				testClusterVersion.Status.AvailableUpdates = []configv1.Release{
+					{
+						Version: "4.4.4",
+						Image:   "quay.io/openshift-release-dev/ocp-release@sha256:1234567890abcdef",
+						URL:     "",
+						Channels: []string{
+							"stable-4.4",
+						},
+					},
+				}
+				testClusterVersion.Status.History[0].Version = "4.4.3"
+				testClusterVersion.Status.History[1].Version = "4.4.2"
+				result, err := testValidator.IsValidUpgradeConfig(testClient, testUpgradeConfig, testClusterVersion, testLogger)
+				Expect(err).Should(BeNil())
+				Expect(result.IsValid).Should(BeTrue())
+			})
+			It("Version available in ConditionalUpdates", func() {
+				testUpgradeConfig.Spec.Desired.Version = "4.4.4"
+				testUpgradeConfig.Spec.Desired.Channel = "stable-4.4"
+				testClusterVersion.Spec.Channel = "stable-4.4"
+				testClusterVersion.Status.ConditionalUpdates = []configv1.ConditionalUpdate{
+					{
+						Release: configv1.Release{
+							Version: "4.4.4",
+							Channels: []string{
+								"stable-4.4",
+							},
+						},
+						Risks:      []configv1.ConditionalUpdateRisk{},
+						Conditions: []v1.Condition{},
+					},
+				}
+				testClusterVersion.Status.History[0].Version = "4.4.3"
+				testClusterVersion.Status.History[1].Version = "4.4.2"
+				result, err := testValidator.IsValidUpgradeConfig(testClient, testUpgradeConfig, testClusterVersion, testLogger)
+				Expect(err).Should(BeNil())
+				Expect(result.IsValid).Should(BeTrue())
+			})
+			It("z-stream version not available", func() {
+				testUpgradeConfig.Spec.Desired.Version = "4.4.4"
+				testUpgradeConfig.Spec.Desired.Channel = "stable-4.4"
+				testClusterVersion.Spec.Channel = "stable-4.4"
+				testClusterVersion.Status.History[0].Version = "4.4.3"
+				testClusterVersion.Status.History[1].Version = "4.4.2"
+				result, err := testValidator.IsValidUpgradeConfig(testClient, testUpgradeConfig, testClusterVersion, testLogger)
+				Expect(err).Should(BeNil())
+				Expect(result.IsValid).Should(BeFalse())
+			})
 		})
 	})
 	Context("Validating versions are semver", func() {
