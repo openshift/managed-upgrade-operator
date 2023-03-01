@@ -5,37 +5,38 @@
 package mocks
 
 import (
-	gomock "github.com/golang/mock/gomock"
-	ocm "github.com/openshift/managed-upgrade-operator/pkg/ocm"
 	url "net/url"
 	reflect "reflect"
+
+	gomock "github.com/golang/mock/gomock"
+	ocm "github.com/openshift/managed-upgrade-operator/pkg/ocm"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// MockOcmClientBuilder is a mock of OcmClientBuilder interface
+// MockOcmClientBuilder is a mock of OcmClientBuilder interface.
 type MockOcmClientBuilder struct {
 	ctrl     *gomock.Controller
 	recorder *MockOcmClientBuilderMockRecorder
 }
 
-// MockOcmClientBuilderMockRecorder is the mock recorder for MockOcmClientBuilder
+// MockOcmClientBuilderMockRecorder is the mock recorder for MockOcmClientBuilder.
 type MockOcmClientBuilderMockRecorder struct {
 	mock *MockOcmClientBuilder
 }
 
-// NewMockOcmClientBuilder creates a new mock instance
+// NewMockOcmClientBuilder creates a new mock instance.
 func NewMockOcmClientBuilder(ctrl *gomock.Controller) *MockOcmClientBuilder {
 	mock := &MockOcmClientBuilder{ctrl: ctrl}
 	mock.recorder = &MockOcmClientBuilderMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockOcmClientBuilder) EXPECT() *MockOcmClientBuilderMockRecorder {
 	return m.recorder
 }
 
-// New mocks base method
+// New mocks base method.
 func (m *MockOcmClientBuilder) New(arg0 client.Client, arg1 *url.URL) (ocm.OcmClient, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "New", arg0, arg1)
@@ -44,7 +45,7 @@ func (m *MockOcmClientBuilder) New(arg0 client.Client, arg1 *url.URL) (ocm.OcmCl
 	return ret0, ret1
 }
 
-// New indicates an expected call of New
+// New indicates an expected call of New.
 func (mr *MockOcmClientBuilderMockRecorder) New(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "New", reflect.TypeOf((*MockOcmClientBuilder)(nil).New), arg0, arg1)

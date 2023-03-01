@@ -5,7 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -37,6 +37,7 @@ func NewBuilder() ValidationBuilder {
 }
 
 // Validator knows how to validate UpgradeConfig CRs.
+//
 //go:generate mockgen -destination=mocks/mockValidation.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/validation Validator
 type Validator interface {
 	IsValidUpgradeConfig(c client.Client, uC *upgradev1alpha1.UpgradeConfig, cV *configv1.ClusterVersion, logger logr.Logger) (ValidatorResult, error)
@@ -227,6 +228,7 @@ func getUpstreamURL(cV *configv1.ClusterVersion) string {
 }
 
 // ValidationBuilder is a interface that enables ValidationBuiler implementations
+//
 //go:generate mockgen -destination=mocks/mockValidationBuilder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/validation ValidationBuilder
 type ValidationBuilder interface {
 	NewClient(configmanager.ConfigManager) (Validator, error)
@@ -316,7 +318,7 @@ func runHTTP(url string) ([]byte, error) {
 		defer res.Body.Close()
 	}
 
-	body, readErr := ioutil.ReadAll(res.Body)
+	body, readErr := io.ReadAll(res.Body)
 	if readErr != nil {
 		return nil, readErr
 	}

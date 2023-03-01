@@ -5,36 +5,37 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	metrics "github.com/openshift/managed-upgrade-operator/pkg/metrics"
-	reflect "reflect"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// MockMetricsBuilder is a mock of MetricsBuilder interface
+// MockMetricsBuilder is a mock of MetricsBuilder interface.
 type MockMetricsBuilder struct {
 	ctrl     *gomock.Controller
 	recorder *MockMetricsBuilderMockRecorder
 }
 
-// MockMetricsBuilderMockRecorder is the mock recorder for MockMetricsBuilder
+// MockMetricsBuilderMockRecorder is the mock recorder for MockMetricsBuilder.
 type MockMetricsBuilderMockRecorder struct {
 	mock *MockMetricsBuilder
 }
 
-// NewMockMetricsBuilder creates a new mock instance
+// NewMockMetricsBuilder creates a new mock instance.
 func NewMockMetricsBuilder(ctrl *gomock.Controller) *MockMetricsBuilder {
 	mock := &MockMetricsBuilder{ctrl: ctrl}
 	mock.recorder = &MockMetricsBuilderMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockMetricsBuilder) EXPECT() *MockMetricsBuilderMockRecorder {
 	return m.recorder
 }
 
-// NewClient mocks base method
+// NewClient mocks base method.
 func (m *MockMetricsBuilder) NewClient(arg0 client.Client) (metrics.Metrics, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "NewClient", arg0)
@@ -43,7 +44,7 @@ func (m *MockMetricsBuilder) NewClient(arg0 client.Client) (metrics.Metrics, err
 	return ret0, ret1
 }
 
-// NewClient indicates an expected call of NewClient
+// NewClient indicates an expected call of NewClient.
 func (mr *MockMetricsBuilderMockRecorder) NewClient(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewClient", reflect.TypeOf((*MockMetricsBuilder)(nil).NewClient), arg0)

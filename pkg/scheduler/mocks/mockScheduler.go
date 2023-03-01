@@ -5,37 +5,38 @@
 package mocks
 
 import (
+	reflect "reflect"
+	time "time"
+
 	gomock "github.com/golang/mock/gomock"
 	v1alpha1 "github.com/openshift/managed-upgrade-operator/api/v1alpha1"
 	scheduler "github.com/openshift/managed-upgrade-operator/pkg/scheduler"
-	reflect "reflect"
-	time "time"
 )
 
-// MockScheduler is a mock of Scheduler interface
+// MockScheduler is a mock of Scheduler interface.
 type MockScheduler struct {
 	ctrl     *gomock.Controller
 	recorder *MockSchedulerMockRecorder
 }
 
-// MockSchedulerMockRecorder is the mock recorder for MockScheduler
+// MockSchedulerMockRecorder is the mock recorder for MockScheduler.
 type MockSchedulerMockRecorder struct {
 	mock *MockScheduler
 }
 
-// NewMockScheduler creates a new mock instance
+// NewMockScheduler creates a new mock instance.
 func NewMockScheduler(ctrl *gomock.Controller) *MockScheduler {
 	mock := &MockScheduler{ctrl: ctrl}
 	mock.recorder = &MockSchedulerMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockScheduler) EXPECT() *MockSchedulerMockRecorder {
 	return m.recorder
 }
 
-// IsReadyToUpgrade mocks base method
+// IsReadyToUpgrade mocks base method.
 func (m *MockScheduler) IsReadyToUpgrade(arg0 *v1alpha1.UpgradeConfig, arg1 time.Duration) scheduler.SchedulerResult {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IsReadyToUpgrade", arg0, arg1)
@@ -43,7 +44,7 @@ func (m *MockScheduler) IsReadyToUpgrade(arg0 *v1alpha1.UpgradeConfig, arg1 time
 	return ret0
 }
 
-// IsReadyToUpgrade indicates an expected call of IsReadyToUpgrade
+// IsReadyToUpgrade indicates an expected call of IsReadyToUpgrade.
 func (mr *MockSchedulerMockRecorder) IsReadyToUpgrade(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsReadyToUpgrade", reflect.TypeOf((*MockScheduler)(nil).IsReadyToUpgrade), arg0, arg1)

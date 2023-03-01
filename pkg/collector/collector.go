@@ -31,7 +31,7 @@ const (
 	helpCommenceUpgradeTimestamp               = "Unix Timestamp indicating start time of upgrade"
 	helpControlPlaneUpgradeCompleteTimestamp   = "Unix Timestamp indicating completion of upgrade upgrade"
 	helpRemoveControlPlaneMaintWindowTimestamp = "Unix Timestamp indicating removal of control plane maintenance window"
-	helpWorkersWindowTimestamp                 = "Unix Timestamp indicating start time of workers maintenance"
+	helpWorkersWindowTimestamp                 = "Unix Timestamp indicating start time of workers maintenance" //nolint:gosec
 	helpAllWorkerNodesUpgradedTimestamp        = "Unix Timestamp indicating all worker nodes have upgraded"
 	helpRemoveExtraScaledNodesTimestamp        = "Unix Timestamp indicating time of addtional compute removed"
 	helpRemoveMaintWindow                      = "Unix Timestamp indicating end of workers maintenace"

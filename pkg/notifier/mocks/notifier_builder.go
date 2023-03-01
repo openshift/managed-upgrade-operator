@@ -5,38 +5,39 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	configmanager "github.com/openshift/managed-upgrade-operator/pkg/configmanager"
 	notifier "github.com/openshift/managed-upgrade-operator/pkg/notifier"
 	upgradeconfigmanager "github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager"
-	reflect "reflect"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// MockNotifierBuilder is a mock of NotifierBuilder interface
+// MockNotifierBuilder is a mock of NotifierBuilder interface.
 type MockNotifierBuilder struct {
 	ctrl     *gomock.Controller
 	recorder *MockNotifierBuilderMockRecorder
 }
 
-// MockNotifierBuilderMockRecorder is the mock recorder for MockNotifierBuilder
+// MockNotifierBuilderMockRecorder is the mock recorder for MockNotifierBuilder.
 type MockNotifierBuilderMockRecorder struct {
 	mock *MockNotifierBuilder
 }
 
-// NewMockNotifierBuilder creates a new mock instance
+// NewMockNotifierBuilder creates a new mock instance.
 func NewMockNotifierBuilder(ctrl *gomock.Controller) *MockNotifierBuilder {
 	mock := &MockNotifierBuilder{ctrl: ctrl}
 	mock.recorder = &MockNotifierBuilderMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockNotifierBuilder) EXPECT() *MockNotifierBuilderMockRecorder {
 	return m.recorder
 }
 
-// New mocks base method
+// New mocks base method.
 func (m *MockNotifierBuilder) New(arg0 client.Client, arg1 configmanager.ConfigManagerBuilder, arg2 upgradeconfigmanager.UpgradeConfigManagerBuilder) (notifier.Notifier, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "New", arg0, arg1, arg2)
@@ -45,7 +46,7 @@ func (m *MockNotifierBuilder) New(arg0 client.Client, arg1 configmanager.ConfigM
 	return ret0, ret1
 }
 
-// New indicates an expected call of New
+// New indicates an expected call of New.
 func (mr *MockNotifierBuilderMockRecorder) New(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "New", reflect.TypeOf((*MockNotifierBuilder)(nil).New), arg0, arg1, arg2)

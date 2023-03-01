@@ -6,36 +6,37 @@ package mocks
 
 import (
 	context "context"
+	reflect "reflect"
+
 	logr "github.com/go-logr/logr"
 	gomock "github.com/golang/mock/gomock"
 	v1alpha1 "github.com/openshift/managed-upgrade-operator/api/v1alpha1"
-	reflect "reflect"
 )
 
-// MockClusterUpgrader is a mock of ClusterUpgrader interface
+// MockClusterUpgrader is a mock of ClusterUpgrader interface.
 type MockClusterUpgrader struct {
 	ctrl     *gomock.Controller
 	recorder *MockClusterUpgraderMockRecorder
 }
 
-// MockClusterUpgraderMockRecorder is the mock recorder for MockClusterUpgrader
+// MockClusterUpgraderMockRecorder is the mock recorder for MockClusterUpgrader.
 type MockClusterUpgraderMockRecorder struct {
 	mock *MockClusterUpgrader
 }
 
-// NewMockClusterUpgrader creates a new mock instance
+// NewMockClusterUpgrader creates a new mock instance.
 func NewMockClusterUpgrader(ctrl *gomock.Controller) *MockClusterUpgrader {
 	mock := &MockClusterUpgrader{ctrl: ctrl}
 	mock.recorder = &MockClusterUpgraderMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockClusterUpgrader) EXPECT() *MockClusterUpgraderMockRecorder {
 	return m.recorder
 }
 
-// UpgradeCluster mocks base method
+// UpgradeCluster mocks base method.
 func (m *MockClusterUpgrader) UpgradeCluster(arg0 context.Context, arg1 *v1alpha1.UpgradeConfig, arg2 logr.Logger) (v1alpha1.UpgradePhase, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpgradeCluster", arg0, arg1, arg2)
@@ -44,7 +45,7 @@ func (m *MockClusterUpgrader) UpgradeCluster(arg0 context.Context, arg1 *v1alpha
 	return ret0, ret1
 }
 
-// UpgradeCluster indicates an expected call of UpgradeCluster
+// UpgradeCluster indicates an expected call of UpgradeCluster.
 func (mr *MockClusterUpgraderMockRecorder) UpgradeCluster(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpgradeCluster", reflect.TypeOf((*MockClusterUpgrader)(nil).UpgradeCluster), arg0, arg1, arg2)

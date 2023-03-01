@@ -144,7 +144,7 @@ func (m NotMatchingLabels) ApplyToList(opts *client.ListOptions) {
 
 // NotSelectorFromSet returns a labels.Selector
 func NotSelectorFromSet(ls NotMatchingLabels) labels.Selector {
-	if ls == nil || len(ls) == 0 {
+	if len(ls) == 0 {
 		return labels.NewSelector()
 	}
 	selector := labels.Everything()

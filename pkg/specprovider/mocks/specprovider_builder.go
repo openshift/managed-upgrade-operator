@@ -5,37 +5,38 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	configmanager "github.com/openshift/managed-upgrade-operator/pkg/configmanager"
 	specprovider "github.com/openshift/managed-upgrade-operator/pkg/specprovider"
-	reflect "reflect"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// MockSpecProviderBuilder is a mock of SpecProviderBuilder interface
+// MockSpecProviderBuilder is a mock of SpecProviderBuilder interface.
 type MockSpecProviderBuilder struct {
 	ctrl     *gomock.Controller
 	recorder *MockSpecProviderBuilderMockRecorder
 }
 
-// MockSpecProviderBuilderMockRecorder is the mock recorder for MockSpecProviderBuilder
+// MockSpecProviderBuilderMockRecorder is the mock recorder for MockSpecProviderBuilder.
 type MockSpecProviderBuilderMockRecorder struct {
 	mock *MockSpecProviderBuilder
 }
 
-// NewMockSpecProviderBuilder creates a new mock instance
+// NewMockSpecProviderBuilder creates a new mock instance.
 func NewMockSpecProviderBuilder(ctrl *gomock.Controller) *MockSpecProviderBuilder {
 	mock := &MockSpecProviderBuilder{ctrl: ctrl}
 	mock.recorder = &MockSpecProviderBuilderMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockSpecProviderBuilder) EXPECT() *MockSpecProviderBuilderMockRecorder {
 	return m.recorder
 }
 
-// New mocks base method
+// New mocks base method.
 func (m *MockSpecProviderBuilder) New(arg0 client.Client, arg1 configmanager.ConfigManagerBuilder) (specprovider.SpecProvider, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "New", arg0, arg1)
@@ -44,7 +45,7 @@ func (m *MockSpecProviderBuilder) New(arg0 client.Client, arg1 configmanager.Con
 	return ret0, ret1
 }
 
-// New indicates an expected call of New
+// New indicates an expected call of New.
 func (mr *MockSpecProviderBuilderMockRecorder) New(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "New", reflect.TypeOf((*MockSpecProviderBuilder)(nil).New), arg0, arg1)
