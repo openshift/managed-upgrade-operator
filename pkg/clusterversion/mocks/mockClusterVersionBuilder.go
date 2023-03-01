@@ -5,36 +5,37 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	clusterversion "github.com/openshift/managed-upgrade-operator/pkg/clusterversion"
-	reflect "reflect"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// MockClusterVersionBuilder is a mock of ClusterVersionBuilder interface
+// MockClusterVersionBuilder is a mock of ClusterVersionBuilder interface.
 type MockClusterVersionBuilder struct {
 	ctrl     *gomock.Controller
 	recorder *MockClusterVersionBuilderMockRecorder
 }
 
-// MockClusterVersionBuilderMockRecorder is the mock recorder for MockClusterVersionBuilder
+// MockClusterVersionBuilderMockRecorder is the mock recorder for MockClusterVersionBuilder.
 type MockClusterVersionBuilderMockRecorder struct {
 	mock *MockClusterVersionBuilder
 }
 
-// NewMockClusterVersionBuilder creates a new mock instance
+// NewMockClusterVersionBuilder creates a new mock instance.
 func NewMockClusterVersionBuilder(ctrl *gomock.Controller) *MockClusterVersionBuilder {
 	mock := &MockClusterVersionBuilder{ctrl: ctrl}
 	mock.recorder = &MockClusterVersionBuilderMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockClusterVersionBuilder) EXPECT() *MockClusterVersionBuilderMockRecorder {
 	return m.recorder
 }
 
-// New mocks base method
+// New mocks base method.
 func (m *MockClusterVersionBuilder) New(arg0 client.Client) clusterversion.ClusterVersion {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "New", arg0)
@@ -42,7 +43,7 @@ func (m *MockClusterVersionBuilder) New(arg0 client.Client) clusterversion.Clust
 	return ret0
 }
 
-// New indicates an expected call of New
+// New indicates an expected call of New.
 func (mr *MockClusterVersionBuilderMockRecorder) New(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "New", reflect.TypeOf((*MockClusterVersionBuilder)(nil).New), arg0)

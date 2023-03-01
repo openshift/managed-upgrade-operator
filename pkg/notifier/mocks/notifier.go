@@ -5,35 +5,36 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	notifier "github.com/openshift/managed-upgrade-operator/pkg/notifier"
-	reflect "reflect"
 )
 
-// MockNotifier is a mock of Notifier interface
+// MockNotifier is a mock of Notifier interface.
 type MockNotifier struct {
 	ctrl     *gomock.Controller
 	recorder *MockNotifierMockRecorder
 }
 
-// MockNotifierMockRecorder is the mock recorder for MockNotifier
+// MockNotifierMockRecorder is the mock recorder for MockNotifier.
 type MockNotifierMockRecorder struct {
 	mock *MockNotifier
 }
 
-// NewMockNotifier creates a new mock instance
+// NewMockNotifier creates a new mock instance.
 func NewMockNotifier(ctrl *gomock.Controller) *MockNotifier {
 	mock := &MockNotifier{ctrl: ctrl}
 	mock.recorder = &MockNotifierMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockNotifier) EXPECT() *MockNotifierMockRecorder {
 	return m.recorder
 }
 
-// NotifyState mocks base method
+// NotifyState mocks base method.
 func (m *MockNotifier) NotifyState(arg0 notifier.MuoState, arg1 string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "NotifyState", arg0, arg1)
@@ -41,7 +42,7 @@ func (m *MockNotifier) NotifyState(arg0 notifier.MuoState, arg1 string) error {
 	return ret0
 }
 
-// NotifyState indicates an expected call of NotifyState
+// NotifyState indicates an expected call of NotifyState.
 func (mr *MockNotifierMockRecorder) NotifyState(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NotifyState", reflect.TypeOf((*MockNotifier)(nil).NotifyState), arg0, arg1)

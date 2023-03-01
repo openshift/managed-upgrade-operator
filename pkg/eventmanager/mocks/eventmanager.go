@@ -5,35 +5,36 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	notifier "github.com/openshift/managed-upgrade-operator/pkg/notifier"
-	reflect "reflect"
 )
 
-// MockEventManager is a mock of EventManager interface
+// MockEventManager is a mock of EventManager interface.
 type MockEventManager struct {
 	ctrl     *gomock.Controller
 	recorder *MockEventManagerMockRecorder
 }
 
-// MockEventManagerMockRecorder is the mock recorder for MockEventManager
+// MockEventManagerMockRecorder is the mock recorder for MockEventManager.
 type MockEventManagerMockRecorder struct {
 	mock *MockEventManager
 }
 
-// NewMockEventManager creates a new mock instance
+// NewMockEventManager creates a new mock instance.
 func NewMockEventManager(ctrl *gomock.Controller) *MockEventManager {
 	mock := &MockEventManager{ctrl: ctrl}
 	mock.recorder = &MockEventManagerMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockEventManager) EXPECT() *MockEventManagerMockRecorder {
 	return m.recorder
 }
 
-// Notify mocks base method
+// Notify mocks base method.
 func (m *MockEventManager) Notify(arg0 notifier.MuoState) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Notify", arg0)
@@ -41,7 +42,7 @@ func (m *MockEventManager) Notify(arg0 notifier.MuoState) error {
 	return ret0
 }
 
-// Notify indicates an expected call of Notify
+// Notify indicates an expected call of Notify.
 func (mr *MockEventManagerMockRecorder) Notify(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Notify", reflect.TypeOf((*MockEventManager)(nil).Notify), arg0)

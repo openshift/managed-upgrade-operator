@@ -67,7 +67,7 @@ FROM quay.io/openshift/origin-operator-registry:4.10.0 AS builder
 COPY $SAAS_OPERATOR_DIR manifests
 RUN initializer --permissive
 
-FROM registry.access.redhat.com/ubi8/ubi-micro:8.5-836
+FROM registry.access.redhat.com/ubi8/ubi-micro:8.6-484
 
 COPY --from=builder /bin/registry-server /bin/registry-server
 COPY --from=builder /bin/grpc_health_probe /bin/grpc_health_probe

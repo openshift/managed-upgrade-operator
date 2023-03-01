@@ -5,37 +5,38 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	machinery "github.com/openshift/managed-upgrade-operator/pkg/machinery"
 	v1 "k8s.io/api/core/v1"
-	reflect "reflect"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// MockMachinery is a mock of Machinery interface
+// MockMachinery is a mock of Machinery interface.
 type MockMachinery struct {
 	ctrl     *gomock.Controller
 	recorder *MockMachineryMockRecorder
 }
 
-// MockMachineryMockRecorder is the mock recorder for MockMachinery
+// MockMachineryMockRecorder is the mock recorder for MockMachinery.
 type MockMachineryMockRecorder struct {
 	mock *MockMachinery
 }
 
-// NewMockMachinery creates a new mock instance
+// NewMockMachinery creates a new mock instance.
 func NewMockMachinery(ctrl *gomock.Controller) *MockMachinery {
 	mock := &MockMachinery{ctrl: ctrl}
 	mock.recorder = &MockMachineryMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockMachinery) EXPECT() *MockMachineryMockRecorder {
 	return m.recorder
 }
 
-// IsNodeCordoned mocks base method
+// IsNodeCordoned mocks base method.
 func (m *MockMachinery) IsNodeCordoned(arg0 *v1.Node) *machinery.IsCordonedResult {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IsNodeCordoned", arg0)
@@ -43,13 +44,13 @@ func (m *MockMachinery) IsNodeCordoned(arg0 *v1.Node) *machinery.IsCordonedResul
 	return ret0
 }
 
-// IsNodeCordoned indicates an expected call of IsNodeCordoned
+// IsNodeCordoned indicates an expected call of IsNodeCordoned.
 func (mr *MockMachineryMockRecorder) IsNodeCordoned(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsNodeCordoned", reflect.TypeOf((*MockMachinery)(nil).IsNodeCordoned), arg0)
 }
 
-// IsUpgrading mocks base method
+// IsUpgrading mocks base method.
 func (m *MockMachinery) IsUpgrading(arg0 client.Client, arg1 string) (*machinery.UpgradingResult, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IsUpgrading", arg0, arg1)
@@ -58,7 +59,7 @@ func (m *MockMachinery) IsUpgrading(arg0 client.Client, arg1 string) (*machinery
 	return ret0, ret1
 }
 
-// IsUpgrading indicates an expected call of IsUpgrading
+// IsUpgrading indicates an expected call of IsUpgrading.
 func (mr *MockMachineryMockRecorder) IsUpgrading(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsUpgrading", reflect.TypeOf((*MockMachinery)(nil).IsUpgrading), arg0, arg1)
