@@ -461,20 +461,26 @@ func fetchCVOUpdates(cV *configv1.ClusterVersion, uc *upgradev1alpha1.UpgradeCon
 	ctx := context.TODO()
 
 	// Fetch available updates by version in Cincinnati.
-	_, updates, _, err := cincinnati.NewClient(clusterId, transport).GetUpdates(ctx, upstreamURI, runtime.GOARCH, uc.Spec.Desired.Channel, parsedCvVersion)
+	_, updates, conditionalUpdates, err := cincinnati.NewClient(clusterId, transport).GetUpdates(ctx, upstreamURI, runtime.GOARCH, uc.Spec.Desired.Channel, parsedCvVersion)
 	if err != nil {
 		return nil, err
 	}
+	var cvoUpdates []configv1.Update
 
-	if len(updates) > 0 {
-		var cvoUpdates []configv1.Update
-		for _, update := range updates {
-			cvoUpdates = append(cvoUpdates, configv1.Update{
-				Version: update.Version,
-				Image:   update.Image,
-			})
-		}
-		return cvoUpdates, err
+	for _, update := range updates {
+		cvoUpdates = append(cvoUpdates, configv1.Update{
+			Version: update.Version,
+			Image:   update.Image,
+		})
+	}
+	for _, update := range conditionalUpdates {
+		cvoUpdates = append(cvoUpdates, configv1.Update{
+			Version: update.Release.Version,
+			Image:   update.Release.Image,
+		})
+	}
+	if len(cvoUpdates) > 0 {
+		return cvoUpdates, nil
 	}
 
 	return nil, fmt.Errorf("no available upgrade for the given clusterversion %s", cvVersion)
