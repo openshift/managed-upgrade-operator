@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/blang/semver"
+	"github.com/blang/semver/v4"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
