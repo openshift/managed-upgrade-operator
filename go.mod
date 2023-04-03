@@ -16,8 +16,10 @@ require (
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.24.2
 	github.com/openshift/api v0.0.0-20230330150608-05635858d40f
+	github.com/openshift/cluster-version-operator v1.0.1-0.20230322131514-c659e6ccaca7
 	github.com/openshift/library-go v0.0.0-20230112164258-24668b1349e6
 	github.com/openshift/machine-config-operator v0.0.1-0.20230330142923-2832f049b3f4
+	github.com/openshift/operator-custom-metrics v0.5.1
 	github.com/operator-framework/operator-lib v0.9.0
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.64.0
 	github.com/prometheus-operator/prometheus-operator/pkg/client v0.64.0
@@ -37,7 +39,6 @@ require (
 require (
 	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/blang/semver v3.5.1+incompatible // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/emicklei/go-restful/v3 v3.10.1 // indirect
@@ -77,8 +78,6 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/nxadm/tail v1.4.8 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
-	github.com/openshift/cluster-version-operator v1.0.1-0.20230322131514-c659e6ccaca7 // indirect
-	github.com/openshift/operator-custom-metrics v0.5.1 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus/client_model v0.3.0 // indirect
@@ -106,9 +105,7 @@ require (
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/apiextensions-apiserver v0.26.1 // indirect
-	k8s.io/code-generator v0.26.3 // indirect
 	k8s.io/component-base v0.26.1 // indirect
-	k8s.io/gengo v0.0.0-20220902162205-c0856e24416d // indirect
 	k8s.io/klog/v2 v2.90.1 // indirect
 	k8s.io/utils v0.0.0-20230313181309-38a27ef9d749 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
