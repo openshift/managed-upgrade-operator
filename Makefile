@@ -10,7 +10,7 @@ boilerplate-update: ## Make boilerplate update itself
 
 .PHONY: run
 run: 
-	OPERATOR_NAMESPACE="openshift-managed-upgrade-operator" go run ./main.go
+	OPERATOR_NAMESPACE="openshift-managed-upgrade-operator" WATCH_NAMESPACE="" go run ./main.go
 
 .PHONY: tools
 tools: ## Install local go tools for MUO
