@@ -12,6 +12,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/openshift/cluster-version-operator/pkg/cincinnati"
 	"github.com/openshift/managed-upgrade-operator/pkg/configmanager"
 
 	"github.com/blang/semver/v4"
@@ -19,7 +20,6 @@ import (
 	"github.com/google/uuid"
 
 	configv1 "github.com/openshift/api/config/v1"
-	"github.com/openshift/cluster-version-operator/pkg/cincinnati"
 	"github.com/openshift/library-go/pkg/image/dockerv1client"
 	imagereference "github.com/openshift/library-go/pkg/image/reference"
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/api/v1alpha1"
