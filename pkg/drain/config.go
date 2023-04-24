@@ -6,9 +6,10 @@ import (
 
 // NodeDrain holds timeout and expected drain time fields required for NodeDrain execution
 type NodeDrain struct {
-	DisableDrainStrategies bool `yaml:"disableDrainStrategies"`
-	Timeout                int  `yaml:"timeOut"`
-	ExpectedNodeDrainTime  int  `yaml:"expectedNodeDrainTime" default:"8"`
+	DisableDrainStrategies   bool     `yaml:"disableDrainStrategies"`
+	Timeout                  int      `yaml:"timeOut"`
+	ExpectedNodeDrainTime    int      `yaml:"expectedNodeDrainTime" default:"8"`
+	IgnoredNamespacePatterns []string `yaml:"ignoredNamespacePatterns"`
 }
 
 // GetTimeOutDuration returns the timout field from the NodeDrain object

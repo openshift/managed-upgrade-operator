@@ -113,16 +113,22 @@ Example:
 
 #### nodeDrain
 
-| Key | Description |
-| --- | --- |
-| timeOut | a time window to trigger the force node drain strategy, measured in minutes |
+| Key | Description                                                                                           |
+| --- |-------------------------------------------------------------------------------------------------------|
+| timeOut | a time window to trigger the force node drain strategy, measured in minutes                           |
 | expectedNodeDrainTime | expected time in minutes for a single node drain to be finished, used to setup the maintenance window |
+| disableDrainStrategies | disable any node drain completion strategies from executing (defaults to false)                       |
+| ignoredNamespacePatterns | any pods in namespaces matching the regular expressions in this list are ignored from having drain strategies applied  to them |
 
 Example:
 ```
     nodeDrain:
       timeOut: 45
       expectedNodeDrainTime: 8
+      disableDrainStrategies: true
+      ignoredNamespacePatterns:
+      - my-namespace-name
+      - example-.+
 ```
 
 #### healthCheck

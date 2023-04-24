@@ -20,6 +20,10 @@ import (
 
 var _ = Describe("Pod Delete Strategy", func() {
 
+	const (
+		POD_NAMESPACE = "test-namespace"
+	)
+
 	var (
 		logger         logr.Logger
 		mockCtrl       *gomock.Controller
@@ -27,6 +31,7 @@ var _ = Describe("Pod Delete Strategy", func() {
 		pds            *podDeletionStrategy
 		node           *corev1.Node
 		podList        corev1.PodList
+		nsPredicate    pod.PodPredicate
 	)
 
 	BeforeEach(func() {
@@ -47,7 +52,8 @@ var _ = Describe("Pod Delete Strategy", func() {
 			Items: []corev1.Pod{
 				{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "pod1",
+						Name:      "pod1",
+						Namespace: POD_NAMESPACE,
 					},
 					Spec: corev1.PodSpec{
 						NodeName: "n1",
@@ -56,6 +62,7 @@ var _ = Describe("Pod Delete Strategy", func() {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:              "pod2",
+						Namespace:         POD_NAMESPACE,
 						DeletionTimestamp: &metav1.Time{Time: time.Now()},
 					},
 					Spec: corev1.PodSpec{
@@ -64,7 +71,8 @@ var _ = Describe("Pod Delete Strategy", func() {
 				},
 				{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "pod3",
+						Name:      "pod3",
+						Namespace: POD_NAMESPACE,
 					},
 					Spec: corev1.PodSpec{
 						NodeName: "n2",
@@ -157,6 +165,31 @@ var _ = Describe("Pod Delete Strategy", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(err).NotTo(BeNil())
 
+		})
+	})
+
+	Context("Ensure that pods with namespaces are respected based on config preferences", func() {
+		It("Will not consider a pod if the pod's namespace should be ignored", func() {
+			nsPredicate = isAllowedNamespace([]string{POD_NAMESPACE})
+			pds.filters = append(pds.filters, nsPredicate)
+
+			gomock.InOrder(
+				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList),
+			)
+			valid, err := pds.IsValid(node, logger)
+			Expect(valid).To(BeFalse())
+			Expect(err).To(BeNil())
+		})
+
+		It("Will consider a pod if its namespace isn't in the ignore list", func() {
+			nsPredicate = isAllowedNamespace([]string{})
+			pds.filters = append(pds.filters, nsPredicate)
+			gomock.InOrder(
+				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList),
+			)
+			valid, err := pds.IsValid(node, logger)
+			Expect(valid).To(BeTrue())
+			Expect(err).To(BeNil())
 		})
 	})
 })
