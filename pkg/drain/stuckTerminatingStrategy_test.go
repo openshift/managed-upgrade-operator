@@ -20,6 +20,10 @@ import (
 
 var _ = Describe("Stuck Terminating Strategy", func() {
 
+	const (
+		POD_NAMESPACE = "test-namespace"
+	)
+
 	var (
 		logger         logr.Logger
 		mockCtrl       *gomock.Controller
@@ -27,6 +31,7 @@ var _ = Describe("Stuck Terminating Strategy", func() {
 		sts            *stuckTerminatingStrategy
 		node           *corev1.Node
 		podList        corev1.PodList
+		nsPredicate    pod.PodPredicate
 
 		NODENAME string
 	)
@@ -46,6 +51,7 @@ var _ = Describe("Stuck Terminating Strategy", func() {
 			client:  mockKubeClient,
 			filters: []pod.PodPredicate{isOnNode(node), hasNoFinalizers, isTerminating},
 		}
+		nsPredicate = isAllowedNamespace([]string{POD_NAMESPACE})
 
 		podList = corev1.PodList{
 			Items: []corev1.Pod{
@@ -53,6 +59,7 @@ var _ = Describe("Stuck Terminating Strategy", func() {
 
 					ObjectMeta: metav1.ObjectMeta{
 						Name:              "pod1",
+						Namespace:         POD_NAMESPACE,
 						DeletionTimestamp: &metav1.Time{Time: time.Now()},
 					},
 					Spec: corev1.PodSpec{
@@ -62,6 +69,7 @@ var _ = Describe("Stuck Terminating Strategy", func() {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:              "pod2",
+						Namespace:         POD_NAMESPACE,
 						DeletionTimestamp: &metav1.Time{Time: time.Now()},
 						Finalizers: []string{
 							"finalizer2",
@@ -74,6 +82,7 @@ var _ = Describe("Stuck Terminating Strategy", func() {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:              "pod3",
+						Namespace:         POD_NAMESPACE,
 						DeletionTimestamp: &metav1.Time{Time: time.Now()},
 					},
 					Spec: corev1.PodSpec{
@@ -164,6 +173,31 @@ var _ = Describe("Stuck Terminating Strategy", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(err).NotTo(BeNil())
 
+		})
+	})
+
+	Context("Ensure that pods with namespaces are respected based on config preferences", func() {
+		It("Will not consider a pod if the pod's namespace should be ignored", func() {
+			nsPredicate = isAllowedNamespace([]string{POD_NAMESPACE})
+			sts.filters = append(sts.filters, nsPredicate)
+
+			gomock.InOrder(
+				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList),
+			)
+			valid, err := sts.IsValid(node, logger)
+			Expect(valid).To(BeFalse())
+			Expect(err).To(BeNil())
+		})
+
+		It("Will consider a pod if its namespace isn't in the ignore list", func() {
+			nsPredicate = isAllowedNamespace([]string{})
+			sts.filters = append(sts.filters, nsPredicate)
+			gomock.InOrder(
+				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList),
+			)
+			valid, err := sts.IsValid(node, logger)
+			Expect(valid).To(BeTrue())
+			Expect(err).To(BeNil())
 		})
 	})
 })

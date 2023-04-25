@@ -1,10 +1,10 @@
 package drain
 
 import (
+	"github.com/openshift/managed-upgrade-operator/pkg/pod"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
-
-	"github.com/openshift/managed-upgrade-operator/pkg/pod"
+	"regexp"
 )
 
 func isPdbPod(pdbList *policyv1.PodDisruptionBudgetList) pod.PodPredicate {
@@ -67,4 +67,20 @@ func hasNoFinalizers(p corev1.Pod) bool {
 
 func isTerminating(p corev1.Pod) bool {
 	return p.DeletionTimestamp != nil
+}
+
+func isAllowedNamespace(ignoredNamespacePatterns []string) pod.PodPredicate {
+	return func(p corev1.Pod) bool {
+		return containsIgnoredNamespace(p, ignoredNamespacePatterns)
+	}
+}
+
+func containsIgnoredNamespace(p corev1.Pod, ignoredNamespacePatterns []string) bool {
+	for _, nsPattern := range ignoredNamespacePatterns {
+		rxp := regexp.MustCompile(nsPattern)
+		if rxp.MatchString(p.Namespace) {
+			return false
+		}
+	}
+	return true
 }

@@ -79,28 +79,29 @@ func (dsb *drainStrategyBuilder) NewNodeDrainStrategy(c client.Client, logger lo
 	defaultOsdPodPredicates := []pod.PodPredicate{isNotDaemonSet}
 	isNotPdbPod := isNotPdbPod(pdbList)
 	isPdbPod := isPdbPod(pdbList)
+	isAllowedNamespace := isAllowedNamespace(cfg.IgnoredNamespacePatterns)
 	defaultDuration := cfg.GetTimeOutDuration()
 	pdbDuration := uc.GetPDBDrainTimeoutDuration() + cfg.GetExpectedDrainDuration()
 	ts := []TimedDrainStrategy{
 		newTimedStrategy(defaultPodDeleteName, "Default pod deletion", defaultDuration, &podDeletionStrategy{
 			client:  c,
-			filters: append(defaultOsdPodPredicates, isNotPdbPod),
+			filters: append(defaultOsdPodPredicates, isNotPdbPod, isAllowedNamespace),
 		}),
 		newTimedStrategy(defaultPodFinalizerRemovalName, "Default pod finalizer removal", defaultDuration, &removeFinalizersStrategy{
 			client:  c,
-			filters: append(defaultOsdPodPredicates, isNotPdbPod),
+			filters: append(defaultOsdPodPredicates, isNotPdbPod, isAllowedNamespace),
 		}),
 		newTimedStrategy(stuckTerminatingPodName, "Pod stuck terminating removal", defaultDuration, &stuckTerminatingStrategy{
 			client:  c,
-			filters: append(defaultOsdPodPredicates, isNotPdbPod),
+			filters: append(defaultOsdPodPredicates, isNotPdbPod, isAllowedNamespace),
 		}),
 		newTimedStrategy(pdbPodDeleteName, "PDB pod deletion", pdbDuration, &podDeletionStrategy{
 			client:  c,
-			filters: append(defaultOsdPodPredicates, isPdbPod),
+			filters: append(defaultOsdPodPredicates, isPdbPod, isAllowedNamespace),
 		}),
 		newTimedStrategy(pdbPodFinalizerRemovalName, "PDB Pod finalizer removal", pdbDuration, &removeFinalizersStrategy{
 			client:  c,
-			filters: append(defaultOsdPodPredicates, isPdbPod),
+			filters: append(defaultOsdPodPredicates, isPdbPod, isAllowedNamespace),
 		}),
 	}
 

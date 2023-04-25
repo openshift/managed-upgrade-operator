@@ -100,28 +100,30 @@ func (r *ReconcileNodeKeeper) Reconcile(ctx context.Context, request reconcile.R
 		return reconcile.Result{}, err
 	}
 
-	drainStrategy, err := r.DrainstrategyBuilder.NewNodeDrainStrategy(r.Client, reqLogger, uc, &cfg.NodeDrain)
-	if err != nil {
-		reqLogger.Error(err, "Error while executing drain.")
-		return reconcile.Result{}, err
-	}
+	if !cfg.NodeDrain.DisableDrainStrategies {
+		drainStrategy, err := r.DrainstrategyBuilder.NewNodeDrainStrategy(r.Client, reqLogger, uc, &cfg.NodeDrain)
+		if err != nil {
+			reqLogger.Error(err, "Error while executing drain.")
+			return reconcile.Result{}, err
+		}
 
-	res, err := drainStrategy.Execute(node, reqLogger)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-	for _, r := range res {
-		reqLogger.Info(r.Message)
-	}
+		res, err := drainStrategy.Execute(node, reqLogger)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+		for _, r := range res {
+			reqLogger.Info(r.Message)
+		}
 
-	hasFailed, err := drainStrategy.HasFailed(node, reqLogger)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-	if hasFailed {
-		reqLogger.Info(fmt.Sprintf("Node drain timed out %s. Alerting.", node.Name))
-		metricsClient.UpdateMetricNodeDrainFailed(node.Name)
-		return reconcile.Result{RequeueAfter: time.Minute * 1}, nil
+		hasFailed, err := drainStrategy.HasFailed(node, reqLogger)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+		if hasFailed {
+			reqLogger.Info(fmt.Sprintf("Node drain timed out %s. Alerting.", node.Name))
+			metricsClient.UpdateMetricNodeDrainFailed(node.Name)
+			return reconcile.Result{RequeueAfter: time.Minute * 1}, nil
+		}
 	}
 
 	return reconcile.Result{RequeueAfter: time.Minute * 1}, nil
