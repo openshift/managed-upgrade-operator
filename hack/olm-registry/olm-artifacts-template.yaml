@@ -52,6 +52,8 @@ objects:
             namespace: openshift-managed-upgrade-operator
           spec:
             sourceType: grpc
+            grpcPodConfig:
+              securityContextConfig: restricted
             image: ${REGISTRY_IMG}@${IMAGE_DIGEST}
             displayName: Managed Upgrade Operator
             publisher: Red Hat
@@ -138,4 +140,3 @@ objects:
           - kind: ServiceAccount
             name: managed-upgrade-operator
             namespace: openshift-managed-upgrade-operator
-
