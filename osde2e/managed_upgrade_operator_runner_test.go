@@ -20,9 +20,8 @@ const (
 func TestManagedUpgradeOperator(t *testing.T) {
 	RegisterFailHandler(Fail)
 
-	//suiteConfig, reporterConfig := GinkgoConfiguration()
-	//reporterConfig.JUnitReport = filepath.Join(testResultsDirectory, jUnitOutputFilename)
-	//RunSpecs(t, "Managed Upgrade Operator", suiteConfig, reporterConfig)
-	RunSpecs(t, "Managed Upgrade Operator")
+	suiteConfig, reporterConfig := GinkgoConfiguration()
+	reporterConfig.JUnitReport = filepath.Join(testResultsDirectory, jUnitOutputFilename)
+	RunSpecs(t, "Managed Upgrade Operator", suiteConfig, reporterConfig)
 
 }
