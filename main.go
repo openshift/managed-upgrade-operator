@@ -39,7 +39,6 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -159,7 +158,7 @@ func main() {
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "312e6264.managed.openshift.io",
 		SyncPeriod:             &syncPeriod,
-		NewClient: func(_ cache.Cache, config *rest.Config, options client.Options, uncachedObjects ...client.Object) (client.Client, error) {
+		NewClient: func(config *rest.Config, options client.Options) (client.Client, error) {
 			return client.New(config, options)
 		},
 	})
