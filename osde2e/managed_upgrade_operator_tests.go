@@ -58,7 +58,7 @@ var _ = ginkgo.Describe("managed-upgrade-operator", ginkgo.Ordered, func() {
 		Expect(err).ShouldNot(HaveOccurred(), "unable to setup prometheus client")
 	})
 
-	ginkgo.It("installs operator successfully", func(ctx context.Context) {
+	ginkgo.It("is installed", func(ctx context.Context) {
 		ginkgo.By("Checking the namespace exists")
 		err := k8s.Get(ctx, operatorNamespace, operatorNamespace, &corev1.Namespace{})
 		Expect(err).Should(BeNil(), "namespace %s not found", operatorNamespace)
