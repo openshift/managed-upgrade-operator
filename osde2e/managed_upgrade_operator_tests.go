@@ -31,7 +31,6 @@ const (
 	operatorLockFile                       = "managed-upgrade-operator-lock"
 	upgradeConfigResourceName              = "managed-upgrade-config"
 	upgradeConfigForDedicatedAdminTestName = "osde2e-da-upgrade-config"
-	defaultDesiredReplicas                 = 1
 	rolePrefix                             = "managed-upgrade-operator"
 )
 
@@ -50,10 +49,10 @@ var _ = ginkgo.Describe("managed-upgrade-operator", ginkgo.Ordered, func() {
 		var err error
 		k8s, err = openshift.New(ginkgo.GinkgoLogr)
 		Expect(err).ShouldNot(HaveOccurred(), "Unable to setup k8s client")
-		Expect(upgradev1alpha1.AddToScheme(k8s.GetScheme())).Should(BeNil(), "Unable to register upgradev1alpha1 api scheme")
+		Expect(upgradev1alpha1.AddToScheme(k8s.GetScheme())).Should(Succeed(), "Unable to register upgradev1alpha1 api scheme")
 		impersonatedResourceClient, err = k8s.Impersonate("test-user@redhat.com", "dedicated-admins")
 		Expect(err).ShouldNot(HaveOccurred(), "Unable to setup impersonated k8s client")
-		Expect(upgradev1alpha1.AddToScheme(impersonatedResourceClient.GetScheme())).Should(BeNil(), "Unable to register upgradev1alpha1 api to impersonated client scheme")
+		Expect(upgradev1alpha1.AddToScheme(impersonatedResourceClient.GetScheme())).Should(Succeed(), "Unable to register upgradev1alpha1 api to impersonated client scheme")
 		prom, err = prometheus.New(ctx, k8s)
 		Expect(err).ShouldNot(HaveOccurred(), "unable to setup prometheus client")
 	})
@@ -88,16 +87,16 @@ var _ = ginkgo.Describe("managed-upgrade-operator", ginkgo.Ordered, func() {
 			// Add the upgradeconfig to the cluster
 			upgradeConfig := makeMinimalUpgradeConfig(upgradeConfigForDedicatedAdminTestName, operatorNamespace)
 			ginkgo.By("Trying to create upgrade config")
-			err = impersonatedResourceClient.WithNamespace(operatorNamespace).Create(ctx, &upgradeConfig)
-			Expect(apierrors.IsForbidden(err)).To(BeTrue(), "Dedicated admin should not be able to create upgradeconfig")
+			err = impersonatedResourceClient.Create(ctx, &upgradeConfig)
+			Expect(apierrors.IsForbidden(err)).To(BeTrue(), "Expected forbidden error: dedicated admin should not be able to create upgradeconfig")
 
 			ginkgo.By("Adding test upgrade config as cluster admin")
-			err = k8s.WithNamespace(operatorNamespace).Create(ctx, &upgradeConfig)
+			err = k8s.Create(ctx, &upgradeConfig)
 			Expect(err).NotTo(HaveOccurred(), "Upgradeconfig should be created")
 
 			ginkgo.By("Trying to delete upgrade config")
 			err = impersonatedResourceClient.Delete(ctx, &upgradeConfig)
-			Expect(apierrors.IsForbidden(err)).To(BeTrue(), "Dedicated admin should not be able to delete upgradeconfig")
+			Expect(apierrors.IsForbidden(err)).To(BeTrue(), "Expected forbidden error: dedicated admin should not be able to delete upgradeconfig")
 
 			ginkgo.By("Cleaning up upgrade config")
 			err = k8s.Delete(ctx, &upgradeConfig)
@@ -114,34 +113,33 @@ var _ = ginkgo.Describe("managed-upgrade-operator", ginkgo.Ordered, func() {
 			// Validate clusterversion
 			Expect(err).NotTo(HaveOccurred())
 			Expect(clusterVersion).NotTo(BeNil())
+			skipIfNoUpdatesOrCurrentlyUpgrading(ctx, clusterVersion)
 		})
 
 		ginkgo.It("should stay Pending if the start time is in future", func(ctx context.Context) {
-			skipIfNoUpdatesOrCurrentlyUpgrading(ctx, clusterVersion)
 			targetVersion := clusterVersion.Status.AvailableUpdates[0].Version
 			targetChannel := clusterVersion.Spec.Channel
 			startTime := time.Now().UTC().Add(12 * time.Hour)
 			upgradeConfig = makeUpgradeConfig(upgradeConfigResourceName, operatorNamespace, startTime.Format(time.RFC3339), targetVersion, targetChannel)
 
 			ginkgo.By("Creating test upgrade config")
-			err = k8s.WithNamespace(operatorNamespace).Create(ctx, &upgradeConfig)
+			err = k8s.Create(ctx, &upgradeConfig)
 			Expect(err).NotTo(HaveOccurred(), "Upgradeconfig should be created")
 
 			ginkgo.By("Polling upgrade config")
 			var pollUc upgradev1alpha1.UpgradeConfig
-			Eventually(k8s.Get(ctx, upgradeConfigResourceName, operatorNamespace, &pollUc)).WithTimeout(time.Duration(60) * time.Second).WithPolling(time.Duration(3) * time.Second).Should(BeNil())
+			Eventually(k8s.Get(ctx, upgradeConfigResourceName, operatorNamespace, &pollUc)).WithTimeout(60 * time.Second).WithPolling(3 * time.Second).Should(BeNil())
 			Eventually(func() *upgradev1alpha1.UpgradeHistory {
 				k8s.Get(ctx, upgradeConfigResourceName, operatorNamespace, &pollUc)
 				return pollUc.Status.History.GetHistory(targetVersion)
-			}).WithTimeout(time.Duration(60) * time.Second).WithPolling(time.Duration(5) * time.Second).ShouldNot(BeNil())
+			}).WithTimeout(60 * time.Second).WithPolling(5 * time.Second).ShouldNot(BeNil())
 			Eventually(func() upgradev1alpha1.UpgradePhase {
 				k8s.Get(ctx, upgradeConfigResourceName, operatorNamespace, &pollUc)
 				return pollUc.Status.History.GetHistory(targetVersion).Phase
-			}).WithTimeout(time.Duration(60) * time.Second).WithPolling(time.Duration(5) * time.Second).Should(Equal((upgradev1alpha1.UpgradePhasePending)))
+			}).WithTimeout(60 * time.Second).WithPolling(5 * time.Second).Should(Equal((upgradev1alpha1.UpgradePhasePending)))
 		})
 
 		ginkgo.It("should raise prometheus metric if start time is invalid", func(ctx context.Context) {
-			skipIfNoUpdatesOrCurrentlyUpgrading(ctx, clusterVersion)
 			targetVersion := clusterVersion.Status.AvailableUpdates[0].Version
 			targetChannel := clusterVersion.Spec.Channel
 			upgradeConfig = makeUpgradeConfig(upgradeConfigResourceName, operatorNamespace, "this is not a start time", targetVersion, targetChannel)
@@ -152,17 +150,12 @@ var _ = ginkgo.Describe("managed-upgrade-operator", ginkgo.Ordered, func() {
 
 			ginkgo.By("Polling prometheus query")
 			query := fmt.Sprintf("upgradeoperator_upgradeconfig_validation_failed{upgradeconfig_name=\"%s\"} == 1", upgradeConfigResourceName)
-			Eventually(func() bool {
-				context, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+			Eventually(func(ctx context.Context) bool {
+				context, cancel := context.WithTimeout(ctx, 1*time.Minute)
 				defer cancel()
 				vector, err := prom.InstantQuery(context, query)
-				if err == nil {
-					if vector.Len() == 1 {
-						return true
-					}
-				}
-				return false
-			}).WithTimeout(time.Duration(60)*time.Second).WithPolling(time.Duration(5)*time.Second).Should(BeTrue(),
+				return err == nil && vector.Len() == 1
+			}).WithTimeout(60*time.Second).WithPolling(5*time.Second).Should(BeTrue(),
 				"MUO should raise prometheus metric for invalid start time for upgrade config", upgradeConfigResourceName)
 		})
 
@@ -181,10 +174,6 @@ var _ = ginkgo.Describe("managed-upgrade-operator", ginkgo.Ordered, func() {
 // Make upgrade config with given target
 func makeUpgradeConfig(name string, ns string, startTime string, version string, channel string) upgradev1alpha1.UpgradeConfig {
 	uc := upgradev1alpha1.UpgradeConfig{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "UpgradeConfig",
-			APIVersion: "upgrade.managed.openshift.io/v1alpha1",
-		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: ns,
@@ -205,10 +194,6 @@ func makeUpgradeConfig(name string, ns string, startTime string, version string,
 // Make generic minimal upgradeconfig
 func makeMinimalUpgradeConfig(name string, ns string) upgradev1alpha1.UpgradeConfig {
 	uc := upgradev1alpha1.UpgradeConfig{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "UpgradeConfig",
-			APIVersion: "upgrade.managed.openshift.io/v1alpha1",
-		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: ns,

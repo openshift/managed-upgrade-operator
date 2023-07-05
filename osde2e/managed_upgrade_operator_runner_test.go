@@ -5,6 +5,7 @@
 package osde2etests
 
 import (
+	"path/filepath"
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
