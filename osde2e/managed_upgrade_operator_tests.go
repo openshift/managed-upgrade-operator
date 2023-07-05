@@ -64,7 +64,7 @@ var _ = ginkgo.Describe("managed-upgrade-operator", ginkgo.Ordered, func() {
 		Expect(err).Should(BeNil(), "namespace %s not found", operatorNamespace)
 
 		ginkgo.By("Checking the operator lock file config map exists")
-		assertions.EventuallyConfigMap(ctx, k8s, operatorLockFile, operatorNamespace).WithTimeout(time.Duration(300)*time.Second).WithPolling(time.Duration(30)*time.Second).Should(Not(BeNil()), "configmap %s should exist", operatorLockFile)
+		assertions.EventuallyConfigMap(ctx, k8s, operatorLockFile, operatorNamespace).WithTimeout(300*time.Second).WithPolling(30*time.Second).Should(Not(BeNil()), "configmap %s should exist", operatorLockFile)
 
 		ginkgo.By("Checking the operator deployment exists and is available")
 		assertions.EventuallyDeployment(ctx, k8s, operatorName, operatorNamespace)
