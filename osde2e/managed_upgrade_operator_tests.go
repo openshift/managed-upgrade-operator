@@ -53,7 +53,7 @@ var _ = ginkgo.Describe("managed-upgrade-operator", ginkgo.Ordered, func() {
 		Expect(upgradev1alpha1.AddToScheme(k8s.GetScheme())).Should(BeNil(), "Unable to register upgradev1alpha1 api scheme")
 		impersonatedResourceClient, err = k8s.Impersonate("test-user@redhat.com", "dedicated-admins")
 		Expect(err).ShouldNot(HaveOccurred(), "Unable to setup impersonated k8s client")
-		Expect(upgradev1alpha1.AddToScheme(impersonatedResourceClient.GetScheme())).Should(BeNil(), "Unable to register upgradev1alpha1 api scheme")
+		Expect(upgradev1alpha1.AddToScheme(impersonatedResourceClient.GetScheme())).Should(BeNil(), "Unable to register upgradev1alpha1 api to impersonated client scheme")
 		prom, err = prometheus.New(ctx, k8s)
 		Expect(err).ShouldNot(HaveOccurred(), "unable to setup prometheus client")
 	})
