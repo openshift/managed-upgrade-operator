@@ -36,18 +36,18 @@ aliases:
     - Tessg22
     - thavlice
   srep-functional-team-rocket:
-    - anispate
-    - yithian
     - aliceh
+    - anispate
     - bdmiller3
+    - clcollins
     - mjlshen
-    - sam-nguyen7
     - tnierman
+    - yithian
   srep-functional-team-security:
     - karthikperu7
-    - clcollins
     - gsleeman
     - jaybeeunix
+    - sam-nguyen7
     - wshearn
   srep-functional-team-thor:
     - bmeng
@@ -68,12 +68,12 @@ aliases:
   srep-functional-leads:
     - mrbarge
     - rafael-azevedo
-    - sam-nguyen7
     - iamkirkbater
     - bng0y
     - tonytheleg
     - karthikperu7
     - bmeng
+    - mjlshen
   srep-team-leads:
     - cblecker
     - jharrington22
