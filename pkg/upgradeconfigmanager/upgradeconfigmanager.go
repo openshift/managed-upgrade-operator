@@ -56,7 +56,6 @@ var (
 )
 
 // UpgradeConfigManager enables an implementation of an UpgradeConfigManager
-//
 //go:generate mockgen -destination=mocks/upgradeconfigmanager.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager UpgradeConfigManager
 type UpgradeConfigManager interface {
 	Get() (*upgradev1alpha1.UpgradeConfig, error)
@@ -65,7 +64,6 @@ type UpgradeConfigManager interface {
 }
 
 // UpgradeConfigManagerBuilder enables an implementation of an UpgradeConfigManagerBuilder
-//
 //go:generate mockgen -destination=mocks/upgradeconfigmanager_builder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager UpgradeConfigManagerBuilder
 type UpgradeConfigManagerBuilder interface {
 	NewManager(client.Client) (UpgradeConfigManager, error)
@@ -366,7 +364,7 @@ func recreateUpgradeConfigOnChange(c client.Client, foundUpgradeConfig bool, exi
 
 		// Confirm object is deleted prior to creating
 		if !confirmDeletedUpgrade {
-			err = wait.PollUntilContextTimeout(context.Background(), 5*time.Second, 60*time.Second, true, func(context.Context) (bool, error) {
+			err = wait.PollImmediate(5*time.Second, 60*time.Second, func() (bool, error) {
 				_, err := ucm.Get()
 				if err != nil {
 					if err == ErrUpgradeConfigNotFound {
