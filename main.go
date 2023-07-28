@@ -159,6 +159,7 @@ func main() {
 		LeaderElectionID:       "312e6264.managed.openshift.io",
 		SyncPeriod:             &syncPeriod,
 		NewClient: func(config *rest.Config, options client.Options) (client.Client, error) {
+			options.Cache = nil
 			return client.New(config, options)
 		},
 	})
