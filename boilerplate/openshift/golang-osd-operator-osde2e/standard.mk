@@ -9,6 +9,10 @@ ifndef HARNESS_IMAGE_REPOSITORY
 $(error HARNESS_IMAGE_REPOSITORY is not set; check project.mk file)
 endif
 
+# Use current commit as harness image tag
+CURRENT_COMMIT=$(shell git rev-parse --short=7 HEAD)
+HARNESS_IMAGE_TAG=$(CURRENT_COMMIT)
+
 ### Accommodate docker or podman
 #
 # The docker/podman creds cache needs to be in a location unique to this
@@ -76,4 +80,4 @@ e2e-harness-build:
 # push harness image
 .PHONY: e2e-image-build-push
 e2e-image-build-push:
-	${OSDE2E_CONVENTION_DIR}/e2e-image-build-push.sh "./osde2e/Dockerfile $(IMAGE_REGISTRY)/$(HARNESS_IMAGE_REPOSITORY)/$(HARNESS_IMAGE_NAME):latest"
+	${OSDE2E_CONVENTION_DIR}/e2e-image-build-push.sh "./osde2e/Dockerfile $(IMAGE_REGISTRY)/$(HARNESS_IMAGE_REPOSITORY)/$(HARNESS_IMAGE_NAME):$(HARNESS_IMAGE_TAG)"
