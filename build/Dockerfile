@@ -1,4 +1,4 @@
-FROM quay.io/app-sre/boilerplate:image-v3.0.4 AS builder
+FROM quay.io/app-sre/boilerplate:image-v3.0.5 AS builder
 
 RUN mkdir -p /workdir
 WORKDIR /workdir
@@ -8,7 +8,7 @@ COPY . .
 RUN make go-build
 
 ####
-FROM registry.access.redhat.com/ubi8/ubi-minimal:8.8-1014
+FROM registry.access.redhat.com/ubi8/ubi-minimal:8.8-1037
 
 ENV USER_UID=1001 \
     USER_NAME=managed-upgrade-operator
