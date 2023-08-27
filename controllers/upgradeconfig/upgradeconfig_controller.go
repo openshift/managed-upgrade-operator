@@ -87,12 +87,32 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 		return reconcile.Result{}, err
 	}
 
+	// Get current ClusterVersion
+	cvClient := r.CvClientBuilder.New(r.Client)
+	clusterVersion, err := cvClient.GetClusterVersion()
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
 	history := instance.Status.History.GetHistory(instance.Spec.Desired.Version)
 	if history == nil {
-		history = &upgradev1alpha1.UpgradeHistory{Version: instance.Spec.Desired.Version, Phase: upgradev1alpha1.UpgradePhaseNew}
+		upgraded, err := cvClient.HasUpgradeCommenced(instance)
+		if err != nil {
+			return reconcile.Result{}, fmt.Errorf("could not tell if cluster was upgrading: %v", err)
+		}
+		if upgraded {
+			// If CVO is currently set to the version of the UC, then we need to be in an Upgrading phase, at minimum.
+			// We also won't know the actual start time, so picking now will just have to do
+			history = &upgradev1alpha1.UpgradeHistory{
+				Version:   instance.Spec.Desired.Version,
+				Phase:     upgradev1alpha1.UpgradePhaseUpgrading,
+				StartTime: &metav1.Time{Time: time.Now()}}
+		} else {
+			history = &upgradev1alpha1.UpgradeHistory{Version: instance.Spec.Desired.Version, Phase: upgradev1alpha1.UpgradePhaseNew}
+		}
 		history.Conditions = upgradev1alpha1.NewConditions()
 		instance.Status.History = append([]upgradev1alpha1.UpgradeHistory{*history}, instance.Status.History...)
-		err := r.Client.Status().Update(context.TODO(), instance)
+		err = r.Client.Status().Update(context.TODO(), instance)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -114,13 +134,6 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 		cfm := r.ConfigManagerBuilder.New(r.Client, cmTarget)
 		cfg := &config{}
 		err = cfm.Into(cfg)
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-
-		// Get current ClusterVersion
-		cvClient := r.CvClientBuilder.New(r.Client)
-		clusterVersion, err := cvClient.GetClusterVersion()
 		if err != nil {
 			return reconcile.Result{}, err
 		}
