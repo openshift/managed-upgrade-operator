@@ -665,8 +665,8 @@ github.com/openshift/machine-config-operator v0.0.1-0.20230330142923-2832f049b3f
 github.com/openshift/machine-config-operator v0.0.1-0.20230330142923-2832f049b3f4/go.mod h1:p8S2oRbRzYFB6y8vN1QBI9uExCUkXZGpZ/yW8s9ZO+Y=
 github.com/openshift/operator-custom-metrics v0.5.1 h1:1pk4YMUV+cmqfV0f2fyxY62cl7Gc76kwudJT+EdcfYM=
 github.com/openshift/operator-custom-metrics v0.5.1/go.mod h1:0dYDHi/ubKRWzsC9MmW6bRMdBgo1QSOuAh3GupTe0Sw=
-github.com/openshift/osde2e-common v0.0.0-20230627123718-79ec4c181d85 h1:oRWhSeC5i+26g4RiIOziLL2UidhU7ZSwpG52bFK6e1Y=
-github.com/openshift/osde2e-common v0.0.0-20230627123718-79ec4c181d85/go.mod h1:qP+tI/gaFODlcRTSzD7IL3Z6Eh7C/eKdxK4z7J/bYNE=
+github.com/openshift/osde2e-common v0.0.0-20230830054343-f487e353dac0 h1:3XKwwvrFlLHU0OeQRcn1jktg/UKFQHNSGnQhNbPhY/k=
+github.com/openshift/osde2e-common v0.0.0-20230830054343-f487e353dac0/go.mod h1:bkreMB6T7SoOuEceXyXCvMHF4/9augfiWsixGaQ/Yo0=
 github.com/opentracing/opentracing-go v1.1.0/go.mod h1:UkNAQd3GIcIGf0SeVgPpRdFStlNbqXla1AfSYxPUl2o=
 github.com/opentracing/opentracing-go v1.2.0 h1:uEJPy/1a5RIPAJ0Ov+OIO8OxWu77jEv+1B0VhjKrZUs=
 github.com/opentracing/opentracing-go v1.2.0/go.mod h1:GxEUsuufX4nBwe+T+Wl9TAgYrxe9dPLANfrWvHYVTgc=

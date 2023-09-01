@@ -22,7 +22,7 @@ require (
 	github.com/openshift/library-go v0.0.0-20230112164258-24668b1349e6
 	github.com/openshift/machine-config-operator v0.0.1-0.20230330142923-2832f049b3f4
 	github.com/openshift/operator-custom-metrics v0.5.1
-	github.com/openshift/osde2e-common v0.0.0-20230627123718-79ec4c181d85
+	github.com/openshift/osde2e-common v0.0.0-20230830054343-f487e353dac0
 	github.com/operator-framework/operator-lib v0.9.0
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.64.0
 	github.com/prometheus-operator/prometheus-operator/pkg/client v0.64.0

@@ -155,7 +155,7 @@ var _ = ginkgo.Describe("managed-upgrade-operator", ginkgo.Ordered, func() {
 				defer cancel()
 				vector, err := prom.InstantQuery(context, query)
 				return err == nil && vector.Len() == 1
-			}).WithTimeout(60*time.Second).WithPolling(5*time.Second).Should(BeTrue(),
+			}).WithContext(ctx).WithTimeout(60*time.Second).WithPolling(5*time.Second).Should(BeTrue(),
 				"MUO should raise prometheus metric for invalid start time for upgrade config", upgradeConfigResourceName)
 		})
 
@@ -167,6 +167,11 @@ var _ = ginkgo.Describe("managed-upgrade-operator", ginkgo.Ordered, func() {
 				Expect(err).NotTo(HaveOccurred(), "Could not clean up upgrade config")
 			}
 		})
+	})
+
+	ginkgo.It("can be upgraded", func(ctx context.Context) {
+		err := k8s.UpgradeOperator(ctx, operatorName, operatorNamespace)
+		Expect(err).NotTo(HaveOccurred(), "operator upgrade failed")
 	})
 
 })
