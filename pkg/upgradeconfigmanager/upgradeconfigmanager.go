@@ -198,17 +198,6 @@ func (s *upgradeConfigManager) Refresh() (bool, error) {
 		foundUpgradeConfig = true
 	}
 
-	// If we are in the middle of an upgrade, we should not refresh
-	cvClient := s.cvClientBuilder.New(s.client)
-	upgrading, err := upgradeInProgress(currentUpgradeConfig, cvClient)
-	if err != nil {
-		return false, err
-	}
-	if upgrading {
-		log.Info("skipping spec refresh as the cluster is currently upgrading")
-		return false, nil
-	}
-
 	// Get the latest config specs from the provider
 	pp, err := s.specProviderBuilder.New(s.client, s.configManagerBuilder)
 	if err != nil {

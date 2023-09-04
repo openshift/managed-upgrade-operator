@@ -278,11 +278,21 @@ var _ = Describe("OCM Provider", func() {
 		})
 		It("Will not action a policy not in a pending state", func() {
 			u := upgradePolicyListResponse.Items[0]
-			u.Version = ""
-			upgradePolicyStateResponse.Value = "somethingelse"
+			upgradePolicyStateResponse.Value = "pending"
 			result := isActionableUpgradePolicy(&u, &upgradePolicyStateResponse)
 			Expect(result).To(BeFalse())
 		})
-
+		It("Will not action a policy not in a completed state", func() {
+			u := upgradePolicyListResponse.Items[0]
+			upgradePolicyStateResponse.Value = "completed"
+			result := isActionableUpgradePolicy(&u, &upgradePolicyStateResponse)
+			Expect(result).To(BeFalse())
+		})
+		It("Will not action a policy not in a cancelled state", func() {
+			u := upgradePolicyListResponse.Items[0]
+			upgradePolicyStateResponse.Value = "cancelled"
+			result := isActionableUpgradePolicy(&u, &upgradePolicyStateResponse)
+			Expect(result).To(BeFalse())
+		})
 	})
 })

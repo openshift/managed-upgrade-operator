@@ -253,12 +253,6 @@ var _ = Describe("UpgradeConfigManager", func() {
 				Type:                 TEST_UPGRADE_TYPE,
 			},
 		}
-		cv := &configv1.ClusterVersion{
-			Spec: configv1.ClusterVersionSpec{
-				DesiredUpdate: &configv1.Update{Version: TEST_UPGRADE_VERSION},
-				Channel:       TEST_UPGRADE_CHANNEL,
-			},
-		}
 
 		BeforeEach(func() {
 			_ = os.Setenv("OPERATOR_NAMESPACE", TEST_OPERATOR_NAMESPACE)
@@ -273,42 +267,9 @@ var _ = Describe("UpgradeConfigManager", func() {
 			Expect(err).To(Equal(ErrRetrievingUpgradeConfigs))
 		})
 
-		It("should not proceed if an upgrade is occurring", func() {
-			cv := &configv1.ClusterVersion{
-				Spec: configv1.ClusterVersionSpec{
-					DesiredUpdate: &configv1.Update{Version: TEST_UPGRADE_VERSION},
-					Channel:       TEST_UPGRADE_CHANNEL,
-				},
-				Status: configv1.ClusterVersionStatus{
-					Conditions: []configv1.ClusterOperatorStatusCondition{
-						{
-							Type:   configv1.OperatorProgressing,
-							Status: configv1.ConditionTrue,
-						},
-					},
-				},
-			}
-			upgradeConfig.Status.History = []upgradev1alpha1.UpgradeHistory{
-				{
-					Version: TEST_UPGRADE_VERSION,
-					Phase:   upgradev1alpha1.UpgradePhaseUpgrading,
-				},
-			}
-			gomock.InOrder(
-				mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, upgradeConfig).Return(nil),
-				mockCVClientBuilder.EXPECT().New(gomock.Any()).Return(mockCVClient),
-				mockCVClient.EXPECT().GetClusterVersion().Return(cv, nil),
-			)
-			changed, err := manager.Refresh()
-			Expect(err).To(BeNil())
-			Expect(changed).To(BeFalse())
-		})
-
 		It("should indicate if the provider couldn't pull properly", func() {
 			gomock.InOrder(
 				mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, upgradeConfig).Return(nil),
-				mockCVClientBuilder.EXPECT().New(gomock.Any()).Return(mockCVClient),
-				mockCVClient.EXPECT().GetClusterVersion().Return(cv, nil),
 				mockSPClientBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockSPClient, nil),
 				mockSPClient.EXPECT().Get().Return(nil, fmt.Errorf("some error")),
 			)
@@ -320,8 +281,6 @@ var _ = Describe("UpgradeConfigManager", func() {
 		It("should remove existing UpgradeConfigs if no provider configs are pulled", func() {
 			gomock.InOrder(
 				mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, upgradeConfig).Return(nil),
-				mockCVClientBuilder.EXPECT().New(gomock.Any()).Return(mockCVClient),
-				mockCVClient.EXPECT().GetClusterVersion().Return(cv, nil),
 				mockSPClientBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockSPClient, nil),
 				mockSPClient.EXPECT().Get().Return([]upgradev1alpha1.UpgradeConfigSpec{}, nil),
 				mockKubeClient.EXPECT().Delete(gomock.Any(), gomock.Any()).DoAndReturn(
@@ -346,8 +305,6 @@ var _ = Describe("UpgradeConfigManager", func() {
 			}, "test")
 			gomock.InOrder(
 				mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(notFound),
-				mockCVClientBuilder.EXPECT().New(gomock.Any()).Return(mockCVClient),
-				mockCVClient.EXPECT().GetClusterVersion().Return(cv, nil),
 				mockSPClientBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockSPClient, nil),
 				mockSPClient.EXPECT().Get().Return([]upgradev1alpha1.UpgradeConfigSpec{}, nil),
 			)
@@ -366,8 +323,6 @@ var _ = Describe("UpgradeConfigManager", func() {
 			}, "test")
 			gomock.InOrder(
 				mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(notFound),
-				mockCVClientBuilder.EXPECT().New(gomock.Any()).Return(mockCVClient),
-				mockCVClient.EXPECT().GetClusterVersion().Return(cv, nil),
 				mockSPClientBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockSPClient, nil),
 				mockSPClient.EXPECT().Get().Return(upgradeConfigSpecs, nil),
 				mockKubeClient.EXPECT().Create(gomock.Any(), gomock.Any()).DoAndReturn(
@@ -413,8 +368,6 @@ var _ = Describe("UpgradeConfigManager", func() {
 
 			gomock.InOrder(
 				mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, *oldUpgradeConfig).Return(nil),
-				mockCVClientBuilder.EXPECT().New(gomock.Any()).Return(mockCVClient),
-				mockCVClient.EXPECT().GetClusterVersion().Return(cv, nil),
 				mockSPClientBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockSPClient, nil),
 				mockSPClient.EXPECT().Get().Return(upgradeConfigSpecs, nil),
 				mockKubeClient.EXPECT().Delete(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil),

@@ -135,8 +135,15 @@ func getNextOccurringUpgradePolicy(uPs *ocm.UpgradePolicyList) (*ocm.UpgradePoli
 // UpgradeConfig
 func isActionableUpgradePolicy(up *ocm.UpgradePolicy, state *ocm.UpgradePolicyState) bool {
 
-	// Policies that aren't in a SCHEDULED state should be ignored
-	if strings.ToLower(state.Value) != "scheduled" {
+	switch strings.ToLower(state.Value) {
+	case "pending":
+		// Policies that are in a PENDING state should be ignored, because they aren't scheduled
+		return false
+	case "completed":
+		// Policies that are in a COMPLETED state should be ignored, because they're already acted on
+		return false
+	case "cancelled":
+		// Policies that are in a CANCELLED state should be ignored, because they're no longer valid
 		return false
 	}
 
