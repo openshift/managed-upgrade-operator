@@ -18,14 +18,18 @@
 ## About
 The `configmap` which used to tune the `managed-upgrade-operator`. It has various configurable values.
 
-## How to use it
+## Practical implementations of the ConfigMap
 
-### For OSD
-You can update the `configmap` via [`managed-cluster-config`](https://github.com/openshift/managed-cluster-config/tree/master/deploy/managed-upgrade-operator-config).
+### Red Hat OSD/ROSA clusters
 
-### For ARO
-TBD
+Maintained in the [managed-cluster-config](https://github.com/openshift/managed-cluster-config) repository:
 
+- https://github.com/openshift/managed-cluster-config/tree/master/deploy/managed-upgrade-operator-config
+
+### Red Hat ARO clusters
+
+Maintained in the [ARO-RP](https://github.com/Azure/ARO-RP) repository:
+- https://github.com/Azure/ARO-RP/blob/master/pkg/operator/controllers/muo/staticresources/config.yaml
 
 ## Configurable knobs
 
@@ -47,7 +51,7 @@ Please refer to the doc [`configmanager`](./configmanager.md)
 
 | Key        | Description                                                             |
 |------------|-------------------------------------------------------------------------|
-| cincinnati | Use Cincinnati to validate upgrade hops during UpgradeConfig validation |
+| `cincinnati` | Use Cincinnati to validate upgrade hops during UpgradeConfig validation |
 
 Example:
 ```
@@ -59,7 +63,7 @@ Example:
 
 | Key     | Description                                |
 |---------|--------------------------------------------|
-| fedramp | MUO is deployed into a Fedramp environment |
+| `fedramp` | MUO is deployed into a Fedramp environment |
 
 Example:
 ```
@@ -69,11 +73,12 @@ Example:
 
 #### maintenance
 
-| Key | Description |
-| --- | --- |
-| controlPlaneTime | maintenance window created in alertmanager for controlplane upgrade in minutes including all the low and medium alerts, default is 90 |
-| ignoredAlerts | a list of particular alerts to silence which are not covered by the default maintenance |
-| controlPlaneCriticals | critical alerts might fire during controlplane upgrade |
+The `maintenance` section is used to control behaviour of the `managed-upgrade-operator` concerning the creation of AlertManager silences created during the upgrade process.
+
+| Key                                 | Description                                                                                                                                      |
+|-------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------|
+| `controlPlaneTime`                    | maintenance window created in alertmanager for controlplane upgrade, including all the low and medium alerts. Measured in minutes, default is 90 |
+| `ignoredAlerts.controlPlaneCriticals` | a list of particular critical alerts during the controlplane upgrade which are not covered by the default maintenance |
 
 Example:
 ```
@@ -87,9 +92,11 @@ Example:
 
 #### scale
 
-| Key | Description |
-| --- | --- |
-| timeOut | timeout window for the extra workload scale up in minutes, default is 30 |
+The `scale` section is used to control the `managed-upgrade-operator`'s behaviour when performing capacity node scaling.
+
+| Key | Description                                                              |
+| --- |--------------------------------------------------------------------------|
+| `timeOut` | timeout window for the extra workload scale up in minutes, default is 30 |
 
 Example:
 ```
@@ -99,10 +106,12 @@ Example:
 
 #### upgradeWindow
 
-| Key | Description |
-| --- | --- |
-| delayTrigger | a time window to indicate that the cluster upgrade is delayed against the schedule in minutes, default is 30 |
-| timeOut | a time window which the upgrade process should have started before it is considered as "failed". Measured in minutes, default is 120 |
+The `upgradeWindow` section is used to control the `managed-upgrade-operator`'s behaviour in relation to the upgrade window within which an upgrade should take place.   
+
+| Key | Description                                                                                                                                                                                               |
+| --- |-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `delayTrigger` | The duration of time following the upgrade scheduled start time, after which MUO will set the upgrade state to "delayed" if the control plane upgrade has not started. Measured in minutes, default is 30 |
+| `timeOut` | a time window which the upgrade process should have started before it is considered as "failed". Measured in minutes, default is 120                                                                      |
 
 Example:
 ```
@@ -115,10 +124,10 @@ Example:
 
 | Key | Description                                                                                           |
 | --- |-------------------------------------------------------------------------------------------------------|
-| timeOut | a time window to trigger the force node drain strategy, measured in minutes                           |
-| expectedNodeDrainTime | expected time in minutes for a single node drain to be finished, used to setup the maintenance window |
-| disableDrainStrategies | disable any node drain completion strategies from executing (defaults to false)                       |
-| ignoredNamespacePatterns | any pods in namespaces matching the regular expressions in this list are ignored from having drain strategies applied  to them |
+| `timeOut` | a time window to trigger the force node drain strategy, measured in minutes                           |
+| `expectedNodeDrainTime` | expected time in minutes for a single node drain to be finished, used to setup the maintenance window |
+| `disableDrainStrategies` | disable any node drain completion strategies from executing (defaults to false)                       |
+| `ignoredNamespacePatterns` | any pods in namespaces matching the regular expressions in this list are ignored from having drain strategies applied to them |
 
 Example:
 ```
@@ -133,10 +142,12 @@ Example:
 
 #### healthCheck
 
+The `healthCheck` section is used to control how the `managed-upgrade-operator` handles the pre and post-upgrade health checks.
+
 | Key | Description |
 | --- | --- |
-| ignoredCriticals | a list of critical alerts which need to be ignored in the health check to unblock the upgrade process |
-| ignoredNamespaces | a list of namespaces which need to be ignored in the health check to unblock the upgrade process |
+| `ignoredCriticals` | a list of critical alerts which need to be ignored in the health check to unblock the upgrade process |
+| `ignoredNamespaces` | a list of namespaces which need to be ignored in the health check to unblock the upgrade process |
 
 Example:
 ```
@@ -153,7 +164,7 @@ Example:
 
 | Key | Description |
 | --- | --- |
-| http | a list of external HTTP(s) dependencies to check before the upgrade can be triggered. Dependencies must return a 200 HTTP Status Code to be considered healthy. |
+| `http` | a list of external HTTP(s) dependencies to check before the upgrade can be triggered. Dependencies must return a 200 HTTP Status Code to be considered healthy. |
 
 Example:
 ```
