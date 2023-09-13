@@ -37,6 +37,21 @@ func (m *MockScaler) EXPECT() *MockScalerMockRecorder {
 	return m.recorder
 }
 
+// CanScale mocks base method.
+func (m *MockScaler) CanScale(arg0 client.Client, arg1 logr.Logger) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CanScale", arg0, arg1)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CanScale indicates an expected call of CanScale.
+func (mr *MockScalerMockRecorder) CanScale(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CanScale", reflect.TypeOf((*MockScaler)(nil).CanScale), arg0, arg1)
+}
+
 // EnsureScaleDownNodes mocks base method.
 func (m *MockScaler) EnsureScaleDownNodes(arg0 client.Client, arg1 drain.NodeDrainStrategy, arg2 logr.Logger) (bool, error) {
 	m.ctrl.T.Helper()
