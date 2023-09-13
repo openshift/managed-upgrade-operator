@@ -34,6 +34,16 @@ func (c *clusterUpgrader) EnsureExtraUpgradeWorkers(ctx context.Context, logger 
 		return true, nil
 	}
 
+	// check if the cluster would support scaling
+	canScale, err := c.scaler.CanScale(c.client, logger)
+	if err != nil {
+		return false, err
+	}
+	if !canScale {
+		// We don't need to perform a scaling step
+		return true, nil
+	}
+
 	isScaled, err := c.scaler.EnsureScaleUpNodes(c.client, c.config.GetScaleDuration(), logger)
 	if err != nil {
 		if scaler.IsScaleTimeOutError(err) {
@@ -67,6 +77,16 @@ func (c *clusterUpgrader) RemoveExtraScaledNodes(ctx context.Context, logger log
 		return false, configErr
 	}
 
+	// check if the cluster would support scaling
+	canScale, err := c.scaler.CanScale(c.client, logger)
+	if err != nil {
+		return false, err
+	}
+	if !canScale {
+		// We don't need to perform a scaling step
+		return true, nil
+	}
+	
 	nds, err := c.drainstrategyBuilder.NewNodeDrainStrategy(c.client, logger, c.upgradeConfig, &c.config.NodeDrain)
 	if err != nil {
 		return false, err

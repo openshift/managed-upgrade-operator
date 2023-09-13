@@ -28,6 +28,28 @@ const (
 
 type machineSetScaler struct{}
 
+// CanScale will check if the MachineSet scaler is capable of performing a scale-out event
+func (s *machineSetScaler) CanScale(c client.Client, logger logr.Logger) (bool, error) {
+	originalMachineSets := &machineapi.MachineSetList{}
+
+	// Do we have an original "worker" machineset that can be scaled?
+	err := c.List(context.TODO(), originalMachineSets, []client.ListOption{
+		client.InNamespace(MACHINE_API_NAMESPACE),
+		client.MatchingLabels{"hive.openshift.io/machine-pool": "worker"},
+	}...)
+	if err != nil {
+		logger.Error(err, "failed to get original machinesets")
+		return false, err
+	}
+	if len(originalMachineSets.Items) == 0 {
+		// We require a worker machineset in order to perform a capacity scale
+		return false, nil
+	}
+
+	// All our conditions are satisfied
+	return true, nil
+}
+
 // EnsureScaleUpNodes will create a new MachineSet with 1 extra replicas for workers in every region and report when the nodes are ready.
 func (s *machineSetScaler) EnsureScaleUpNodes(c client.Client, timeOut time.Duration, logger logr.Logger) (bool, error) {
 	upgradeMachinesets := &machineapi.MachineSetList{}

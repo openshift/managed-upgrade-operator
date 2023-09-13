@@ -9,8 +9,10 @@ import (
 )
 
 // Scaler is an interface that enables implementations of a Scaler
+//
 //go:generate mockgen -destination=mocks/scaler.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/scaler Scaler
 type Scaler interface {
+	CanScale(client.Client, logr.Logger) (bool, error)
 	EnsureScaleUpNodes(client.Client, time.Duration, logr.Logger) (bool, error)
 	EnsureScaleDownNodes(client.Client, drain.NodeDrainStrategy, logr.Logger) (bool, error)
 }

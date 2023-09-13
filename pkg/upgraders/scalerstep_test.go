@@ -85,10 +85,22 @@ var _ = Describe("ScalerStep", func() {
 	})
 
 	Context("Scaling", func() {
+		Context("When the scaler says that scaling cannot proceed", func() {
+			It("should not attempt to scale", func() {
+				gomock.InOrder(
+					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
+					mockScalerClient.EXPECT().CanScale(gomock.Any(), gomock.Any()).Return(false, nil),
+				)
+				ok, err := upgrader.EnsureExtraUpgradeWorkers(context.TODO(), logger)
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(ok).To(BeTrue())
+			})
+		})
 		Context("When capacity reservation is enabled", func() {
 			It("Should scale up extra nodes and set success metric on successful scaling when capacity reservation enabled", func() {
 				gomock.InOrder(
 					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
+					mockScalerClient.EXPECT().CanScale(gomock.Any(), gomock.Any()).Return(true, nil),
 					mockScalerClient.EXPECT().EnsureScaleUpNodes(gomock.Any(), config.GetScaleDuration(), gomock.Any()).Return(true, nil),
 					mockMetricsClient.EXPECT().UpdateMetricScalingSucceeded(gomock.Any()),
 				)
@@ -100,6 +112,7 @@ var _ = Describe("ScalerStep", func() {
 			It("Should set failed metric on scaling time out when capacity reservation enabled", func() {
 				gomock.InOrder(
 					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
+					mockScalerClient.EXPECT().CanScale(gomock.Any(), gomock.Any()).Return(true, nil),
 					mockScalerClient.EXPECT().EnsureScaleUpNodes(gomock.Any(), config.GetScaleDuration(), gomock.Any()).Return(false, scaler.NewScaleTimeOutError("test scale timed out")),
 					mockMetricsClient.EXPECT().UpdateMetricScalingFailed(gomock.Any()),
 					mockEMClient.EXPECT().Notify(notifier.MuoStateSkipped),

@@ -43,6 +43,45 @@ var _ = Describe("Node scaling tests", func() {
 		mockCtrl.Finish()
 	})
 
+	Context("When checking if the scaler can perform", func() {
+		var originalMachineSets *machineapi.MachineSetList
+
+		BeforeEach(func() {
+			originalMachineSets = &machineapi.MachineSetList{}
+		})
+
+		Context("and there is no worker machineset", func() {
+			It("will flag that scaling is not possible", func() {
+				originalMachineSets = &machineapi.MachineSetList{}
+				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
+					client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{"hive.openshift.io/machine-pool": "worker"},
+				}).SetArg(1, *originalMachineSets)
+				result, err := scaler.CanScale(mockKubeClient, logger)
+				Expect(err).To(BeNil())
+				Expect(result).To(BeFalse())
+			})
+		})
+		Context("and there is a worker machineset", func() {
+			It("will flag that scaling is possible", func() {
+				originalMachineSets = &machineapi.MachineSetList{
+					Items: []machineapi.MachineSet{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "worker",
+								Namespace: MACHINE_API_NAMESPACE,
+							},
+						},
+					},
+				}
+				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
+					client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{"hive.openshift.io/machine-pool": "worker"},
+				}).SetArg(1, *originalMachineSets)
+				result, err := scaler.CanScale(mockKubeClient, logger)
+				Expect(err).To(BeNil())
+				Expect(result).To(BeTrue())
+			})
+		})
+	})
 	Context("When the upgrade is scaling out workers", func() {
 		var upgradeMachinesets *machineapi.MachineSetList
 		var originalMachineSets *machineapi.MachineSetList
