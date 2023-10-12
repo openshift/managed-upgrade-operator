@@ -44,7 +44,6 @@ aliases:
     - tnierman
     - yithian
   srep-functional-team-security:
-    - karthikperu7
     - gsleeman
     - jaybeeunix
     - sam-nguyen7
@@ -66,14 +65,13 @@ aliases:
     - reedcort
     - mrWinston
   srep-functional-leads:
-    - mrbarge
     - rafael-azevedo
     - iamkirkbater
     - bng0y
     - tonytheleg
-    - karthikperu7
     - bmeng
     - mjlshen
+    - sam-nguyen7
   srep-team-leads:
     - cblecker
     - jharrington22
