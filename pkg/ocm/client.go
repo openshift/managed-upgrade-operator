@@ -32,7 +32,7 @@ var log = logf.Log.WithName("ocm-client")
 
 var (
 	// ErrClusterIdNotFound is an error describing the cluster ID can not be found
-	ErrClusterIdNotFound = fmt.Errorf("cluster ID can't be found")
+	ErrClusterIdNotFound = fmt.Errorf("OCM did not return a valid cluster ID: pull-secret may be invalid")
 )
 
 // OcmClient enables an implementation of an ocm client
