@@ -19,7 +19,6 @@ var log = logf.Log.WithName("ocm-config-getter")
 // Errors
 var (
 	ErrProviderUnavailable = fmt.Errorf("OCM Provider unavailable")
-	ErrClusterIdNotFound   = fmt.Errorf("cluster ID can't be found")
 	ErrRetrievingPolicies  = fmt.Errorf("could not retrieve provider upgrade policies")
 	ErrProcessingPolicies  = fmt.Errorf("could not process provider upgrade policies")
 )
@@ -64,7 +63,7 @@ func (s *ocmProvider) Get() ([]upgradev1alpha1.UpgradeConfigSpec, error) {
 	}
 	// In case a response was returned that has no cluster ID
 	if cluster.Id == "" {
-		return nil, ErrClusterIdNotFound
+		return nil, ocm.ErrClusterIdNotFound
 	}
 
 	// Retrieve the cluster's available upgrade policies from Cluster Services

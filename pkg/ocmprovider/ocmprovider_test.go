@@ -249,7 +249,7 @@ var _ = Describe("OCM Provider", func() {
 				mockOcmClient.EXPECT().GetCluster().Return(nil, ocm.ErrClusterIdNotFound),
 			)
 			specs, err := provider.Get()
-			Expect(err).To(Equal(ErrClusterIdNotFound))
+			Expect(err).To(Equal(ocm.ErrClusterIdNotFound))
 			Expect(specs).To(BeNil())
 		})
 
