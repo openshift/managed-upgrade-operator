@@ -40,6 +40,8 @@ configManager:
   watchInterval: 60
 ```
 
+If we set the OCM base URL to the URL of the local OCM agent service (`http://ocm-agent.openshift-ocm-agent-operator.svc.cluster.local:8081`) we will activate the `ocmAgent` client handler, which will use the OCM agent endpoints set out in the [OCM Agent router](https://github.com/openshift/ocm-agent/blob/master/pkg/cli/serve/serve.go)
+
 ### LOCAL UpgradeConfig Manager
 
 The following configuration fields must be set:
