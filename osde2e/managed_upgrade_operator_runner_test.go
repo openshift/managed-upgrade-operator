@@ -5,11 +5,10 @@
 package osde2etests
 
 import (
-	"path/filepath"
-	"testing"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"path/filepath"
+	"testing"
 )
 
 const (
