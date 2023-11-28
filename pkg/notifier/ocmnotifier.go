@@ -8,12 +8,23 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/openshift/managed-upgrade-operator/pkg/ocm"
+	"github.com/openshift/managed-upgrade-operator/pkg/ocmagent"
 	"github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager"
 )
 
 // NewOCMNotifier returns a ocmNotifier
 func NewOCMNotifier(client client.Client, ocmBaseUrl *url.URL, upgradeConfigManager upgradeconfigmanager.UpgradeConfigManager) (*ocmNotifier, error) {
-	ocmClient, err := ocm.NewBuilder().New(client, ocmBaseUrl)
+	var (
+		ocmClient ocm.OcmClient
+		err error
+	)
+
+	if (strings.Contains(ocmBaseUrl.String(), fmt.Sprintf("%s:%d", ocmagent.OCM_AGENT_SERVICE_URL, ocmagent.OCM_AGENT_SERVICE_PORT))) {
+		ocmClient, err = ocmagent.NewBuilder().New(client, ocmBaseUrl)
+	} else {
+		ocmClient, err = ocm.NewBuilder().New(client, ocmBaseUrl)
+	}
+
 	if err != nil {
 		return nil, err
 	}

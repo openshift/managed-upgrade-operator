@@ -12,6 +12,7 @@ import (
 
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/api/v1alpha1"
 	"github.com/openshift/managed-upgrade-operator/pkg/ocm"
+	"github.com/openshift/managed-upgrade-operator/pkg/ocmagent"
 )
 
 var log = logf.Log.WithName("ocm-config-getter")
@@ -25,8 +26,17 @@ var (
 
 // New returns a new ocmProvider
 func New(client client.Client, upgradeType upgradev1alpha1.UpgradeType, ocmBaseUrl *url.URL) (*ocmProvider, error) {
+	var (
+		ocmClient ocm.OcmClient
+		err error
+	)
 
-	ocmClient, err := ocm.NewBuilder().New(client, ocmBaseUrl)
+	if (strings.Contains(ocmBaseUrl.String(), fmt.Sprintf("%s:%d", ocmagent.OCM_AGENT_SERVICE_URL, ocmagent.OCM_AGENT_SERVICE_PORT))) {
+		ocmClient, err = ocmagent.NewBuilder().New(client, ocmBaseUrl)
+	} else {
+		ocmClient, err = ocm.NewBuilder().New(client, ocmBaseUrl)
+	}
+
 	if err != nil {
 		return nil, err
 	}
