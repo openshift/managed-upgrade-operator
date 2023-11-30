@@ -18,7 +18,7 @@ We recommend the following workflow when submitting change requests to this repo
 1. Fork the repository to your own account.
 2. Create a topic branch from the main branch.
 3. Make commits of logical units.
-4. If necessary, use `make generate` to update generated code.
+4. If necessary, use `make container-generate` to update generated code.
 5. Add or modify tests as needed. Ensure code has been [tested](testing.md) prior to PR.
 6. Push your changes to a topic branch in your fork of the repository.
 7. Submit a pull request to the original repository.
