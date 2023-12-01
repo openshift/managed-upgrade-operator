@@ -23,6 +23,8 @@ parameters:
   - name: IMAGE_TAG
     value: ''
     required: true
+  - name: LOG_BUCKET
+    value: 'osde2e-logs'
 objects:
   - apiVersion: batch/v1
     kind: Job
@@ -60,3 +62,5 @@ objects:
                   value: ${AWS_SECRET_ACCESS_KEY}
                 - name: AWS_REGION
                   value: ${AWS_REGION}
+                - name: LOG_BUCKET
+                  value: ${LOG_BUCKET}                 
