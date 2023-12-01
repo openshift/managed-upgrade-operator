@@ -6,7 +6,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/golang/mock/gomock"
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/api/v1alpha1"
 	configMock "github.com/openshift/managed-upgrade-operator/pkg/configmanager/mocks"
 	metricsMock "github.com/openshift/managed-upgrade-operator/pkg/metrics/mocks"
@@ -15,6 +14,7 @@ import (
 	ucMgrMock "github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager/mocks"
 	"github.com/openshift/managed-upgrade-operator/util/mocks"
 	testStructs "github.com/openshift/managed-upgrade-operator/util/mocks/structs"
+	"go.uber.org/mock/gomock"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/golang/mock/gomock"
 	configv1 "github.com/openshift/api/config/v1"
+	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"

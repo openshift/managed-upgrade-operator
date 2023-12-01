@@ -3,11 +3,12 @@ package upgradesteps
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/go-logr/logr"
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"time"
 )
 
 // UpgradeStep is the interface for steps that the upgrade runner

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/golang/mock/gomock"
 	"github.com/openshift/managed-upgrade-operator/pkg/ocm"
+	"go.uber.org/mock/gomock"
 	"k8s.io/apimachinery/pkg/types"
 
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/api/v1alpha1"

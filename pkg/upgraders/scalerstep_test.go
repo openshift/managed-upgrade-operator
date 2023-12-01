@@ -10,7 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/go-logr/logr"
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 	"k8s.io/apimachinery/pkg/types"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
