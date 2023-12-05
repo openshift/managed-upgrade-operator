@@ -13,9 +13,9 @@ import (
 
 	"github.com/openshift/managed-upgrade-operator/util/mocks"
 
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 )
 
 const (

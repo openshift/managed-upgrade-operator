@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/go-openapi/strfmt"
-	"github.com/golang/mock/gomock"
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/openshift/managed-upgrade-operator/config"
 	ammocks "github.com/openshift/managed-upgrade-operator/pkg/alertmanager/mocks"
@@ -15,6 +14,7 @@ import (
 	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
 	"github.com/openshift/managed-upgrade-operator/util/mocks"
 	amv2Models "github.com/prometheus/alertmanager/api/v2/models"
+	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
