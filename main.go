@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -45,6 +46,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	zaplogfmt "github.com/sykesm/zap-logfmt"
 	uzap "go.uber.org/zap"
@@ -150,14 +152,19 @@ func main() {
 	syncPeriod := muocfg.SyncPeriodDefault
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Namespace:              operatorNS,
-		Scheme:                 scheme,
-		MetricsBindAddress:     metricsAddr,
-		Port:                   9443,
+		Cache: cache.Options{
+			DefaultNamespaces: map[string]cache.Config{
+				operatorNS: {},
+			},
+			SyncPeriod: &syncPeriod,
+		},
+		Scheme: scheme,
+		Metrics: metricsserver.Options{
+			BindAddress: metricsAddr,
+		},
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "312e6264.managed.openshift.io",
-		SyncPeriod:             &syncPeriod,
 		NewClient: func(config *rest.Config, options client.Options) (client.Client, error) {
 			options.Cache = nil
 			return client.New(config, options)

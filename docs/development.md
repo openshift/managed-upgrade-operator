@@ -24,11 +24,11 @@ This document should entail all you need to develop this operator locally.
 
 ### golang
 
-A recent Go distribution (>=1.19) with enabled Go modules.
+A recent Go distribution (>=1.20) with enabled Go modules.
 
 ```shell
 $ go version
-go version go1.19.7 linux/amd64
+go version go1.20.13 linux/amd64
 ```
 
 ### operator-sdk
