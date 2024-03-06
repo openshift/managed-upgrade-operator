@@ -5,6 +5,7 @@
 //
 //	mockgen -destination=mocks/mockValidationBuilder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/validation ValidationBuilder
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 

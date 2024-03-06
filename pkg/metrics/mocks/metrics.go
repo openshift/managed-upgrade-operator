@@ -5,6 +5,7 @@
 //
 //	mockgen -destination=mocks/metrics.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/metrics Metrics
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 
@@ -283,15 +284,15 @@ func (mr *MockMetricsMockRecorder) UpdateMetricUpgradeControlPlaneTimeout(arg0, 
 }
 
 // UpdateMetricUpgradeResult mocks base method.
-func (m *MockMetrics) UpdateMetricUpgradeResult(arg0, arg1 string, arg2 []string) {
+func (m *MockMetrics) UpdateMetricUpgradeResult(arg0, arg1, arg2 string, arg3 metrics.IsMinorVersion, arg4 []string) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "UpdateMetricUpgradeResult", arg0, arg1, arg2)
+	m.ctrl.Call(m, "UpdateMetricUpgradeResult", arg0, arg1, arg2, arg3, arg4)
 }
 
 // UpdateMetricUpgradeResult indicates an expected call of UpdateMetricUpgradeResult.
-func (mr *MockMetricsMockRecorder) UpdateMetricUpgradeResult(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockMetricsMockRecorder) UpdateMetricUpgradeResult(arg0, arg1, arg2, arg3, arg4 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricUpgradeResult", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricUpgradeResult), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricUpgradeResult", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricUpgradeResult), arg0, arg1, arg2, arg3, arg4)
 }
 
 // UpdateMetricUpgradeWindowBreached mocks base method.

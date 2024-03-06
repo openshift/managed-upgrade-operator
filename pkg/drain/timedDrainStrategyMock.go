@@ -5,6 +5,7 @@
 //
 //	mockgen -destination=./timedDrainStrategyMock.go -package=drain -self_package=github.com/openshift/managed-upgrade-operator/pkg/drain github.com/openshift/managed-upgrade-operator/pkg/drain TimedDrainStrategy
 //
+
 // Package drain is a generated GoMock package.
 package drain
 

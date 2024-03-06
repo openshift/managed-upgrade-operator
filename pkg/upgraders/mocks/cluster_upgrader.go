@@ -5,6 +5,7 @@
 //
 //	mockgen -destination=mocks/cluster_upgrader.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/upgraders ClusterUpgrader
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 

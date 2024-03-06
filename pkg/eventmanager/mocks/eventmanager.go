@@ -5,6 +5,7 @@
 //
 //	mockgen -destination=mocks/eventmanager.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/eventmanager EventManager
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 

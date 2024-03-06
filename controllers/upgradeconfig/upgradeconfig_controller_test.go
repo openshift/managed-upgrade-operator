@@ -19,6 +19,7 @@ import (
 	cvMocks "github.com/openshift/managed-upgrade-operator/pkg/clusterversion/mocks"
 	configMocks "github.com/openshift/managed-upgrade-operator/pkg/configmanager/mocks"
 	emMocks "github.com/openshift/managed-upgrade-operator/pkg/eventmanager/mocks"
+	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
 	mockMetrics "github.com/openshift/managed-upgrade-operator/pkg/metrics/mocks"
 	"github.com/openshift/managed-upgrade-operator/pkg/scheduler"
 	schedulerMocks "github.com/openshift/managed-upgrade-operator/pkg/scheduler/mocks"
@@ -180,6 +181,7 @@ var _ = Describe("UpgradeConfigController", func() {
 					BeforeEach(func() {
 						// set CVO's version to that of the UC's
 						testClusterVersion.Spec.DesiredUpdate.Version = upgradeConfig.Spec.Desired.Version
+						testClusterVersion.Status.Desired.Version = "PreviousVersion"
 					})
 					It("sets an appropriate history phase", func() {
 						matcher := testStructs.NewUpgradeConfigMatcher()
@@ -209,7 +211,7 @@ var _ = Describe("UpgradeConfigController", func() {
 						_, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: upgradeConfigName})
 						Expect(err).NotTo(HaveOccurred())
 						Expect(matcher.ActualUpgradeConfig.Status.History).To(ContainElement(
-							gstruct.MatchFields(gstruct.IgnoreExtras, gstruct.Fields{"Version": Equal(upgradeConfig.Spec.Desired.Version),
+							gstruct.MatchFields(gstruct.IgnoreExtras, gstruct.Fields{"PrecedingVersion": Equal("PreviousVersion"), "Version": Equal(upgradeConfig.Spec.Desired.Version),
 								"Phase": Equal(upgradev1alpha1.UpgradePhaseUpgrading)})))
 					})
 				})
@@ -283,12 +285,11 @@ var _ = Describe("UpgradeConfigController", func() {
 		Context("When inspecting the UpgradeConfig's phase", func() {
 			var version = "a version"
 			BeforeEach(func() {
+				upgradeConfig.Status.History = []upgradev1alpha1.UpgradeHistory{{}}
+			})
+			JustBeforeEach(func() {
 				upgradeConfig.Spec.Desired.Version = version
-				upgradeConfig.Status.History = []upgradev1alpha1.UpgradeHistory{
-					{
-						Version: version,
-					},
-				}
+				upgradeConfig.Status.History[0].Version = version
 			})
 
 			Context("When the upgrade phase is New", func() {
@@ -634,6 +635,7 @@ var _ = Describe("UpgradeConfigController", func() {
 					upgradeConfig.Status.History[0].Phase = upgradev1alpha1.UpgradePhaseUpgraded
 					upgradeConfig.Status.History[0].StartTime = &metav1.Time{Time: time.Now()}
 					upgradeConfig.Status.History[0].CompleteTime = &metav1.Time{Time: time.Now()}
+
 				})
 				It("reports metrics", func() {
 					gomock.InOrder(
@@ -643,12 +645,59 @@ var _ = Describe("UpgradeConfigController", func() {
 						mockCVClient.EXPECT().GetClusterVersion().Return(testClusterVersion, nil),
 						mockClusterUpgraderBuilder.EXPECT().NewClient(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), upgradeConfig.Spec.Type).Times(0),
 						mockMetricsClient.EXPECT().AlertsFromUpgrade(gomock.Any(), gomock.Any()),
-						mockMetricsClient.EXPECT().UpdateMetricUpgradeResult(gomock.Any(), gomock.Any(), gomock.Any()),
+						mockMetricsClient.EXPECT().UpdateMetricUpgradeResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()),
 					)
 					result, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: upgradeConfigName})
 					Expect(err).NotTo(HaveOccurred())
 					Expect(result.Requeue).To(BeFalse())
 					Expect(result.RequeueAfter).To(BeZero())
+				})
+				When("It's a minor version change", func() {
+					BeforeEach(func() {
+						version = "4.15.0"
+						upgradeConfig.Status.History[0].PrecedingVersion = "4.14.0"
+					})
+					It("reports metric with minor_upgrade = true", func() {
+						gomock.InOrder(
+							mockEMBuilder.EXPECT().NewManager(gomock.Any()).Return(mockEMClient, nil),
+							mockKubeClient.EXPECT().Get(gomock.Any(), upgradeConfigName, gomock.Any()).SetArg(2, *upgradeConfig),
+							mockCVClientBuilder.EXPECT().New(gomock.Any()).Return(mockCVClient),
+							mockCVClient.EXPECT().GetClusterVersion().Return(testClusterVersion, nil),
+							mockClusterUpgraderBuilder.EXPECT().NewClient(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), upgradeConfig.Spec.Type).Times(0),
+							mockMetricsClient.EXPECT().AlertsFromUpgrade(gomock.Any(), gomock.Any()),
+							mockMetricsClient.EXPECT().UpdateMetricUpgradeResult(gomock.Any(), "4.14.0", "4.15.0", metrics.IsMinorVersionTrue, gomock.Any()),
+						)
+						result, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: upgradeConfigName})
+
+						Expect(err).NotTo(HaveOccurred())
+						Expect(result.Requeue).To(BeFalse())
+						Expect(result.RequeueAfter).To(BeZero())
+
+					})
+				})
+
+				When("It's a patch version change", func() {
+					BeforeEach(func() {
+						version = "4.15.2"
+						upgradeConfig.Status.History[0].PrecedingVersion = "4.15.1"
+					})
+					It("reports metric with minor_upgrade = false", func() {
+						gomock.InOrder(
+							mockEMBuilder.EXPECT().NewManager(gomock.Any()).Return(mockEMClient, nil),
+							mockKubeClient.EXPECT().Get(gomock.Any(), upgradeConfigName, gomock.Any()).SetArg(2, *upgradeConfig),
+							mockCVClientBuilder.EXPECT().New(gomock.Any()).Return(mockCVClient),
+							mockCVClient.EXPECT().GetClusterVersion().Return(testClusterVersion, nil),
+							mockClusterUpgraderBuilder.EXPECT().NewClient(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), upgradeConfig.Spec.Type).Times(0),
+							mockMetricsClient.EXPECT().AlertsFromUpgrade(gomock.Any(), gomock.Any()),
+							mockMetricsClient.EXPECT().UpdateMetricUpgradeResult(gomock.Any(), "4.15.1", "4.15.2", metrics.IsMinorVersionFalse, gomock.Any()),
+						)
+						result, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: upgradeConfigName})
+
+						Expect(err).NotTo(HaveOccurred())
+						Expect(result.Requeue).To(BeFalse())
+						Expect(result.RequeueAfter).To(BeZero())
+
+					})
 				})
 			})
 

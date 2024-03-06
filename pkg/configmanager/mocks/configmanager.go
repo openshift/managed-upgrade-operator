@@ -5,6 +5,7 @@
 //
 //	mockgen -destination=mocks/configmanager.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/configmanager ConfigManager
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 

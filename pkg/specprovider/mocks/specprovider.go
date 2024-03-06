@@ -5,6 +5,7 @@
 //
 //	mockgen -destination=mocks/specprovider.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/specprovider SpecProvider
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 

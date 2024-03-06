@@ -52,6 +52,10 @@ type UpgradeHistories []UpgradeHistory
 type UpgradeHistory struct {
 	//Desired version of this upgrade
 	Version string `json:"version,omitempty"`
+
+	//Version preceding this upgrade
+	PrecedingVersion string `json:"precedingVersion,omitempty"`
+
 	// +kubebuilder:validation:Enum={"New","Pending","Upgrading","Upgraded", "Failed"}
 	// This describe the status of the upgrade process
 	Phase UpgradePhase `json:"phase"`
