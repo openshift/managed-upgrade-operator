@@ -98,14 +98,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 
 	history := instance.Status.History.GetHistory(instance.Spec.Desired.Version)
 	if history == nil {
-		precedingVersion := clusterVersion.Status.Desired.Version
-		if precedingVersion == instance.Spec.Desired.Version {
-			for _, clusterVersionHistory := range clusterVersion.Status.History {
-				if clusterVersionHistory.State == v1.CompletedUpdate && clusterVersionHistory.Version != "" {
-					precedingVersion = clusterVersionHistory.Version
-				}
-			}
-		}
+		precedingVersion := getPrecedingVersion(instance, clusterVersion)
 
 		upgraded, err := cvClient.HasUpgradeCommenced(instance)
 		if err != nil {
@@ -260,6 +253,19 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 	}
 
 	return reconcile.Result{}, nil
+}
+
+func getPrecedingVersion(instance *upgradev1alpha1.UpgradeConfig, clusterVersion *v1.ClusterVersion) string {
+	precedingVersion := clusterVersion.Status.Desired.Version
+	if precedingVersion == instance.Spec.Desired.Version {
+		for _, clusterVersionHistory := range clusterVersion.Status.History {
+			if clusterVersionHistory.State == v1.CompletedUpdate && clusterVersionHistory.Version != "" {
+				precedingVersion = clusterVersionHistory.Version
+				return precedingVersion
+			}
+		}
+	}
+	return precedingVersion
 }
 
 func (r *ReconcileUpgradeConfig) upgradeCluster(upgrader cub.ClusterUpgrader, uc *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (reconcile.Result, error) {
