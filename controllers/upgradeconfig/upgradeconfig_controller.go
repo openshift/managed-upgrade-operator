@@ -289,22 +289,22 @@ func reportUpgradeMetrics(metricsClient metrics.Metrics, name string, precedingV
 	return nil
 }
 
-func getMinorUpgrade(precedingVersion, version string) (metrics.IsMinorVersion, error) {
+func getMinorUpgrade(precedingVersion, version string) (string, error) {
 	minorRegex, err := regexp.Compile(`[0-9]+\.([0-9]+)\..*`)
 	if err != nil {
-		return metrics.IsMinorVersionUnknown, fmt.Errorf("failed to compile regex: %v", err)
+		return "unknown", fmt.Errorf("failed to compile regex: %v", err)
 	}
 	versionMinorRes := minorRegex.FindStringSubmatch(version)
 	precedingVersionMinorRes := minorRegex.FindStringSubmatch(precedingVersion)
 	if len(versionMinorRes) < 2 || len(precedingVersionMinorRes) < 2 {
-		return metrics.IsMinorVersionUnknown, nil
+		return "unknown", nil
 	}
 
 	if versionMinorRes[1] != precedingVersionMinorRes[1] {
-		return metrics.IsMinorVersionTrue, nil
+		return "y", nil
 	}
 
-	return metrics.IsMinorVersionFalse, nil
+	return "z", nil
 }
 
 // ManagedUpgradePredicate is used for managing predicates of the UpgradeConfig

@@ -284,7 +284,7 @@ func (mr *MockMetricsMockRecorder) UpdateMetricUpgradeControlPlaneTimeout(arg0, 
 }
 
 // UpdateMetricUpgradeResult mocks base method.
-func (m *MockMetrics) UpdateMetricUpgradeResult(arg0, arg1, arg2 string, arg3 metrics.IsMinorVersion, arg4 []string) {
+func (m *MockMetrics) UpdateMetricUpgradeResult(arg0, arg1, arg2, arg3 string, arg4 []string) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "UpdateMetricUpgradeResult", arg0, arg1, arg2, arg3, arg4)
 }

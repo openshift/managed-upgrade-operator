@@ -19,7 +19,6 @@ import (
 	cvMocks "github.com/openshift/managed-upgrade-operator/pkg/clusterversion/mocks"
 	configMocks "github.com/openshift/managed-upgrade-operator/pkg/configmanager/mocks"
 	emMocks "github.com/openshift/managed-upgrade-operator/pkg/eventmanager/mocks"
-	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
 	mockMetrics "github.com/openshift/managed-upgrade-operator/pkg/metrics/mocks"
 	"github.com/openshift/managed-upgrade-operator/pkg/scheduler"
 	schedulerMocks "github.com/openshift/managed-upgrade-operator/pkg/scheduler/mocks"
@@ -657,7 +656,7 @@ var _ = Describe("UpgradeConfigController", func() {
 						version = "4.15.0"
 						upgradeConfig.Status.History[0].PrecedingVersion = "4.14.0"
 					})
-					It("reports metric with minor_upgrade = true", func() {
+					It("reports metric with stream = y", func() {
 						gomock.InOrder(
 							mockEMBuilder.EXPECT().NewManager(gomock.Any()).Return(mockEMClient, nil),
 							mockKubeClient.EXPECT().Get(gomock.Any(), upgradeConfigName, gomock.Any()).SetArg(2, *upgradeConfig),
@@ -665,7 +664,7 @@ var _ = Describe("UpgradeConfigController", func() {
 							mockCVClient.EXPECT().GetClusterVersion().Return(testClusterVersion, nil),
 							mockClusterUpgraderBuilder.EXPECT().NewClient(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), upgradeConfig.Spec.Type).Times(0),
 							mockMetricsClient.EXPECT().AlertsFromUpgrade(gomock.Any(), gomock.Any()),
-							mockMetricsClient.EXPECT().UpdateMetricUpgradeResult(gomock.Any(), "4.14.0", "4.15.0", metrics.IsMinorVersionTrue, gomock.Any()),
+							mockMetricsClient.EXPECT().UpdateMetricUpgradeResult(gomock.Any(), "4.14.0", "4.15.0", "y", gomock.Any()),
 						)
 						result, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: upgradeConfigName})
 
@@ -681,7 +680,7 @@ var _ = Describe("UpgradeConfigController", func() {
 						version = "4.15.2"
 						upgradeConfig.Status.History[0].PrecedingVersion = "4.15.1"
 					})
-					It("reports metric with minor_upgrade = false", func() {
+					It("reports metric with stream = z", func() {
 						gomock.InOrder(
 							mockEMBuilder.EXPECT().NewManager(gomock.Any()).Return(mockEMClient, nil),
 							mockKubeClient.EXPECT().Get(gomock.Any(), upgradeConfigName, gomock.Any()).SetArg(2, *upgradeConfig),
@@ -689,7 +688,7 @@ var _ = Describe("UpgradeConfigController", func() {
 							mockCVClient.EXPECT().GetClusterVersion().Return(testClusterVersion, nil),
 							mockClusterUpgraderBuilder.EXPECT().NewClient(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), upgradeConfig.Spec.Type).Times(0),
 							mockMetricsClient.EXPECT().AlertsFromUpgrade(gomock.Any(), gomock.Any()),
-							mockMetricsClient.EXPECT().UpdateMetricUpgradeResult(gomock.Any(), "4.15.1", "4.15.2", metrics.IsMinorVersionFalse, gomock.Any()),
+							mockMetricsClient.EXPECT().UpdateMetricUpgradeResult(gomock.Any(), "4.15.1", "4.15.2", "z", gomock.Any()),
 						)
 						result, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: upgradeConfigName})
 

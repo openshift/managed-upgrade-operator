@@ -36,7 +36,7 @@ const (
 	StateLabel            = "state"
 	VersionLabel          = "version"
 	PrecedingVersionLabel = "preceding_version"
-	MinorUpgradeLabel     = "minor_upgrade"
+	StreamLabel           = "stream"
 
 	ScheduledStateValue             = "scheduled"
 	StartedStateValue               = "started"
@@ -62,14 +62,6 @@ var pagingAlerts = []string{
 	"UpgradeNodeDrainFailedSRE",
 }
 
-type IsMinorVersion string
-
-const (
-	IsMinorVersionTrue    IsMinorVersion = "true"
-	IsMinorVersionFalse   IsMinorVersion = "false"
-	IsMinorVersionUnknown IsMinorVersion = "unknown"
-)
-
 //go:generate mockgen -destination=mocks/metrics.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/metrics Metrics
 type Metrics interface {
 	UpdateMetricValidationFailed(string)
@@ -91,7 +83,7 @@ type Metrics interface {
 	ResetFailureMetrics()
 	ResetEphemeralMetrics()
 	UpdateMetricNotificationEventSent(string, string, string)
-	UpdateMetricUpgradeResult(string, string, string, IsMinorVersion, []string)
+	UpdateMetricUpgradeResult(string, string, string, string, []string)
 	AlertsFromUpgrade(time.Time, time.Time) ([]string, error)
 	IsAlertFiring(alert string, checkedNS, ignoredNS []string) (bool, error)
 	IsMetricNotificationEventSentSet(upgradeConfigName string, event string, version string) (bool, error)
@@ -376,7 +368,7 @@ func (c *Counter) UpdateMetricNotificationEventSent(upgradeConfigName string, ev
 		float64(1))
 }
 
-func (c *Counter) UpdateMetricUpgradeResult(name string, precedingVersion string, version string, minorUpgrade IsMinorVersion, alerts []string) {
+func (c *Counter) UpdateMetricUpgradeResult(name string, precedingVersion string, version string, stream string, alerts []string) {
 	val := float64(1)
 	if len(alerts) > 0 {
 		val = float64(0)
@@ -384,7 +376,7 @@ func (c *Counter) UpdateMetricUpgradeResult(name string, precedingVersion string
 	metricUpgradeResult.With(prometheus.Labels{
 		nameLabel:             name,
 		PrecedingVersionLabel: precedingVersion,
-		MinorUpgradeLabel:     string(minorUpgrade),
+		StreamLabel:           stream,
 		VersionLabel:          version,
 		alertsLabel:           strings.Join(alerts, ","),
 	}).Set(val)
