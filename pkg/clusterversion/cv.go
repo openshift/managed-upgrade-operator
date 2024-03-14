@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-logr/logr"
 	configv1 "github.com/openshift/api/config/v1"
+	v1 "github.com/openshift/api/config/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -27,6 +28,7 @@ const (
 )
 
 // ClusterVersion interface enables implementations of the ClusterVersion
+
 //go:generate mockgen -destination=mocks/mockClusterVersion.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/clusterversion ClusterVersion
 type ClusterVersion interface {
 	GetClusterVersion() (*configv1.ClusterVersion, error)
@@ -37,6 +39,7 @@ type ClusterVersion interface {
 }
 
 // ClusterVersionBuilder returns a ClusterVersion interface
+
 //go:generate mockgen -destination=mocks/mockClusterVersionBuilder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/clusterversion ClusterVersionBuilder
 type ClusterVersionBuilder interface {
 	New(client.Client) ClusterVersion
@@ -149,6 +152,18 @@ func (c *clusterVersionClient) HasUpgradeCompleted(cv *configv1.ClusterVersion, 
 // isEqualVersion compare the upgrade version state for cv and uc
 func isEqualVersion(cv *configv1.ClusterVersion, uc *upgradev1alpha1.UpgradeConfig) bool {
 	return cv.Spec.DesiredUpdate != nil && (cv.Spec.DesiredUpdate.Version == uc.Spec.Desired.Version)
+}
+
+// GetPrecedingVersion returns the version the upgradeConfig is upgrading from
+func GetPrecedingVersion(clusterVersion *configv1.ClusterVersion, uc *upgradev1alpha1.UpgradeConfig) string {
+	if clusterVersion.Status.Desired.Version == uc.Spec.Desired.Version {
+		for _, clusterVersionHistory := range clusterVersion.Status.History {
+			if clusterVersionHistory.State == v1.CompletedUpdate && clusterVersionHistory.Version != "" {
+				return clusterVersionHistory.Version
+			}
+		}
+	}
+	return clusterVersion.Status.Desired.Version
 }
 
 // isEqualImage compare the upgrade version state for cv and uc

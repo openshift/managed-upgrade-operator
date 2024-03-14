@@ -384,4 +384,86 @@ var _ = Describe("ClusterVersion client and utils", func() {
 		})
 	})
 
+	Describe("GetPrecedingVersion", func() {
+		var (
+			clusterVersion configv1.ClusterVersion
+		)
+
+		BeforeEach(func() {
+			clusterVersion = configv1.ClusterVersion{
+				Status: configv1.ClusterVersionStatus{
+					Desired: configv1.Release{
+						Version: "cv-desired-version",
+					},
+				},
+			}
+
+		})
+
+		Context("When CV desired version is different from upgradeConfig desired version", func() {
+			BeforeEach(func() {
+				upgradeConfig.Spec.Desired.Version = "uc-desired-version"
+			})
+
+			It("Returns the CV version", func() {
+				precedingVersion := GetPrecedingVersion(&clusterVersion, upgradeConfig)
+				Expect(precedingVersion).To(Equal(clusterVersion.Status.Desired.Version))
+			})
+		})
+
+		Context("When CV desired version is equal to upgradeconfig desired version", func() {
+			BeforeEach(func() {
+				upgradeConfig.Spec.Desired.Version = "cv-desired-version"
+			})
+			Context("When History is empty", func() {
+				It("Returns the CV version", func() {
+					precedingVersion := GetPrecedingVersion(&clusterVersion, upgradeConfig)
+					Expect(precedingVersion).To(Equal(clusterVersion.Status.Desired.Version))
+				})
+			})
+
+			Context("When History is not empty", func() {
+				BeforeEach(func() {
+					clusterVersion.Status.History = []configv1.UpdateHistory{
+						{
+							State:   configv1.PartialUpdate,
+							Version: "partial-updated-version-1",
+						},
+						{
+							State:   configv1.CompletedUpdate,
+							Version: "completely-updated-version-1",
+						},
+						{
+							State:   configv1.CompletedUpdate,
+							Version: "completely-updated-version-2",
+						},
+					}
+				})
+
+				It("Returns the first version from history in status CompletedUpdate", func() {
+					precedingVersion := GetPrecedingVersion(&clusterVersion, upgradeConfig)
+					Expect(precedingVersion).To(Equal(clusterVersion.Status.History[1].Version))
+				})
+
+				Context("When History has no CompletedUpdate", func() {
+					BeforeEach(func() {
+						clusterVersion.Status.History = []configv1.UpdateHistory{
+							{
+								State:   configv1.PartialUpdate,
+								Version: "partial-updated-version-1",
+							},
+						}
+					})
+
+					It("Returns the CV version", func() {
+						precedingVersion := GetPrecedingVersion(&clusterVersion, upgradeConfig)
+						Expect(precedingVersion).To(Equal(clusterVersion.Status.Desired.Version))
+					})
+				})
+			})
+
+		})
+
+	})
+
 })

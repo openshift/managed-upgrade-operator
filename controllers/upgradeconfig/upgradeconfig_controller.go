@@ -11,9 +11,9 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-multierror"
-	v1 "github.com/openshift/api/config/v1"
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/api/v1alpha1"
 	muocfg "github.com/openshift/managed-upgrade-operator/config"
+	"github.com/openshift/managed-upgrade-operator/pkg/clusterversion"
 	cv "github.com/openshift/managed-upgrade-operator/pkg/clusterversion"
 	"github.com/openshift/managed-upgrade-operator/pkg/configmanager"
 	"github.com/openshift/managed-upgrade-operator/pkg/eventmanager"
@@ -98,7 +98,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 
 	history := instance.Status.History.GetHistory(instance.Spec.Desired.Version)
 	if history == nil {
-		precedingVersion := getPrecedingVersion(instance, clusterVersion)
+		precedingVersion := clusterversion.GetPrecedingVersion(clusterVersion, instance)
 
 		upgraded, err := cvClient.HasUpgradeCommenced(instance)
 		if err != nil {
@@ -253,19 +253,6 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 	}
 
 	return reconcile.Result{}, nil
-}
-
-func getPrecedingVersion(instance *upgradev1alpha1.UpgradeConfig, clusterVersion *v1.ClusterVersion) string {
-	precedingVersion := clusterVersion.Status.Desired.Version
-	if precedingVersion == instance.Spec.Desired.Version {
-		for _, clusterVersionHistory := range clusterVersion.Status.History {
-			if clusterVersionHistory.State == v1.CompletedUpdate && clusterVersionHistory.Version != "" {
-				precedingVersion = clusterVersionHistory.Version
-				return precedingVersion
-			}
-		}
-	}
-	return precedingVersion
 }
 
 func (r *ReconcileUpgradeConfig) upgradeCluster(upgrader cub.ClusterUpgrader, uc *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (reconcile.Result, error) {
