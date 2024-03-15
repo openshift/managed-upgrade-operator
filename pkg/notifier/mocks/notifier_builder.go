@@ -5,6 +5,7 @@
 //
 //	mockgen -destination=mocks/notifier_builder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/notifier NotifierBuilder
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 

@@ -3,6 +3,7 @@ package upgradeconfig
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"time"
 
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -12,6 +13,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/api/v1alpha1"
 	muocfg "github.com/openshift/managed-upgrade-operator/config"
+	"github.com/openshift/managed-upgrade-operator/pkg/clusterversion"
 	cv "github.com/openshift/managed-upgrade-operator/pkg/clusterversion"
 	"github.com/openshift/managed-upgrade-operator/pkg/configmanager"
 	"github.com/openshift/managed-upgrade-operator/pkg/eventmanager"
@@ -96,6 +98,8 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 
 	history := instance.Status.History.GetHistory(instance.Spec.Desired.Version)
 	if history == nil {
+		precedingVersion := clusterversion.GetPrecedingVersion(clusterVersion, instance)
+
 		upgraded, err := cvClient.HasUpgradeCommenced(instance)
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not tell if cluster was upgrading: %v", err)
@@ -104,11 +108,15 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 			// If CVO is currently set to the version of the UC, then we need to be in an Upgrading phase, at minimum.
 			// We also won't know the actual start time, so picking now will just have to do
 			history = &upgradev1alpha1.UpgradeHistory{
-				Version:   instance.Spec.Desired.Version,
-				Phase:     upgradev1alpha1.UpgradePhaseUpgrading,
-				StartTime: &metav1.Time{Time: time.Now()}}
+				PrecedingVersion: precedingVersion,
+				Version:          instance.Spec.Desired.Version,
+				Phase:            upgradev1alpha1.UpgradePhaseUpgrading,
+				StartTime:        &metav1.Time{Time: time.Now()}}
 		} else {
-			history = &upgradev1alpha1.UpgradeHistory{Version: instance.Spec.Desired.Version, Phase: upgradev1alpha1.UpgradePhaseNew}
+			history = &upgradev1alpha1.UpgradeHistory{
+				PrecedingVersion: precedingVersion,
+				Version:          instance.Spec.Desired.Version,
+				Phase:            upgradev1alpha1.UpgradePhaseNew}
 		}
 		history.Conditions = upgradev1alpha1.NewConditions()
 		instance.Status.History = append([]upgradev1alpha1.UpgradeHistory{*history}, instance.Status.History...)
@@ -235,7 +243,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 		return r.upgradeCluster(upgrader, instance, reqLogger)
 	case upgradev1alpha1.UpgradePhaseUpgraded:
 		reqLogger.Info("Cluster is already upgraded")
-		err = reportUpgradeMetrics(metricsClient, instance.Name, instance.Spec.Desired.Version, history.StartTime.Time, history.CompleteTime.Time)
+		err = reportUpgradeMetrics(metricsClient, instance.Name, history.PrecedingVersion, instance.Spec.Desired.Version, history.StartTime.Time, history.CompleteTime.Time)
 		return reconcile.Result{}, err
 	case upgradev1alpha1.UpgradePhaseFailed:
 		reqLogger.Info("Cluster has failed to upgrade")
@@ -266,14 +274,37 @@ func (r *ReconcileUpgradeConfig) upgradeCluster(upgrader cub.ClusterUpgrader, uc
 }
 
 // reportUpgradeMetrics updates prometheus with statistics from the latest upgrade
-func reportUpgradeMetrics(metricsClient metrics.Metrics, name string, version string, upgradeStart time.Time, upgradeEnd time.Time) error {
+func reportUpgradeMetrics(metricsClient metrics.Metrics, name string, precedingVersion string, version string, upgradeStart time.Time, upgradeEnd time.Time) error {
 	upgradeAlerts, err := metricsClient.AlertsFromUpgrade(upgradeStart, upgradeEnd)
 	if err != nil {
 		return err
 	}
 
-	metricsClient.UpdateMetricUpgradeResult(name, version, upgradeAlerts)
+	minorUpgrade, err := getMinorUpgrade(precedingVersion, version)
+	if err != nil {
+		return fmt.Errorf("failed to figure out if it is a minor upgrade: %v", err)
+	}
+
+	metricsClient.UpdateMetricUpgradeResult(name, precedingVersion, version, minorUpgrade, upgradeAlerts)
 	return nil
+}
+
+func getMinorUpgrade(precedingVersion, version string) (string, error) {
+	minorRegex, err := regexp.Compile(`[0-9]+\.([0-9]+)\..*`)
+	if err != nil {
+		return "unknown", fmt.Errorf("failed to compile regex: %v", err)
+	}
+	versionMinorRes := minorRegex.FindStringSubmatch(version)
+	precedingVersionMinorRes := minorRegex.FindStringSubmatch(precedingVersion)
+	if len(versionMinorRes) < 2 || len(precedingVersionMinorRes) < 2 {
+		return "unknown", nil
+	}
+
+	if versionMinorRes[1] != precedingVersionMinorRes[1] {
+		return "y", nil
+	}
+
+	return "z", nil
 }
 
 // ManagedUpgradePredicate is used for managing predicates of the UpgradeConfig

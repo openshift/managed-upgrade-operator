@@ -5,6 +5,7 @@
 //
 //	mockgen -destination=mocks/mockAvailabilityChecks.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/availabilitychecks AvailabilityChecker
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 

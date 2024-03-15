@@ -5,6 +5,7 @@
 //
 //	mockgen -destination=mocks/nodeDrainStrategyBuilder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/drain NodeDrainStrategyBuilder
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 

@@ -33,8 +33,10 @@ const (
 	Namespace = "upgradeoperator"
 	Subsystem = "upgrade"
 
-	StateLabel   = "state"
-	VersionLabel = "version"
+	StateLabel            = "state"
+	VersionLabel          = "version"
+	PrecedingVersionLabel = "preceding_version"
+	StreamLabel           = "stream"
 
 	ScheduledStateValue             = "scheduled"
 	StartedStateValue               = "started"
@@ -81,7 +83,7 @@ type Metrics interface {
 	ResetFailureMetrics()
 	ResetEphemeralMetrics()
 	UpdateMetricNotificationEventSent(string, string, string)
-	UpdateMetricUpgradeResult(string, string, []string)
+	UpdateMetricUpgradeResult(string, string, string, string, []string)
 	AlertsFromUpgrade(time.Time, time.Time) ([]string, error)
 	IsAlertFiring(alert string, checkedNS, ignoredNS []string) (bool, error)
 	IsMetricNotificationEventSentSet(upgradeConfigName string, event string, version string) (bool, error)
@@ -366,15 +368,17 @@ func (c *Counter) UpdateMetricNotificationEventSent(upgradeConfigName string, ev
 		float64(1))
 }
 
-func (c *Counter) UpdateMetricUpgradeResult(name string, version string, alerts []string) {
+func (c *Counter) UpdateMetricUpgradeResult(name string, precedingVersion string, version string, stream string, alerts []string) {
 	val := float64(1)
 	if len(alerts) > 0 {
 		val = float64(0)
 	}
 	metricUpgradeResult.With(prometheus.Labels{
-		nameLabel:    name,
-		VersionLabel: version,
-		alertsLabel:  strings.Join(alerts, ","),
+		nameLabel:             name,
+		PrecedingVersionLabel: precedingVersion,
+		StreamLabel:           stream,
+		VersionLabel:          version,
+		alertsLabel:           strings.Join(alerts, ","),
 	}).Set(val)
 }
 

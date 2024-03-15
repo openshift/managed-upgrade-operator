@@ -5,6 +5,7 @@
 //
 //	mockgen -destination=mocks/maintenance.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/maintenance Maintenance
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 

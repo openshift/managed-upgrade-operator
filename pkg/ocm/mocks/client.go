@@ -5,6 +5,7 @@
 //
 //	mockgen -destination=mocks/client.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/ocm OcmClient
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 
