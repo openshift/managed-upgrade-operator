@@ -431,6 +431,10 @@ var _ = Describe("ClusterVersion client and utils", func() {
 						},
 						{
 							State:   configv1.CompletedUpdate,
+							Version: "cv-desired-version",
+						},
+						{
+							State:   configv1.CompletedUpdate,
 							Version: "completely-updated-version-1",
 						},
 						{
@@ -440,9 +444,9 @@ var _ = Describe("ClusterVersion client and utils", func() {
 					}
 				})
 
-				It("Returns the first version from history in status CompletedUpdate", func() {
+				It("Returns the first different version from history in status CompletedUpdate", func() {
 					precedingVersion := GetPrecedingVersion(&clusterVersion, upgradeConfig)
-					Expect(precedingVersion).To(Equal(clusterVersion.Status.History[1].Version))
+					Expect(precedingVersion).To(Equal(clusterVersion.Status.History[2].Version))
 				})
 
 				Context("When History has no CompletedUpdate", func() {
