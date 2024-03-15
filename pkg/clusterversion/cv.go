@@ -158,7 +158,9 @@ func isEqualVersion(cv *configv1.ClusterVersion, uc *upgradev1alpha1.UpgradeConf
 func GetPrecedingVersion(clusterVersion *configv1.ClusterVersion, uc *upgradev1alpha1.UpgradeConfig) string {
 	if clusterVersion.Status.Desired.Version == uc.Spec.Desired.Version {
 		for _, clusterVersionHistory := range clusterVersion.Status.History {
-			if clusterVersionHistory.State == v1.CompletedUpdate && clusterVersionHistory.Version != "" {
+			if clusterVersionHistory.State == v1.CompletedUpdate &&
+				clusterVersionHistory.Version != "" &&
+				clusterVersionHistory.Version != uc.Spec.Desired.Version {
 				return clusterVersionHistory.Version
 			}
 		}

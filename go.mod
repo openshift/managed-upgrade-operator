@@ -2,8 +2,6 @@ module github.com/openshift/managed-upgrade-operator
 
 go 1.21
 
-toolchain go1.21.1
-
 replace (
 	k8s.io/api => k8s.io/api v0.28.7
 	k8s.io/apimachinery => k8s.io/apimachinery v0.28.7
