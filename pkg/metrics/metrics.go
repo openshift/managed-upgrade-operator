@@ -231,7 +231,7 @@ var (
 		Subsystem: metricsTag,
 		Name:      "upgrade_result",
 		Help:      "Alerts fired during latest upgrade",
-	}, []string{nameLabel, VersionLabel, alertsLabel})
+	}, []string{nameLabel, PrecedingVersionLabel, StreamLabel, VersionLabel, alertsLabel})
 	metricUpgradeConfigSyncTimestamp = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Subsystem: metricsTag,
 		Name:      "upgradeconfig_sync_timestamp",
