@@ -14,7 +14,7 @@ Currently this is a manual process. We are working on dashboards and other metri
 
 **Does MUO reserve compute capacity?**
 
-Yes, if `capacityReservation` in the upgradeconfig CR is set to `true`. MUO creates a new `upgrade` worker machineset for each availability zone with a size of 1 worker node.
+Yes, if `capacityReservation` in the upgradeconfig CR is set to `true`. MUO creates a new `upgrade` worker machineset for each availability zone with a size of 1 worker node only when the cluster having machineset with label `'hive.openshift.io/machine-pool': 'worker'`.
 
 > **_NOTE:_** `spec.capacityReservation` is an optional field in the upgradeconfig CR. If this is not defined in the upgradeconfig CR the default value is set to true for OCM provider and false for LOCAL provider.
 

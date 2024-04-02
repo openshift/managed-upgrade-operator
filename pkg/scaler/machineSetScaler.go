@@ -8,6 +8,7 @@ import (
 	"github.com/go-logr/logr"
 	machineapi "github.com/openshift/api/machine/v1beta1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
@@ -38,9 +39,14 @@ func (s *machineSetScaler) CanScale(c client.Client, logger logr.Logger) (bool, 
 		client.MatchingLabels{"hive.openshift.io/machine-pool": "worker"},
 	}...)
 	if err != nil {
-		logger.Error(err, "failed to get original machinesets")
-		return false, err
+		if apierrors.IsNotFound(err) {
+			logger.Info("failed to get original machinesets with label 'hive.openshift.io/machine-pool': 'worker'")
+			return false, nil
+		} else {
+			return false, err
+		}
 	}
+
 	if len(originalMachineSets.Items) == 0 {
 		// We require a worker machineset in order to perform a capacity scale
 		return false, nil
