@@ -29,3 +29,12 @@ func (m *machinery) IsNodeCordoned(node *corev1.Node) *IsCordonedResult {
 		AddedAt:    cordonAddedTime,
 	}
 }
+
+// IsNodeUpgrading returns bool
+func IsNodeUpgrading(node *corev1.Node) bool {
+	if node.Annotations["machineconfiguration.openshift.io/currentConfig"] != node.Annotations["machineconfiguration.openshift.io/desiredConfig"] {
+		return true
+	} else {
+		return false
+	}
+}
