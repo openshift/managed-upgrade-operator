@@ -41,7 +41,6 @@ func (c *clusterUpgrader) EnsureExtraUpgradeWorkers(ctx context.Context, logger 
 	}
 	if !canScale {
 		// We can't perform a scaling step
-		c.metrics.UpdateMetricScalingFailed(c.upgradeConfig.Name)
 		err := c.notifier.Notify(notifier.MuoStateSkipped)
 		if err != nil {
 			return false, err

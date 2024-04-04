@@ -90,7 +90,6 @@ var _ = Describe("ScalerStep", func() {
 				gomock.InOrder(
 					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
 					mockScalerClient.EXPECT().CanScale(gomock.Any(), gomock.Any()).Return(false, nil),
-					mockMetricsClient.EXPECT().UpdateMetricScalingFailed(gomock.Any()),
 					mockEMClient.EXPECT().Notify(gomock.Any()),
 				)
 				ok, err := upgrader.EnsureExtraUpgradeWorkers(context.TODO(), logger)
