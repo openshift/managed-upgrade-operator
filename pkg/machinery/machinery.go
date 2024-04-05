@@ -12,10 +12,12 @@ const (
 )
 
 // Machinery enables an implementation of a Machinery interface
+//
 //go:generate mockgen -destination=mocks/machinery.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/machinery Machinery
 type Machinery interface {
 	IsUpgrading(c client.Client, nodeType string) (*UpgradingResult, error)
 	IsNodeCordoned(node *corev1.Node) *IsCordonedResult
+	IsNodeUpgrading(node *corev1.Node) bool
 }
 
 type machinery struct{}

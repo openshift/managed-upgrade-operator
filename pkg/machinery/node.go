@@ -31,7 +31,7 @@ func (m *machinery) IsNodeCordoned(node *corev1.Node) *IsCordonedResult {
 }
 
 // IsNodeUpgrading returns bool
-func IsNodeUpgrading(node *corev1.Node) bool {
+func (m *machinery) IsNodeUpgrading(node *corev1.Node) bool {
 	if node.Annotations["machineconfiguration.openshift.io/currentConfig"] != node.Annotations["machineconfiguration.openshift.io/desiredConfig"] {
 		return true
 	} else {
