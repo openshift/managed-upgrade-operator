@@ -386,5 +386,5 @@ rvmo-bundle:
 	OPERATOR_NAME=$(OPERATOR_NAME) \
 	OPERATOR_VERSION=$(OPERATOR_VERSION) \
 	OPERATOR_OLM_REGISTRY_IMAGE=$(REGISTRY_IMAGE) \
-	TEMPLATE_FILE=$(abspath hack/olm-registry/olm-artifacts-template.yaml) \
+	TEMPLATE_FILE=$(abspath hack/artifacts/olm-artifacts-template.gotmpl) \
 	bash ${CONVENTION_DIR}/rvmo-bundle.sh
