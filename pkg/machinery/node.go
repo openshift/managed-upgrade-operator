@@ -1,6 +1,7 @@
 package machinery
 
 import (
+	mcoconst "github.com/openshift/machine-config-operator/pkg/daemon/constants"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -32,7 +33,7 @@ func (m *machinery) IsNodeCordoned(node *corev1.Node) *IsCordonedResult {
 
 // IsNodeUpgrading returns bool
 func (m *machinery) IsNodeUpgrading(node *corev1.Node) bool {
-	if node.Annotations["machineconfiguration.openshift.io/currentConfig"] != node.Annotations["machineconfiguration.openshift.io/desiredConfig"] {
+	if node.Annotations[mcoconst.MachineConfigDaemonStateAnnotationKey] == mcoconst.MachineConfigDaemonStateWorking {
 		return true
 	} else {
 		return false
