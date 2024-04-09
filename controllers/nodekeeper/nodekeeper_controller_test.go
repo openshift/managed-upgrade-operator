@@ -166,6 +166,7 @@ var _ = Describe("NodeKeeperController", func() {
 					mockDrainStrategyBuilder.EXPECT().NewNodeDrainStrategy(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(mockDrainStrategy, nil),
 					mockDrainStrategy.EXPECT().Execute(gomock.Any(), gomock.Any()).Return([]*drain.DrainStrategyResult{}, nil),
 					mockDrainStrategy.EXPECT().HasFailed(gomock.Any(), gomock.Any()).Return(true, nil),
+					mockMachineryClient.EXPECT().IsNodeUpgrading(gomock.Any()).Return(true),
 					mockMetricsClient.EXPECT().UpdateMetricNodeDrainFailed(gomock.Any()).Times(1),
 					mockMetricsClient.EXPECT().ResetMetricNodeDrainFailed(gomock.Any()).Times(0),
 				)

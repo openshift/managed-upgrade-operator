@@ -121,7 +121,10 @@ func (r *ReconcileNodeKeeper) Reconcile(ctx context.Context, request reconcile.R
 		}
 		if hasFailed {
 			reqLogger.Info(fmt.Sprintf("Node drain timed out %s. Alerting.", node.Name))
-			metricsClient.UpdateMetricNodeDrainFailed(node.Name)
+			// Set metric only for the node going through upgrade
+			if r.Machinery.IsNodeUpgrading(node) {
+				metricsClient.UpdateMetricNodeDrainFailed(node.Name)
+			}
 			return reconcile.Result{RequeueAfter: time.Minute * 1}, nil
 		} else {
 			metricsClient.ResetMetricNodeDrainFailed(node.Name)

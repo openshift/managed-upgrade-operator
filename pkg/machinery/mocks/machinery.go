@@ -55,6 +55,20 @@ func (mr *MockMachineryMockRecorder) IsNodeCordoned(arg0 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsNodeCordoned", reflect.TypeOf((*MockMachinery)(nil).IsNodeCordoned), arg0)
 }
 
+// IsNodeUpgrading mocks base method.
+func (m *MockMachinery) IsNodeUpgrading(arg0 *v1.Node) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsNodeUpgrading", arg0)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// IsNodeUpgrading indicates an expected call of IsNodeUpgrading.
+func (mr *MockMachineryMockRecorder) IsNodeUpgrading(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsNodeUpgrading", reflect.TypeOf((*MockMachinery)(nil).IsNodeUpgrading), arg0)
+}
+
 // IsUpgrading mocks base method.
 func (m *MockMachinery) IsUpgrading(arg0 client.Client, arg1 string) (*machinery.UpgradingResult, error) {
 	m.ctrl.T.Helper()
