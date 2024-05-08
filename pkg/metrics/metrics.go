@@ -24,11 +24,12 @@ import (
 )
 
 const (
-	eventLabel  = "event"
-	metricsTag  = "upgradeoperator"
-	nameLabel   = "upgradeconfig_name"
-	nodeLabel   = "node_name"
-	alertsLabel = "alerts"
+	eventLabel   = "event"
+	metricsTag   = "upgradeoperator"
+	nameLabel    = "upgradeconfig_name"
+	nodeLabel    = "node_name"
+	alertsLabel  = "alerts"
+	failedReason = "reason"
 
 	Namespace = "upgradeoperator"
 	Subsystem = "upgrade"
@@ -46,11 +47,15 @@ const (
 	WorkersStartedStateValue        = "workers_started"
 	WorkersCompletedStateValue      = "workers_completed"
 
-	MonitoringNS              = "openshift-monitoring"
-	MonitoringCAConfigMapName = "serving-certs-ca-bundle"
-	MonitoringConfigField     = "service-ca.crt"
-	promApp                   = "prometheus-k8s"
-	clusterSVCSuffix          = ".svc.cluster.local"
+	MonitoringNS                 = "openshift-monitoring"
+	MonitoringCAConfigMapName    = "serving-certs-ca-bundle"
+	MonitoringConfigField        = "service-ca.crt"
+	promApp                      = "prometheus-k8s"
+	clusterSVCSuffix             = ".svc.cluster.local"
+	MetricsQueryFailed           = "healthcheck_query_failed"
+	CriticalAlertsFiring         = "critical_alerts_firing"
+	ClusterOperatorsDegraded     = "cluster_operators_degraded"
+	ClusterOperatorsStatusFailed = "cluster_operator_status_failed"
 )
 
 // Alerts sourced from https://github.com/openshift/managed-cluster-config/blob/master/deploy/sre-prometheus/100-managed-upgrade-operator.PrometheusRule.yaml
@@ -66,8 +71,7 @@ var pagingAlerts = []string{
 type Metrics interface {
 	UpdateMetricValidationFailed(string)
 	UpdateMetricValidationSucceeded(string)
-	UpdateMetricClusterCheckFailed(string)
-	UpdateMetricClusterCheckSucceeded(string)
+	UpdateMetricHealthcheckSucceeded(string)
 	UpdateMetricScalingFailed(string)
 	UpdateMetricScalingSucceeded(string)
 	UpdateMetricUpgradeWindowNotBreached(string)
@@ -75,6 +79,7 @@ type Metrics interface {
 	UpdateMetricUpgradeWindowBreached(string)
 	UpdateMetricUpgradeControlPlaneTimeout(string, string)
 	ResetMetricUpgradeControlPlaneTimeout(string, string)
+	UpdateMetricHealthcheckFailed(string, string)
 	UpdateMetricUpgradeWorkerTimeout(string, string)
 	ResetMetricUpgradeWorkerTimeout(string, string)
 	UpdateMetricNodeDrainFailed(string)
@@ -192,11 +197,6 @@ var (
 		Name:      "upgradeconfig_validation_failed",
 		Help:      "Failed to validate the upgrade config",
 	}, []string{nameLabel})
-	metricClusterCheckFailed = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Subsystem: metricsTag,
-		Name:      "cluster_check_failed",
-		Help:      "Failed on the cluster check step",
-	}, []string{nameLabel})
 	metricScalingFailed = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Subsystem: metricsTag,
 		Name:      "scaling_failed",
@@ -212,6 +212,11 @@ var (
 		Name:      "controlplane_timeout",
 		Help:      "Control plane upgrade timeout",
 	}, []string{nameLabel, VersionLabel})
+	metricHealthcheckFailed = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Subsystem: metricsTag,
+		Name:      "healthcheck_failed",
+		Help:      "Upgrade Opertaor health check failed",
+	}, []string{nameLabel, failedReason})
 	metricUpgradeWorkerTimeout = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Subsystem: metricsTag,
 		Name:      "worker_timeout",
@@ -241,10 +246,10 @@ var (
 	// ephemeralMetrics defines temporary metrics whose data should be cleared when an upgrade completes
 	ephemeralMetrics = []*prometheus.GaugeVec{
 		metricValidationFailed,
-		metricClusterCheckFailed,
 		metricScalingFailed,
 		metricUpgradeWindowBreached,
 		metricUpgradeControlPlaneTimeout,
+		metricHealthcheckFailed,
 		metricUpgradeWorkerTimeout,
 		metricNodeDrainFailed,
 		metricUpgradeNotification,
@@ -276,15 +281,10 @@ func (c *Counter) UpdateMetricValidationSucceeded(upgradeConfigName string) {
 		float64(0))
 }
 
-func (c *Counter) UpdateMetricClusterCheckFailed(upgradeConfigName string) {
-	metricClusterCheckFailed.With(prometheus.Labels{
-		nameLabel: upgradeConfigName}).Set(
-		float64(1))
-}
-
-func (c *Counter) UpdateMetricClusterCheckSucceeded(upgradeConfigName string) {
-	metricClusterCheckFailed.With(prometheus.Labels{
-		nameLabel: upgradeConfigName}).Set(
+func (c *Counter) UpdateMetricHealthcheckSucceeded(upgradeConfigName string) {
+	metricHealthcheckFailed.With(prometheus.Labels{
+		nameLabel:    upgradeConfigName,
+		failedReason: ""}).Set(
 		float64(0))
 }
 
@@ -316,6 +316,13 @@ func (c *Counter) ResetMetricUpgradeControlPlaneTimeout(upgradeConfigName, versi
 		VersionLabel: version,
 		nameLabel:    upgradeConfigName}).Set(
 		float64(0))
+}
+
+func (c *Counter) UpdateMetricHealthcheckFailed(upgradeConfigName, reason string) {
+	metricHealthcheckFailed.With(prometheus.Labels{
+		failedReason: reason,
+		nameLabel:    upgradeConfigName}).Set(
+		float64(1))
 }
 
 func (c *Counter) UpdateMetricUpgradeWorkerTimeout(upgradeConfigName, version string) {
@@ -393,9 +400,9 @@ func (c *Counter) ResetEphemeralMetrics() {
 func (c *Counter) ResetFailureMetrics() {
 	failureMetricsList := []*prometheus.GaugeVec{
 		metricValidationFailed,
-		metricClusterCheckFailed,
 		metricScalingFailed,
 		metricUpgradeControlPlaneTimeout,
+		metricHealthcheckFailed,
 		metricUpgradeWorkerTimeout,
 		metricNodeDrainFailed,
 		metricUpgradeNotification,

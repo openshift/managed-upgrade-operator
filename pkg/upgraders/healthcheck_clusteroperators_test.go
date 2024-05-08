@@ -70,6 +70,7 @@ var _ = Describe("HealthCheck ClusterOperators", func() {
 		It("Prehealth check will fail", func() {
 			gomock.InOrder(
 				mockCVClient.EXPECT().HasDegradedOperators().Return(&clusterversion.HasDegradedOperatorsResult{Degraded: []string{"test-clusteroperator"}}, nil),
+				mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, gomock.Any()),
 			)
 			result, err := ClusterOperators(mockMetricsClient, mockCVClient, upgradeConfig, logger)
 			Expect(err).Should(HaveOccurred())
@@ -82,6 +83,7 @@ var _ = Describe("HealthCheck ClusterOperators", func() {
 		It("Prehealth check will fail", func() {
 			gomock.InOrder(
 				mockCVClient.EXPECT().HasDegradedOperators().Return(&clusterversion.HasDegradedOperatorsResult{Degraded: []string{}}, fakeError),
+				mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, gomock.Any()),
 			)
 			result, err := ClusterOperators(mockMetricsClient, mockCVClient, upgradeConfig, logger)
 			Expect(err).Should(HaveOccurred())
