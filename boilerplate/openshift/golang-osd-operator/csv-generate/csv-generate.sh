@@ -165,6 +165,15 @@ OPERATOR_PREV_VERSION=$(ls "$BUNDLE_DIR" | sort -t . -k 3 -g | tail -n 1)
 OPERATOR_NEW_VERSION="${operator_version}"
 OUTPUT_DIR=${BUNDLE_DIR}
 
+VERSION_DIR="${OUTPUT_DIR}/${OPERATOR_NEW_VERSION}"
+
+# Check if the VERSION_DIR already exists and is not empty - if so skip building
+# anything, as only timestamps would be changed.
+if [[ -d "${VERSION_DIR}" && -n $(ls -A "${VERSION_DIR}") ]]; then
+    echo "Output directory for bundle already exists and is not empty: ${VERSION_DIR}. Skipping bundle creation."
+    exit 0
+fi
+
 # If setting up a new SaaS repo, there is no previous version when building a bundle
 # Optionally pass it to the bundle generator in that case.
 if [[ -z "${OPERATOR_PREV_VERSION}" ]]; then
