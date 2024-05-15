@@ -29,7 +29,7 @@ func (c *clusterUpgrader) PreUpgradeHealthCheck(ctx context.Context, logger logr
 	if err != nil || !ok {
 		return false, err
 	}
-
+	c.metrics.UpdateMetricHealthcheckSucceeded(c.upgradeConfig.Name)
 	return true, nil
 }
 
@@ -44,5 +44,6 @@ func (c *clusterUpgrader) PostUpgradeHealthCheck(ctx context.Context, logger log
 	if err != nil || !ok {
 		return false, err
 	}
+	c.metrics.UpdateMetricHealthcheckSucceeded(c.upgradeConfig.Name)
 	return true, nil
 }

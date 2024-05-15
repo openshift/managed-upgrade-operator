@@ -17,10 +17,12 @@ func ClusterOperators(metricsClient metrics.Metrics, cvClient cv.ClusterVersion,
 	result, err := cvClient.HasDegradedOperators()
 	if err != nil {
 		logger.Info("Unable to fetch status of clusteroperators")
+		metricsClient.UpdateMetricHealthcheckFailed(ug.Name, metrics.ClusterOperatorsStatusFailed)
 		return false, err
 	}
 	if len(result.Degraded) > 0 {
 		logger.Info("Degraded operators: %s", strings.Join(result.Degraded, ", "))
+		metricsClient.UpdateMetricHealthcheckFailed(ug.Name, metrics.ClusterOperatorsDegraded)
 		return false, fmt.Errorf("degraded operators: %s", strings.Join(result.Degraded, ", "))
 	}
 	logger.Info("Prehealth check for clusteroperators passed")

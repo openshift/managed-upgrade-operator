@@ -187,28 +187,28 @@ func (mr *MockMetricsMockRecorder) ResetMetricUpgradeWorkerTimeout(arg0, arg1 an
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResetMetricUpgradeWorkerTimeout", reflect.TypeOf((*MockMetrics)(nil).ResetMetricUpgradeWorkerTimeout), arg0, arg1)
 }
 
-// UpdateMetricClusterCheckFailed mocks base method.
-func (m *MockMetrics) UpdateMetricClusterCheckFailed(arg0 string) {
+// UpdateMetricHealthcheckFailed mocks base method.
+func (m *MockMetrics) UpdateMetricHealthcheckFailed(arg0, arg1 string) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "UpdateMetricClusterCheckFailed", arg0)
+	m.ctrl.Call(m, "UpdateMetricHealthcheckFailed", arg0, arg1)
 }
 
-// UpdateMetricClusterCheckFailed indicates an expected call of UpdateMetricClusterCheckFailed.
-func (mr *MockMetricsMockRecorder) UpdateMetricClusterCheckFailed(arg0 any) *gomock.Call {
+// UpdateMetricHealthcheckFailed indicates an expected call of UpdateMetricHealthcheckFailed.
+func (mr *MockMetricsMockRecorder) UpdateMetricHealthcheckFailed(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricClusterCheckFailed", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricClusterCheckFailed), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricHealthcheckFailed", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricHealthcheckFailed), arg0, arg1)
 }
 
-// UpdateMetricClusterCheckSucceeded mocks base method.
-func (m *MockMetrics) UpdateMetricClusterCheckSucceeded(arg0 string) {
+// UpdateMetricHealthcheckSucceeded mocks base method.
+func (m *MockMetrics) UpdateMetricHealthcheckSucceeded(arg0 string) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "UpdateMetricClusterCheckSucceeded", arg0)
+	m.ctrl.Call(m, "UpdateMetricHealthcheckSucceeded", arg0)
 }
 
-// UpdateMetricClusterCheckSucceeded indicates an expected call of UpdateMetricClusterCheckSucceeded.
-func (mr *MockMetricsMockRecorder) UpdateMetricClusterCheckSucceeded(arg0 any) *gomock.Call {
+// UpdateMetricHealthcheckSucceeded indicates an expected call of UpdateMetricHealthcheckSucceeded.
+func (mr *MockMetricsMockRecorder) UpdateMetricHealthcheckSucceeded(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricClusterCheckSucceeded", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricClusterCheckSucceeded), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricHealthcheckSucceeded", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricHealthcheckSucceeded), arg0)
 }
 
 // UpdateMetricNodeDrainFailed mocks base method.
