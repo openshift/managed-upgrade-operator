@@ -5,7 +5,7 @@ The Managed Upgrade Operator reports the following metrics via direct instrument
 ## Metrics use to alert SRE
 
 - `upgradeoperator_upgradeconfig_validation_failed`: If failed to validate the upgrade config `value > 0`
-- `upgradeoperator_cluster_check_failed`: If failed on the cluster check step `value > 0`
+- `upgradeoperator_healthcheck_failed`: If failed on the cluster health check step `value > 0`
 - `upgradeoperator_scaling_failed`: If failed to scale up extra workers `value > 0`
 - `upgradeoperator_controlplane_timeout`: If control plane upgrade timeout `value > 0`
 - `upgradeoperator_worker_timeout`: If worker nodes upgrade timeout `value > 0`
