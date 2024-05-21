@@ -7,6 +7,7 @@ import (
 	"github.com/go-logr/logr"
 
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/api/v1alpha1"
+	"github.com/openshift/managed-upgrade-operator/pkg/notifier"
 )
 
 // PreUpgradeHealthCheck performs cluster healthy check
@@ -24,12 +25,16 @@ func (c *clusterUpgrader) PreUpgradeHealthCheck(ctx context.Context, logger logr
 	if err != nil || !ok {
 		return false, err
 	}
+	c.notifier.Notify(notifier.MuoStateCancelled)
+	logger.Info("CriticalAlerts check completed")
 
 	ok, err = ClusterOperators(c.metrics, c.cvClient, c.upgradeConfig, logger)
 	if err != nil || !ok {
 		return false, err
 	}
 	c.metrics.UpdateMetricHealthcheckSucceeded(c.upgradeConfig.Name)
+
+	//c.notifier.Notify(notifier.MuoStateCancelled)
 	return true, nil
 }
 
