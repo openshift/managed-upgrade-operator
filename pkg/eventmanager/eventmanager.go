@@ -117,6 +117,8 @@ func (s *eventManager) Notify(state notifier.MuoState) error {
 		description = fmt.Sprintf("Cluster has been successfully upgraded to version %s", uc.Spec.Desired.Version)
 	case notifier.MuoStateFailed:
 		description = createFailureDescription(uc)
+	case notifier.MuoStateCancelled:
+		description = createFailureDescription(uc)
 	default:
 		return fmt.Errorf("state %v not yet implemented", state)
 	}

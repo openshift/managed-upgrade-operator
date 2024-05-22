@@ -23,9 +23,10 @@ func (c *clusterUpgrader) PreUpgradeHealthCheck(ctx context.Context, logger logr
 
 	ok, err := CriticalAlerts(c.metrics, c.config, c.upgradeConfig, logger)
 	if err != nil || !ok {
+		c.notifier.Notify(notifier.MuoStateCancelled)
+		logger.Info("upgrade cancelled")
 		return false, err
 	}
-	c.notifier.Notify(notifier.MuoStateCancelled)
 	logger.Info("CriticalAlerts check completed")
 
 	ok, err = ClusterOperators(c.metrics, c.cvClient, c.upgradeConfig, logger)
