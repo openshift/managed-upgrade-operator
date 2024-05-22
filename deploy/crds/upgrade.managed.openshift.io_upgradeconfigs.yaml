@@ -61,6 +61,14 @@ spec:
             description: UpgradeConfigSpec defines the desired state of UpgradeConfig
               and upgrade window and freeze window
             properties:
+              HealthCheckDuration:
+                default: 2
+                description: |-
+                  HealthCheckDuration specifies minimum duration of 2 hours before upgrade time to run healthcheck.
+                  If an upgrade is scheduled within 2 hours from now, healthcheck won't run.
+                format: int32
+                minimum: 2
+                type: integer
               PDBForceDrainTimeout:
                 description: The maximum grace period granted to a node whose drain
                   is blocked by a Pod Disruption Budget, before that drain is forced.

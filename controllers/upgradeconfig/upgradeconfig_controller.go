@@ -153,11 +153,22 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 	// in "New" phase and move to "Pending" phase once healthcheck
 	// is done.
 	case upgradev1alpha1.UpgradePhaseNew:
-		reqLogger.Info("Running Pre-Health Check for upgrade")
 
-		result, err := upgrader.HealthCheck(ctx, instance, reqLogger)
-		if err != nil || !result {
-			return reconcile.Result{}, err
+		schedulerResult := r.Scheduler.IsReadyToUpgrade(instance, cfg.GetUpgradeWindowTimeOutDuration())
+		timeToUpgrade := schedulerResult.TimeUntilUpgrade.Minutes()
+		healthCheckDuration := instance.GetHealthCheckDuration().Minutes()
+		if time.Duration(timeToUpgrade) > time.Duration(healthCheckDuration) {
+			reqLogger.Info("Running Pre-Health Check for upgrade")
+			// We do not block the upgrade from going to pending state deliberately
+			// since we want to notify and give a heads up regarding pre healthcheck
+			// failure which can be fixed before actual upgrade starts. During the upgrade
+			// time, the pre healthcheck will run again and catch any failures as such.
+			result, err := upgrader.HealthCheck(ctx, instance, reqLogger)
+			if err != nil || !result {
+				reqLogger.Error(err, "Pre HealthCheck failed on scheduling upgrade")
+			}
+		} else {
+			reqLogger.Info("Skipping pre healthcheck")
 		}
 
 		history.Phase = upgradev1alpha1.UpgradePhasePending
@@ -258,18 +269,6 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 
 	case upgradev1alpha1.UpgradePhaseUpgrading:
 		reqLogger.Info("Cluster detected as already upgrading.")
-
-		target := muocfg.CMTarget{Namespace: request.Namespace}
-		cmTarget, err := target.NewCMTarget()
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-
-		cfm := r.ConfigManagerBuilder.New(r.Client, cmTarget)
-		upgrader, err := r.ClusterUpgraderBuilder.NewClient(r.Client, cfm, metricsClient, eventClient, instance.Spec.Type)
-		if err != nil {
-			return reconcile.Result{}, err
-		}
 		return r.upgradeCluster(upgrader, instance, reqLogger)
 	case upgradev1alpha1.UpgradePhaseUpgraded:
 		reqLogger.Info("Cluster is already upgraded")
