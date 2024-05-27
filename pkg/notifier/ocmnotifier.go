@@ -16,10 +16,10 @@ import (
 func NewOCMNotifier(client client.Client, ocmBaseUrl *url.URL, upgradeConfigManager upgradeconfigmanager.UpgradeConfigManager) (*ocmNotifier, error) {
 	var (
 		ocmClient ocm.OcmClient
-		err error
+		err       error
 	)
 
-	if (strings.Contains(ocmBaseUrl.String(), fmt.Sprintf("%s:%d", ocmagent.OCM_AGENT_SERVICE_URL, ocmagent.OCM_AGENT_SERVICE_PORT))) {
+	if strings.Contains(ocmBaseUrl.String(), fmt.Sprintf("%s:%d", ocmagent.OCM_AGENT_SERVICE_URL, ocmagent.OCM_AGENT_SERVICE_PORT)) {
 		ocmClient, err = ocmagent.NewBuilder().New(ocmBaseUrl)
 	} else {
 		ocmClient, err = ocm.NewBuilder().New(client, ocmBaseUrl)
@@ -48,14 +48,16 @@ const (
 )
 
 var stateMap = map[MuoState]OcmState{
-	MuoStatePending:   OcmStatePending,
-	MuoStateCancelled: OcmStateCancelled,
-	MuoStateStarted:   OcmStateStarted,
-	MuoStateCompleted: OcmStateCompleted,
-	MuoStateDelayed:   OcmStateDelayed,
-	MuoStateFailed:    OcmStateFailed,
-	MuoStateScheduled: OcmStateScheduled,
-	MuoStateSkipped:   OcmStateDelayed,
+	MuoStatePending:                 OcmStatePending,
+	MuoStateCancelled:               OcmStateCancelled,
+	MuoStateStarted:                 OcmStateStarted,
+	MuoStateCompleted:               OcmStateCompleted,
+	MuoStateDelayed:                 OcmStateDelayed,
+	MuoStateFailed:                  OcmStateFailed,
+	MuoStateScheduled:               OcmStateScheduled,
+	MuoStateSkipped:                 OcmStateDelayed,
+	MuoStateCOHealthCheckFailed:     OcmStateDelayed,
+	MuoStateAlertsHealthCheckFailed: OcmStateDelayed,
 }
 
 type ocmNotifier struct {
@@ -168,6 +170,10 @@ func validateStateTransition(from MuoState, to MuoState) bool {
 		case MuoStateCompleted:
 			return true
 		case MuoStateFailed:
+			return true
+		case MuoStateCOHealthCheckFailed:
+			return true
+		case MuoStateAlertsHealthCheckFailed:
 			return true
 		default:
 			return false
