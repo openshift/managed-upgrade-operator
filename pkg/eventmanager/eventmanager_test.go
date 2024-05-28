@@ -322,9 +322,9 @@ var _ = Describe("OCM Notifier", func() {
 
 	})
 
-	Context("When notifying a MuoStateAlertsHealthCheckFailed state", func() {
+	Context("When notifying a MuoStateHealthCheck state", func() {
 		var uc upgradev1alpha1.UpgradeConfig
-		var testState = notifier.MuoStateAlertsHealthCheckFailed
+		var testState = notifier.MuoStateHealthCheck
 		BeforeEach(func() {
 			upgradeConfigName = types.NamespacedName{
 				Name:      TEST_UPGRADECONFIG_CR,
@@ -349,32 +349,6 @@ var _ = Describe("OCM Notifier", func() {
 			})
 		})
 	})
-	Context("When notifying a MuoStateCOHealthCheckFailed state", func() {
-		var uc upgradev1alpha1.UpgradeConfig
-		var testState = notifier.MuoStateCOHealthCheckFailed
-		BeforeEach(func() {
-			upgradeConfigName = types.NamespacedName{
-				Name:      TEST_UPGRADECONFIG_CR,
-				Namespace: TEST_OPERATOR_NAMESPACE,
-			}
-			uc = *testStructs.NewUpgradeConfigBuilder().WithNamespacedName(upgradeConfigName).WithPhase(upgradev1alpha1.UpgradePhaseUpgrading).GetUpgradeConfig()
-			uc.Spec.Desired.Version = TEST_UPGRADE_VERSION
-			uc.Status.History[0].Version = TEST_UPGRADE_VERSION
-			uc.Spec.UpgradeAt = TEST_UPGRADE_TIME
-		})
-		Context("when the upgrade is MuoStateCOHealthCheckFailed", func() {
-			It("sends a correct notification and description", func() {
-				expectedDescription := fmt.Sprintf(UPGRADE_PREHEALTHCHECK_CO_DOWN_DELAY_DESC, uc.Spec.Desired.Version)
-				gomock.InOrder(
-					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
-					mockMetricsClient.EXPECT().IsMetricNotificationEventSentSet(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION).Return(false, nil),
-					mockNotifier.EXPECT().NotifyState(testState, expectedDescription),
-					mockMetricsClient.EXPECT().UpdateMetricNotificationEventSent(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION),
-				)
-				err := manager.Notify(testState)
-				Expect(err).To(BeNil())
-			})
-		})
-	})
+
 
 })

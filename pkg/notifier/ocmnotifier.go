@@ -48,16 +48,15 @@ const (
 )
 
 var stateMap = map[MuoState]OcmState{
-	MuoStatePending:                 OcmStatePending,
-	MuoStateCancelled:               OcmStateCancelled,
-	MuoStateStarted:                 OcmStateStarted,
-	MuoStateCompleted:               OcmStateCompleted,
-	MuoStateDelayed:                 OcmStateDelayed,
-	MuoStateFailed:                  OcmStateFailed,
-	MuoStateScheduled:               OcmStateScheduled,
-	MuoStateSkipped:                 OcmStateDelayed,
-	MuoStateCOHealthCheckFailed:     OcmStateDelayed,
-	MuoStateAlertsHealthCheckFailed: OcmStateDelayed,
+	MuoStatePending:     OcmStatePending,
+	MuoStateCancelled:   OcmStateCancelled,
+	MuoStateStarted:     OcmStateStarted,
+	MuoStateCompleted:   OcmStateCompleted,
+	MuoStateDelayed:     OcmStateDelayed,
+	MuoStateFailed:      OcmStateFailed,
+	MuoStateScheduled:   OcmStateScheduled,
+	MuoStateSkipped:     OcmStateDelayed,
+	MuoStateHealthCheck: OcmStateDelayed,
 }
 
 type ocmNotifier struct {
@@ -171,9 +170,7 @@ func validateStateTransition(from MuoState, to MuoState) bool {
 			return true
 		case MuoStateFailed:
 			return true
-		case MuoStateCOHealthCheckFailed:
-			return true
-		case MuoStateAlertsHealthCheckFailed:
+		case MuoStateHealthCheck:
 			return true
 		default:
 			return false
