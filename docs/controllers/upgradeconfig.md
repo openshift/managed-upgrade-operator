@@ -6,6 +6,7 @@ The `UpgradeConfig` controller is the controller that drives the managed upgrade
 
 This includes:
 
+- Running of Pre-HealthCheck when an upgrade is scheduled in advance (> 2 hrs by default)
 - Validation of the `Upgradeconfig`
 - Initiating the upgrade process at the scheduled time
 - Managing the upgrade process
@@ -42,7 +43,13 @@ If no history exists, one is initialized with a `phase` based upon the current s
 
 The reconciler then checks the current phase of the `UpgradeConfig`.
 
-If the phase is `New` or `Pending`:
+If the phase is `New`:
+
+- The time to upgrade is checked to decide if a Pre-HealthCheck is required to be run or not. This gives users/customers a notification in advance about what's wrong or can impact an upgrade and has time to address it when the upgrade actually starts at scheduled time.
+- If the scheduled upgrade time is greater than the `HealthCheckDuration` time (defaults to 2 hours), then the Pre-HealthCheck is run. Else, the HealthCheck is run as per usual upgrade process as such just before the upgrade starts.
+- Once the Pre-HealthCheck is run, the upgrade phase is set to "Pending" state.
+
+If the phase is `Pending`:
 
 - The `UpgradeConfig` contents are validated to ensure that the upgrade time is syntactically valid, and the version being upgraded to is a valid version.
 - The upgrade start time is checked to see if the current time falls within the upgrade window (start time + the [ConfigMap's](../configmap.md) `upgradeWindow.timeOut` value).
@@ -70,10 +77,19 @@ sethistory(Initialise history based on cluster state)
 sethistory --> checkphase
 
 checkphase[/Check the UC phase/]
+checkphase --> isucnew
 checkphase --> isucpending
 checkphase --> isucupgrading
 checkphase --> isdone
-isucpending{New/Pending?}
+isucnew{New}
+checktimetoupgrade[/Time to upgrade more than 2 hours/]
+isucnew --> checktimetoupgrade
+checktimetoupgrade --> |yes|healthcheck
+checktimetoupgrade --> |no|isucpending
+isucpending{Pending}
+
+healthcheck(Pre Health Check):::highlight
+healthcheck --> isucpending
 isucpending --> |yes|validate
 isucupgrading{Upgrading?}
 isucupgrading --> |yes|continueupgrade
