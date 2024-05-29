@@ -23,15 +23,21 @@ func (c *clusterUpgrader) PreUpgradeHealthCheck(ctx context.Context, logger logr
 
 	ok, err := CriticalAlerts(c.metrics, c.config, c.upgradeConfig, logger)
 	if err != nil || !ok {
-		c.notifier.Notify(notifier.MuoStateHealthCheck)
 		logger.Info("upgrade delayed due to firing critical alerts")
+		errResult := c.notifier.Notify(notifier.MuoStateHealthCheck)
+		if errResult != nil {
+			err = errResult
+		}
 		return false, err
 	}
 
 	ok, err = ClusterOperators(c.metrics, c.cvClient, c.upgradeConfig, logger)
 	if err != nil || !ok {
-		c.notifier.Notify(notifier.MuoStateHealthCheck)
 		logger.Info("upgrade delayed due to cluster operators not ready")
+		errResult := c.notifier.Notify(notifier.MuoStateHealthCheck)
+		if errResult != nil {
+			err = errResult
+		}
 		return false, err
 	}
 	c.metrics.UpdateMetricHealthcheckSucceeded(c.upgradeConfig.Name)
