@@ -323,6 +323,7 @@ coverage:
 # TODO: Boilerplate this script.
 .PHONY: build-push
 build-push:
+	OPERATOR_VERSION="${OPERATOR_VERSION}" \
 	${CONVENTION_DIR}/app-sre-build-deploy.sh ${REGISTRY_IMAGE} ${CURRENT_COMMIT} "$$IMAGES_TO_BUILD"
 
 .PHONY: opm-build-push
