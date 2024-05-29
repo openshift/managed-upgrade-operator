@@ -84,7 +84,7 @@ replaces ${OPERATOR_PREV_VERSION}
 removed versions: ${REMOVED_VERSIONS}"
 
 git commit -m "${MESSAGE}"
-git push origin "${operator_channel}"
+git push origin HEAD
 
 if [ $? -ne 0 ] ; then
     echo "git push failed, exiting..."
@@ -95,21 +95,20 @@ popd
 
 if [ "$push_catalog" = true ] ; then
     # push image
-    skopeo copy --dest-creds "${QUAY_USER}:${QUAY_TOKEN}" \
-        "${SRC_CONTAINER_TRANSPORT}:${registry_image}:${operator_channel}-latest" \
-        "docker://${registry_image}:${operator_channel}-latest"
-
-    if [ $? -ne 0 ] ; then
-        echo "skopeo push of ${registry_image}:${operator_channel}-latest failed, exiting..."
-        exit 1
+    if [[ "${RELEASE_BRANCHED_BUILDS}" ]]; then
+      tags=( "v${OPERATOR_NEW_VERSION}" )
+    else
+      tags=( "${operator_channel}-latest" "${operator_channel}-${operator_commit_hash}" )
     fi
 
-    skopeo copy --dest-creds "${QUAY_USER}:${QUAY_TOKEN}" \
-        "${SRC_CONTAINER_TRANSPORT}:${registry_image}:${operator_channel}-latest" \
-        "docker://${registry_image}:${operator_channel}-${operator_commit_hash}"
+    for tag in ${tags[@]}; do
+      skopeo copy --dest-creds "${QUAY_USER}:${QUAY_TOKEN}" \
+          "${SRC_CONTAINER_TRANSPORT}:${registry_image}:${tag}" \
+          "docker://${registry_image}:${tag}"
 
-    if [ $? -ne 0 ] ; then
-        echo "skopeo push of ${registry_image}:${operator_channel}-${operator_commit_hash} failed, exiting..."
-        exit 1
-    fi
+      if [ $? -ne 0 ] ; then
+          echo "skopeo push of ${registry_image}:${tag} failed, exiting..."
+          exit 1
+      fi
+    done
 fi
