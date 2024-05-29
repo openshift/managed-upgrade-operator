@@ -233,6 +233,12 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 
 			if remoteChanged {
 				reqLogger.Info("The cluster's upgrade policy has changed, so the operator will re-reconcile.")
+				history.Phase = upgradev1alpha1.UpgradePhaseNew
+				instance.Status.History.SetHistory(*history)
+				err = r.Client.Status().Update(context.TODO(), instance)
+				if err != nil {
+					return reconcile.Result{}, err
+				}
 				return reconcile.Result{}, nil
 			}
 
