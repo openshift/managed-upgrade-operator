@@ -95,12 +95,14 @@ var _ = Describe("HealthCheck Step", func() {
 
 			JustBeforeEach(func() {
 				alertsResponse = &metrics.AlertResponse{}
+				upgradeConfig.Spec.CapacityReservation = true
 			})
 			It("will satisfy a pre-upgrade health check", func() {
 				gomock.InOrder(
 					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
 					mockMetricsClient.EXPECT().Query(gomock.Any()).Return(alertsResponse, nil),
 					mockCVClient.EXPECT().HasDegradedOperators().Return(&clusterversion.HasDegradedOperatorsResult{Degraded: []string{}}, nil),
+					mockScalerClient.EXPECT().CanScale(gomock.Any(), logger).Return(true, nil),
 					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name),
 				)
 				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
@@ -117,6 +119,7 @@ var _ = Describe("HealthCheck Step", func() {
 							return &metrics.AlertResponse{}, nil
 						}),
 					mockCVClient.EXPECT().HasDegradedOperators().Return(&clusterversion.HasDegradedOperatorsResult{Degraded: []string{}}, nil),
+					mockScalerClient.EXPECT().CanScale(mockKubeClient, logger).Return(true, nil),
 					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name),
 				)
 				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
@@ -131,6 +134,7 @@ var _ = Describe("HealthCheck Step", func() {
 						return &metrics.AlertResponse{}, nil
 					})
 				mockCVClient.EXPECT().HasDegradedOperators().Return(&clusterversion.HasDegradedOperatorsResult{Degraded: []string{}}, nil)
+				mockScalerClient.EXPECT().CanScale(mockKubeClient, logger).Return(true, nil)
 				mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name)
 				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
 				Expect(err).To(Not(HaveOccurred()))
@@ -152,6 +156,7 @@ var _ = Describe("HealthCheck Step", func() {
 
 			JustBeforeEach(func() {
 				alertsResponse = &metrics.AlertResponse{}
+				upgradeConfig.Spec.CapacityReservation = true
 			})
 
 			It("will satisfy a pre-Upgrade health check", func() {
@@ -159,6 +164,7 @@ var _ = Describe("HealthCheck Step", func() {
 					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
 					mockMetricsClient.EXPECT().Query(gomock.Any()).Return(alertsResponse, nil),
 					mockCVClient.EXPECT().HasDegradedOperators().Return(&clusterversion.HasDegradedOperatorsResult{Degraded: []string{}}, nil),
+					mockScalerClient.EXPECT().CanScale(mockKubeClient, logger).Return(true, nil),
 					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name),
 				)
 				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)

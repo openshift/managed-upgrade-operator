@@ -2,6 +2,7 @@ package upgraders
 
 import (
 	"context"
+
 	"github.com/go-logr/logr"
 
 	"github.com/openshift/managed-upgrade-operator/pkg/notifier"
@@ -33,4 +34,13 @@ func (c *clusterUpgrader) SendCompletedNotification(ctx context.Context, logger 
 		return false, err
 	}
 	return true, nil
+}
+
+// SendScaleSkippedNotification sends a notification on Muo skip capacityreservation
+func (c *clusterUpgrader) SendScaleSkippedNotification(ctx context.Context, logger logr.Logger) error {
+	err := c.notifier.Notify(notifier.MuoStateScaleSkipped)
+	if err != nil {
+		return err
+	}
+	return nil
 }

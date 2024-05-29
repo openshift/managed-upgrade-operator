@@ -20,6 +20,8 @@ const (
 	UPGRADE_EXTDEPCHECK_FAILED_DESC = "Cluster upgrade to version %s was cancelled during the External Dependency Availability Check step. A required external dependency of the upgrade was unavailable, so the upgrade did not proceed. Automated upgrades will be retried on their next scheduling cycle. If you have manually scheduled an upgrade instead, it must now be rescheduled"
 	// UPGRADE_SCALE_FAILED_DESC describes the upgrade scaling failed
 	UPGRADE_SCALE_FAILED_DESC = "Cluster upgrade to version %s was cancelled during the Scale-Up Worker Node step. A temporary additional worker node was unable to be created to temporarily house workloads, so the upgrade did not proceed. Automated upgrades will be retried on their next scheduling cycle. If you have manually scheduled an upgrade instead, it must now be rescheduled"
+	// UPGRADE_SCALE_SKIP_DESC describes the upgrade scaling skipped
+	UPGRADE_SCALE_SKIP_DESC = "Cluster upgrade to version %s has skipped Scale-Up additional Worker Node step for compute capacity reservation. This is an informational notification and no action is required by you"
 
 	// UPGRADE_DEFAULT_DELAY_DESC describes the upgrade default delay
 	UPGRADE_DEFAULT_DELAY_DESC = "Cluster upgrade to version %s is experiencing a delay whilst it performs necessary pre-upgrade procedures. The upgrade will continue to retry. This is an informational notification and no action is required"
@@ -34,12 +36,14 @@ const (
 )
 
 // EventManager enables implementation of an EventManager
+//
 //go:generate mockgen -destination=mocks/eventmanager.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/eventmanager EventManager
 type EventManager interface {
 	Notify(state notifier.MuoState) error
 }
 
 // EventManagerBuilder enables implementation of an EventManagerBuilder
+//
 //go:generate mockgen -destination=mocks/eventmanager_builder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/eventmanager EventManagerBuilder
 type EventManagerBuilder interface {
 	NewManager(client.Client) (EventManager, error)
@@ -109,6 +113,8 @@ func (s *eventManager) Notify(state notifier.MuoState) error {
 	switch state {
 	case notifier.MuoStateStarted:
 		description = fmt.Sprintf("Cluster is currently being upgraded to version %s", uc.Spec.Desired.Version)
+	case notifier.MuoStateScaleSkipped:
+		description = fmt.Sprintf(UPGRADE_SCALE_SKIP_DESC, uc.Spec.Desired.Version)
 	case notifier.MuoStateDelayed:
 		description = createDelayedDescription(uc)
 	case notifier.MuoStateSkipped:

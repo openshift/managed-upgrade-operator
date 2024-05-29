@@ -12,12 +12,14 @@ import (
 )
 
 // Notifier is an interface that enables implementation of a Notifier
+//
 //go:generate mockgen -destination=mocks/notifier.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/notifier Notifier
 type Notifier interface {
 	NotifyState(value MuoState, description string) error
 }
 
 // NotifierBuilder is an interface that enables implementation of a NotifierBuilder
+//
 //go:generate mockgen -destination=mocks/notifier_builder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/notifier NotifierBuilder
 type NotifierBuilder interface {
 	New(client.Client, configmanager.ConfigManagerBuilder, upgradeconfigmanager.UpgradeConfigManagerBuilder) (Notifier, error)
@@ -25,14 +27,15 @@ type NotifierBuilder interface {
 
 // Represents valid notify states that can be reported
 const (
-	MuoStatePending   MuoState = "StatePending"
-	MuoStateStarted   MuoState = "StateStarted"
-	MuoStateCompleted MuoState = "StateCompleted"
-	MuoStateDelayed   MuoState = "StateDelayed"
-	MuoStateFailed    MuoState = "StateFailed"
-	MuoStateCancelled MuoState = "StateCancelled"
-	MuoStateScheduled MuoState = "StateScheduled"
-	MuoStateSkipped   MuoState = "StateSkipped"
+	MuoStatePending      MuoState = "StatePending"
+	MuoStateStarted      MuoState = "StateStarted"
+	MuoStateCompleted    MuoState = "StateCompleted"
+	MuoStateDelayed      MuoState = "StateDelayed"
+	MuoStateFailed       MuoState = "StateFailed"
+	MuoStateCancelled    MuoState = "StateCancelled"
+	MuoStateScaleSkipped MuoState = "StateScaleSkipped"
+	MuoStateScheduled    MuoState = "StateScheduled"
+	MuoStateSkipped      MuoState = "StateSkipped"
 )
 
 // MuoState is a type

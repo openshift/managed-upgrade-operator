@@ -16,10 +16,10 @@ import (
 func NewOCMNotifier(client client.Client, ocmBaseUrl *url.URL, upgradeConfigManager upgradeconfigmanager.UpgradeConfigManager) (*ocmNotifier, error) {
 	var (
 		ocmClient ocm.OcmClient
-		err error
+		err       error
 	)
 
-	if (strings.Contains(ocmBaseUrl.String(), fmt.Sprintf("%s:%d", ocmagent.OCM_AGENT_SERVICE_URL, ocmagent.OCM_AGENT_SERVICE_PORT))) {
+	if strings.Contains(ocmBaseUrl.String(), fmt.Sprintf("%s:%d", ocmagent.OCM_AGENT_SERVICE_URL, ocmagent.OCM_AGENT_SERVICE_PORT)) {
 		ocmClient, err = ocmagent.NewBuilder().New(ocmBaseUrl)
 	} else {
 		ocmClient, err = ocm.NewBuilder().New(client, ocmBaseUrl)
@@ -48,14 +48,15 @@ const (
 )
 
 var stateMap = map[MuoState]OcmState{
-	MuoStatePending:   OcmStatePending,
-	MuoStateCancelled: OcmStateCancelled,
-	MuoStateStarted:   OcmStateStarted,
-	MuoStateCompleted: OcmStateCompleted,
-	MuoStateDelayed:   OcmStateDelayed,
-	MuoStateFailed:    OcmStateFailed,
-	MuoStateScheduled: OcmStateScheduled,
-	MuoStateSkipped:   OcmStateDelayed,
+	MuoStatePending:      OcmStatePending,
+	MuoStateCancelled:    OcmStateCancelled,
+	MuoStateStarted:      OcmStateStarted,
+	MuoStateCompleted:    OcmStateCompleted,
+	MuoStateDelayed:      OcmStateDelayed,
+	MuoStateFailed:       OcmStateFailed,
+	MuoStateScheduled:    OcmStateScheduled,
+	MuoStateSkipped:      OcmStateDelayed,
+	MuoStateScaleSkipped: OcmStateDelayed,
 }
 
 type ocmNotifier struct {
@@ -153,21 +154,37 @@ func validateStateTransition(from MuoState, to MuoState) bool {
 		// We shouldn't even be in this state to transition from
 		return false
 	case MuoStateScheduled:
-		// Can only go to a started state
+		// Can only go to started state
 		switch to {
 		case MuoStateStarted:
 			return true
 		default:
 			return false
 		}
+
 	case MuoStateStarted:
-		// Can go to a delayed, completed or failed state
+		// Can go to a scale skipped, delayed, completed or failed state
 		switch to {
+		case MuoStateScaleSkipped:
+			return true
 		case MuoStateDelayed:
 			return true
 		case MuoStateCompleted:
 			return true
 		case MuoStateFailed:
+			return true
+		default:
+			return false
+		}
+	case MuoStateScaleSkipped:
+		switch to {
+		case MuoStateDelayed:
+			return true
+		case MuoStateFailed:
+			return true
+		case MuoStateSkipped:
+			return true
+		case MuoStateCompleted:
 			return true
 		default:
 			return false

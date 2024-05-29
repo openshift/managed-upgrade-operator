@@ -47,15 +47,16 @@ const (
 	WorkersStartedStateValue        = "workers_started"
 	WorkersCompletedStateValue      = "workers_completed"
 
-	MonitoringNS                 = "openshift-monitoring"
-	MonitoringCAConfigMapName    = "serving-certs-ca-bundle"
-	MonitoringConfigField        = "service-ca.crt"
-	promApp                      = "prometheus-k8s"
-	clusterSVCSuffix             = ".svc.cluster.local"
-	MetricsQueryFailed           = "healthcheck_query_failed"
-	CriticalAlertsFiring         = "critical_alerts_firing"
-	ClusterOperatorsDegraded     = "cluster_operators_degraded"
-	ClusterOperatorsStatusFailed = "cluster_operator_status_failed"
+	MonitoringNS                     = "openshift-monitoring"
+	MonitoringCAConfigMapName        = "serving-certs-ca-bundle"
+	MonitoringConfigField            = "service-ca.crt"
+	promApp                          = "prometheus-k8s"
+	clusterSVCSuffix                 = ".svc.cluster.local"
+	MetricsQueryFailed               = "healthcheck_query_failed"
+	CriticalAlertsFiring             = "critical_alerts_firing"
+	ClusterOperatorsDegraded         = "cluster_operators_degraded"
+	ClusterOperatorsStatusFailed     = "cluster_operator_status_failed"
+	DefaultWorkerMachinepoolNotFound = "default_worker_machinepool_not_found"
 )
 
 // Alerts sourced from https://github.com/openshift/managed-cluster-config/blob/master/deploy/sre-prometheus/100-managed-upgrade-operator.PrometheusRule.yaml

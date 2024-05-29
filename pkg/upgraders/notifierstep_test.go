@@ -3,6 +3,7 @@ package upgraders
 import (
 	"context"
 	"fmt"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -132,6 +133,17 @@ var _ = Describe("NotifierStep", func() {
 			result, err := upgrader.SendCompletedNotification(context.TODO(), logger)
 			Expect(err).To(HaveOccurred())
 			Expect(result).To(BeFalse())
+		})
+	})
+	Context("When running the scale-skipped-notification phase", func() {
+		Context("When the cluster is upgrading", func() {
+			It("will return without doing anything", func() {
+				gomock.InOrder(
+					mockEMClient.EXPECT().Notify(notifier.MuoStateScaleSkipped),
+				)
+				err := upgrader.SendScaleSkippedNotification(context.TODO(), logger)
+				Expect(err).NotTo(HaveOccurred())
+			})
 		})
 	})
 })
