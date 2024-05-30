@@ -33,6 +33,8 @@ const (
 	UPGRADE_SCALE_DELAY_DESC = "Cluster upgrade to version %s is experiencing a delay attempting to scale up an additional worker node. The upgrade will continue to retry. This is an informational notification and no action is required by you"
 	// UPGRADE_SCALE_DELAY_SKIP_DESC describes the upgrade scaling skipped after delay
 	UPGRADE_SCALE_DELAY_SKIP_DESC = "Cluster upgrade to version %s has experienced an issue during capacity reservation efforts. This could be caused by cloud service provider quota limitations or temporary connectivity issues to/from the new worker node. The upgrade will continue without extra compute. This is an informational notification and no action is required by you"
+	// UPGRADE_HEALTHCHECK_DELAY_DESC describes the upgrade pre health check delay
+	UPGRADE_HEALTHCHECK_DELAY_DESC = "Cluster upgrade to version %s is experiencing a delay which could impact the upgrade's operation. The upgrade will continue to retry. This is an informational notification and no action is required by you"
 )
 
 // EventManager enables implementation of an EventManager
@@ -123,6 +125,8 @@ func (s *eventManager) Notify(state notifier.MuoState) error {
 		description = fmt.Sprintf("Cluster has been successfully upgraded to version %s", uc.Spec.Desired.Version)
 	case notifier.MuoStateFailed:
 		description = createFailureDescription(uc)
+	case notifier.MuoStateHealthCheck:
+		description = fmt.Sprintf(UPGRADE_HEALTHCHECK_DELAY_DESC, uc.Spec.Desired.Version)
 	default:
 		return fmt.Errorf("state %v not yet implemented", state)
 	}

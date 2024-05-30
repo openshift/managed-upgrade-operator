@@ -57,6 +57,7 @@ var stateMap = map[MuoState]OcmState{
 	MuoStateScheduled:    OcmStateScheduled,
 	MuoStateSkipped:      OcmStateDelayed,
 	MuoStateScaleSkipped: OcmStateDelayed,
+	MuoStateHealthCheck:  OcmStateDelayed,
 }
 
 type ocmNotifier struct {
@@ -163,7 +164,7 @@ func validateStateTransition(from MuoState, to MuoState) bool {
 		}
 
 	case MuoStateStarted:
-		// Can go to a scale skipped, delayed, completed or failed state
+		// Can go to a scale skipped, healthCheck, delayed, completed or failed state
 		switch to {
 		case MuoStateScaleSkipped:
 			return true
@@ -173,10 +174,14 @@ func validateStateTransition(from MuoState, to MuoState) bool {
 			return true
 		case MuoStateFailed:
 			return true
+		case MuoStateHealthCheck:
+			return true
 		default:
 			return false
 		}
+
 	case MuoStateScaleSkipped:
+		// can go to skipped, delayed, completed or failed state
 		switch to {
 		case MuoStateDelayed:
 			return true
@@ -189,6 +194,7 @@ func validateStateTransition(from MuoState, to MuoState) bool {
 		default:
 			return false
 		}
+
 	case MuoStateDelayed:
 		// can go to completed or failed or skipped state
 		switch to {
@@ -201,6 +207,7 @@ func validateStateTransition(from MuoState, to MuoState) bool {
 		default:
 			return false
 		}
+
 	case MuoStateSkipped:
 		// can go to completed or failed state
 		switch to {
@@ -211,6 +218,7 @@ func validateStateTransition(from MuoState, to MuoState) bool {
 		default:
 			return false
 		}
+
 	case MuoStateCompleted:
 		// can't go anywhere
 		return false

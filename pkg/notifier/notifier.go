@@ -33,9 +33,10 @@ const (
 	MuoStateDelayed      MuoState = "StateDelayed"
 	MuoStateFailed       MuoState = "StateFailed"
 	MuoStateCancelled    MuoState = "StateCancelled"
-	MuoStateScaleSkipped MuoState = "StateScaleSkipped"
 	MuoStateScheduled    MuoState = "StateScheduled"
+	MuoStateScaleSkipped MuoState = "StateScaleSkipped"
 	MuoStateSkipped      MuoState = "StateSkipped"
+	MuoStateHealthCheck  MuoState = "StateHealthCheck"
 )
 
 // MuoState is a type

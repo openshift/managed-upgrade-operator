@@ -8,6 +8,7 @@ import (
 
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/api/v1alpha1"
 	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
+	"github.com/openshift/managed-upgrade-operator/pkg/notifier"
 )
 
 // PreUpgradeHealthCheck performs cluster healthy check
@@ -23,23 +24,37 @@ func (c *clusterUpgrader) PreUpgradeHealthCheck(ctx context.Context, logger logr
 
 	ok, err := CriticalAlerts(c.metrics, c.config, c.upgradeConfig, logger)
 	if err != nil || !ok {
+		logger.Info("upgrade delayed due to firing critical alerts")
+		errResult := c.notifier.Notify(notifier.MuoStateHealthCheck)
+		if errResult != nil {
+			err = errResult
+		}
 		return false, err
 	}
 
 	ok, err = ClusterOperators(c.metrics, c.cvClient, c.upgradeConfig, logger)
 	if err != nil || !ok {
+		logger.Info("upgrade delayed due to cluster operators not ready")
+		errResult := c.notifier.Notify(notifier.MuoStateHealthCheck)
+		if errResult != nil {
+			err = errResult
+		}
 		return false, err
 	}
 
 	if c.upgradeConfig.Spec.CapacityReservation {
 		ok, err := c.scaler.CanScale(c.client, logger)
-		if err != nil || !ok {
+		if !ok {
 			c.metrics.UpdateMetricHealthcheckFailed(c.upgradeConfig.Name, metrics.DefaultWorkerMachinepoolNotFound)
+			return false, nil
+		}
+		if err != nil {
 			return false, err
 		}
 	}
 
 	c.metrics.UpdateMetricHealthcheckSucceeded(c.upgradeConfig.Name)
+
 	return true, nil
 }
 

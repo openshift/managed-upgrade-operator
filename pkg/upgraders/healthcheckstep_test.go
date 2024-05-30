@@ -202,6 +202,7 @@ var _ = Describe("HealthCheck Step", func() {
 					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
 					mockMetricsClient.EXPECT().Query(gomock.Any()).Return(alertsResponse, nil),
 					mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, gomock.Any()),
+					mockEMClient.EXPECT().Notify(gomock.Any()).Return(nil),
 				)
 				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
 				Expect(err).To(HaveOccurred())
@@ -230,6 +231,7 @@ var _ = Describe("HealthCheck Step", func() {
 					mockMetricsClient.EXPECT().Query(gomock.Any()).Return(alertsResponse, nil),
 					mockCVClient.EXPECT().HasDegradedOperators().Return(&clusterversion.HasDegradedOperatorsResult{Degraded: []string{"ClusterOperator"}}, nil),
 					mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, gomock.Any()),
+					mockEMClient.EXPECT().Notify(gomock.Any()).Return(nil),
 				)
 				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
 				Expect(err).To(HaveOccurred())
