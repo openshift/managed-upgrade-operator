@@ -57,6 +57,7 @@ const (
 	ClusterOperatorsDegraded         = "cluster_operators_degraded"
 	ClusterOperatorsStatusFailed     = "cluster_operator_status_failed"
 	DefaultWorkerMachinepoolNotFound = "default_worker_machinepool_not_found"
+	ClusternNodesManuallyCordoned    = "cluster_node_manually_cordoned"
 )
 
 // Alerts sourced from https://github.com/openshift/managed-cluster-config/blob/master/deploy/sre-prometheus/100-managed-upgrade-operator.PrometheusRule.yaml

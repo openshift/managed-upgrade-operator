@@ -53,6 +53,11 @@ func (c *clusterUpgrader) PreUpgradeHealthCheck(ctx context.Context, logger logr
 		}
 	}
 
+	ok, err = ManuallyCordonedNodes(c.metrics, c.machinery, c.client, c.upgradeConfig, logger)
+	if err != nil || !ok {
+		return false, err
+	}
+
 	c.metrics.UpdateMetricHealthcheckSucceeded(c.upgradeConfig.Name)
 
 	return true, nil
