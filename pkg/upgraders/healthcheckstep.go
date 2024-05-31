@@ -55,6 +55,11 @@ func (c *clusterUpgrader) PreUpgradeHealthCheck(ctx context.Context, logger logr
 
 	ok, err = ManuallyCordonedNodes(c.metrics, c.machinery, c.client, c.upgradeConfig, logger)
 	if err != nil || !ok {
+		logger.Info(fmt.Sprintf("upgrade delayed due to there are manually cordoned nodes: %s", err))
+		errResult := c.notifier.Notify(notifier.MuoStateHealthCheck)
+		if errResult != nil {
+			err = errResult
+		}
 		return false, err
 	}
 
