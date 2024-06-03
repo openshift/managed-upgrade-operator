@@ -7,6 +7,7 @@ import (
 	"github.com/go-logr/logr"
 
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/api/v1alpha1"
+	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
 	"github.com/openshift/managed-upgrade-operator/pkg/notifier"
 )
 
@@ -40,6 +41,18 @@ func (c *clusterUpgrader) PreUpgradeHealthCheck(ctx context.Context, logger logr
 		}
 		return false, err
 	}
+
+	if c.upgradeConfig.Spec.CapacityReservation {
+		ok, err := c.scaler.CanScale(c.client, logger)
+		if !ok {
+			c.metrics.UpdateMetricHealthcheckFailed(c.upgradeConfig.Name, metrics.DefaultWorkerMachinepoolNotFound)
+			return false, nil
+		}
+		if err != nil {
+			return false, err
+		}
+	}
+
 	c.metrics.UpdateMetricHealthcheckSucceeded(c.upgradeConfig.Name)
 
 	return true, nil

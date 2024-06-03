@@ -48,15 +48,16 @@ const (
 )
 
 var stateMap = map[MuoState]OcmState{
-	MuoStatePending:     OcmStatePending,
-	MuoStateCancelled:   OcmStateCancelled,
-	MuoStateStarted:     OcmStateStarted,
-	MuoStateCompleted:   OcmStateCompleted,
-	MuoStateDelayed:     OcmStateDelayed,
-	MuoStateFailed:      OcmStateFailed,
-	MuoStateScheduled:   OcmStateScheduled,
-	MuoStateSkipped:     OcmStateDelayed,
-	MuoStateHealthCheck: OcmStateDelayed,
+	MuoStatePending:      OcmStatePending,
+	MuoStateCancelled:    OcmStateCancelled,
+	MuoStateStarted:      OcmStateStarted,
+	MuoStateCompleted:    OcmStateCompleted,
+	MuoStateDelayed:      OcmStateDelayed,
+	MuoStateFailed:       OcmStateFailed,
+	MuoStateScheduled:    OcmStateScheduled,
+	MuoStateSkipped:      OcmStateDelayed,
+	MuoStateScaleSkipped: OcmStateDelayed,
+	MuoStateHealthCheck:  OcmStateDelayed,
 }
 
 type ocmNotifier struct {
@@ -154,16 +155,19 @@ func validateStateTransition(from MuoState, to MuoState) bool {
 		// We shouldn't even be in this state to transition from
 		return false
 	case MuoStateScheduled:
-		// Can only go to a started state
+		// Can only go to started state
 		switch to {
 		case MuoStateStarted:
 			return true
 		default:
 			return false
 		}
+
 	case MuoStateStarted:
-		// Can go to a delayed, completed or failed state
+		// Can go to a scale skipped, healthCheck, delayed, completed or failed state
 		switch to {
+		case MuoStateScaleSkipped:
+			return true
 		case MuoStateDelayed:
 			return true
 		case MuoStateCompleted:
@@ -175,6 +179,22 @@ func validateStateTransition(from MuoState, to MuoState) bool {
 		default:
 			return false
 		}
+
+	case MuoStateScaleSkipped:
+		// can go to skipped, delayed, completed or failed state
+		switch to {
+		case MuoStateDelayed:
+			return true
+		case MuoStateFailed:
+			return true
+		case MuoStateSkipped:
+			return true
+		case MuoStateCompleted:
+			return true
+		default:
+			return false
+		}
+
 	case MuoStateDelayed:
 		// can go to completed or failed or skipped state
 		switch to {
@@ -187,6 +207,7 @@ func validateStateTransition(from MuoState, to MuoState) bool {
 		default:
 			return false
 		}
+
 	case MuoStateSkipped:
 		// can go to completed or failed state
 		switch to {
@@ -197,6 +218,7 @@ func validateStateTransition(from MuoState, to MuoState) bool {
 		default:
 			return false
 		}
+
 	case MuoStateCompleted:
 		// can't go anywhere
 		return false

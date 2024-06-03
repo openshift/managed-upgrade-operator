@@ -4,11 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/openshift/managed-upgrade-operator/pkg/notifier"
-
 	"github.com/go-logr/logr"
-
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/api/v1alpha1"
+	"github.com/openshift/managed-upgrade-operator/pkg/notifier"
 	"github.com/openshift/managed-upgrade-operator/pkg/scaler"
 )
 
@@ -40,7 +38,10 @@ func (c *clusterUpgrader) EnsureExtraUpgradeWorkers(ctx context.Context, logger 
 		return false, err
 	}
 	if !canScale {
-		// We don't need to perform a scaling step
+		err := c.SendScaleSkippedNotification(ctx, logger)
+		if err != nil {
+			logger.Info(fmt.Sprintf("Failed to send ScaleSkipped notification:  %s", err))
+		}
 		return true, nil
 	}
 
@@ -86,7 +87,7 @@ func (c *clusterUpgrader) RemoveExtraScaledNodes(ctx context.Context, logger log
 		// We don't need to perform a scaling step
 		return true, nil
 	}
-	
+
 	nds, err := c.drainstrategyBuilder.NewNodeDrainStrategy(c.client, logger, c.upgradeConfig, &c.config.NodeDrain)
 	if err != nil {
 		return false, err
