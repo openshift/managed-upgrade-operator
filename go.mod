@@ -22,7 +22,7 @@ require (
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/ginkgo/v2 v2.19.0
 	github.com/onsi/gomega v1.33.1
-	github.com/openshift/api v0.0.0-20240522145529-93d6bda14341
+	github.com/openshift/api v0.0.0-20240530231226-9d1c2e5ff5a8
 	github.com/openshift/client-go v0.0.0-20240510131258-f646d5f29250
 	github.com/openshift/cluster-version-operator v1.0.1-0.20230322131514-c659e6ccaca7
 	github.com/openshift/library-go v0.0.0-20240517135010-e93e442c2b18
