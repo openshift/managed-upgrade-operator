@@ -35,6 +35,14 @@ type UpgradeConfigSpec struct {
 
 	// Specify if scaling up an extra node for capacity reservation before upgrade starts is needed
 	CapacityReservation bool `json:"capacityReservation,omitempty"`
+
+	// +kubebuilder:validation:Minimum:=2
+	// +kubebuilder:validation:Default:=2
+	// +kubebuilder:default:=2
+	// +kubebuilder:validation:Optional
+	// HealthCheckDuration specifies minimum duration of 2 hours before upgrade time to run healthcheck.
+	// If an upgrade is scheduled within 2 hours from now, healthcheck won't run.
+	HealthCheckDuration int32 `json:"HealthCheckDuration,omitempty"`
 }
 
 // UpgradeConfigStatus defines the observed state of UpgradeConfig
@@ -177,6 +185,17 @@ type UpgradeConfig struct {
 // GetPDBDrainTimeoutDuration returns the PDB timeout
 func (uc *UpgradeConfig) GetPDBDrainTimeoutDuration() time.Duration {
 	return time.Duration(uc.Spec.PDBForceDrainTimeout) * time.Minute
+}
+
+// GetHealthCheckDuration returns the duration to perform HealthCheck in hours
+func (uc *UpgradeConfig) GetHealthCheckDuration() time.Duration {
+	hcTime := uc.Spec.HealthCheckDuration
+
+	if hcTime == 0 {
+		return time.Duration(time.Hour * 2)
+	}
+
+	return time.Duration(uc.Spec.HealthCheckDuration) * time.Hour * time.Duration(hcTime)
 }
 
 // +kubebuilder:object:root=true

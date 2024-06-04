@@ -101,6 +101,14 @@ func (u *osdUpgrader) UpgradeCluster(ctx context.Context, upgradeConfig *upgrade
 	return u.runSteps(ctx, logger, u.steps)
 }
 
+// HealthCheck performs a pre-upgrade healthcheck when an upgrade is scheduled in advance mainly
+// to highlight and notify of issues which could get fixed before the upgrade begins.
+func (u *osdUpgrader) HealthCheck(ctx context.Context, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
+	u.upgradeConfig = upgradeConfig
+	ok, err := u.PreUpgradeHealthCheck(ctx, logger)
+	return ok, err
+}
+
 // shouldFailUpgrade checks if the cluster has reached a condition during upgrade
 // where it should be treated as failed.
 // If the cluster should fail its upgrade a condition of 'true' is returned.
