@@ -34,6 +34,7 @@ func ManuallyCordonedNodes(metricsClient metrics.Metrics, machinery machinery.Ma
 	var manuallyCordonNodes []string
 	isHealthCheckFailed := false
 	for _, node := range nodes.Items {
+		node := node
 		logger.Info(fmt.Sprintf("checking node %s", node.Name))
 		cordonResult := machinery.IsNodeCordoned(&node)
 		if cordonResult.IsCordoned && !machinery.IsNodeUpgrading(&node) {
