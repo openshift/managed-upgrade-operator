@@ -87,13 +87,17 @@ if [[ "${RELEASE_BRANCHED_BUILDS}" ]]; then
     BRANCH="release-${operator_version%.*}"
 fi
 
-git clone ${GIT_PATH} "$SAAS_OPERATOR_DIR"
-pushd "${SAAS_OPERATOR_DIR}"
-# if branch doesn't exist, checkout a new branch based on staging
-if ! git show-ref --verify --quiet refs/heads/${BRANCH}; then
-    git checkout -b "${BRANCH}" --track origin/staging
+if [[ "${RELEASE_BRANCHED_BUILDS}" ]]; then
+  git clone ${GIT_PATH} "$SAAS_OPERATOR_DIR"
+  pushd "${SAAS_OPERATOR_DIR}"
+  # if branch doesn't exist, checkout a new branch based on staging
+  if ! git show-ref --verify --quiet refs/heads/${BRANCH}; then
+      git checkout -b "${BRANCH}" --track origin/staging
+  fi
+  popd
+else
+  git clone --branch "$operator_channel" ${GIT_PATH} "$SAAS_OPERATOR_DIR"
 fi
-popd
 
 # If this is a brand new SaaS setup, then set up accordingly
 if [[ ! -d "${BUNDLE_DIR}" ]]; then
