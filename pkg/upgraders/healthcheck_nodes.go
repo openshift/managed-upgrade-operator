@@ -35,12 +35,10 @@ func ManuallyCordonedNodes(metricsClient metrics.Metrics, machinery machinery.Ma
 	isHealthCheckFailed := false
 	for _, node := range nodes.Items {
 		node := node
-		logger.Info(fmt.Sprintf("checking node %s", node.Name))
 		cordonResult := machinery.IsNodeCordoned(&node)
 		if cordonResult.IsCordoned && !machinery.IsNodeUpgrading(&node) {
 			//Node has been manually cordoned, set the flag and record the node name
 			isHealthCheckFailed = true
-			logger.Info(fmt.Sprintf("Found cordoned node %s", node.Name))
 			manuallyCordonNodes = append(manuallyCordonNodes, node.Name)
 		}
 	}
