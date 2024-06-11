@@ -26,7 +26,7 @@ func ManuallyCordonedNodes(metricsClient metrics.Metrics, machinery machinery.Ma
 	err := c.List(context.TODO(), nodes, cops)
 	if err != nil {
 		logger.Info("Unable to fetch node list")
-		metricsClient.UpdateMetricHealthcheckFailed(ug.Name, metrics.ClusternNodesManuallyCordoned)
+		metricsClient.UpdateMetricHealthcheckFailed(ug.Name, metrics.ClusterNodeQueryFailed)
 		return false, err
 	}
 
@@ -45,7 +45,7 @@ func ManuallyCordonedNodes(metricsClient metrics.Metrics, machinery machinery.Ma
 
 	if isHealthCheckFailed {
 		// Manually cordon node check failed, fail the healthcheck and return failed nodes
-		metricsClient.UpdateMetricHealthcheckFailed(ug.Name, metrics.ClusternNodesManuallyCordoned)
+		metricsClient.UpdateMetricHealthcheckFailed(ug.Name, metrics.ClusterNodesManuallyCordoned)
 		return false, fmt.Errorf("cordoned nodes: %s", strings.Join(manuallyCordonNodes, ", "))
 	}
 	logger.Info("Prehealth check for manually cordoned node passed")
