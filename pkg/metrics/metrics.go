@@ -59,6 +59,7 @@ const (
 	DefaultWorkerMachinepoolNotFound = "default_worker_machinepool_not_found"
 	ClusterNodeQueryFailed           = "cluster_node_query_failed"
 	ClusterNodesManuallyCordoned     = "cluster_node_manually_cordoned"
+	ClusterNodesTaintedUnschedulable = "cluster_node_taint_unschedulable"
 )
 
 // Alerts sourced from https://github.com/openshift/managed-cluster-config/blob/master/deploy/sre-prometheus/100-managed-upgrade-operator.PrometheusRule.yaml

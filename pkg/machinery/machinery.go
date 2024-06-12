@@ -18,6 +18,9 @@ type Machinery interface {
 	IsUpgrading(c client.Client, nodeType string) (*UpgradingResult, error)
 	IsNodeCordoned(node *corev1.Node) *IsCordonedResult
 	IsNodeUpgrading(node *corev1.Node) bool
+	HasMemoryPressure(node *corev1.Node) bool
+	HasDiskPressure(node *corev1.Node) bool
+	HasPidPressure(node *corev1.Node) bool
 }
 
 type machinery struct{}

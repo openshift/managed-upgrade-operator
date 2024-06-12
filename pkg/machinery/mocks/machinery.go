@@ -41,6 +41,48 @@ func (m *MockMachinery) EXPECT() *MockMachineryMockRecorder {
 	return m.recorder
 }
 
+// HasDiskPressure mocks base method.
+func (m *MockMachinery) HasDiskPressure(arg0 *v1.Node) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HasDiskPressure", arg0)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// HasDiskPressure indicates an expected call of HasDiskPressure.
+func (mr *MockMachineryMockRecorder) HasDiskPressure(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasDiskPressure", reflect.TypeOf((*MockMachinery)(nil).HasDiskPressure), arg0)
+}
+
+// HasMemoryPressure mocks base method.
+func (m *MockMachinery) HasMemoryPressure(arg0 *v1.Node) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HasMemoryPressure", arg0)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// HasMemoryPressure indicates an expected call of HasMemoryPressure.
+func (mr *MockMachineryMockRecorder) HasMemoryPressure(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasMemoryPressure", reflect.TypeOf((*MockMachinery)(nil).HasMemoryPressure), arg0)
+}
+
+// HasPidPressure mocks base method.
+func (m *MockMachinery) HasPidPressure(arg0 *v1.Node) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HasPidPressure", arg0)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// HasPidPressure indicates an expected call of HasPidPressure.
+func (mr *MockMachineryMockRecorder) HasPidPressure(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasPidPressure", reflect.TypeOf((*MockMachinery)(nil).HasPidPressure), arg0)
+}
+
 // IsNodeCordoned mocks base method.
 func (m *MockMachinery) IsNodeCordoned(arg0 *v1.Node) *machinery.IsCordonedResult {
 	m.ctrl.T.Helper()

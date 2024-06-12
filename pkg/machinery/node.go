@@ -39,3 +39,39 @@ func (m *machinery) IsNodeUpgrading(node *corev1.Node) bool {
 		return false
 	}
 }
+
+func (m *machinery) HasMemoryPressure(node *corev1.Node) bool {
+	if len(node.Spec.Taints) > 0 {
+		// Only check if there are taints
+		for _, n := range node.Spec.Taints {
+			if n.Effect == corev1.TaintEffectNoSchedule && n.Key == corev1.TaintNodeMemoryPressure {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (m *machinery) HasDiskPressure(node *corev1.Node) bool {
+	if len(node.Spec.Taints) > 0 {
+		// Only check if there are taints
+		for _, n := range node.Spec.Taints {
+			if n.Effect == corev1.TaintEffectNoSchedule && n.Key == corev1.TaintNodeDiskPressure {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (m *machinery) HasPidPressure(node *corev1.Node) bool {
+	if len(node.Spec.Taints) > 0 {
+		// Only check if there are taints
+		for _, n := range node.Spec.Taints {
+			if n.Effect == corev1.TaintEffectNoSchedule && n.Key == corev1.TaintNodePIDPressure {
+				return true
+			}
+		}
+	}
+	return false
+}
