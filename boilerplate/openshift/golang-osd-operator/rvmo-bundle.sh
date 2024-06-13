@@ -2,7 +2,7 @@
 
 set -e
 
-REPOSITORY=${REPOSITORY:-"git@github.com:openshift/managed-release-bundle.git"}
+REPOSITORY=${REPOSITORY:-"git@github.com:openshift/managed-release-bundle-osd.git"}
 BRANCH=${BRANCH:-main}
 DELETE_TEMP_DIR=${DELETE_TEMP_DIR:-true}
 TMPD=$(mktemp -d --suffix -rvmo-bundle)
