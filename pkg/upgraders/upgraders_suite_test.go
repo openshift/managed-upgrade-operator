@@ -1,8 +1,9 @@
 package upgraders
 
 import (
-	"github.com/openshift/managed-upgrade-operator/pkg/drain"
 	"testing"
+
+	"github.com/openshift/managed-upgrade-operator/pkg/drain"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

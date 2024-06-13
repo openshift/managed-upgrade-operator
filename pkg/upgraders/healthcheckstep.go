@@ -55,7 +55,7 @@ func (c *clusterUpgrader) PreUpgradeHealthCheck(ctx context.Context, logger logr
 		result := strings.Join(healthCheckFailed, ",")
 		logger.Info(fmt.Sprintf("upgrade may delay due to pre-health-check failure: %s", result))
 		history := c.upgradeConfig.Status.History.GetHistory(c.upgradeConfig.Spec.Desired.Version)
-		state := ""
+		var state notifier.MuoState
 		if history != nil {
 			if history.Phase == upgradev1alpha1.UpgradePhaseNew {
 				state = "MuoStatePreHealthCheck"
@@ -70,6 +70,7 @@ func (c *clusterUpgrader) PreUpgradeHealthCheck(ctx context.Context, logger logr
 				}
 				return false, nil
 			}
+			return false, nil
 		}
 		logger.Info(fmt.Sprintf("upgradeconfig history doesn't exist for version: %s", c.upgradeConfig.Spec.Desired.Version))
 		return false, nil
