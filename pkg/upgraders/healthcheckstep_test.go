@@ -118,6 +118,10 @@ var _ = Describe("HealthCheck Step", func() {
 					mockScalerClient.EXPECT().CanScale(gomock.Any(), logger).Return(true, nil),
 					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *nodes),
 					mockMachineryClient.EXPECT().IsNodeCordoned(gomock.Any()).Return(&machinery.IsCordonedResult{IsCordoned: false, AddedAt: cordonAddedTime}),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *nodes),
+					mockMachineryClient.EXPECT().HasMemoryPressure(gomock.Any()).Return(false),
+					mockMachineryClient.EXPECT().HasDiskPressure(gomock.Any()).Return(false),
+					mockMachineryClient.EXPECT().HasPidPressure(gomock.Any()).Return(false),
 					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name),
 				)
 				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
@@ -137,6 +141,10 @@ var _ = Describe("HealthCheck Step", func() {
 					mockScalerClient.EXPECT().CanScale(mockKubeClient, logger).Return(true, nil),
 					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *nodes),
 					mockMachineryClient.EXPECT().IsNodeCordoned(gomock.Any()).Return(&machinery.IsCordonedResult{IsCordoned: false, AddedAt: cordonAddedTime}),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *nodes),
+					mockMachineryClient.EXPECT().HasMemoryPressure(gomock.Any()).Return(false),
+					mockMachineryClient.EXPECT().HasDiskPressure(gomock.Any()).Return(false),
+					mockMachineryClient.EXPECT().HasPidPressure(gomock.Any()).Return(false),
 					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name),
 				)
 				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
@@ -154,6 +162,10 @@ var _ = Describe("HealthCheck Step", func() {
 				mockScalerClient.EXPECT().CanScale(mockKubeClient, logger).Return(true, nil)
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *nodes)
 				mockMachineryClient.EXPECT().IsNodeCordoned(gomock.Any()).Return(&machinery.IsCordonedResult{IsCordoned: false, AddedAt: cordonAddedTime})
+				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *nodes)
+				mockMachineryClient.EXPECT().HasMemoryPressure(gomock.Any()).Return(false)
+				mockMachineryClient.EXPECT().HasDiskPressure(gomock.Any()).Return(false)
+				mockMachineryClient.EXPECT().HasPidPressure(gomock.Any()).Return(false)
 				mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name)
 				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
 				Expect(err).To(Not(HaveOccurred()))
@@ -186,6 +198,10 @@ var _ = Describe("HealthCheck Step", func() {
 					mockScalerClient.EXPECT().CanScale(mockKubeClient, logger).Return(true, nil),
 					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *nodes),
 					mockMachineryClient.EXPECT().IsNodeCordoned(gomock.Any()).Return(&machinery.IsCordonedResult{IsCordoned: false, AddedAt: cordonAddedTime}),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *nodes),
+					mockMachineryClient.EXPECT().HasMemoryPressure(gomock.Any()).Return(false),
+					mockMachineryClient.EXPECT().HasDiskPressure(gomock.Any()).Return(false),
+					mockMachineryClient.EXPECT().HasPidPressure(gomock.Any()).Return(false),
 					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name),
 				)
 				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
@@ -218,6 +234,10 @@ var _ = Describe("HealthCheck Step", func() {
 					mockScalerClient.EXPECT().CanScale(mockKubeClient, logger).Return(true, nil),
 					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *nodes),
 					mockMachineryClient.EXPECT().IsNodeCordoned(gomock.Any()).Return(&machinery.IsCordonedResult{IsCordoned: false, AddedAt: cordonAddedTime}),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *nodes),
+					mockMachineryClient.EXPECT().HasMemoryPressure(gomock.Any()).Return(false),
+					mockMachineryClient.EXPECT().HasDiskPressure(gomock.Any()).Return(false),
+					mockMachineryClient.EXPECT().HasPidPressure(gomock.Any()).Return(false),
 					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name),
 				)
 				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
@@ -251,6 +271,10 @@ var _ = Describe("HealthCheck Step", func() {
 					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *nodes),
 					mockMachineryClient.EXPECT().IsNodeCordoned(gomock.Any()).Return(&machinery.IsCordonedResult{IsCordoned: true, AddedAt: cordonAddedTime}),
 					mockMachineryClient.EXPECT().IsNodeUpgrading(gomock.Any()).Return(true),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *nodes),
+					mockMachineryClient.EXPECT().HasMemoryPressure(gomock.Any()).Return(false),
+					mockMachineryClient.EXPECT().HasDiskPressure(gomock.Any()).Return(false),
+					mockMachineryClient.EXPECT().HasPidPressure(gomock.Any()).Return(false),
 					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name),
 				)
 				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
@@ -367,29 +391,252 @@ var _ = Describe("HealthCheck Step", func() {
 				Expect(result).To(BeFalse())
 			})
 		})
-	})
 
-	Context("When the cluster's upgrade process has commenced", func() {
-		It("will not re-perform a pre-upgrade health check", func() {
-			gomock.InOrder(
-				mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(true, nil),
-			)
-			result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(BeTrue())
+		Context("When node unschedulable taint check failed", func() {
+			var alertsResponse *metrics.AlertResponse
+			var addedTime *metav1.Time
+			JustBeforeEach(func() {
+				alertsResponse = &metrics.AlertResponse{}
+			})
+			It("Memory pressure taint will not satisfy a pre-Upgrade health check", func() {
+				nodes := &corev1.NodeList{
+					TypeMeta: metav1.TypeMeta{},
+					ListMeta: metav1.ListMeta{},
+					Items: []corev1.Node{
+						{
+							ObjectMeta: metav1.ObjectMeta{Name: "testNode"},
+							Spec: corev1.NodeSpec{
+								Taints: []corev1.Taint{
+									{
+										Effect:    corev1.TaintEffectNoSchedule,
+										Key:       corev1.TaintNodeMemoryPressure,
+										TimeAdded: addedTime,
+									},
+								},
+							},
+						},
+					},
+				}
+				gomock.InOrder(
+					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
+					mockMetricsClient.EXPECT().Query(gomock.Any()).Return(alertsResponse, nil),
+					mockCVClient.EXPECT().HasDegradedOperators().Return(&clusterversion.HasDegradedOperatorsResult{Degraded: []string{}}, nil),
+					mockScalerClient.EXPECT().CanScale(mockKubeClient, logger).Return(true, nil),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *nodes),
+					mockMachineryClient.EXPECT().IsNodeCordoned(gomock.Any()).Return(&machinery.IsCordonedResult{IsCordoned: false, AddedAt: addedTime}),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *nodes),
+					mockMachineryClient.EXPECT().HasMemoryPressure(gomock.Any()).Return(true),
+					mockMachineryClient.EXPECT().HasDiskPressure(gomock.Any()).Return(false),
+					mockMachineryClient.EXPECT().HasPidPressure(gomock.Any()).Return(false),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, gomock.Any()),
+					mockEMClient.EXPECT().Notify(gomock.Any()).Return(nil),
+				)
+				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
+				Expect(err).To(HaveOccurred())
+				Expect(result).To(BeFalse())
+			})
+
+			It("Disk pressure taint will not satisfy a pre-Upgrade health check", func() {
+				nodes := &corev1.NodeList{
+					TypeMeta: metav1.TypeMeta{},
+					ListMeta: metav1.ListMeta{},
+					Items: []corev1.Node{
+						{
+							ObjectMeta: metav1.ObjectMeta{Name: "testNode"},
+							Spec: corev1.NodeSpec{
+								Taints: []corev1.Taint{
+									{
+										Effect:    corev1.TaintEffectNoSchedule,
+										Key:       corev1.TaintNodeDiskPressure,
+										TimeAdded: addedTime,
+									},
+								},
+							},
+						},
+					},
+				}
+				gomock.InOrder(
+					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
+					mockMetricsClient.EXPECT().Query(gomock.Any()).Return(alertsResponse, nil),
+					mockCVClient.EXPECT().HasDegradedOperators().Return(&clusterversion.HasDegradedOperatorsResult{Degraded: []string{}}, nil),
+					mockScalerClient.EXPECT().CanScale(mockKubeClient, logger).Return(true, nil),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *nodes),
+					mockMachineryClient.EXPECT().IsNodeCordoned(gomock.Any()).Return(&machinery.IsCordonedResult{IsCordoned: false, AddedAt: addedTime}),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *nodes),
+					mockMachineryClient.EXPECT().HasMemoryPressure(gomock.Any()).Return(false),
+					mockMachineryClient.EXPECT().HasDiskPressure(gomock.Any()).Return(true),
+					mockMachineryClient.EXPECT().HasPidPressure(gomock.Any()).Return(false),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, gomock.Any()),
+					mockEMClient.EXPECT().Notify(gomock.Any()).Return(nil),
+				)
+				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
+				Expect(err).To(HaveOccurred())
+				Expect(result).To(BeFalse())
+			})
+
+			It("PID pressure taint will not satisfy a pre-Upgrade health check", func() {
+				nodes := &corev1.NodeList{
+					TypeMeta: metav1.TypeMeta{},
+					ListMeta: metav1.ListMeta{},
+					Items: []corev1.Node{
+						{
+							ObjectMeta: metav1.ObjectMeta{Name: "testNode"},
+							Spec: corev1.NodeSpec{
+								Taints: []corev1.Taint{
+									{
+										Effect:    corev1.TaintEffectNoSchedule,
+										Key:       corev1.TaintNodePIDPressure,
+										TimeAdded: addedTime,
+									},
+								},
+							},
+						},
+					},
+				}
+				gomock.InOrder(
+					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
+					mockMetricsClient.EXPECT().Query(gomock.Any()).Return(alertsResponse, nil),
+					mockCVClient.EXPECT().HasDegradedOperators().Return(&clusterversion.HasDegradedOperatorsResult{Degraded: []string{}}, nil),
+					mockScalerClient.EXPECT().CanScale(mockKubeClient, logger).Return(true, nil),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *nodes),
+					mockMachineryClient.EXPECT().IsNodeCordoned(gomock.Any()).Return(&machinery.IsCordonedResult{IsCordoned: false, AddedAt: addedTime}),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *nodes),
+					mockMachineryClient.EXPECT().HasMemoryPressure(gomock.Any()).Return(false),
+					mockMachineryClient.EXPECT().HasDiskPressure(gomock.Any()).Return(false),
+					mockMachineryClient.EXPECT().HasPidPressure(gomock.Any()).Return(true),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, gomock.Any()),
+					mockEMClient.EXPECT().Notify(gomock.Any()).Return(nil),
+				)
+				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
+				Expect(err).To(HaveOccurred())
+				Expect(result).To(BeFalse())
+			})
+
+			It("There are 2 pressure taints which will not satisfy a pre-Upgrade health check", func() {
+				nodes := &corev1.NodeList{
+					TypeMeta: metav1.TypeMeta{},
+					ListMeta: metav1.ListMeta{},
+					Items: []corev1.Node{
+						{
+							ObjectMeta: metav1.ObjectMeta{Name: "testNode"},
+							Spec: corev1.NodeSpec{
+								Taints: []corev1.Taint{
+									{
+										Effect:    corev1.TaintEffectNoSchedule,
+										Key:       corev1.TaintNodeMemoryPressure,
+										TimeAdded: addedTime,
+									},
+									{
+										Effect:    corev1.TaintEffectNoSchedule,
+										Key:       corev1.TaintNodePIDPressure,
+										TimeAdded: addedTime,
+									},
+								},
+							},
+						},
+					},
+				}
+				gomock.InOrder(
+					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
+					mockMetricsClient.EXPECT().Query(gomock.Any()).Return(alertsResponse, nil),
+					mockCVClient.EXPECT().HasDegradedOperators().Return(&clusterversion.HasDegradedOperatorsResult{Degraded: []string{}}, nil),
+					mockScalerClient.EXPECT().CanScale(mockKubeClient, logger).Return(true, nil),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *nodes),
+					mockMachineryClient.EXPECT().IsNodeCordoned(gomock.Any()).Return(&machinery.IsCordonedResult{IsCordoned: false, AddedAt: addedTime}),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *nodes),
+					mockMachineryClient.EXPECT().HasMemoryPressure(gomock.Any()).Return(true),
+					mockMachineryClient.EXPECT().HasDiskPressure(gomock.Any()).Return(false),
+					mockMachineryClient.EXPECT().HasPidPressure(gomock.Any()).Return(true),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, gomock.Any()),
+					mockEMClient.EXPECT().Notify(gomock.Any()).Return(nil),
+				)
+				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
+				Expect(err).To(HaveOccurred())
+				Expect(result).To(BeFalse())
+			})
+
+			It("There are all 3 pressure taints which will not satisfy a pre-Upgrade health check", func() {
+				nodes := &corev1.NodeList{
+					TypeMeta: metav1.TypeMeta{},
+					ListMeta: metav1.ListMeta{},
+					Items: []corev1.Node{
+						{
+							ObjectMeta: metav1.ObjectMeta{Name: "memPressureNode"},
+							Spec: corev1.NodeSpec{
+								Taints: []corev1.Taint{
+									{
+										Effect:    corev1.TaintEffectNoSchedule,
+										Key:       corev1.TaintNodeMemoryPressure,
+										TimeAdded: addedTime,
+									},
+								},
+							},
+						},
+						{
+							ObjectMeta: metav1.ObjectMeta{Name: "diskAndPIDPressureNode"},
+							Spec: corev1.NodeSpec{
+								Taints: []corev1.Taint{
+									{
+										Effect:    corev1.TaintEffectNoSchedule,
+										Key:       corev1.TaintNodeDiskPressure,
+										TimeAdded: addedTime,
+									},
+									{
+										Effect:    corev1.TaintEffectNoSchedule,
+										Key:       corev1.TaintNodePIDPressure,
+										TimeAdded: addedTime,
+									},
+								},
+							},
+						},
+					},
+				}
+				gomock.InOrder(
+					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
+					mockMetricsClient.EXPECT().Query(gomock.Any()).Return(alertsResponse, nil),
+					mockCVClient.EXPECT().HasDegradedOperators().Return(&clusterversion.HasDegradedOperatorsResult{Degraded: []string{}}, nil),
+					mockScalerClient.EXPECT().CanScale(mockKubeClient, logger).Return(true, nil),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *nodes),
+					mockMachineryClient.EXPECT().IsNodeCordoned(gomock.Any()).Return(&machinery.IsCordonedResult{IsCordoned: false, AddedAt: addedTime}),
+					mockMachineryClient.EXPECT().IsNodeCordoned(gomock.Any()).Return(&machinery.IsCordonedResult{IsCordoned: false, AddedAt: addedTime}),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *nodes),
+					mockMachineryClient.EXPECT().HasMemoryPressure(gomock.Any()).Return(true),
+					mockMachineryClient.EXPECT().HasDiskPressure(gomock.Any()).Return(false),
+					mockMachineryClient.EXPECT().HasPidPressure(gomock.Any()).Return(false),
+					mockMachineryClient.EXPECT().HasMemoryPressure(gomock.Any()).Return(false),
+					mockMachineryClient.EXPECT().HasDiskPressure(gomock.Any()).Return(true),
+					mockMachineryClient.EXPECT().HasPidPressure(gomock.Any()).Return(true),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, gomock.Any()),
+					mockEMClient.EXPECT().Notify(gomock.Any()).Return(nil),
+				)
+				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
+				Expect(err).To(HaveOccurred())
+				Expect(result).To(BeFalse())
+			})
 		})
-	})
 
-	Context("When the upgrader can't tell if the cluster's upgrade has commenced", func() {
-		var fakeError = fmt.Errorf("fake upgradeCommenced error")
-		It("will abort the pre-upgrade health check", func() {
-			gomock.InOrder(
-				mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(true, fakeError),
-			)
-			result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
-			Expect(err).To(HaveOccurred())
-			Expect(err).To(Equal(fakeError))
-			Expect(result).To(BeFalse())
+		Context("When the cluster's upgrade process has commenced", func() {
+			It("will not re-perform a pre-upgrade health check", func() {
+				gomock.InOrder(
+					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(true, nil),
+				)
+				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(BeTrue())
+			})
+		})
+
+		Context("When the upgrader can't tell if the cluster's upgrade has commenced", func() {
+			var fakeError = fmt.Errorf("fake upgradeCommenced error")
+			It("will abort the pre-upgrade health check", func() {
+				gomock.InOrder(
+					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(true, fakeError),
+				)
+				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
+				Expect(err).To(HaveOccurred())
+				Expect(err).To(Equal(fakeError))
+				Expect(result).To(BeFalse())
+			})
 		})
 	})
 })
