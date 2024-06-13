@@ -21,7 +21,7 @@ func ClusterOperators(metricsClient metrics.Metrics, cvClient cv.ClusterVersion,
 		return false, err
 	}
 	if len(result.Degraded) > 0 {
-		logger.Info("Degraded operators: %s", strings.Join(result.Degraded, ", "))
+		logger.Info(fmt.Sprintf("Degraded operators: %s", strings.Join(result.Degraded, ", ")))
 		metricsClient.UpdateMetricHealthcheckFailed(ug.Name, metrics.ClusterOperatorsDegraded)
 		return false, fmt.Errorf("degraded operators: %s", strings.Join(result.Degraded, ", "))
 	}
