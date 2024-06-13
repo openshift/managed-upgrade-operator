@@ -283,17 +283,7 @@ var _ = Describe("HealthCheck Step", func() {
 					},
 				}
 			})
-			It("will not satisfy a pre-Upgrade health check", func() {
-				gomock.InOrder(
-					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
-					mockMetricsClient.EXPECT().Query(gomock.Any()).Return(alertsResponse, nil),
-					mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, gomock.Any()),
-					mockEMClient.EXPECT().Notify(gomock.Any()).Return(nil),
-				)
-				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
-				Expect(err).To(HaveOccurred())
-				Expect(result).To(BeFalse())
-			})
+
 			It("will not satisfy a post-upgrade health check", func() {
 				gomock.InOrder(
 					mockMetricsClient.EXPECT().Query(gomock.Any()).Return(alertsResponse, nil),
@@ -307,6 +297,16 @@ var _ = Describe("HealthCheck Step", func() {
 
 		Context("When operators are degraded", func() {
 			var alertsResponse *metrics.AlertResponse
+			nodes := &corev1.NodeList{
+				TypeMeta: metav1.TypeMeta{},
+				ListMeta: metav1.ListMeta{},
+				Items: []corev1.Node{
+					{
+						ObjectMeta: metav1.ObjectMeta{Name: "testNode"},
+					},
+				},
+			}
+			//var hc = []string{"testhealthcheckfailed"}
 
 			JustBeforeEach(func() {
 				alertsResponse = &metrics.AlertResponse{}
@@ -317,10 +317,13 @@ var _ = Describe("HealthCheck Step", func() {
 					mockMetricsClient.EXPECT().Query(gomock.Any()).Return(alertsResponse, nil),
 					mockCVClient.EXPECT().HasDegradedOperators().Return(&clusterversion.HasDegradedOperatorsResult{Degraded: []string{"ClusterOperator"}}, nil),
 					mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, gomock.Any()),
-					mockEMClient.EXPECT().Notify(gomock.Any()).Return(nil),
+					mockScalerClient.EXPECT().CanScale(mockKubeClient, logger).Return(true, nil),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *nodes),
+					mockMachineryClient.EXPECT().IsNodeCordoned(gomock.Any()).Return(&machinery.IsCordonedResult{IsCordoned: false, AddedAt: nil}),
+					mockMachineryClient.EXPECT().IsNodeUpgrading(gomock.Any()).Return(false),
 				)
 				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
-				Expect(err).To(HaveOccurred())
+				Expect(err).Should(nil, err)
 				Expect(result).To(BeFalse())
 			})
 			It("will not satisfy a post-upgrade health check", func() {

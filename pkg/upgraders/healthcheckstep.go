@@ -3,6 +3,7 @@ package upgraders
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/go-logr/logr"
 
@@ -22,49 +23,58 @@ func (c *clusterUpgrader) PreUpgradeHealthCheck(ctx context.Context, logger logr
 		return true, nil
 	}
 
+	healthCheckFailed := []string{}
+
 	ok, err := CriticalAlerts(c.metrics, c.config, c.upgradeConfig, logger)
 	if err != nil || !ok {
-		logger.Info("upgrade delayed due to firing critical alerts")
-		errResult := c.notifier.Notify(notifier.MuoStateHealthCheck)
-		if errResult != nil {
-			err = errResult
-		}
-		return false, err
+		logger.Info("upgrade may delay due to firing critical alerts")
+		healthCheckFailed = append(healthCheckFailed, "CriticalAlertsHealthcheckFailed")
 	}
 
 	ok, err = ClusterOperators(c.metrics, c.cvClient, c.upgradeConfig, logger)
 	if err != nil || !ok {
-		logger.Info("upgrade delayed due to cluster operators not ready")
-		errResult := c.notifier.Notify(notifier.MuoStateHealthCheck)
-		if errResult != nil {
-			err = errResult
-		}
-		return false, err
+		logger.Info("upgrade may delay due to cluster operators not ready")
+		healthCheckFailed = append(healthCheckFailed, "ClusterOperatorsHealthcheckFailed")
 	}
 
 	if c.upgradeConfig.Spec.CapacityReservation {
 		ok, err := c.scaler.CanScale(c.client, logger)
-		if !ok {
+		if !ok || err != nil {
 			c.metrics.UpdateMetricHealthcheckFailed(c.upgradeConfig.Name, metrics.DefaultWorkerMachinepoolNotFound)
-			return false, nil
-		}
-		if err != nil {
-			return false, err
+			healthCheckFailed = append(healthCheckFailed, "CapacityReservationHealthcheckFailed")
 		}
 	}
 
 	ok, err = ManuallyCordonedNodes(c.metrics, c.machinery, c.client, c.upgradeConfig, logger)
 	if err != nil || !ok {
-		logger.Info(fmt.Sprintf("upgrade delayed due to there are manually cordoned nodes: %s", err))
-		errResult := c.notifier.Notify(notifier.MuoStateHealthCheck)
-		if errResult != nil {
-			err = errResult
-		}
-		return false, err
+		logger.Info(fmt.Sprintf("upgrade may delay due to there are manually cordoned nodes: %s", err))
+		healthCheckFailed = append(healthCheckFailed, "NodeUnschedulableHealthcheckFailed")
 	}
 
+	if len(healthCheckFailed) > 0 {
+		result := strings.Join(healthCheckFailed, ",")
+		logger.Info(fmt.Sprintf("upgrade may delay due to pre-health-check failure: %s", result))
+		history := c.upgradeConfig.Status.History.GetHistory(c.upgradeConfig.Spec.Desired.Version)
+		state := ""
+		if history != nil {
+			if history.Phase == upgradev1alpha1.UpgradePhaseNew {
+				state = "MuoStatePreHealthCheck"
+			}
+			if history.Phase == upgradev1alpha1.UpgradePhasePending {
+				state = "MuoStateHealthCheck"
+			}
+			if state != "" {
+				err := c.notifier.Notify(notifier.MuoState(state))
+				if err != nil {
+					return false, err
+				}
+				return false, nil
+			}
+		}
+		logger.Info(fmt.Sprintf("upgradeconfig history doesn't exist for version: %s", c.upgradeConfig.Spec.Desired.Version))
+		return false, nil
+	}
 	c.metrics.UpdateMetricHealthcheckSucceeded(c.upgradeConfig.Name)
-
 	return true, nil
 }
 
