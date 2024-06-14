@@ -58,11 +58,12 @@ func (c *clusterUpgrader) PreUpgradeHealthCheck(ctx context.Context, logger logr
 		var state notifier.MuoState
 		if history != nil {
 			if history.Phase == upgradev1alpha1.UpgradePhaseNew {
-				state = "MuoStatePreHealthCheck"
+				state = "StatePreHealthCheck"
 			}
-			if history.Phase == upgradev1alpha1.UpgradePhasePending {
-				state = "MuoStateHealthCheck"
+			if history.Phase == upgradev1alpha1.UpgradePhaseUpgrading {
+				state = "StateHealthCheck"
 			}
+			fmt.Println(state)
 			if state != "" {
 				err := c.notifier.Notify(notifier.MuoState(state))
 				if err != nil {

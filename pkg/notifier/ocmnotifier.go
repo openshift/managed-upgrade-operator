@@ -48,16 +48,17 @@ const (
 )
 
 var stateMap = map[MuoState]OcmState{
-	MuoStatePending:      OcmStatePending,
-	MuoStateCancelled:    OcmStateCancelled,
-	MuoStateStarted:      OcmStateStarted,
-	MuoStateCompleted:    OcmStateCompleted,
-	MuoStateDelayed:      OcmStateDelayed,
-	MuoStateFailed:       OcmStateFailed,
-	MuoStateScheduled:    OcmStateScheduled,
-	MuoStateSkipped:      OcmStateDelayed,
-	MuoStateScaleSkipped: OcmStateDelayed,
-	MuoStateHealthCheck:  OcmStateDelayed,
+	MuoStatePending:        OcmStatePending,
+	MuoStateCancelled:      OcmStateCancelled,
+	MuoStateStarted:        OcmStateStarted,
+	MuoStateCompleted:      OcmStateCompleted,
+	MuoStateDelayed:        OcmStateDelayed,
+	MuoStateFailed:         OcmStateFailed,
+	MuoStateScheduled:      OcmStateScheduled,
+	MuoStateSkipped:        OcmStateDelayed,
+	MuoStateScaleSkipped:   OcmStateDelayed,
+	MuoStateHealthCheck:    OcmStateDelayed,
+	MuoStatePreHealthCheck: OcmStatePending,
 }
 
 type ocmNotifier struct {
@@ -151,9 +152,25 @@ func (s *ocmNotifier) getPolicyIdForUpgradeConfig(clusterId string) (*string, er
 func validateStateTransition(from MuoState, to MuoState) bool {
 
 	switch from {
+	case MuoStatePreHealthCheck:
+		switch to {
+		case MuoStatePending:
+			return true
+		case MuoStateScheduled:
+			return true
+		default:
+			return false
+		}
 	case MuoStatePending:
-		// We shouldn't even be in this state to transition from
-		return false
+		switch to {
+		case MuoStatePreHealthCheck:
+			return true
+		case MuoStateScheduled:
+			return false
+		default:
+			return false
+		}
+
 	case MuoStateScheduled:
 		// Can only go to started state
 		switch to {
@@ -175,6 +192,22 @@ func validateStateTransition(from MuoState, to MuoState) bool {
 		case MuoStateFailed:
 			return true
 		case MuoStateHealthCheck:
+			return true
+		default:
+			return false
+		}
+
+	case MuoStateHealthCheck:
+		switch to {
+		case MuoStateScaleSkipped:
+			return true
+		case MuoStateDelayed:
+			return true
+		case MuoStateFailed:
+			return true
+		case MuoStateSkipped:
+			return true
+		case MuoStateCompleted:
 			return true
 		default:
 			return false
