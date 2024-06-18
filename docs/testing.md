@@ -31,6 +31,7 @@ find .
 
 ### Mocking interfaces
 
+#### Basic Mock knowledge and process
 This project makes use of [`GoMock`](https://github.com/golang/mock) to mock service interfaces. This comes with the `mockgen` utility which can be used to generate or re-generate mock interfaces that can be used to simulate the behaviour of an external dependency.
 
 Once installed, an interface can be mocked by running: 
@@ -48,4 +49,13 @@ Internal interfaces including `pkg/maintenance/maintenance.go` and `pkg/controll
 To regenerate controller-runtime mock (cr-client.go), run
 
 ```
-mockgen -package mocks -destination=util/mocks/cr-client.go sigs.k8s.io/controller-runtime/pkg/client Client,StatusWriter,Reader,Writer```
+mockgen -package mocks -destination=util/mocks/cr-client.go sigs.k8s.io/controller-runtime/pkg/client Client,StatusWriter,Reader,Writer
+```
+#### Update Mock via boilerplate container
+
+The easiest and recommend way to make an update on the Mock when there is any interface update is using boilerplate-container. Because boilerplate container installs all the dependencies and has all the environment setup. Most important, boilerplate container resolves a lot of platform, arch and version impacts while generate the mocks manually.
+
+To regenerate the mocks by using boilerplate container, simply run the following command
+```
+./boilerplate/_lib/container-make generate
+```

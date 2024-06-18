@@ -149,4 +149,115 @@ var _ = Describe("Machinery client and utils", func() {
 			}
 		})
 	})
+
+	Context("When a node has no taints", func() {
+		testNode := &corev1.Node{
+			Spec: corev1.NodeSpec{
+				Taints: []corev1.Taint{},
+			},
+		}
+
+		It("Node has no memory pressure taints", func() {
+			result := machineryClient.HasMemoryPressure(testNode)
+			Expect(result).To(BeFalse())
+		})
+
+		It("Node has no disk pressure taints", func() {
+			result := machineryClient.HasDiskPressure(testNode)
+			Expect(result).To(BeFalse())
+		})
+
+		It("Node has no PID pressure taints", func() {
+			result := machineryClient.HasPidPressure(testNode)
+			Expect(result).To(BeFalse())
+		})
+	})
+
+	Context("When a node has unschedule taints but not memory/disk/PID pressure", func() {
+		startTime := &metav1.Time{Time: time.Now()}
+		testNode := &corev1.Node{
+			Spec: corev1.NodeSpec{
+				Taints: []corev1.Taint{
+					{
+						Effect:    corev1.TaintEffectNoSchedule,
+						Key:       corev1.TaintNodeUnschedulable,
+						TimeAdded: startTime,
+					},
+				},
+			},
+		}
+
+		It("Node has no memory pressure taints", func() {
+			result := machineryClient.HasMemoryPressure(testNode)
+			Expect(result).To(BeFalse())
+		})
+
+		It("Node has no disk pressure taints", func() {
+			result := machineryClient.HasDiskPressure(testNode)
+			Expect(result).To(BeFalse())
+		})
+
+		It("Node has no PID pressure taints", func() {
+			result := machineryClient.HasPidPressure(testNode)
+			Expect(result).To(BeFalse())
+		})
+	})
+
+	Context("When a node has relevant pressure taints", func() {
+		startTime := &metav1.Time{Time: time.Now()}
+		testNode := &corev1.Node{
+			Spec: corev1.NodeSpec{
+				Taints: []corev1.Taint{},
+			},
+		}
+
+		It("Node has no memory pressure taints", func() {
+			taintTests := []corev1.Taint{
+				{
+					Effect:    corev1.TaintEffectNoSchedule,
+					Key:       corev1.TaintNodeUnschedulable,
+					TimeAdded: startTime,
+				},
+				{
+					Effect:    corev1.TaintEffectNoSchedule,
+					Key:       corev1.TaintNodeMemoryPressure,
+					TimeAdded: startTime,
+				},
+			}
+			testNode.Spec.Taints = taintTests
+			result := machineryClient.HasMemoryPressure(testNode)
+			Expect(result).To(BeTrue())
+		})
+
+		It("Node has no disk pressure taints", func() {
+			taintTests := []corev1.Taint{
+				{
+					Effect:    corev1.TaintEffectNoSchedule,
+					Key:       corev1.TaintNodeDiskPressure,
+					TimeAdded: startTime,
+				},
+				{
+					Effect:    corev1.TaintEffectNoSchedule,
+					Key:       corev1.TaintNodeUnschedulable,
+					TimeAdded: startTime,
+				},
+			}
+			testNode.Spec.Taints = taintTests
+			result := machineryClient.HasDiskPressure(testNode)
+			Expect(result).To(BeTrue())
+		})
+
+		It("Node has no PID pressure taints", func() {
+			taintTests := []corev1.Taint{
+				{
+					Effect:    corev1.TaintEffectNoSchedule,
+					Key:       corev1.TaintNodePIDPressure,
+					TimeAdded: startTime,
+				},
+			}
+			testNode.Spec.Taints = taintTests
+			result := machineryClient.HasPidPressure(testNode)
+			Expect(result).To(BeTrue())
+		})
+	})
 })
