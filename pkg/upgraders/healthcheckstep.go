@@ -41,6 +41,9 @@ func (c *clusterUpgrader) PreUpgradeHealthCheck(ctx context.Context, logger logr
 	if len(c.config.FeatureGate.Enabled) > 0 && c.config.IsFeatureEnabled(string(upgradev1alpha1.PreHealthCheckFeatureGate)) {
 
 		healthCheckFailed := []string{}
+		history := c.upgradeConfig.Status.History.GetHistory(c.upgradeConfig.Spec.Desired.Version)
+		state := string(history.Phase)
+		version := getCurrentVersion(c.upgradeConfig)
 
 		ok, err := CriticalAlerts(c.metrics, c.config, c.upgradeConfig, logger)
 		if err != nil || !ok {
@@ -57,11 +60,11 @@ func (c *clusterUpgrader) PreUpgradeHealthCheck(ctx context.Context, logger logr
 		if c.upgradeConfig.Spec.CapacityReservation {
 			ok, err := c.scaler.CanScale(c.client, logger)
 			if !ok || err != nil {
-				c.metrics.UpdateMetricHealthcheckFailed(c.upgradeConfig.Name, metrics.DefaultWorkerMachinepoolNotFound)
+				c.metrics.UpdateMetricHealthcheckFailed(c.upgradeConfig.Name, metrics.DefaultWorkerMachinepoolNotFound, version, state)
 				healthCheckFailed = append(healthCheckFailed, "CapacityReservationHealthcheckFailed")
 			} else {
 				logger.Info("Prehealth check for CapacityReservation passed")
-				c.metrics.UpdateMetricHealthcheckSucceeded(c.upgradeConfig.Name, metrics.DefaultWorkerMachinepoolNotFound)
+				c.metrics.UpdateMetricHealthcheckSucceeded(c.upgradeConfig.Name, metrics.DefaultWorkerMachinepoolNotFound, version, state)
 			}
 		}
 
@@ -119,5 +122,28 @@ func (c *clusterUpgrader) PostUpgradeHealthCheck(ctx context.Context, logger log
 	if err != nil || !ok {
 		return false, err
 	}
+
 	return true, nil
+}
+
+func getCurrentVersion(ug *upgradev1alpha1.UpgradeConfig) string {
+	history := ug.Status.History.GetHistory(ug.Spec.Desired.Version)
+	state := history.Phase
+	version := ""
+
+	switch state {
+	case upgradev1alpha1.UpgradePhaseNew,
+		upgradev1alpha1.UpgradePhasePending,
+		upgradev1alpha1.UpgradePhaseFailed,
+		upgradev1alpha1.UpgradePhaseUpgrading:
+		version = history.PrecedingVersion
+	case upgradev1alpha1.UpgradePhaseUpgraded:
+		version = ug.Spec.Desired.Version
+	case upgradev1alpha1.UpgradePhaseUnknown:
+		version = "unknown"
+	default:
+		version = "Unsupported"
+	}
+
+	return version
 }

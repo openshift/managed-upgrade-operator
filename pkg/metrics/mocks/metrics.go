@@ -188,27 +188,27 @@ func (mr *MockMetricsMockRecorder) ResetMetricUpgradeWorkerTimeout(arg0, arg1 an
 }
 
 // UpdateMetricHealthcheckFailed mocks base method.
-func (m *MockMetrics) UpdateMetricHealthcheckFailed(arg0, arg1 string) {
+func (m *MockMetrics) UpdateMetricHealthcheckFailed(arg0, arg1, arg2, arg3 string) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "UpdateMetricHealthcheckFailed", arg0, arg1)
+	m.ctrl.Call(m, "UpdateMetricHealthcheckFailed", arg0, arg1, arg2, arg3)
 }
 
 // UpdateMetricHealthcheckFailed indicates an expected call of UpdateMetricHealthcheckFailed.
-func (mr *MockMetricsMockRecorder) UpdateMetricHealthcheckFailed(arg0, arg1 any) *gomock.Call {
+func (mr *MockMetricsMockRecorder) UpdateMetricHealthcheckFailed(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricHealthcheckFailed", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricHealthcheckFailed), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricHealthcheckFailed", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricHealthcheckFailed), arg0, arg1, arg2, arg3)
 }
 
 // UpdateMetricHealthcheckSucceeded mocks base method.
-func (m *MockMetrics) UpdateMetricHealthcheckSucceeded(arg0, arg1 string) {
+func (m *MockMetrics) UpdateMetricHealthcheckSucceeded(arg0, arg1, arg2, arg3 string) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "UpdateMetricHealthcheckSucceeded", arg0, arg1)
+	m.ctrl.Call(m, "UpdateMetricHealthcheckSucceeded", arg0, arg1, arg2, arg3)
 }
 
 // UpdateMetricHealthcheckSucceeded indicates an expected call of UpdateMetricHealthcheckSucceeded.
-func (mr *MockMetricsMockRecorder) UpdateMetricHealthcheckSucceeded(arg0, arg1 any) *gomock.Call {
+func (mr *MockMetricsMockRecorder) UpdateMetricHealthcheckSucceeded(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricHealthcheckSucceeded", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricHealthcheckSucceeded), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricHealthcheckSucceeded", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricHealthcheckSucceeded), arg0, arg1, arg2, arg3)
 }
 
 // UpdateMetricNodeDrainFailed mocks base method.

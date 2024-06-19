@@ -25,12 +25,16 @@ func CriticalAlerts(metricsClient metrics.Metrics, cfg *upgraderConfig, ug *upgr
 		ignoredNamespaceQuery = `,namespace!="` + strings.Join(ignoredNamespace, `",namespace!="`) + `"`
 	}
 
-	healthCheckQuery := `ALERTS{alertstate="firing",severity="critical",namespace=~"^openshift.*|^kube-.*|^default$"` + ignoredNamespaceQuery + icQuery + "}"
+	// Get current cluster version and upgrade state info
+	history := ug.Status.History.GetHistory(ug.Spec.Desired.Version)
+	state := string(history.Phase)
+	version := getCurrentVersion(ug)
 
+	healthCheckQuery := `ALERTS{alertstate="firing",severity="critical",namespace=~"^openshift.*|^kube-.*|^default$"` + ignoredNamespaceQuery + icQuery + "}"
 	alerts, err := metricsClient.Query(healthCheckQuery)
 	if err != nil {
 		logger.Info("Unable to query metrics to check for open alerts")
-		metricsClient.UpdateMetricHealthcheckFailed(ug.Name, metrics.MetricsQueryFailed)
+		metricsClient.UpdateMetricHealthcheckFailed(ug.Name, metrics.MetricsQueryFailed, version, state)
 		return false, fmt.Errorf("unable to query critical alerts: %s", err)
 	}
 
@@ -51,13 +55,13 @@ func CriticalAlerts(metricsClient metrics.Metrics, cfg *upgraderConfig, ug *upgr
 		}
 
 		logger.Info(fmt.Sprintf("Critical alert(s) firing: %s. Cannot continue upgrade", strings.Join(alert, ", ")))
-		metricsClient.UpdateMetricHealthcheckFailed(ug.Name, metrics.CriticalAlertsFiring)
+		metricsClient.UpdateMetricHealthcheckFailed(ug.Name, metrics.CriticalAlertsFiring, version, state)
 
 		return false, fmt.Errorf("critical alert(s) firing: %s", strings.Join(alert, ", "))
 	}
 
 	logger.Info("Prehealth check for critical alerts passed")
-	metricsClient.UpdateMetricHealthcheckSucceeded(ug.Name, metrics.MetricsQueryFailed)
-	metricsClient.UpdateMetricHealthcheckSucceeded(ug.Name, metrics.CriticalAlertsFiring)
+	metricsClient.UpdateMetricHealthcheckSucceeded(ug.Name, metrics.MetricsQueryFailed, version, state)
+	metricsClient.UpdateMetricHealthcheckSucceeded(ug.Name, metrics.CriticalAlertsFiring, version, state)
 	return true, nil
 }

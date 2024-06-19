@@ -22,11 +22,18 @@ func ManuallyCordonedNodes(metricsClient metrics.Metrics, machinery machinery.Ma
 			LabelSelector: "node-role.kubernetes.io/worker, !node-role.kubernetes.io/infra",
 		},
 	}
+
+	// Get current cluster version and upgrade state info
+	history := ug.Status.History.GetHistory(ug.Spec.Desired.Version)
+	state := string(history.Phase)
+	version := getCurrentVersion(ug)
+
 	// Get the list of worker nodes
 	err := c.List(context.TODO(), nodes, cops)
 	if err != nil {
 		logger.Info("Unable to fetch node list")
-		metricsClient.UpdateMetricHealthcheckFailed(ug.Name, metrics.ClusterNodeQueryFailed)
+		// Use PrecedingVersion as the versionLabel here because preflight check is performed before the upgrade
+		metricsClient.UpdateMetricHealthcheckFailed(ug.Name, metrics.ClusterNodeQueryFailed, version, state)
 		return false, err
 	}
 
@@ -45,23 +52,31 @@ func ManuallyCordonedNodes(metricsClient metrics.Metrics, machinery machinery.Ma
 
 	if isHealthCheckFailed {
 		// Manually cordon node check failed, fail the healthcheck and return failed nodes
-		metricsClient.UpdateMetricHealthcheckFailed(ug.Name, metrics.ClusterNodesManuallyCordoned)
+		// Use PrecedingVersion as the versionLabel here because preflight check is performed before the upgrade
+		metricsClient.UpdateMetricHealthcheckFailed(ug.Name, metrics.ClusterNodesManuallyCordoned, version, state)
 		return false, fmt.Errorf("cordoned nodes: %s", strings.Join(manuallyCordonNodes, ", "))
 	}
 	logger.Info("Prehealth check for manually cordoned node passed")
-	metricsClient.UpdateMetricHealthcheckSucceeded(ug.Name, metrics.ClusterNodeQueryFailed)
-	metricsClient.UpdateMetricHealthcheckSucceeded(ug.Name, metrics.ClusterNodesManuallyCordoned)
+	metricsClient.UpdateMetricHealthcheckSucceeded(ug.Name, metrics.ClusterNodeQueryFailed, version, state)
+	metricsClient.UpdateMetricHealthcheckSucceeded(ug.Name, metrics.ClusterNodesManuallyCordoned, version, state)
 	return true, nil
 }
 
 func NodeUnschedulableTaints(metricsClient metrics.Metrics, machinery machinery.Machinery, c client.Client, ug *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
 	nodes := &corev1.NodeList{}
 	cops := &client.ListOptions{}
+
+	// Get current cluster version and upgrade state info
+	history := ug.Status.History.GetHistory(ug.Spec.Desired.Version)
+	state := string(history.Phase)
+	version := getCurrentVersion(ug)
+
 	// Get the list of worker nodes
 	err := c.List(context.TODO(), nodes, cops)
 	if err != nil {
 		logger.Info("Unable to fetch node list")
-		metricsClient.UpdateMetricHealthcheckFailed(ug.Name, metrics.ClusterNodeQueryFailed)
+		// Use PrecedingVersion as the versionLabel here because preflight check is performed before the upgrade
+		metricsClient.UpdateMetricHealthcheckFailed(ug.Name, metrics.ClusterNodeQueryFailed, version, state)
 		return false, err
 	}
 
@@ -95,7 +110,8 @@ func NodeUnschedulableTaints(metricsClient metrics.Metrics, machinery machinery.
 	if isHealthCheckFailed {
 		// Node unschedulable taints check failed, fail the healthcheck and return failed nodes
 		logger.Info(" Unschedulable node taints check failed")
-		metricsClient.UpdateMetricHealthcheckFailed(ug.Name, metrics.ClusterNodesTaintedUnschedulable)
+		// Use PrecedingVersion as the versionLabel here because preflight check is performed before the upgrade
+		metricsClient.UpdateMetricHealthcheckFailed(ug.Name, metrics.ClusterNodesTaintedUnschedulable, version, state)
 		if len(memPressureNodes) > 0 {
 			logger.Info(fmt.Sprintf("%s has/have memory pressure", strings.Join(memPressureNodes, ", ")))
 			unschedulableNodes = append(unschedulableNodes, memPressureNodes...)
@@ -114,7 +130,7 @@ func NodeUnschedulableTaints(metricsClient metrics.Metrics, machinery machinery.
 		return false, fmt.Errorf("unschedulable taints on nodes: %s", strings.Join(unschedulableNodes, ", "))
 	}
 	logger.Info("Prehealth check for unschedulable node taints passed")
-	metricsClient.UpdateMetricHealthcheckSucceeded(ug.Name, metrics.ClusterNodeQueryFailed)
-	metricsClient.UpdateMetricHealthcheckSucceeded(ug.Name, metrics.ClusterNodesTaintedUnschedulable)
+	metricsClient.UpdateMetricHealthcheckSucceeded(ug.Name, metrics.ClusterNodeQueryFailed, version, state)
+	metricsClient.UpdateMetricHealthcheckSucceeded(ug.Name, metrics.ClusterNodesTaintedUnschedulable, version, state)
 	return true, nil
 }

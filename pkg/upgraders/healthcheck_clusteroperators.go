@@ -14,19 +14,24 @@ import (
 // ClusterOperators function will check the degraded ClusterOperators and if there are any found then
 // error is reported.
 func ClusterOperators(metricsClient metrics.Metrics, cvClient cv.ClusterVersion, ug *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
+	// Get current cluster version and upgrade state info
+	history := ug.Status.History.GetHistory(ug.Spec.Desired.Version)
+	state := string(history.Phase)
+	version := getCurrentVersion(ug)
+
 	result, err := cvClient.HasDegradedOperators()
 	if err != nil {
 		logger.Info("Unable to fetch status of clusteroperators")
-		metricsClient.UpdateMetricHealthcheckFailed(ug.Name, metrics.ClusterOperatorsStatusFailed)
+		metricsClient.UpdateMetricHealthcheckFailed(ug.Name, metrics.ClusterOperatorsStatusFailed, version, state)
 		return false, err
 	}
 	if len(result.Degraded) > 0 {
 		logger.Info(fmt.Sprintf("Degraded operators: %s", strings.Join(result.Degraded, ", ")))
-		metricsClient.UpdateMetricHealthcheckFailed(ug.Name, metrics.ClusterOperatorsDegraded)
+		metricsClient.UpdateMetricHealthcheckFailed(ug.Name, metrics.ClusterOperatorsDegraded, version, state)
 		return false, fmt.Errorf("degraded operators: %s", strings.Join(result.Degraded, ", "))
 	}
 	logger.Info("Prehealth check for clusteroperators passed")
-	metricsClient.UpdateMetricHealthcheckSucceeded(ug.Name, metrics.ClusterOperatorsStatusFailed)
-	metricsClient.UpdateMetricHealthcheckSucceeded(ug.Name, metrics.ClusterOperatorsDegraded)
+	metricsClient.UpdateMetricHealthcheckSucceeded(ug.Name, metrics.ClusterOperatorsStatusFailed, version, state)
+	metricsClient.UpdateMetricHealthcheckSucceeded(ug.Name, metrics.ClusterOperatorsDegraded, version, state)
 	return true, nil
 }
