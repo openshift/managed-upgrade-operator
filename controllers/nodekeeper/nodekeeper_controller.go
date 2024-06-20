@@ -120,12 +120,17 @@ func (r *ReconcileNodeKeeper) Reconcile(ctx context.Context, request reconcile.R
 			return reconcile.Result{}, err
 		}
 		if hasFailed {
-			reqLogger.Info(fmt.Sprintf("Node drain timed out %s. Alerting.", node.Name))
-			// Set metric only for the node going through upgrade
-			if r.Machinery.IsNodeUpgrading(node) {
-				metricsClient.UpdateMetricNodeDrainFailed(node.Name)
+			// If the node.DeletionTimestamp is set NodeDrainFailed metric needs to be reset
+			if node.DeletionTimestamp != nil {
+				metricsClient.ResetMetricNodeDrainFailed(node.Name)
+			} else {
+				reqLogger.Info(fmt.Sprintf("Node drain timed out %s. Alerting.", node.Name))
+				// Set metric only for the node going through upgrade
+				if r.Machinery.IsNodeUpgrading(node) {
+					metricsClient.UpdateMetricNodeDrainFailed(node.Name)
+				}
+				return reconcile.Result{RequeueAfter: time.Minute * 1}, nil
 			}
-			return reconcile.Result{RequeueAfter: time.Minute * 1}, nil
 		} else {
 			metricsClient.ResetMetricNodeDrainFailed(node.Name)
 		}
