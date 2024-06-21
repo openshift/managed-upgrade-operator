@@ -20,7 +20,7 @@ func NewOCMNotifier(client client.Client, ocmBaseUrl *url.URL, upgradeConfigMana
 	)
 
 	if strings.Contains(ocmBaseUrl.String(), fmt.Sprintf("%s:%d", ocmagent.OCM_AGENT_SERVICE_URL, ocmagent.OCM_AGENT_SERVICE_PORT)) {
-		ocmClient, err = ocmagent.NewBuilder().New(ocmBaseUrl)
+		ocmClient, err = ocmagent.NewBuilder().New(client, ocmBaseUrl)
 	} else {
 		ocmClient, err = ocm.NewBuilder().New(client, ocmBaseUrl)
 	}
@@ -60,6 +60,24 @@ var stateMap = map[MuoState]OcmState{
 	MuoStateHealthCheck:  OcmStateDelayed,
 }
 
+var (
+	// ServiceLogStateControlPlaneStarted defines the summary for control plane upgrade starting servicelog
+	ServiceLogStateControlPlaneStarted = ServiceLogState{Summary: "Cluster is starting with control plane upgrade"}
+	// ServiceLogStateControlPlaneFinished defines the summary for control plane upgrade finished servicelog
+	ServiceLogStateControlPlaneFinished = ServiceLogState{Summary: "Cluster has finished control plane upgrade"}
+	// ServiceLogStateWorkerPlaneFinished defines the summary for worker plane upgrade finished servicelog
+	ServiceLogStateWorkerPlaneFinished = ServiceLogState{Summary: "Cluster has finished with worker plane upgrade"}
+)
+
+// ServiceLogState type defines the ServiceLog metadata
+type ServiceLogState ocm.ServiceLog
+
+var serviceLogMap = map[MuoState]ServiceLogState{
+	MuoStateControlPlaneUpgradeStartedSL:  ServiceLogStateControlPlaneStarted,
+	MuoStateControlPlaneUpgradeFinishedSL: ServiceLogStateControlPlaneFinished,
+	MuoStateWorkerPlaneUpgradeFinishedSL:  ServiceLogStateWorkerPlaneFinished,
+}
+
 type ocmNotifier struct {
 	// Cluster k8s client
 	client client.Client
@@ -74,6 +92,14 @@ func (s *ocmNotifier) NotifyState(state MuoState, description string) error {
 	cluster, err := s.ocmClient.GetCluster()
 	if err != nil {
 		return fmt.Errorf("failed to retrieve internal ocm cluster ID: %v", err)
+	}
+
+	if strings.HasSuffix(toString(state), "SL") {
+		slState, ok := mapSLState(state, serviceLogMap)
+		if !ok {
+			return fmt.Errorf("failed to map the servicelog state for MUO state %s", state)
+		}
+		s.ocmClient.PostServiceLog((*ocm.ServiceLog)(&slState), description)
 	}
 
 	policyId, err := s.getPolicyIdForUpgradeConfig(cluster.Id)
@@ -240,4 +266,20 @@ func mapState(os OcmState, dict map[MuoState]OcmState) (ms MuoState, ok bool) {
 		}
 	}
 	return "", false
+}
+
+func toString(s MuoState) string {
+	return string(s)
+}
+
+// return the ServiceLogState from the given MuoState
+func mapSLState(ms MuoState, dict map[MuoState]ServiceLogState) (ss ServiceLogState, ok bool) {
+	for k, v := range dict {
+		if k == ms {
+			ss = v
+			ok = true
+			return ss, ok
+		}
+	}
+	return ServiceLogState{}, false
 }

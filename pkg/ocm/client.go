@@ -14,6 +14,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
+	servicelogsv1 "github.com/openshift-online/ocm-sdk-go/servicelogs/v1"
+
 	"github.com/openshift/managed-upgrade-operator/util"
 )
 
@@ -26,6 +28,13 @@ const (
 	UPGRADEPOLICIES_V1_PATH = "upgrade_policies"
 	// STATE_V1_PATH sub-path to the policy state service
 	STATE_V1_PATH = "state"
+
+	// SERVICELOG_LOG_TYPE is the log type sent from MUO
+	SERVICELOG_LOG_TYPE = "Cluster Updates"
+	// SERVICELOG_SERVICE_NAME is the name of the service reporting the log
+	SERVICELOG_SERVICE_NAME = "RedHat Managed Upgrade Notifications"
+	// SERVICELOG_INTERNAL_ONLY defines if the log is internal or not
+	SERVICELOG_INTERNAL_ONLY = false
 )
 
 var log = logf.Log.WithName("ocm-client")
@@ -36,11 +45,13 @@ var (
 )
 
 // OcmClient enables an implementation of an ocm client
+//
 //go:generate mockgen -destination=mocks/client.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/ocm OcmClient
 type OcmClient interface {
 	GetCluster() (*ClusterInfo, error)
 	GetClusterUpgradePolicies(clusterId string) (*UpgradePolicyList, error)
 	GetClusterUpgradePolicyState(policyId string, clusterId string) (*UpgradePolicyState, error)
+	PostServiceLog(sl *ServiceLog, description string) error
 	SetState(value string, description string, policyId string, clusterId string) error
 }
 
@@ -51,6 +62,17 @@ type ocmClient struct {
 	ocmBaseUrl *url.URL
 	// HTTP client used for API queries (TODO: remove in favour of OCM SDK)
 	httpClient *resty.Client
+	// OCM SDK Client
+	sdkClient *SdkClient
+}
+
+// ServiceLog is the internal representation of a service log
+type ServiceLog struct {
+	Severity     string
+	ServiceName  string
+	Summary      string
+	Description  string
+	InternalOnly bool
 }
 
 type ocmRoundTripper struct {
@@ -205,4 +227,43 @@ func (s *ocmClient) GetClusterUpgradePolicyState(policyId string, clusterId stri
 
 	stateResponse := response.Result().(*UpgradePolicyState)
 	return stateResponse, nil
+}
+
+// PostServiceLog allows to send a generic servicelog to a cluster.
+func (s *ocmClient) PostServiceLog(sl *ServiceLog, description string) error {
+	cluster, err := s.GetCluster()
+	if err != nil {
+		return fmt.Errorf("failed to retrieve internal cluster ID from OCM: %v", err)
+	}
+	builder := &servicelogsv1.LogEntryBuilder{}
+
+	// We set standard fields here which are common across different ServiceLogs sent
+	builder.Severity(servicelogsv1.Severity(servicelogsv1.SeverityInfo))
+	builder.InternalOnly(SERVICELOG_INTERNAL_ONLY)
+	builder.ServiceName(SERVICELOG_SERVICE_NAME)
+	builder.LogType(SERVICELOG_LOG_TYPE)
+	builder.Description(description)
+	builder.ClusterID(cluster.Id)
+
+	// Else refer to the values in 'sl'
+	builder.Summary(sl.Summary)
+
+	le, err := builder.Build()
+	if err != nil {
+		return fmt.Errorf("could not create post request (SL): %w", err)
+	}
+
+	request := s.sdkClient.conn.ServiceLogs().V1().ClusterLogs().Add()
+	request = request.Body(le)
+
+	response, err := request.Send()
+	if err != nil {
+		return fmt.Errorf("could not post service log %s: %w", sl.Summary, err)
+	}
+
+	fmt.Printf(response.Body().ClusterID())
+
+	fmt.Printf("Successfully sent servicelog: %s", sl.Summary)
+
+	return nil
 }

@@ -84,6 +84,20 @@ func (mr *MockOcmClientMockRecorder) GetClusterUpgradePolicyState(arg0, arg1 any
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClusterUpgradePolicyState", reflect.TypeOf((*MockOcmClient)(nil).GetClusterUpgradePolicyState), arg0, arg1)
 }
 
+// PostServiceLog mocks base method.
+func (m *MockOcmClient) PostServiceLog(arg0 *ocm.ServiceLog, arg1 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PostServiceLog", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PostServiceLog indicates an expected call of PostServiceLog.
+func (mr *MockOcmClientMockRecorder) PostServiceLog(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostServiceLog", reflect.TypeOf((*MockOcmClient)(nil).PostServiceLog), arg0, arg1)
+}
+
 // SetState mocks base method.
 func (m *MockOcmClient) SetState(arg0, arg1, arg2, arg3 string) error {
 	m.ctrl.T.Helper()

@@ -24,6 +24,7 @@ func (c *clusterUpgrader) SendStartedNotification(ctx context.Context, logger lo
 	if err != nil {
 		return false, err
 	}
+
 	return true, nil
 }
 
