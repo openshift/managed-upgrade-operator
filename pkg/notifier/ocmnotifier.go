@@ -61,8 +61,8 @@ var stateMap = map[MuoState]OcmState{
 }
 
 var (
-	// ServiceLogStateControlPlaneStarted defines the summary for control plane upgrade starting servicelog
-	ServiceLogStateControlPlaneStarted = ServiceLogState{Summary: "Cluster is starting with control plane upgrade"}
+	// ServiceLogStateControlPlaneStarted defines the summary for control and worker plane upgrade starting servicelog
+	ServiceLogStateControlPlaneStarted = ServiceLogState{Summary: "Cluster is starting with control and worker plane upgrade"}
 	// ServiceLogStateControlPlaneFinished defines the summary for control plane upgrade finished servicelog
 	ServiceLogStateControlPlaneFinished = ServiceLogState{Summary: "Cluster has finished control plane upgrade"}
 	// ServiceLogStateWorkerPlaneFinished defines the summary for worker plane upgrade finished servicelog
