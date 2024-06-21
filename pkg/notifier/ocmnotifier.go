@@ -99,7 +99,10 @@ func (s *ocmNotifier) NotifyState(state MuoState, description string) error {
 		if !ok {
 			return fmt.Errorf("failed to map the servicelog state for MUO state %s", state)
 		}
-		s.ocmClient.PostServiceLog((*ocm.ServiceLog)(&slState), description)
+		err = s.ocmClient.PostServiceLog((*ocm.ServiceLog)(&slState), description)
+		if err != nil {
+			return fmt.Errorf("failed to send servicelog notification: %v", err)
+		}
 	}
 
 	policyId, err := s.getPolicyIdForUpgradeConfig(cluster.Id)
