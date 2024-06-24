@@ -122,6 +122,8 @@ func (r *ReconcileNodeKeeper) Reconcile(ctx context.Context, request reconcile.R
 		if hasFailed {
 			// If the node.DeletionTimestamp is set NodeDrainFailed metric needs to be reset
 			if node.DeletionTimestamp != nil {
+				reqLogger.Info(fmt.Sprintf("DeletionTimestamp set for node %s. Re-setting NodeDrainFailed metric",
+					node.Name))
 				metricsClient.ResetMetricNodeDrainFailed(node.Name)
 			} else {
 				reqLogger.Info(fmt.Sprintf("Node drain timed out %s. Alerting.", node.Name))
