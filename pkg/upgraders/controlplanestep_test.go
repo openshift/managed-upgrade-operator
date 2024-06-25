@@ -113,6 +113,7 @@ var _ = Describe("ControlPlaneStep", func() {
 				gomock.InOrder(
 					mockCVClient.EXPECT().GetClusterVersion().Return(clusterVersion, nil),
 					mockCVClient.EXPECT().HasUpgradeCompleted(gomock.Any(), gomock.Any()).Return(true),
+					mockEMClient.EXPECT().Notify(gomock.Any()),
 					mockMetricsClient.EXPECT().ResetMetricUpgradeControlPlaneTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version),
 				)
 				result, err := upgrader.ControlPlaneUpgraded(context.TODO(), logger)
@@ -212,6 +213,7 @@ var _ = Describe("ControlPlaneStep", func() {
 				gomock.InOrder(
 					mockMetricsClient.EXPECT().UpdateMetricUpgradeWindowNotBreached(gomock.Any()),
 					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
+					mockEMClient.EXPECT().Notify(gomock.Any()),
 					mockCVClient.EXPECT().EnsureDesiredConfig(gomock.Any()).Return(false, fakeError),
 				)
 				result, err := upgrader.CommenceUpgrade(context.TODO(), logger)

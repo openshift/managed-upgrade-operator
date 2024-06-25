@@ -28,11 +28,11 @@ var (
 func New(client client.Client, upgradeType upgradev1alpha1.UpgradeType, ocmBaseUrl *url.URL) (*ocmProvider, error) {
 	var (
 		ocmClient ocm.OcmClient
-		err error
+		err       error
 	)
 
-	if (strings.Contains(ocmBaseUrl.String(), fmt.Sprintf("%s:%d", ocmagent.OCM_AGENT_SERVICE_URL, ocmagent.OCM_AGENT_SERVICE_PORT))) {
-		ocmClient, err = ocmagent.NewBuilder().New(ocmBaseUrl)
+	if strings.Contains(ocmBaseUrl.String(), fmt.Sprintf("%s:%d", ocmagent.OCM_AGENT_SERVICE_URL, ocmagent.OCM_AGENT_SERVICE_PORT)) {
+		ocmClient, err = ocmagent.NewBuilder().New(client, ocmBaseUrl)
 	} else {
 		ocmClient, err = ocm.NewBuilder().New(client, ocmBaseUrl)
 	}

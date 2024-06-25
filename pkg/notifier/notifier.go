@@ -27,16 +27,19 @@ type NotifierBuilder interface {
 
 // Represents valid notify states that can be reported
 const (
-	MuoStatePending      MuoState = "StatePending"
-	MuoStateStarted      MuoState = "StateStarted"
-	MuoStateCompleted    MuoState = "StateCompleted"
-	MuoStateDelayed      MuoState = "StateDelayed"
-	MuoStateFailed       MuoState = "StateFailed"
-	MuoStateCancelled    MuoState = "StateCancelled"
-	MuoStateScheduled    MuoState = "StateScheduled"
-	MuoStateScaleSkipped MuoState = "StateScaleSkipped"
-	MuoStateSkipped      MuoState = "StateSkipped"
-	MuoStateHealthCheck  MuoState = "StateHealthCheck"
+	MuoStatePending                       MuoState = "StatePending"
+	MuoStateStarted                       MuoState = "StateStarted"
+	MuoStateCompleted                     MuoState = "StateCompleted"
+	MuoStateDelayed                       MuoState = "StateDelayed"
+	MuoStateFailed                        MuoState = "StateFailed"
+	MuoStateCancelled                     MuoState = "StateCancelled"
+	MuoStateScheduled                     MuoState = "StateScheduled"
+	MuoStateScaleSkipped                  MuoState = "StateScaleSkipped"
+	MuoStateSkipped                       MuoState = "StateSkipped"
+	MuoStateHealthCheck                   MuoState = "StateHealthCheck"
+	MuoStateControlPlaneUpgradeStartedSL  MuoState = "StateControlPlaneStartedSL"
+	MuoStateControlPlaneUpgradeFinishedSL MuoState = "StateControlPlaneFinishedSL"
+	MuoStateWorkerPlaneUpgradeFinishedSL  MuoState = "StateWorkerPlaneFinishedSL"
 )
 
 // MuoState is a type

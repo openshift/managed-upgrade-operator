@@ -12,6 +12,8 @@ import (
 )
 
 const (
+	// Failed and Skipped descriptions
+
 	// UPGRADE_PRECHECK_FAILED_DESC describes the upgrade pre check failure
 	UPGRADE_PRECHECK_FAILED_DESC = "Cluster upgrade to version %s was cancelled as the cluster did not pass its pre-upgrade verification checks. Automated upgrades will be retried on their next scheduling cycle. If you have manually scheduled an upgrade instead, it must now be rescheduled"
 	// UPGRADE_PREHEALTHCHECK_FAILED_DESC describes the upgrade pre health check failure
@@ -22,6 +24,8 @@ const (
 	UPGRADE_SCALE_FAILED_DESC = "Cluster upgrade to version %s was cancelled during the Scale-Up Worker Node step. A temporary additional worker node was unable to be created to temporarily house workloads, so the upgrade did not proceed. Automated upgrades will be retried on their next scheduling cycle. If you have manually scheduled an upgrade instead, it must now be rescheduled"
 	// UPGRADE_SCALE_SKIP_DESC describes the upgrade scaling skipped
 	UPGRADE_SCALE_SKIP_DESC = "Cluster upgrade to version %s has skipped Scale-Up additional Worker Node step for compute capacity reservation. This is an informational notification and no action is required by you"
+
+	// Delayed descriptions
 
 	// UPGRADE_DEFAULT_DELAY_DESC describes the upgrade default delay
 	UPGRADE_DEFAULT_DELAY_DESC = "Cluster upgrade to version %s is experiencing a delay whilst it performs necessary pre-upgrade procedures. The upgrade will continue to retry. This is an informational notification and no action is required"
@@ -35,6 +39,15 @@ const (
 	UPGRADE_SCALE_DELAY_SKIP_DESC = "Cluster upgrade to version %s has experienced an issue during capacity reservation efforts. This could be caused by cloud service provider quota limitations or temporary connectivity issues to/from the new worker node. The upgrade will continue without extra compute. This is an informational notification and no action is required by you"
 	// UPGRADE_HEALTHCHECK_DELAY_DESC describes the upgrade pre health check delay
 	UPGRADE_HEALTHCHECK_DELAY_DESC = "Cluster upgrade to version %s is experiencing a delay which could impact the upgrade's operation. The upgrade will continue to retry. This is an informational notification and no action is required by you"
+
+	// ServiceLog descriptions
+
+	// UPGRADE_CONTROL_PLANE_STARTED_DESC describes the control plane upgrade started
+	UPGRADE_CONTROL_PLANE_STARTED_DESC = "Cluster upgrade to version %s is starting with control and worker plane upgrade. This is an informational notification and no action is required"
+	// UPGRADE_CONTROL_PLANE_FINISHED_DESC describes the control plane upgrade finished
+	UPGRADE_CONTROL_PLANE_FINISHED_DESC = "Cluster upgrade to version %s has finished control plane upgrade. This is an informational notification and no action is required"
+	// UPGRADE_WORKER_PLANE_FINISHED_DESC describes the worker plane upgrade finished
+	UPGRADE_WORKER_PLANE_FINISHED_DESC = "Cluster upgrade to version %s has finished worker plane upgrade. This is an informational notification and no action is required."
 )
 
 // EventManager enables implementation of an EventManager
@@ -127,6 +140,12 @@ func (s *eventManager) Notify(state notifier.MuoState) error {
 		description = createFailureDescription(uc)
 	case notifier.MuoStateHealthCheck:
 		description = fmt.Sprintf(UPGRADE_HEALTHCHECK_DELAY_DESC, uc.Spec.Desired.Version)
+	case notifier.MuoStateControlPlaneUpgradeStartedSL:
+		description = fmt.Sprintf(UPGRADE_CONTROL_PLANE_STARTED_DESC, uc.Spec.Desired.Version)
+	case notifier.MuoStateControlPlaneUpgradeFinishedSL:
+		description = fmt.Sprintf(UPGRADE_CONTROL_PLANE_FINISHED_DESC, uc.Spec.Desired.Version)
+	case notifier.MuoStateWorkerPlaneUpgradeFinishedSL:
+		description = fmt.Sprintf(UPGRADE_WORKER_PLANE_FINISHED_DESC, uc.Spec.Desired.Version)
 	default:
 		return fmt.Errorf("state %v not yet implemented", state)
 	}

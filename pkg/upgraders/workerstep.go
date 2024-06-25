@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	"github.com/openshift/managed-upgrade-operator/pkg/notifier"
 )
 
 // AllWorkersUpgraded checks whether all the worker nodes are ready with new config
@@ -30,8 +31,12 @@ func (c *clusterUpgrader) AllWorkersUpgraded(ctx context.Context, logger logr.Lo
 		return false, nil
 	}
 
+	err := c.notifier.Notify(notifier.MuoStateWorkerPlaneUpgradeFinishedSL)
+	if err != nil {
+		logger.Error(err, "failed to notify worker plane upgrade completion")
+		return false, err
+	}
+
 	c.metrics.ResetMetricUpgradeWorkerTimeout(c.upgradeConfig.Name, c.upgradeConfig.Spec.Desired.Version)
 	return true, nil
 }
-
-

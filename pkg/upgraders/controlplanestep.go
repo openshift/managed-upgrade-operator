@@ -9,6 +9,7 @@ import (
 
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/api/v1alpha1"
 	cv "github.com/openshift/managed-upgrade-operator/pkg/clusterversion"
+	"github.com/openshift/managed-upgrade-operator/pkg/notifier"
 )
 
 // CommenceUpgrade will update the clusterversion object to apply the desired version to trigger real OCP upgrade
@@ -24,6 +25,11 @@ func (c *clusterUpgrader) CommenceUpgrade(ctx context.Context, logger logr.Logge
 	if upgradeCommenced {
 		logger.Info(fmt.Sprintf("Skipping upgrade step %s", upgradev1alpha1.CommenceUpgrade))
 		return true, nil
+	}
+
+	err = c.notifier.Notify(notifier.MuoStateControlPlaneUpgradeStartedSL)
+	if err != nil {
+		return false, err
 	}
 
 	isComplete, err := c.cvClient.EnsureDesiredConfig(c.upgradeConfig)
@@ -44,6 +50,10 @@ func (c *clusterUpgrader) ControlPlaneUpgraded(ctx context.Context, logger logr.
 
 	isCompleted := c.cvClient.HasUpgradeCompleted(clusterVersion, c.upgradeConfig)
 	if isCompleted {
+		err = c.notifier.Notify(notifier.MuoStateControlPlaneUpgradeFinishedSL)
+		if err != nil {
+			return false, err
+		}
 		c.metrics.ResetMetricUpgradeControlPlaneTimeout(c.upgradeConfig.Name, c.upgradeConfig.Spec.Desired.Version)
 		return true, nil
 	}
