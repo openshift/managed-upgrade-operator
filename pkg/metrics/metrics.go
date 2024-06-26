@@ -17,8 +17,12 @@ import (
 	"github.com/openshift/managed-upgrade-operator/config"
 	"github.com/openshift/managed-upgrade-operator/pkg/k8sutil"
 	"github.com/prometheus/client_golang/prometheus"
+	authenticationv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes"
+	rest "k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 )
@@ -117,7 +121,12 @@ func (mb *metricsBuilder) NewClient(c client.Client) (Metrics, error) {
 		return nil, err
 	}
 
-	token, err := prometheusToken(c)
+	kc, err := NewKubernetesClient()
+	if err != nil {
+		return nil, err
+	}
+
+	token, err := RequestPrometheusServiceAccountAPIToken(*kc)
 	if err != nil {
 		return nil, err
 	}
@@ -138,10 +147,11 @@ func (mb *metricsBuilder) NewClient(c client.Client) (Metrics, error) {
 		promTarget: promTarget,
 		promClient: http.Client{
 			Transport: &prometheusRoundTripper{
-				token: *token,
+				token: token,
 				tls:   tlsConfig,
 			},
 		},
+		k8sClient: *kc,
 	}, nil
 }
 
@@ -193,6 +203,7 @@ func (prt *prometheusRoundTripper) RoundTrip(req *http.Request) (*http.Response,
 type Counter struct {
 	promClient http.Client
 	promTarget string
+	k8sClient  kubernetes.Clientset
 }
 
 var (
@@ -565,27 +576,31 @@ func (c *Counter) Query(query string) (*AlertResponse, error) {
 	return result, nil
 }
 
-func prometheusToken(c client.Client) (*string, error) {
-	sl := &corev1.SecretList{}
-	err := c.List(context.TODO(), sl, client.InNamespace(MonitoringNS))
+func NewKubernetesClient() (*kubernetes.Clientset, error) {
+	config, err := rest.InClusterConfig()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to get config due to: %w", err)
 	}
 
-	token := ""
-	for _, secret := range sl.Items {
-		if strings.HasPrefix(secret.Name, "prometheus-k8s-token") {
-			tokendata := secret.Data[corev1.ServiceAccountTokenKey]
-			token = string(tokendata)
-			break
-		}
+	k8sClient, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return nil, fmt.Errorf("unable to creat kubernets clientSet to: %w", err)
 	}
 
-	if len(token) == 0 {
-		return nil, fmt.Errorf("failed to find token secret for prometheus-k8s SA")
-	}
+	return k8sClient, nil
+}
 
-	return &token, nil
+// RequestPrometheusServiceAccountAPIToken returns a time-bound (1hr) API token for the prometheus service account.
+func RequestPrometheusServiceAccountAPIToken(kc kubernetes.Clientset) (string, error) {
+	expirationSeconds := int64(1 * time.Hour / time.Second)
+	req, err := kc.CoreV1().ServiceAccounts(MonitoringNS).CreateToken(context.TODO(), promApp,
+		&authenticationv1.TokenRequest{
+			Spec: authenticationv1.TokenRequestSpec{ExpirationSeconds: &expirationSeconds},
+		}, metav1.CreateOptions{})
+	if err != nil {
+		return "", fmt.Errorf("unable to get an API token for the %s service account in the %s namespace: %w", promApp, MonitoringNS, err)
+	}
+	return req.Status.Token, nil
 }
 
 type AlertResponse struct {
