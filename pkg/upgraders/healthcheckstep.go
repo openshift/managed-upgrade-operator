@@ -3,6 +3,7 @@ package upgraders
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/go-logr/logr"
 
@@ -22,59 +23,64 @@ func (c *clusterUpgrader) PreUpgradeHealthCheck(ctx context.Context, logger logr
 		return true, nil
 	}
 
+	healthCheckFailed := []string{}
+
 	ok, err := CriticalAlerts(c.metrics, c.config, c.upgradeConfig, logger)
 	if err != nil || !ok {
-		logger.Info("upgrade delayed due to firing critical alerts")
-		errResult := c.notifier.Notify(notifier.MuoStateHealthCheck)
-		if errResult != nil {
-			err = errResult
-		}
-		return false, err
+		logger.Info("upgrade may delay due to firing critical alerts")
+		healthCheckFailed = append(healthCheckFailed, "CriticalAlertsHealthcheckFailed")
+	} else {
+		c.metrics.UpdateMetricHealthcheckSucceeded(c.upgradeConfig.Name, metrics.CriticalAlertsFiring)
+		c.metrics.UpdateMetricHealthcheckSucceeded(c.upgradeConfig.Name, metrics.MetricsQueryFailed)
 	}
 
 	ok, err = ClusterOperators(c.metrics, c.cvClient, c.upgradeConfig, logger)
 	if err != nil || !ok {
-		logger.Info("upgrade delayed due to cluster operators not ready")
-		errResult := c.notifier.Notify(notifier.MuoStateHealthCheck)
-		if errResult != nil {
-			err = errResult
-		}
-		return false, err
+		logger.Info("upgrade may delay due to cluster operators not ready")
+		healthCheckFailed = append(healthCheckFailed, "ClusterOperatorsHealthcheckFailed")
+	} else {
+		c.metrics.UpdateMetricHealthcheckSucceeded(c.upgradeConfig.Name, metrics.ClusterOperatorsDegraded)
+		c.metrics.UpdateMetricHealthcheckSucceeded(c.upgradeConfig.Name, metrics.ClusterOperatorsStatusFailed)
 	}
 
 	if c.upgradeConfig.Spec.CapacityReservation {
 		ok, err := c.scaler.CanScale(c.client, logger)
-		if !ok {
+		if !ok || err != nil {
 			c.metrics.UpdateMetricHealthcheckFailed(c.upgradeConfig.Name, metrics.DefaultWorkerMachinepoolNotFound)
-			return false, nil
-		}
-		if err != nil {
-			return false, err
+			healthCheckFailed = append(healthCheckFailed, "CapacityReservationHealthcheckFailed")
+		} else {
+			c.metrics.UpdateMetricHealthcheckSucceeded(c.upgradeConfig.Name, metrics.DefaultWorkerMachinepoolNotFound)
 		}
 	}
 
 	ok, err = ManuallyCordonedNodes(c.metrics, c.machinery, c.client, c.upgradeConfig, logger)
 	if err != nil || !ok {
-		logger.Info(fmt.Sprintf("upgrade delayed due to there are manually cordoned nodes: %s", err))
-		errResult := c.notifier.Notify(notifier.MuoStateHealthCheck)
-		if errResult != nil {
-			err = errResult
-		}
-		return false, err
+		logger.Info(fmt.Sprintf("upgrade may delay due to there are manually cordoned nodes: %s", err))
+		healthCheckFailed = append(healthCheckFailed, "NodeUnschedulableHealthcheckFailed")
+	} else {
+		c.metrics.UpdateMetricHealthcheckSucceeded(c.upgradeConfig.Name, metrics.ClusterNodesManuallyCordoned)
+		c.metrics.UpdateMetricHealthcheckSucceeded(c.upgradeConfig.Name, metrics.ClusterNodeQueryFailed)
 	}
 
 	ok, err = NodeUnschedulableTaints(c.metrics, c.machinery, c.client, c.upgradeConfig, logger)
 	if err != nil || !ok {
 		logger.Info(fmt.Sprintf("upgrade delayed due to there are unschedulable taints on nodes: %s", err))
-		errResult := c.notifier.Notify(notifier.MuoStateHealthCheck)
-		if errResult != nil {
-			err = errResult
-		}
-		return false, err
+		healthCheckFailed = append(healthCheckFailed, "NodeUnschedulableTaintHealthcheckFailed")
+	} else {
+		c.metrics.UpdateMetricHealthcheckSucceeded(c.upgradeConfig.Name, metrics.ClusterNodesTaintedUnschedulable)
+		c.metrics.UpdateMetricHealthcheckSucceeded(c.upgradeConfig.Name, metrics.ClusterNodeQueryFailed)
 	}
 
-	c.metrics.UpdateMetricHealthcheckSucceeded(c.upgradeConfig.Name)
+	if len(healthCheckFailed) > 0 {
+		result := strings.Join(healthCheckFailed, ",")
+		logger.Info(fmt.Sprintf("Upgrade may delay due to following PreHealthCheck failure: %s", result))
 
+		err := c.notifier.Notify(notifier.MuoStateHealthCheckSL)
+		if err != nil {
+			return false, err
+		}
+		return false, nil
+	}
 	return true, nil
 }
 
@@ -83,12 +89,17 @@ func (c *clusterUpgrader) PostUpgradeHealthCheck(ctx context.Context, logger log
 	ok, err := CriticalAlerts(c.metrics, c.config, c.upgradeConfig, logger)
 	if err != nil || !ok {
 		return false, err
+	} else {
+		c.metrics.UpdateMetricHealthcheckSucceeded(c.upgradeConfig.Name, metrics.CriticalAlertsFiring)
+		c.metrics.UpdateMetricHealthcheckSucceeded(c.upgradeConfig.Name, metrics.MetricsQueryFailed)
 	}
 
 	ok, err = ClusterOperators(c.metrics, c.cvClient, c.upgradeConfig, logger)
 	if err != nil || !ok {
 		return false, err
+	} else {
+		c.metrics.UpdateMetricHealthcheckSucceeded(c.upgradeConfig.Name, metrics.ClusterOperatorsDegraded)
+		c.metrics.UpdateMetricHealthcheckSucceeded(c.upgradeConfig.Name, metrics.ClusterOperatorsStatusFailed)
 	}
-	c.metrics.UpdateMetricHealthcheckSucceeded(c.upgradeConfig.Name)
 	return true, nil
 }

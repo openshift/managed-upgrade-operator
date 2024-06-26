@@ -122,7 +122,7 @@ var _ = Describe("HealthCheck Step", func() {
 					mockMachineryClient.EXPECT().HasMemoryPressure(gomock.Any()).Return(false),
 					mockMachineryClient.EXPECT().HasDiskPressure(gomock.Any()).Return(false),
 					mockMachineryClient.EXPECT().HasPidPressure(gomock.Any()).Return(false),
-					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, gomock.Any()),
 				)
 				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
 				Expect(err).NotTo(HaveOccurred())
@@ -145,7 +145,7 @@ var _ = Describe("HealthCheck Step", func() {
 					mockMachineryClient.EXPECT().HasMemoryPressure(gomock.Any()).Return(false),
 					mockMachineryClient.EXPECT().HasDiskPressure(gomock.Any()).Return(false),
 					mockMachineryClient.EXPECT().HasPidPressure(gomock.Any()).Return(false),
-					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, gomock.Any()),
 				)
 				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
 				Expect(err).To(Not(HaveOccurred()))
@@ -166,7 +166,7 @@ var _ = Describe("HealthCheck Step", func() {
 				mockMachineryClient.EXPECT().HasMemoryPressure(gomock.Any()).Return(false)
 				mockMachineryClient.EXPECT().HasDiskPressure(gomock.Any()).Return(false)
 				mockMachineryClient.EXPECT().HasPidPressure(gomock.Any()).Return(false)
-				mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name)
+				mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, gomock.Any())
 				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(result).To(BeTrue())
@@ -175,7 +175,7 @@ var _ = Describe("HealthCheck Step", func() {
 				gomock.InOrder(
 					mockMetricsClient.EXPECT().Query(gomock.Any()).Return(alertsResponse, nil),
 					mockCVClient.EXPECT().HasDegradedOperators().Return(&clusterversion.HasDegradedOperatorsResult{Degraded: []string{}}, nil),
-					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, gomock.Any()),
 				)
 				result, err := upgrader.PostUpgradeHealthCheck(context.TODO(), logger)
 				Expect(err).NotTo(HaveOccurred())
@@ -202,7 +202,7 @@ var _ = Describe("HealthCheck Step", func() {
 					mockMachineryClient.EXPECT().HasMemoryPressure(gomock.Any()).Return(false),
 					mockMachineryClient.EXPECT().HasDiskPressure(gomock.Any()).Return(false),
 					mockMachineryClient.EXPECT().HasPidPressure(gomock.Any()).Return(false),
-					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, gomock.Any()),
 				)
 				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
 				Expect(err).NotTo(HaveOccurred())
@@ -212,7 +212,7 @@ var _ = Describe("HealthCheck Step", func() {
 				gomock.InOrder(
 					mockMetricsClient.EXPECT().Query(gomock.Any()).Return(alertsResponse, nil),
 					mockCVClient.EXPECT().HasDegradedOperators().Return(&clusterversion.HasDegradedOperatorsResult{Degraded: []string{}}, nil),
-					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, gomock.Any()),
 				)
 				result, err := upgrader.PostUpgradeHealthCheck(context.TODO(), logger)
 				Expect(err).NotTo(HaveOccurred())
@@ -238,7 +238,7 @@ var _ = Describe("HealthCheck Step", func() {
 					mockMachineryClient.EXPECT().HasMemoryPressure(gomock.Any()).Return(false),
 					mockMachineryClient.EXPECT().HasDiskPressure(gomock.Any()).Return(false),
 					mockMachineryClient.EXPECT().HasPidPressure(gomock.Any()).Return(false),
-					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, gomock.Any()),
 				)
 				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
 				Expect(err).NotTo(HaveOccurred())
@@ -248,7 +248,7 @@ var _ = Describe("HealthCheck Step", func() {
 				gomock.InOrder(
 					mockMetricsClient.EXPECT().Query(gomock.Any()).Return(alertsResponse, nil),
 					mockCVClient.EXPECT().HasDegradedOperators().Return(&clusterversion.HasDegradedOperatorsResult{Degraded: []string{}}, nil),
-					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, gomock.Any()),
 				)
 				result, err := upgrader.PostUpgradeHealthCheck(context.TODO(), logger)
 				Expect(err).NotTo(HaveOccurred())
@@ -275,7 +275,7 @@ var _ = Describe("HealthCheck Step", func() {
 					mockMachineryClient.EXPECT().HasMemoryPressure(gomock.Any()).Return(false),
 					mockMachineryClient.EXPECT().HasDiskPressure(gomock.Any()).Return(false),
 					mockMachineryClient.EXPECT().HasPidPressure(gomock.Any()).Return(false),
-					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, gomock.Any()),
 				)
 				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
 				Expect(err).NotTo(HaveOccurred())
@@ -285,7 +285,7 @@ var _ = Describe("HealthCheck Step", func() {
 				gomock.InOrder(
 					mockMetricsClient.EXPECT().Query(gomock.Any()).Return(alertsResponse, nil),
 					mockCVClient.EXPECT().HasDegradedOperators().Return(&clusterversion.HasDegradedOperatorsResult{Degraded: []string{}}, nil),
-					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, gomock.Any()),
 				)
 				result, err := upgrader.PostUpgradeHealthCheck(context.TODO(), logger)
 				Expect(err).NotTo(HaveOccurred())

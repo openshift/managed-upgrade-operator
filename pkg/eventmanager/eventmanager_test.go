@@ -324,7 +324,7 @@ var _ = Describe("OCM Notifier", func() {
 
 	Context("When notifying a MuoStateHealthCheck state", func() {
 		var uc upgradev1alpha1.UpgradeConfig
-		var testState = notifier.MuoStateHealthCheck
+		var testState = notifier.MuoStateHealthCheckSL
 		BeforeEach(func() {
 			upgradeConfigName = types.NamespacedName{
 				Name:      TEST_UPGRADECONFIG_CR,
@@ -349,6 +349,5 @@ var _ = Describe("OCM Notifier", func() {
 			})
 		})
 	})
-
 
 })

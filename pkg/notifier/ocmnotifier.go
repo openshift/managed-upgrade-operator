@@ -35,6 +35,8 @@ func NewOCMNotifier(client client.Client, ocmBaseUrl *url.URL, upgradeConfigMana
 	}, nil
 }
 
+const SLserviceName string = "MUO"
+
 type OcmState string
 
 const (
@@ -57,16 +59,17 @@ var stateMap = map[MuoState]OcmState{
 	MuoStateScheduled:    OcmStateScheduled,
 	MuoStateSkipped:      OcmStateDelayed,
 	MuoStateScaleSkipped: OcmStateDelayed,
-	MuoStateHealthCheck:  OcmStateDelayed,
 }
 
 var (
 	// ServiceLogStateControlPlaneStarted defines the summary for control and worker plane upgrade starting servicelog
-	ServiceLogStateControlPlaneStarted = ServiceLogState{Summary: "Cluster is starting with control and worker plane upgrade"}
+	ServiceLogStateControlPlaneStarted = ServiceLogState{ServiceName: SLserviceName, InternalOnly: false, Summary: "Cluster is starting with control and worker plane upgrade"}
 	// ServiceLogStateControlPlaneFinished defines the summary for control plane upgrade finished servicelog
-	ServiceLogStateControlPlaneFinished = ServiceLogState{Summary: "Cluster has finished control plane upgrade"}
+	ServiceLogStateControlPlaneFinished = ServiceLogState{ServiceName: SLserviceName, InternalOnly: false, Summary: "Cluster has finished control plane upgrade"}
 	// ServiceLogStateWorkerPlaneFinished defines the summary for worker plane upgrade finished servicelog
-	ServiceLogStateWorkerPlaneFinished = ServiceLogState{Summary: "Cluster has finished with worker plane upgrade"}
+	ServiceLogStateWorkerPlaneFinished = ServiceLogState{ServiceName: SLserviceName, InternalOnly: false, Summary: "Cluster has finished with worker plane upgrade"}
+	//ServiceLogStateHealthCheckSL defines the summary for finsihed cluster healthcheck
+	ServiceLogStateHealthCheckSL = ServiceLogState{ServiceName: SLserviceName, InternalOnly: false, Summary: "Cluster has finished Healthcheck"}
 )
 
 // ServiceLogState type defines the ServiceLog metadata
@@ -76,6 +79,7 @@ var serviceLogMap = map[MuoState]ServiceLogState{
 	MuoStateControlPlaneUpgradeStartedSL:  ServiceLogStateControlPlaneStarted,
 	MuoStateControlPlaneUpgradeFinishedSL: ServiceLogStateControlPlaneFinished,
 	MuoStateWorkerPlaneUpgradeFinishedSL:  ServiceLogStateWorkerPlaneFinished,
+	MuoStateHealthCheckSL:                 ServiceLogStateHealthCheckSL,
 }
 
 type ocmNotifier struct {
@@ -202,8 +206,6 @@ func validateStateTransition(from MuoState, to MuoState) bool {
 		case MuoStateCompleted:
 			return true
 		case MuoStateFailed:
-			return true
-		case MuoStateHealthCheck:
 			return true
 		default:
 			return false

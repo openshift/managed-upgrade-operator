@@ -37,11 +37,11 @@ const (
 	UPGRADE_SCALE_DELAY_DESC = "Cluster upgrade to version %s is experiencing a delay attempting to scale up an additional worker node. The upgrade will continue to retry. This is an informational notification and no action is required by you"
 	// UPGRADE_SCALE_DELAY_SKIP_DESC describes the upgrade scaling skipped after delay
 	UPGRADE_SCALE_DELAY_SKIP_DESC = "Cluster upgrade to version %s has experienced an issue during capacity reservation efforts. This could be caused by cloud service provider quota limitations or temporary connectivity issues to/from the new worker node. The upgrade will continue without extra compute. This is an informational notification and no action is required by you"
-	// UPGRADE_HEALTHCHECK_DELAY_DESC describes the upgrade pre health check delay
-	UPGRADE_HEALTHCHECK_DELAY_DESC = "Cluster upgrade to version %s is experiencing a delay which could impact the upgrade's operation. The upgrade will continue to retry. This is an informational notification and no action is required by you"
 
 	// ServiceLog descriptions
 
+	// UPGRADE_HEALTHCHECK_DELAY_DESC describes the upgrade pre health check delay
+	UPGRADE_HEALTHCHECK_DELAY_DESC = "Cluster upgrade to version %s may experience a delay as following healthcheck(s): %s are failing for the cluster which could impact the upgrade's operation."
 	// UPGRADE_CONTROL_PLANE_STARTED_DESC describes the control plane upgrade started
 	UPGRADE_CONTROL_PLANE_STARTED_DESC = "Cluster upgrade to version %s is starting with control and worker plane upgrade. This is an informational notification and no action is required"
 	// UPGRADE_CONTROL_PLANE_FINISHED_DESC describes the control plane upgrade finished
@@ -138,7 +138,7 @@ func (s *eventManager) Notify(state notifier.MuoState) error {
 		description = fmt.Sprintf("Cluster has been successfully upgraded to version %s", uc.Spec.Desired.Version)
 	case notifier.MuoStateFailed:
 		description = createFailureDescription(uc)
-	case notifier.MuoStateHealthCheck:
+	case notifier.MuoStateHealthCheckSL:
 		description = fmt.Sprintf(UPGRADE_HEALTHCHECK_DELAY_DESC, uc.Spec.Desired.Version)
 	case notifier.MuoStateControlPlaneUpgradeStartedSL:
 		description = fmt.Sprintf(UPGRADE_CONTROL_PLANE_STARTED_DESC, uc.Spec.Desired.Version)
@@ -146,6 +146,44 @@ func (s *eventManager) Notify(state notifier.MuoState) error {
 		description = fmt.Sprintf(UPGRADE_CONTROL_PLANE_FINISHED_DESC, uc.Spec.Desired.Version)
 	case notifier.MuoStateWorkerPlaneUpgradeFinishedSL:
 		description = fmt.Sprintf(UPGRADE_WORKER_PLANE_FINISHED_DESC, uc.Spec.Desired.Version)
+	default:
+		return fmt.Errorf("state %v not yet implemented", state)
+	}
+
+	// Send the notification
+	err = s.notifier.NotifyState(state, description)
+	if err != nil {
+		return fmt.Errorf("can't send notification '%s': %v", state, err)
+	}
+	s.metrics.UpdateMetricNotificationEventSent(uc.Name, string(state), uc.Spec.Desired.Version)
+
+	return nil
+}
+
+func (s *eventManager) NotifyResult(state notifier.MuoState, result string) error {
+	// Get the current UpgradeConfig
+	uc, err := s.upgradeConfigManager.Get()
+	if err != nil {
+		if err == upgradeconfigmanager.ErrUpgradeConfigNotFound {
+			return nil
+		}
+		return fmt.Errorf("unable to find UpgradeConfig: %v", err)
+	}
+
+	// Check if a notification for it has been sent successfully - if so, nothing to do
+	isNotified, err := s.metrics.IsMetricNotificationEventSentSet(uc.Name, string(state), uc.Spec.Desired.Version)
+	if err != nil {
+		return fmt.Errorf("can't check cluster metric NotificationSent: %v", err)
+	}
+	if isNotified {
+		return nil
+	}
+
+	// Customize the state description
+	var description string
+	switch state {
+	case notifier.MuoStateHealthCheckSL:
+		description = fmt.Sprintf(UPGRADE_HEALTHCHECK_DELAY_DESC, uc.Spec.Desired.Version, result)
 	default:
 		return fmt.Errorf("state %v not yet implemented", state)
 	}
