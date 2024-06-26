@@ -65,9 +65,9 @@ func (c *dvoClient) GetMetrics() error {
 	}
 
 	// Send the HTTP request
-	resp, err := c.httpClient.R().Execute(req.URL.String(), req.Method)
+	resp, err := c.httpClient.R().Execute(req.Method, req.URL.String())
 	fmt.Println("*************")
-	log.Info("%v",resp)
+	fmt.Print(resp)
 	if err != nil {
 		return err
 	}
