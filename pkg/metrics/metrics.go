@@ -121,12 +121,7 @@ func (mb *metricsBuilder) NewClient(c client.Client) (Metrics, error) {
 		return nil, err
 	}
 
-	kc, err := NewKubernetesClient()
-	if err != nil {
-		return nil, err
-	}
-
-	token, err := RequestPrometheusServiceAccountAPIToken(*kc)
+	token, err := prometheusToken(c)
 	if err != nil {
 		return nil, err
 	}
@@ -147,11 +142,10 @@ func (mb *metricsBuilder) NewClient(c client.Client) (Metrics, error) {
 		promTarget: promTarget,
 		promClient: http.Client{
 			Transport: &prometheusRoundTripper{
-				token: token,
+				token: *token,
 				tls:   tlsConfig,
 			},
 		},
-		k8sClient: *kc,
 	}, nil
 }
 
@@ -203,7 +197,6 @@ func (prt *prometheusRoundTripper) RoundTrip(req *http.Request) (*http.Response,
 type Counter struct {
 	promClient http.Client
 	promTarget string
-	k8sClient  kubernetes.Clientset
 }
 
 var (
@@ -576,6 +569,33 @@ func (c *Counter) Query(query string) (*AlertResponse, error) {
 	return result, nil
 }
 
+func prometheusToken(c client.Client) (*string, error) {
+	sl := &corev1.SecretList{}
+	err := c.List(context.TODO(), sl, client.InNamespace(MonitoringNS))
+	if err != nil {
+		return nil, err
+	}
+
+	token := ""
+	for _, secret := range sl.Items {
+		if strings.HasPrefix(secret.Name, "prometheus-k8s-token") {
+			tokendata := secret.Data[corev1.ServiceAccountTokenKey]
+			token = string(tokendata)
+			break
+		}
+	}
+
+	if len(token) == 0 {
+		// If serviceaccount token doesn't exist, try to use token request to get a token
+		token, err = RequestPrometheusServiceAccountAPIToken()
+		if err != nil {
+			return nil, fmt.Errorf("failed to find token secret for prometheus-k8s SA due to %v", err)
+		}
+	}
+
+	return &token, nil
+}
+
 func NewKubernetesClient() (*kubernetes.Clientset, error) {
 	config, err := rest.InClusterConfig()
 	if err != nil {
@@ -590,9 +610,15 @@ func NewKubernetesClient() (*kubernetes.Clientset, error) {
 	return k8sClient, nil
 }
 
-// RequestPrometheusServiceAccountAPIToken returns a time-bound (1hr) API token for the prometheus service account.
-func RequestPrometheusServiceAccountAPIToken(kc kubernetes.Clientset) (string, error) {
-	expirationSeconds := int64(1 * time.Hour / time.Second)
+// RequestPrometheusServiceAccountAPIToken returns a time-bound (24hr) API token for the prometheus service account.
+func RequestPrometheusServiceAccountAPIToken() (string, error) {
+	// Create kubernetes client first
+	kc, err := NewKubernetesClient()
+	if err != nil {
+		return "", err
+	}
+
+	expirationSeconds := int64(24 * time.Hour / time.Second)
 	req, err := kc.CoreV1().ServiceAccounts(MonitoringNS).CreateToken(context.TODO(), promApp,
 		&authenticationv1.TokenRequest{
 			Spec: authenticationv1.TokenRequestSpec{ExpirationSeconds: &expirationSeconds},
