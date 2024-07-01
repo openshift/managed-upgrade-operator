@@ -2,42 +2,62 @@ package upgraders
 
 import (
 	"fmt"
-	"net/url"
+	"strconv"
 
 	"github.com/openshift/managed-upgrade-operator/pkg/dvo"
+	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func HealthCheckPDB(c client.Client) error {
+// HealthCheckPDB performs a health check on the PodDisruptionBudget (PDB) metrics.
+// It returns true if the health check passes, false otherwise.
+// It also returns an error if there was an issue performing the health check.
+func HealthCheckPDB(metricsClient metrics.Metrics, c client.Client) (bool, error) {
 
-	//TODO:Use RBAC to get service
-	DVOMetricsURL := "http://deployment-validation-operator-metrics.deployment-validation-operator.svc:8383"
-	url, err := url.Parse(DVOMetricsURL)
-	if err != nil {
-		return err
-	}
+	// Create a new DVO builder
 	builder := dvo.NewBuilder()
-	client, err := builder.New(c, url)
+
+	// Create a new DVO client using the builder and the provided Kubernetes client
+	client, err := builder.New(c)
 	if err != nil {
-		return err
-	}
-	// return metrics resp
-	if err := client.GetMetrics(); err != nil {
-		fmt.Println("Error getting metrics")
-		return err
+		return false, err
 	}
 
-	// Disruptions Allowed is Zero
-	disruptionsAllowed := 0
-	if disruptionsAllowed != 0 {
-		return fmt.Errorf("disruptions allowed is not zero")
+	// Get the PDB metrics
+	pdbresult, err := client.GetMetrics()
+	if err != nil {
+		fmt.Println("Error getting metrics")
+		return false, err
+	}
+
+	// Calculate the number of PDBs with max unavailable pods set
+	PDBMaxUnavailableres := len(pdbresult.Data.Result)
+	var disruptionsAllowed string
+	if PDBMaxUnavailableres > 0 {
+		for _, r := range pdbresult.Data.Result {
+			a := r.Metric["Pdb-max-unavailable"]
+			disruptionsAllowed = a
+		}
+	}
+
+	// Convert the disruptionsAllowed string to an integer
+	disruptionsAllowedInt, _ := strconv.Atoi(disruptionsAllowed)
+
+	// Check if disruptionsAllowedInt is zero
+	if disruptionsAllowedInt == 0 {
+		// failure case
+		fmt.Println("disruptions allowed is zero")
+		return false, nil
 	}
 
 	// Max Unavailable Pods Constraint
 	maxUnavailablePods := 1 // Change this value to the desired max unavailable pods constraint
-	if maxUnavailablePods < 0 {
-		return fmt.Errorf("max unavailable pods constraint is less than zero")
-	}
-	return nil
 
+	// Check if maxUnavailablePods is less than zero
+	if maxUnavailablePods < 0 {
+		return false, fmt.Errorf("max unavailable pods constraint is less than zero")
+	}
+
+	// Health check passed
+	return true, nil
 }

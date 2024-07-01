@@ -59,13 +59,13 @@ func (c *clusterUpgrader) PreUpgradeHealthCheck(ctx context.Context, logger logr
 		healthCheckFailed = append(healthCheckFailed, "NodeUnschedulableTaintHealthcheckFailed")
 	}
 
-		// add error handling and servicelog send
-		err = HealthCheckPDB(c.client)
-		if err != nil {
-			logger.Info(fmt.Sprintf("upgrade delayed due PDB %s", err))
-			//errResult := c.notifier.Notify(notifier.MuoStateHealthCheck)
-			healthCheckFailed = append(healthCheckFailed, "PDBHealthcheckFailed")
-		}
+	// add error handling and servicelog send
+	ok, err = HealthCheckPDB(c.metrics, c.client)
+	if err != nil || !ok {
+		logger.Info(fmt.Sprintf("upgrade delayed due PDB %s", err))
+		//errResult := c.notifier.Notify(notifier.MuoStateHealthCheck)
+		healthCheckFailed = append(healthCheckFailed, "PDBHealthcheckFailed")
+	}
 
 	if len(healthCheckFailed) > 0 {
 		result := strings.Join(healthCheckFailed, ",")
