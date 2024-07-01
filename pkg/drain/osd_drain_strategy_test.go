@@ -14,6 +14,7 @@ import (
 
 	"github.com/openshift/managed-upgrade-operator/pkg/machinery"
 	mockMachinery "github.com/openshift/managed-upgrade-operator/pkg/machinery/mocks"
+	mockNotifier "github.com/openshift/managed-upgrade-operator/pkg/notifier/mocks"
 	"github.com/openshift/managed-upgrade-operator/pkg/pod"
 	"github.com/openshift/managed-upgrade-operator/util/mocks"
 
@@ -34,6 +35,7 @@ var _ = Describe("OSD Drain Strategy", func() {
 		mockTimedDrainTwo   *MockTimedDrainStrategy
 		mockStrategyTwo     *MockDrainStrategy
 		nodeDrainConfig     *NodeDrain
+		mockNotifierClient  *mockNotifier.MockNotifier
 	)
 
 	Context("Node drain Time Based Strategy execution", func() {
@@ -46,6 +48,7 @@ var _ = Describe("OSD Drain Strategy", func() {
 			mockTimedDrainTwo = NewMockTimedDrainStrategy(mockCtrl)
 			mockStrategyTwo = NewMockDrainStrategy(mockCtrl)
 			logger = logf.Log.WithName("drain strategy test logger")
+			mockNotifierClient = mockNotifier.NewMockNotifier(mockCtrl)
 		})
 		AfterEach(func() {
 			mockCtrl.Finish()
@@ -56,6 +59,7 @@ var _ = Describe("OSD Drain Strategy", func() {
 				mockMachineryClient,
 				&NodeDrain{},
 				[]TimedDrainStrategy{},
+				mockNotifierClient,
 			}
 			fiveMinsAgo := &metav1.Time{Time: time.Now().Add(-5 * time.Minute)}
 			gomock.InOrder(
@@ -72,6 +76,7 @@ var _ = Describe("OSD Drain Strategy", func() {
 				mockMachineryClient,
 				&NodeDrain{},
 				[]TimedDrainStrategy{mockTimedDrainOne},
+				mockNotifierClient,
 			}
 			fortyFiveMinsAgo := &metav1.Time{Time: time.Now().Add(-45 * time.Minute)}
 			gomock.InOrder(
@@ -92,6 +97,7 @@ var _ = Describe("OSD Drain Strategy", func() {
 				mockMachineryClient,
 				&NodeDrain{},
 				[]TimedDrainStrategy{mockTimedDrainOne},
+				mockNotifierClient,
 			}
 			fortyFiveMinsAgo := &metav1.Time{Time: time.Now().Add(-45 * time.Minute)}
 			gomock.InOrder(
@@ -112,6 +118,7 @@ var _ = Describe("OSD Drain Strategy", func() {
 				mockMachineryClient,
 				&NodeDrain{},
 				[]TimedDrainStrategy{mockTimedDrainOne, mockTimedDrainTwo},
+				mockNotifierClient,
 			}
 			fortyFiveMinsAgo := &metav1.Time{Time: time.Now().Add(-45 * time.Minute)}
 			gomock.InOrder(
@@ -135,6 +142,7 @@ var _ = Describe("OSD Drain Strategy", func() {
 				mockMachineryClient,
 				&NodeDrain{},
 				[]TimedDrainStrategy{mockTimedDrainOne},
+				mockNotifierClient,
 			}
 			gomock.InOrder(
 				mockMachineryClient.EXPECT().IsNodeCordoned(gomock.Any()).Times(1).Return(&machinery.IsCordonedResult{IsCordoned: true, AddedAt: nil}),
@@ -148,6 +156,7 @@ var _ = Describe("OSD Drain Strategy", func() {
 				mockMachineryClient,
 				&NodeDrain{},
 				[]TimedDrainStrategy{mockTimedDrainOne},
+				mockNotifierClient,
 			}
 			fortyFiveMinsAgo := &metav1.Time{Time: time.Now().Add(-45 * time.Minute)}
 			gomock.InOrder(
@@ -176,6 +185,7 @@ var _ = Describe("OSD Drain Strategy", func() {
 					mockMachineryClient,
 					nodeDrainConfig,
 					[]TimedDrainStrategy{},
+					mockNotifierClient,
 				}
 			})
 			AfterEach(func() {
@@ -216,6 +226,7 @@ var _ = Describe("OSD Drain Strategy", func() {
 					mockMachineryClient,
 					nodeDrainConfig,
 					[]TimedDrainStrategy{mockTimedDrainTwo, mockTimedDrainOne},
+					mockNotifierClient,
 				}
 			})
 			AfterEach(func() {

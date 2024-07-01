@@ -12,7 +12,10 @@ import (
 	"github.com/go-logr/logr"
 
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/api/v1alpha1"
+	"github.com/openshift/managed-upgrade-operator/pkg/configmanager"
+	"github.com/openshift/managed-upgrade-operator/pkg/notifier"
 	"github.com/openshift/managed-upgrade-operator/pkg/pod"
+	"github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager"
 )
 
 // NodeDrainStrategyBuilder enables implementation for a NodeDrainStrategyBuilder
@@ -75,7 +78,13 @@ func (dsb *drainStrategyBuilder) NewNodeDrainStrategy(c client.Client, logger lo
 			return nil, err
 		}
 	}
-
+	cmBuilder := configmanager.NewBuilder()
+	ucb := upgradeconfigmanager.NewBuilder()
+	notifier, err := notifier.NewBuilder().New(c, cmBuilder, ucb)
+	if err != nil {
+		return nil, err
+	}
+	// notifier.NotifyState(noti)
 	defaultOsdPodPredicates := []pod.PodPredicate{isNotDaemonSet}
 	isNotPdbPod := isNotPdbPod(pdbList)
 	isPdbPod := isPdbPod(pdbList)
@@ -105,7 +114,7 @@ func (dsb *drainStrategyBuilder) NewNodeDrainStrategy(c client.Client, logger lo
 		}),
 	}
 
-	return NewNodeDrainStrategy(c, cfg, ts)
+	return NewNodeDrainStrategy(c, cfg, ts, notifier)
 }
 
 // DrainStrategyResult holds fields illustrating a drain strategies result
