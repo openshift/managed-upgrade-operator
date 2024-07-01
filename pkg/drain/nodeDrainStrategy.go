@@ -12,6 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/openshift/managed-upgrade-operator/pkg/machinery"
+	"github.com/openshift/managed-upgrade-operator/pkg/notifier"
 )
 
 var (
@@ -23,12 +24,13 @@ var (
 )
 
 // NewNodeDrainStrategy returns a new node drain stategy
-func NewNodeDrainStrategy(c client.Client, cfg *NodeDrain, ts []TimedDrainStrategy) (NodeDrainStrategy, error) {
+func NewNodeDrainStrategy(c client.Client, cfg *NodeDrain, ts []TimedDrainStrategy, notifier notifier.Notifier) (NodeDrainStrategy, error) {
 	return &osdDrainStrategy{
 		c,
 		machinery.NewMachinery(),
 		cfg,
 		ts,
+		notifier,
 	}, nil
 }
 
@@ -37,6 +39,7 @@ type osdDrainStrategy struct {
 	machinery            machinery.Machinery
 	cfg                  *NodeDrain
 	timedDrainStrategies []TimedDrainStrategy
+	notifier             notifier.Notifier
 }
 
 func (ds *osdDrainStrategy) Execute(node *corev1.Node, logger logr.Logger) ([]*DrainStrategyResult, error) {
@@ -49,18 +52,24 @@ func (ds *osdDrainStrategy) Execute(node *corev1.Node, logger logr.Logger) ([]*D
 			return nil, fmt.Errorf("cannot determine drain commencement time for node %v", node.Name)
 		}
 		me := &multierror.Error{}
-		for _, ds := range ds.timedDrainStrategies {
-			dsName := ds.GetName()
-			expectedTime := result.AddedAt.Add(ds.GetWaitDuration())
+		for _, tds := range ds.timedDrainStrategies {
+			dsName := tds.GetName()
+			expectedTime := result.AddedAt.Add(tds.GetWaitDuration())
 			drainStrategyMsg := fmt.Sprintf("drain strategy %v for node %v, commencing drain at %v, execution expected after %v", dsName, node.Name, result.AddedAt, expectedTime)
-			if isAfter(result.AddedAt, ds.GetWaitDuration()) {
+			if isAfter(result.AddedAt, tds.GetWaitDuration()) {
 				logger.Info(fmt.Sprintf("Executing %s", drainStrategyMsg))
-				r, err := ds.GetStrategy().Execute(node, logger)
+				r, err := tds.GetStrategy().Execute(node, logger)
 				if err != nil {
 					return nil, err
 				}
 				me = multierror.Append(err, me)
 				if r.HasExecuted {
+					if dsName == pdbPodDeleteName {
+						logger.Info("Sending upgrade delay message about node drain grace period")
+						msg := "Node drain grace period might be impacting cluster upgrade. " +
+							"Please refer to the article for further details https://access.redhat.com/solutions/7075425"
+						ds.notifier.NotifyState(notifier.MuoStateDelayed, msg)
+					}
 					res = append(res, &DrainStrategyResult{Message: fmt.Sprintf("Executed %s . Result: %s", drainStrategyMsg, r.Message)})
 				}
 			} else {
