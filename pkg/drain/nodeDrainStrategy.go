@@ -68,7 +68,10 @@ func (ds *osdDrainStrategy) Execute(node *corev1.Node, logger logr.Logger) ([]*D
 						logger.Info("Sending upgrade delay message about node drain grace period")
 						msg := "Node drain grace period might be impacting cluster upgrade. " +
 							"Please refer to the article for further details https://access.redhat.com/solutions/7075425"
-						ds.notifier.NotifyState(notifier.MuoStateDelayed, msg)
+						err = ds.notifier.NotifyState(notifier.MuoStateDelayed, msg)
+						if err != nil {
+							logger.Error(err, "Failed to send the service log about upgrade delay due to node drain grace period")
+						}
 					}
 					res = append(res, &DrainStrategyResult{Message: fmt.Sprintf("Executed %s . Result: %s", drainStrategyMsg, r.Message)})
 				}
