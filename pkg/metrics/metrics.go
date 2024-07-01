@@ -604,7 +604,7 @@ func NewKubernetesClient() (*kubernetes.Clientset, error) {
 
 	k8sClient, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		return nil, fmt.Errorf("unable to creat kubernets clientSet to: %w", err)
+		return nil, fmt.Errorf("unable to create kubernetes clientSet to: %w", err)
 	}
 
 	return k8sClient, nil
