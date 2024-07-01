@@ -94,10 +94,18 @@ func getAuthentication(c client.Client) (runtime.ClientAuthInfoWriter, error) {
 		return nil, err
 	}
 
-	var token string
+	token := ""
 	for _, s := range sl.Items {
 		if strings.Contains(s.Name, alertManagerServiceAccountName+"-token") {
 			token = string(s.Data["token"])
+		}
+	}
+
+	if len(token) == 0 {
+		// If serviceaccount token doesn't exist, try to use token request to get a token
+		token, err = metrics.RequestPrometheusServiceAccountAPIToken()
+		if err != nil {
+			return nil, fmt.Errorf("failed to find token secret for prometheus-k8s SA due to %v", err)
 		}
 	}
 
