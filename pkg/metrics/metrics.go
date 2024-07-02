@@ -75,7 +75,7 @@ var pagingAlerts = []string{
 type Metrics interface {
 	UpdateMetricValidationFailed(string)
 	UpdateMetricValidationSucceeded(string)
-	UpdateMetricHealthcheckSucceeded(string)
+	UpdateMetricHealthcheckSucceeded(string, string)
 	UpdateMetricScalingFailed(string)
 	UpdateMetricScalingSucceeded(string)
 	UpdateMetricUpgradeWindowNotBreached(string)
@@ -285,10 +285,10 @@ func (c *Counter) UpdateMetricValidationSucceeded(upgradeConfigName string) {
 		float64(0))
 }
 
-func (c *Counter) UpdateMetricHealthcheckSucceeded(upgradeConfigName string) {
+func (c *Counter) UpdateMetricHealthcheckSucceeded(upgradeConfigName, reason string) {
 	metricHealthcheckFailed.With(prometheus.Labels{
 		nameLabel:    upgradeConfigName,
-		failedReason: ""}).Set(
+		failedReason: reason}).Set(
 		float64(0))
 }
 
