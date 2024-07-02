@@ -63,13 +63,13 @@ var stateMap = map[MuoState]OcmState{
 
 var (
 	// ServiceLogStateControlPlaneStarted defines the summary for control and worker plane upgrade starting servicelog
-	ServiceLogStateControlPlaneStarted = ServiceLogState{ServiceName: SLserviceName, InternalOnly: false, Summary: "Cluster is starting with control and worker plane upgrade"}
+	ServiceLogStateControlPlaneStarted = ServiceLogState{Summary: "Cluster is starting with control and worker plane upgrade"}
 	// ServiceLogStateControlPlaneFinished defines the summary for control plane upgrade finished servicelog
-	ServiceLogStateControlPlaneFinished = ServiceLogState{ServiceName: SLserviceName, InternalOnly: false, Summary: "Cluster has finished control plane upgrade"}
+	ServiceLogStateControlPlaneFinished = ServiceLogState{Summary: "Cluster has finished control plane upgrade"}
 	// ServiceLogStateWorkerPlaneFinished defines the summary for worker plane upgrade finished servicelog
-	ServiceLogStateWorkerPlaneFinished = ServiceLogState{ServiceName: SLserviceName, InternalOnly: false, Summary: "Cluster has finished with worker plane upgrade"}
+	ServiceLogStateWorkerPlaneFinished = ServiceLogState{Summary: "Cluster has finished with worker plane upgrade"}
 	//ServiceLogStateHealthCheckSL defines the summary for finsihed cluster healthcheck
-	ServiceLogStateHealthCheckSL = ServiceLogState{ServiceName: SLserviceName, InternalOnly: false, Summary: "Cluster has finished Healthcheck"}
+	ServiceLogStateHealthCheckSL = ServiceLogState{Summary: "Cluster has finished Healthcheck"}
 )
 
 // ServiceLogState type defines the ServiceLog metadata

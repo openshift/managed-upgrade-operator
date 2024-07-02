@@ -55,6 +55,7 @@ const (
 //go:generate mockgen -destination=mocks/eventmanager.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/eventmanager EventManager
 type EventManager interface {
 	Notify(state notifier.MuoState) error
+	NotifyResult(state notifier.MuoState, result string) error
 }
 
 // EventManagerBuilder enables implementation of an EventManagerBuilder
@@ -138,8 +139,6 @@ func (s *eventManager) Notify(state notifier.MuoState) error {
 		description = fmt.Sprintf("Cluster has been successfully upgraded to version %s", uc.Spec.Desired.Version)
 	case notifier.MuoStateFailed:
 		description = createFailureDescription(uc)
-	case notifier.MuoStateHealthCheckSL:
-		description = fmt.Sprintf(UPGRADE_HEALTHCHECK_DELAY_DESC, uc.Spec.Desired.Version)
 	case notifier.MuoStateControlPlaneUpgradeStartedSL:
 		description = fmt.Sprintf(UPGRADE_CONTROL_PLANE_STARTED_DESC, uc.Spec.Desired.Version)
 	case notifier.MuoStateControlPlaneUpgradeFinishedSL:

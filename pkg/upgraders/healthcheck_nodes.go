@@ -49,6 +49,8 @@ func ManuallyCordonedNodes(metricsClient metrics.Metrics, machinery machinery.Ma
 		return false, fmt.Errorf("cordoned nodes: %s", strings.Join(manuallyCordonNodes, ", "))
 	}
 	logger.Info("Prehealth check for manually cordoned node passed")
+	metricsClient.UpdateMetricHealthcheckSucceeded(ug.Name, metrics.ClusterNodeQueryFailed)
+	metricsClient.UpdateMetricHealthcheckSucceeded(ug.Name, metrics.ClusterNodesManuallyCordoned)
 	return true, nil
 }
 
@@ -112,5 +114,7 @@ func NodeUnschedulableTaints(metricsClient metrics.Metrics, machinery machinery.
 		return false, fmt.Errorf("unschedulable taints on nodes: %s", strings.Join(unschedulableNodes, ", "))
 	}
 	logger.Info("Prehealth check for unschedulable node taints passed")
+	metricsClient.UpdateMetricHealthcheckSucceeded(ug.Name, metrics.ClusterNodeQueryFailed)
+	metricsClient.UpdateMetricHealthcheckSucceeded(ug.Name, metrics.ClusterNodesTaintedUnschedulable)
 	return true, nil
 }

@@ -52,3 +52,17 @@ func (mr *MockEventManagerMockRecorder) Notify(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Notify", reflect.TypeOf((*MockEventManager)(nil).Notify), arg0)
 }
+
+// NotifyResult mocks base method.
+func (m *MockEventManager) NotifyResult(arg0 notifier.MuoState, arg1 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NotifyResult", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// NotifyResult indicates an expected call of NotifyResult.
+func (mr *MockEventManagerMockRecorder) NotifyResult(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NotifyResult", reflect.TypeOf((*MockEventManager)(nil).NotifyResult), arg0, arg1)
+}

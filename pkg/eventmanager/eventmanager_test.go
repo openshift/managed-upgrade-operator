@@ -337,17 +337,16 @@ var _ = Describe("OCM Notifier", func() {
 		})
 		Context("when the upgrade is Alerts Health Check Failed", func() {
 			It("sends a correct notification and description", func() {
-				expectedDescription := fmt.Sprintf(UPGRADE_HEALTHCHECK_DELAY_DESC, uc.Spec.Desired.Version)
+				expectedDescription := fmt.Sprintf(UPGRADE_HEALTHCHECK_DELAY_DESC, uc.Spec.Desired.Version, gomock.Any().String())
 				gomock.InOrder(
 					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
 					mockMetricsClient.EXPECT().IsMetricNotificationEventSentSet(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION).Return(false, nil),
 					mockNotifier.EXPECT().NotifyState(testState, expectedDescription),
 					mockMetricsClient.EXPECT().UpdateMetricNotificationEventSent(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION),
 				)
-				err := manager.Notify(testState)
+				err := manager.NotifyResult(testState, gomock.Any().String())
 				Expect(err).To(BeNil())
 			})
 		})
 	})
-
 })

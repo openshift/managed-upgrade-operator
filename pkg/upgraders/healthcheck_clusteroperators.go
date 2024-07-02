@@ -26,5 +26,7 @@ func ClusterOperators(metricsClient metrics.Metrics, cvClient cv.ClusterVersion,
 		return false, fmt.Errorf("degraded operators: %s", strings.Join(result.Degraded, ", "))
 	}
 	logger.Info("Prehealth check for clusteroperators passed")
+	metricsClient.UpdateMetricHealthcheckSucceeded(ug.Name, metrics.ClusterOperatorsStatusFailed)
+	metricsClient.UpdateMetricHealthcheckSucceeded(ug.Name, metrics.ClusterOperatorsDegraded)
 	return true, nil
 }

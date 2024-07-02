@@ -57,5 +57,7 @@ func CriticalAlerts(metricsClient metrics.Metrics, cfg *upgraderConfig, ug *upgr
 	}
 
 	logger.Info("Prehealth check for critical alerts passed")
+	metricsClient.UpdateMetricHealthcheckSucceeded(ug.Name, metrics.MetricsQueryFailed)
+	metricsClient.UpdateMetricHealthcheckSucceeded(ug.Name, metrics.CriticalAlertsFiring)
 	return true, nil
 }
