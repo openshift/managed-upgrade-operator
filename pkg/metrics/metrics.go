@@ -21,8 +21,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes"
-	rest "k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 )
@@ -587,7 +585,7 @@ func prometheusToken(c client.Client) (*string, error) {
 
 	if len(token) == 0 {
 		// If serviceaccount token doesn't exist, try to use token request to get a token
-		token, err = RequestPrometheusServiceAccountAPIToken()
+		token, err = RequestPrometheusServiceAccountAPIToken(c)
 		if err != nil {
 			return nil, fmt.Errorf("failed to find token secret for prometheus-k8s SA due to %v", err)
 		}
@@ -596,37 +594,19 @@ func prometheusToken(c client.Client) (*string, error) {
 	return &token, nil
 }
 
-func NewKubernetesClient() (*kubernetes.Clientset, error) {
-	config, err := rest.InClusterConfig()
-	if err != nil {
-		return nil, fmt.Errorf("unable to get config due to: %w", err)
-	}
-
-	k8sClient, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return nil, fmt.Errorf("unable to create kubernetes clientSet to: %w", err)
-	}
-
-	return k8sClient, nil
-}
-
 // RequestPrometheusServiceAccountAPIToken returns a time-bound (24hr) API token for the prometheus service account.
-func RequestPrometheusServiceAccountAPIToken() (string, error) {
-	// Create kubernetes client first
-	kc, err := NewKubernetesClient()
-	if err != nil {
-		return "", err
+func RequestPrometheusServiceAccountAPIToken(c client.Client) (string, error) {
+	expirationSeconds := int64(10 * time.Minute / time.Second)
+	sa := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: MonitoringNS, Name: promApp}}
+	token := &authenticationv1.TokenRequest{
+		Spec: authenticationv1.TokenRequestSpec{ExpirationSeconds: &expirationSeconds},
 	}
 
-	expirationSeconds := int64(24 * time.Hour / time.Second)
-	req, err := kc.CoreV1().ServiceAccounts(MonitoringNS).CreateToken(context.TODO(), promApp,
-		&authenticationv1.TokenRequest{
-			Spec: authenticationv1.TokenRequestSpec{ExpirationSeconds: &expirationSeconds},
-		}, metav1.CreateOptions{})
+	err := c.SubResource("token").Create(context.TODO(), sa, token)
 	if err != nil {
 		return "", fmt.Errorf("unable to get an API token for the %s service account in the %s namespace: %w", promApp, MonitoringNS, err)
 	}
-	return req.Status.Token, nil
+	return token.Status.Token, nil
 }
 
 type AlertResponse struct {
