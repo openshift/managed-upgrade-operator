@@ -105,7 +105,7 @@ func getAuthentication(c client.Client) (runtime.ClientAuthInfoWriter, error) {
 		// If serviceaccount token doesn't exist, try to use token request to get a token
 		token, err = metrics.RequestPrometheusServiceAccountAPIToken(c)
 		if err != nil {
-			return nil, fmt.Errorf("failed to find token secret for prometheus-k8s SA due to %v", err)
+			return nil, fmt.Errorf("failed to get token for prometheus-k8s SA due to %v", err)
 		}
 	}
 

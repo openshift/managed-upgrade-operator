@@ -15,6 +15,7 @@ import (
 	"github.com/openshift/managed-upgrade-operator/util/mocks"
 	amv2Models "github.com/prometheus/alertmanager/api/v2/models"
 	"go.uber.org/mock/gomock"
+	authenticationv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -247,7 +248,7 @@ SLKh9n6qnPj0Lef3Nw==
 	})
 	// Finding and removing all active maintenances
 	Context("Build Alert Manager in production", func() {
-		It("Build an Alert Manager Client and not return an error", func() {
+		It("Build an Alert Manager Client with test token and not return an error", func() {
 			var ammb alertManagerMaintenanceBuilder
 			mockSecretList := &corev1.SecretList{}
 			mockAmService := &corev1.Service{}
@@ -267,6 +268,32 @@ SLKh9n6qnPj0Lef3Nw==
 
 			mockKubeClient.EXPECT().Get(context.TODO(), types.NamespacedName{Namespace: metrics.MonitoringNS, Name: alertManagerApp}, mockAmService)
 			mockKubeClient.EXPECT().List(context.TODO(), mockSecretList, &client.ListOptions{Namespace: metrics.MonitoringNS}).SetArg(1, *secrets)
+			mockKubeClient.EXPECT().Get(context.TODO(), client.ObjectKey{Name: metrics.MonitoringCAConfigMapName, Namespace: metrics.MonitoringNS}, mockMonConfigMap).SetArg(2, *fakeMonConfigMap).Return(nil)
+
+			_, err := ammb.NewClient(mockKubeClient)
+			Expect(err).ShouldNot(HaveOccurred())
+		})
+
+		It("Build an Alert Manager Client with token request and not return an error", func() {
+			var ammb alertManagerMaintenanceBuilder
+			mockSecretList := &corev1.SecretList{}
+			mockAmService := &corev1.Service{}
+			mockMonConfigMap := &corev1.ConfigMap{}
+			fakeMonConfigMap := &corev1.ConfigMap{
+				Data: fakeCAMap,
+			}
+
+			mockSubResourceClient := mocks.NewMockSubResourceClient(mockCtrl)
+			expirationSeconds := int64(24 * time.Hour / time.Second)
+			mockToken := &authenticationv1.TokenRequest{
+				Spec: authenticationv1.TokenRequestSpec{ExpirationSeconds: &expirationSeconds},
+			}
+			mockSA := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: metrics.MonitoringNS, Name: "prometheus-k8s"}}
+
+			mockKubeClient.EXPECT().Get(context.TODO(), types.NamespacedName{Namespace: metrics.MonitoringNS, Name: alertManagerApp}, mockAmService)
+			mockKubeClient.EXPECT().List(context.TODO(), mockSecretList, &client.ListOptions{Namespace: metrics.MonitoringNS})
+			mockKubeClient.EXPECT().SubResource("token").Return(mockSubResourceClient)
+			mockSubResourceClient.EXPECT().Create(context.TODO(), mockSA, mockToken)
 			mockKubeClient.EXPECT().Get(context.TODO(), client.ObjectKey{Name: metrics.MonitoringCAConfigMapName, Namespace: metrics.MonitoringNS}, mockMonConfigMap).SetArg(2, *fakeMonConfigMap).Return(nil)
 
 			_, err := ammb.NewClient(mockKubeClient)

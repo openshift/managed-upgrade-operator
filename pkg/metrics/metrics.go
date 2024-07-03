@@ -587,7 +587,7 @@ func prometheusToken(c client.Client) (*string, error) {
 		// If serviceaccount token doesn't exist, try to use token request to get a token
 		token, err = RequestPrometheusServiceAccountAPIToken(c)
 		if err != nil {
-			return nil, fmt.Errorf("failed to find token secret for prometheus-k8s SA due to %v", err)
+			return nil, fmt.Errorf("failed to get token for prometheus-k8s SA due to %v", err)
 		}
 	}
 
@@ -596,7 +596,7 @@ func prometheusToken(c client.Client) (*string, error) {
 
 // RequestPrometheusServiceAccountAPIToken returns a time-bound (24hr) API token for the prometheus service account.
 func RequestPrometheusServiceAccountAPIToken(c client.Client) (string, error) {
-	expirationSeconds := int64(10 * time.Minute / time.Second)
+	expirationSeconds := int64(24 * time.Hour / time.Second)
 	sa := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: MonitoringNS, Name: promApp}}
 	token := &authenticationv1.TokenRequest{
 		Spec: authenticationv1.TokenRequestSpec{ExpirationSeconds: &expirationSeconds},
@@ -604,7 +604,7 @@ func RequestPrometheusServiceAccountAPIToken(c client.Client) (string, error) {
 
 	err := c.SubResource("token").Create(context.TODO(), sa, token)
 	if err != nil {
-		return "", fmt.Errorf("unable to get an API token for the %s service account in the %s namespace: %w", promApp, MonitoringNS, err)
+		return "", fmt.Errorf("unable to create an API token for the %s service account in the %s namespace: %w", promApp, MonitoringNS, err)
 	}
 	return token.Status.Token, nil
 }
