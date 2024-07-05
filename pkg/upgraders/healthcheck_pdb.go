@@ -31,9 +31,9 @@ func HealthCheckPDB(metricsClient metrics.Metrics, c client.Client) (bool, error
 	}
 
 	// Calculate the number of PDBs with max unavailable pods set
-	PDBMaxUnavailableres := len(pdbresult.Data.Result)
+	PDBMaxUnavailableRes := len(pdbresult.Data.Result)
 	var disruptionsAllowed string
-	if PDBMaxUnavailableres > 0 {
+	if PDBMaxUnavailableRes > 0 {
 		for _, r := range pdbresult.Data.Result {
 			a := r.Metric["Pdb-max-unavailable"]
 			disruptionsAllowed = a
@@ -51,7 +51,7 @@ func HealthCheckPDB(metricsClient metrics.Metrics, c client.Client) (bool, error
 	}
 
 	// Max Unavailable Pods Constraint
-	maxUnavailablePods := 1 // Change this value to the desired max unavailable pods constraint
+	maxUnavailablePods := disruptionsAllowedInt // Change this value to the desired max unavailable pods constraint
 
 	// Check if maxUnavailablePods is less than zero
 	if maxUnavailablePods < 0 {

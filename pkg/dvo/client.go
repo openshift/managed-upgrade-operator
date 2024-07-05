@@ -70,21 +70,18 @@ func (drt *dvoRoundTripper) RoundTrip(req *http.Request) (*http.Response, error)
 
 func (c *dvoClient) GetMetrics() (*DVOResponse, error) {
 	// Construct the URL for the metrics API
-	metricsURL := "https://" + c.dvoBaseUrl + METRICS_API_PATH
+	metricsURL := "http://" + c.dvoBaseUrl + METRICS_API_PATH
 
 	req, err := http.NewRequest("GET", metricsURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("could not query prometheus: %s", err)
 	}
 
-	q := req.URL.Query()
-	query := `Pdb-max-unavailable{}`
-	q.Add("query", query)
-	req.URL.RawQuery = q.Encode()
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
+
 
 	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
@@ -92,6 +89,9 @@ func (c *dvoClient) GetMetrics() (*DVOResponse, error) {
 		return nil, fmt.Errorf("error when querying prometheus: %s", err)
 	}
 
+	if resp != nil{
+		fmt.Printf("********%s", body)
+	}
 	result := &DVOResponse{}
 	err = json.Unmarshal(body, result)
 	if err != nil {
