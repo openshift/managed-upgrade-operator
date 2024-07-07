@@ -1,11 +1,14 @@
 package upgraders
 
 import (
+	"context"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/openshift/managed-upgrade-operator/pkg/dvo"
 	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
+	policyv1 "k8s.io/api/policy/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -13,6 +16,25 @@ import (
 // It returns true if the health check passes, false otherwise.
 // It also returns an error if there was an issue performing the health check.
 func HealthCheckPDB(metricsClient metrics.Metrics, c client.Client) (bool, error) {
+	// List all PodDisruptionBudgets
+	pdbList := &policyv1.PodDisruptionBudgetList{}
+	err1 := c.List(context.TODO(), pdbList)
+	if err1 != nil {
+		fmt.Print("unable to list PodDisruptionBudgets/v1")
+	}
+
+	for _, pdb := range pdbList.Items {
+		if !strings.HasPrefix(pdb.Namespace, "openshift-*") {
+			// Perform operations on each pdb
+			if pdb.Spec.MaxUnavailable != nil && pdb.Spec.MaxUnavailable.IntVal == 0 {
+				//BAD pdb
+				return false, fmt.Errorf("found a PodDisruptionBudget with MaxUnavailable set to 0")
+			} else if pdb.Status.CurrentHealthy < pdb.Status.DesiredHealthy {
+				//BAD pdb
+				return false, fmt.Errorf("found a PodDisruptionBudget with CurrentHealthy less than DesiredHealthy")
+			}
+		}
+	}
 
 	// Create a new DVO builder
 	builder := dvo.NewBuilder()
