@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"strings"
 
+	servicelogsv1 "github.com/openshift-online/ocm-sdk-go/servicelogs/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/openshift/managed-upgrade-operator/pkg/ocm"
@@ -63,13 +64,13 @@ var stateMap = map[MuoState]OcmState{
 
 var (
 	// ServiceLogStateControlPlaneStarted defines the summary for control and worker plane upgrade starting servicelog
-	ServiceLogStateControlPlaneStarted = ServiceLogState{Summary: "Cluster is starting with control and worker plane upgrade"}
+	ServiceLogStateControlPlaneStarted = ServiceLogState{Severity: servicelogsv1.SeverityInfo, Summary: "Cluster is starting with control and worker plane upgrade"}
 	// ServiceLogStateControlPlaneFinished defines the summary for control plane upgrade finished servicelog
-	ServiceLogStateControlPlaneFinished = ServiceLogState{Summary: "Cluster has finished control plane upgrade"}
+	ServiceLogStateControlPlaneFinished = ServiceLogState{Severity: servicelogsv1.SeverityInfo, Summary: "Cluster has finished control plane upgrade"}
 	// ServiceLogStateWorkerPlaneFinished defines the summary for worker plane upgrade finished servicelog
-	ServiceLogStateWorkerPlaneFinished = ServiceLogState{Summary: "Cluster has finished with worker plane upgrade"}
+	ServiceLogStateWorkerPlaneFinished = ServiceLogState{Severity: servicelogsv1.SeverityInfo, Summary: "Cluster has finished with worker plane upgrade"}
 	//ServiceLogStateHealthCheckSL defines the summary for finsihed cluster healthcheck
-	ServiceLogStateHealthCheckSL = ServiceLogState{Summary: "Cluster has finished Healthcheck"}
+	ServiceLogStateHealthCheckSL = ServiceLogState{Severity: servicelogsv1.SeverityInfo, Summary: "Cluster has finished Healthcheck"}
 )
 
 // ServiceLogState type defines the ServiceLog metadata
