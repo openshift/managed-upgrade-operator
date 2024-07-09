@@ -200,15 +200,15 @@ func (mr *MockMetricsMockRecorder) UpdateMetricHealthcheckFailed(arg0, arg1 any)
 }
 
 // UpdateMetricHealthcheckSucceeded mocks base method.
-func (m *MockMetrics) UpdateMetricHealthcheckSucceeded(arg0 string) {
+func (m *MockMetrics) UpdateMetricHealthcheckSucceeded(arg0, arg1 string) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "UpdateMetricHealthcheckSucceeded", arg0)
+	m.ctrl.Call(m, "UpdateMetricHealthcheckSucceeded", arg0, arg1)
 }
 
 // UpdateMetricHealthcheckSucceeded indicates an expected call of UpdateMetricHealthcheckSucceeded.
-func (mr *MockMetricsMockRecorder) UpdateMetricHealthcheckSucceeded(arg0 any) *gomock.Call {
+func (mr *MockMetricsMockRecorder) UpdateMetricHealthcheckSucceeded(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricHealthcheckSucceeded", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricHealthcheckSucceeded), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricHealthcheckSucceeded", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricHealthcheckSucceeded), arg0, arg1)
 }
 
 // UpdateMetricNodeDrainFailed mocks base method.

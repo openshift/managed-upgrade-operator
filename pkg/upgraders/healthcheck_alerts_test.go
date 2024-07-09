@@ -95,6 +95,8 @@ var _ = Describe("HealthCheck Alerts", func() {
 		It("Prehealth check should pass", func() {
 			gomock.InOrder(
 				mockMetricsClient.EXPECT().Query(gomock.Any()).Return(alertsResponse, nil),
+				mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, gomock.Any()),
+				mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, gomock.Any()),
 			)
 			result, err := CriticalAlerts(mockMetricsClient, upgrader.config, upgradeConfig, logger)
 			Expect(err).ShouldNot(HaveOccurred())
