@@ -1,7 +1,6 @@
 package dvo
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -29,7 +28,7 @@ var (
 
 //go:generate mockgen -destination=mocks/client.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/dvo DvoClient
 type DvoClient interface {
-	GetMetrics() (*DVOResponse, error)
+	GetMetrics() ([]byte, error)
 }
 
 type dvoClient struct {
@@ -45,20 +44,6 @@ type dvoRoundTripper struct {
 	authorization util.AccessToken
 }
 
-type DVOResponse struct {
-	Status string  `json:"status"`
-	Data   DVOData `json:"data"`
-}
-
-type DVOData struct {
-	Result []DVOResult `json:"result"`
-}
-
-type DVOResult struct {
-	Metric map[string]string `json:"metric"`
-	Value  []interface{}     `json:"value"`
-}
-
 func (drt *dvoRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	authVal := fmt.Sprintf("AccessToken %s:%s", drt.authorization.ClusterId, drt.authorization.PullSecret)
 	req.Header.Add("Authorization", authVal)
@@ -68,7 +53,7 @@ func (drt *dvoRoundTripper) RoundTrip(req *http.Request) (*http.Response, error)
 	return transport.RoundTrip(req)
 }
 
-func (c *dvoClient) GetMetrics() (*DVOResponse, error) {
+func (c *dvoClient) GetMetrics() ([]byte, error) {
 	// Construct the URL for the metrics API
 	metricsURL := "http://" + c.dvoBaseUrl + METRICS_API_PATH
 
@@ -76,12 +61,10 @@ func (c *dvoClient) GetMetrics() (*DVOResponse, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not query prometheus: %s", err)
 	}
-
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
-
 
 	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
@@ -89,43 +72,10 @@ func (c *dvoClient) GetMetrics() (*DVOResponse, error) {
 		return nil, fmt.Errorf("error when querying prometheus: %s", err)
 	}
 
-	if resp != nil{
+	if resp != nil {
 		fmt.Printf("********%s", body)
 	}
-	result := &DVOResponse{}
-	err = json.Unmarshal(body, result)
-	if err != nil {
-		return nil, err
-	}
 
-	return result, nil
+	return body, nil
 
-	// // Create a new HTTP request
-	// req, err := http.NewRequest(http.MethodGet, metricsURL, nil)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// // Send the HTTP request
-	// resp, err := c.httpClient.R().Execute(req.Method, req.URL.String())
-	// fmt.Println("*************")
-	// fmt.Print(resp)
-	// if err != nil {
-	// 	return err
-	// }
-	// defer func() {
-	// 	if resp != nil && resp.RawResponse != nil && resp.RawResponse.Body != nil {
-	// 		resp.RawResponse.Body.Close()
-	// 	}
-	// }()
-
-	// // Check the response status code
-	// if resp.StatusCode() != http.StatusOK {
-	// 	return fmt.Errorf("failed to get metrics: %s", resp.Status())
-	// }
-	// if resp != nil {
-	// 	resp.Body()
-	//}
-
-	// return nil
 }

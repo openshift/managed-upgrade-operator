@@ -3,7 +3,6 @@ package upgraders
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/openshift/managed-upgrade-operator/pkg/dvo"
@@ -21,11 +20,11 @@ func HealthCheckPDB(metricsClient metrics.Metrics, c client.Client) (bool, error
 	err1 := c.List(context.TODO(), pdbList)
 	if err1 != nil {
 		fmt.Print("unable to list PodDisruptionBudgets/v1")
+		return false, err1
 	}
 
 	for _, pdb := range pdbList.Items {
 		if !strings.HasPrefix(pdb.Namespace, "openshift-*") {
-			// Perform operations on each pdb
 			if pdb.Spec.MaxUnavailable != nil && pdb.Spec.MaxUnavailable.IntVal == 0 {
 				//BAD pdb
 				return false, fmt.Errorf("found a PodDisruptionBudget with MaxUnavailable set to 0")
@@ -36,48 +35,29 @@ func HealthCheckPDB(metricsClient metrics.Metrics, c client.Client) (bool, error
 		}
 	}
 
-	// Create a new DVO builder
-	builder := dvo.NewBuilder()
-
 	// Create a new DVO client using the builder and the provided Kubernetes client
+	builder := dvo.NewBuilder()
 	client, err := builder.New(c)
 	if err != nil {
 		return false, err
 	}
 
 	// Get the PDB metrics
-	pdbresult, err := client.GetMetrics()
+	dvoMetricsResult, err := client.GetMetrics()
 	if err != nil {
 		fmt.Println("Error getting metrics")
 		return false, err
 	}
 
-	// Calculate the number of PDBs with max unavailable pods set
-	PDBMaxUnavailableRes := len(pdbresult.Data.Result)
-	var disruptionsAllowed string
-	if PDBMaxUnavailableRes > 0 {
-		for _, r := range pdbresult.Data.Result {
-			a := r.Metric["Pdb-max-unavailable"]
-			disruptionsAllowed = a
+	badPDBExists := false
+	for _, metric := range dvoMetricsResult {
+		if strings.Contains(string(metric), "deployment_validation_operator_pdb_min_available") || strings.Contains(string(metric), "deployment_validation_operator_pdb_max_available") {
+			badPDBExists = true
+			break
 		}
 	}
-
-	// Convert the disruptionsAllowed string to an integer
-	disruptionsAllowedInt, _ := strconv.Atoi(disruptionsAllowed)
-
-	// Check if disruptionsAllowedInt is zero
-	if disruptionsAllowedInt == 0 {
-		// failure case
-		fmt.Println("disruptions allowed is zero")
-		return false, nil
-	}
-
-	// Max Unavailable Pods Constraint
-	maxUnavailablePods := disruptionsAllowedInt // Change this value to the desired max unavailable pods constraint
-
-	// Check if maxUnavailablePods is less than zero
-	if maxUnavailablePods < 0 {
-		return false, fmt.Errorf("max unavailable pods constraint is less than zero")
+	if badPDBExists {
+		return false, fmt.Errorf("found a PodDisruptionBudget with incorrect configurations")
 	}
 
 	// Health check passed

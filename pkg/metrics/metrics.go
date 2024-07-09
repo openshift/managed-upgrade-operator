@@ -62,6 +62,7 @@ const (
 	ClusterNodeQueryFailed           = "cluster_node_query_failed"
 	ClusterNodesManuallyCordoned     = "cluster_node_manually_cordoned"
 	ClusterNodesTaintedUnschedulable = "cluster_node_taint_unschedulable"
+	ClusterInvalidPDB                = "cluster_invalid_pdb"
 )
 
 // Alerts sourced from https://github.com/openshift/managed-cluster-config/blob/master/deploy/sre-prometheus/100-managed-upgrade-operator.PrometheusRule.yaml
