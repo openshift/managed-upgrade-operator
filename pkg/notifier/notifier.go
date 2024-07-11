@@ -37,6 +37,7 @@ const (
 	MuoStateScaleSkipped                  MuoState = "StateScaleSkipped"
 	MuoStateSkipped                       MuoState = "StateSkipped"
 	MuoStateHealthCheckSL                 MuoState = "StateHealthCheckSL"
+	MuoStatePreHealthCheckSL              MuoState = "StatePreHealthCheckSL"
 	MuoStateControlPlaneUpgradeStartedSL  MuoState = "StateControlPlaneStartedSL"
 	MuoStateControlPlaneUpgradeFinishedSL MuoState = "StateControlPlaneFinishedSL"
 	MuoStateWorkerPlaneUpgradeFinishedSL  MuoState = "StateWorkerPlaneFinishedSL"

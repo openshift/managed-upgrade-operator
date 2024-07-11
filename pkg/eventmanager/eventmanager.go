@@ -183,6 +183,8 @@ func (s *eventManager) NotifyResult(state notifier.MuoState, result string) erro
 	switch state {
 	case notifier.MuoStateHealthCheckSL:
 		description = fmt.Sprintf(UPGRADE_HEALTHCHECK_DELAY_DESC, uc.Spec.Desired.Version, result)
+	case notifier.MuoStatePreHealthCheckSL:
+		description = fmt.Sprintf(UPGRADE_HEALTHCHECK_DELAY_DESC, uc.Spec.Desired.Version, result)
 	default:
 		return fmt.Errorf("state %v not yet implemented", state)
 	}
