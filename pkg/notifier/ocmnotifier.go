@@ -70,6 +70,8 @@ var (
 	ServiceLogStateWorkerPlaneFinished = ServiceLogState{Summary: "Cluster has finished with worker plane upgrade"}
 	//ServiceLogStateHealthCheckSL defines the summary for finsihed cluster healthcheck
 	ServiceLogStateHealthCheckSL = ServiceLogState{Summary: "Cluster has finished Healthcheck"}
+	//ServiceLogStateHealthCheckSL defines the summary for finsihed cluster PreHealthcheck
+	ServiceLogStatePreHealthCheckSL = ServiceLogState{Summary: "Cluster has finished PreHealthcheck"}
 )
 
 // ServiceLogState type defines the ServiceLog metadata
@@ -80,6 +82,7 @@ var serviceLogMap = map[MuoState]ServiceLogState{
 	MuoStateControlPlaneUpgradeFinishedSL: ServiceLogStateControlPlaneFinished,
 	MuoStateWorkerPlaneUpgradeFinishedSL:  ServiceLogStateWorkerPlaneFinished,
 	MuoStateHealthCheckSL:                 ServiceLogStateHealthCheckSL,
+	MuoStatePreHealthCheckSL:              ServiceLogStatePreHealthCheckSL,
 }
 
 type ocmNotifier struct {
