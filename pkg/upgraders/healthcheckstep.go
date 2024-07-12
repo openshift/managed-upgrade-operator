@@ -65,6 +65,7 @@ func (c *clusterUpgrader) PreUpgradeHealthCheck(ctx context.Context, logger logr
 		logger.Info(fmt.Sprintf("upgrade delayed due PDB %s", err))
 		//errResult := c.notifier.Notify(notifier.MuoStateHealthCheck)
 		healthCheckFailed = append(healthCheckFailed, "PDBHealthcheckFailed")
+		c.metrics.UpdateMetricHealthcheckFailed(c.upgradeConfig.Name, metrics.ClusterInvalidPDB)
 	}
 
 	if len(healthCheckFailed) > 0 {
