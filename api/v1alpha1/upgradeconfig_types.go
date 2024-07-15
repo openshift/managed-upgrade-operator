@@ -17,6 +17,17 @@ const (
 	ARO UpgradeType = "ARO"
 )
 
+// FeatureGate type defines the feature that managed-upgrade-operator should enable/disable when deployed.
+// By default, if a feature is not listed then it's disabled.
+type FeatureGate string
+
+const (
+	// PreHealthCheckFeatureGate enables running the PreHealthCheck in "New" upgrade phase if the upgrade is scheduled
+	// beyond two hours from current time. PreHealthCheck during "Upgrading" phase is always run irregard of whether
+	// the featuregate is enabled or not.
+	PreHealthCheckFeatureGate FeatureGate = "PreHealthCheck"
+)
+
 // UpgradeConfigSpec defines the desired state of UpgradeConfig and upgrade window and freeze window
 type UpgradeConfigSpec struct {
 	// Specify the desired OpenShift release
