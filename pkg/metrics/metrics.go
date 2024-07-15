@@ -17,7 +17,9 @@ import (
 	"github.com/openshift/managed-upgrade-operator/config"
 	"github.com/openshift/managed-upgrade-operator/pkg/k8sutil"
 	"github.com/prometheus/client_golang/prometheus"
+	authenticationv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
@@ -75,7 +77,7 @@ var pagingAlerts = []string{
 type Metrics interface {
 	UpdateMetricValidationFailed(string)
 	UpdateMetricValidationSucceeded(string)
-	UpdateMetricHealthcheckSucceeded(string)
+	UpdateMetricHealthcheckSucceeded(string, string)
 	UpdateMetricScalingFailed(string)
 	UpdateMetricScalingSucceeded(string)
 	UpdateMetricUpgradeWindowNotBreached(string)
@@ -285,10 +287,10 @@ func (c *Counter) UpdateMetricValidationSucceeded(upgradeConfigName string) {
 		float64(0))
 }
 
-func (c *Counter) UpdateMetricHealthcheckSucceeded(upgradeConfigName string) {
+func (c *Counter) UpdateMetricHealthcheckSucceeded(upgradeConfigName, reason string) {
 	metricHealthcheckFailed.With(prometheus.Labels{
 		nameLabel:    upgradeConfigName,
-		failedReason: ""}).Set(
+		failedReason: reason}).Set(
 		float64(0))
 }
 
@@ -582,10 +584,29 @@ func prometheusToken(c client.Client) (*string, error) {
 	}
 
 	if len(token) == 0 {
-		return nil, fmt.Errorf("failed to find token secret for prometheus-k8s SA")
+		// If serviceaccount token doesn't exist, try to use token request to get a token
+		token, err = RequestPrometheusServiceAccountAPIToken(c)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get token for prometheus-k8s SA due to %v", err)
+		}
 	}
 
 	return &token, nil
+}
+
+// RequestPrometheusServiceAccountAPIToken returns a time-bound (24hr) API token for the prometheus service account.
+func RequestPrometheusServiceAccountAPIToken(c client.Client) (string, error) {
+	expirationSeconds := int64(24 * time.Hour / time.Second)
+	sa := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: MonitoringNS, Name: promApp}}
+	token := &authenticationv1.TokenRequest{
+		Spec: authenticationv1.TokenRequestSpec{ExpirationSeconds: &expirationSeconds},
+	}
+
+	err := c.SubResource("token").Create(context.TODO(), sa, token)
+	if err != nil {
+		return "", fmt.Errorf("unable to create an API token for the %s service account in the %s namespace: %w", promApp, MonitoringNS, err)
+	}
+	return token.Status.Token, nil
 }
 
 type AlertResponse struct {

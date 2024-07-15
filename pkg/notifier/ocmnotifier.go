@@ -36,6 +36,8 @@ func NewOCMNotifier(client client.Client, ocmBaseUrl *url.URL, upgradeConfigMana
 	}, nil
 }
 
+const SLserviceName string = "MUO"
+
 type OcmState string
 
 const (
@@ -58,7 +60,6 @@ var stateMap = map[MuoState]OcmState{
 	MuoStateScheduled:    OcmStateScheduled,
 	MuoStateSkipped:      OcmStateDelayed,
 	MuoStateScaleSkipped: OcmStateDelayed,
-	MuoStateHealthCheck:  OcmStateDelayed,
 }
 
 var (
@@ -68,6 +69,8 @@ var (
 	ServiceLogStateControlPlaneFinished = ServiceLogState{Severity: servicelogsv1.SeverityInfo, Summary: "Cluster has finished control plane upgrade"}
 	// ServiceLogStateWorkerPlaneFinished defines the summary for worker plane upgrade finished servicelog
 	ServiceLogStateWorkerPlaneFinished = ServiceLogState{Severity: servicelogsv1.SeverityInfo, Summary: "Cluster has finished with worker plane upgrade"}
+	// ServiceLogStateHealthCheckSL defines the summary for finsihed cluster healthcheck
+	ServiceLogStateHealthCheckSL = ServiceLogState{Severity: servicelogsv1.SeverityInfo, Summary: "Cluster has finished Healthcheck"}
 )
 
 // ServiceLogState type defines the ServiceLog metadata
@@ -77,6 +80,7 @@ var serviceLogMap = map[MuoState]ServiceLogState{
 	MuoStateControlPlaneUpgradeStartedSL:  ServiceLogStateControlPlaneStarted,
 	MuoStateControlPlaneUpgradeFinishedSL: ServiceLogStateControlPlaneFinished,
 	MuoStateWorkerPlaneUpgradeFinishedSL:  ServiceLogStateWorkerPlaneFinished,
+	MuoStateHealthCheckSL:                 ServiceLogStateHealthCheckSL,
 }
 
 type ocmNotifier struct {
@@ -89,7 +93,6 @@ type ocmNotifier struct {
 }
 
 func (s *ocmNotifier) NotifyState(state MuoState, description string) error {
-
 	cluster, err := s.ocmClient.GetCluster()
 	if err != nil {
 		return fmt.Errorf("failed to retrieve internal ocm cluster ID: %v", err)
@@ -179,7 +182,6 @@ func (s *ocmNotifier) getPolicyIdForUpgradeConfig(clusterId string) (*string, er
 
 // Validates that a state transition can be made from the supplied from/to states
 func validateStateTransition(from MuoState, to MuoState) bool {
-
 	switch from {
 	case MuoStatePending:
 		// We shouldn't even be in this state to transition from
@@ -203,8 +205,6 @@ func validateStateTransition(from MuoState, to MuoState) bool {
 		case MuoStateCompleted:
 			return true
 		case MuoStateFailed:
-			return true
-		case MuoStateHealthCheck:
 			return true
 		default:
 			return false

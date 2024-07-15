@@ -75,6 +75,8 @@ var _ = Describe("HealthCheck Manually Cordoned node", func() {
 			gomock.InOrder(
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *nodes),
 				mockMachineryClient.EXPECT().IsNodeCordoned(gomock.Any()).Return(&machinery.IsCordonedResult{IsCordoned: false, AddedAt: cordonAddedTime}),
+				mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, gomock.Any()),
+				mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, gomock.Any()),
 			)
 			result, err := ManuallyCordonedNodes(mockMetricsClient, mockMachineryClient, mockKubeClient, upgradeConfig, logger)
 			Expect(err).ShouldNot(HaveOccurred())
@@ -98,6 +100,8 @@ var _ = Describe("HealthCheck Manually Cordoned node", func() {
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *nodes),
 				mockMachineryClient.EXPECT().IsNodeCordoned(gomock.Any()).Return(&machinery.IsCordonedResult{IsCordoned: true, AddedAt: cordonAddedTime}),
 				mockMachineryClient.EXPECT().IsNodeUpgrading(gomock.Any()).Return(true),
+				mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, gomock.Any()),
+				mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, gomock.Any()),
 			)
 			result, err := ManuallyCordonedNodes(mockMetricsClient, mockMachineryClient, mockKubeClient, upgradeConfig, logger)
 			Expect(err).ShouldNot(HaveOccurred())

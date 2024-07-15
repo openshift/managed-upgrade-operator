@@ -15,7 +15,9 @@ import (
 	"github.com/openshift/managed-upgrade-operator/util/mocks"
 	amv2Models "github.com/prometheus/alertmanager/api/v2/models"
 	"go.uber.org/mock/gomock"
+	authenticationv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -41,6 +43,8 @@ var _ = Describe("Alert Manager Maintenance Client", func() {
 
 		// Certificate Authority
 		fakeCAMap = make(map[string]string)
+
+		fakeTokenMap = make(map[string][]byte)
 
 		// Create test silence created by the operator
 		testSilence = amv2Models.Silence{
@@ -101,6 +105,28 @@ O3zCGH3n3V74P27js1duFytlfoGhTscwcByl500lT9fXq1QVPuSNXQIzYsnYTf8e
 SLKh9n6qnPj0Lef3Nw==
 -----END CERTIFICATE-----
 `
+		fakeTokenMap["token"] = []byte(`
+	eyJhbGciOiJSUzI1NiIsImtpZCI6IkxTZHVQQWRrR29jTTloVUs1OHF3akdz
+	THlkbkt0cE1zUDN6bGIyMm1iT0EifQ.eyJhdWQiOlsia3ViZXJuZXRlcy9zZ
+	XJ2aWNlYWNjb3VudCJdLCJleHAiOjE3MTkzMTQ1ODAsImlhdCI6MTcxOTMxM
+	Dk4MCwiaXNzIjoiaHR0cHM6Ly9rdWJlcm5ldGVzLmRlZmF1bHQuc3ZjIiwia
+	3ViZXJuZXRlcy5pbyI6eyJuYW1lc3BhY2UiOiJvcGVuc2hpZnQtbW9uaXRvc
+	mluZyIsInNlcnZpY2VhY2NvdW50Ijp7Im5hbWUiOiJwcm9tZXRoZXVzLWs4c
+	yIsInVpZCI6IjYwZDZhOWQ5LTk2YjYtNDdhMi1hOGVkLTk5NDhmNmE1M2YyM
+	iJ9fSwibmJmIjoxNzE5MzEwOTgwLCJzdWIiOiJzeXN0ZW06c2VydmljZWFjY
+	291bnQ6b3BlbnNoaWZ0LW1vbml0b3Jpbmc6cHJvbWV0aGV1cy1rOHMifQ.aj
+	Ec-IwelWjNO_86rA_T_npv3p30vQs7pFWARqZ0kPRUDixbSSwAqbAWOQ1PVA
+	4jMqPsiMgjp5lRaFLxiew-4lpj-Zpt_VBe_py7Z7S81OWw4tNG8UmQz4Fy97
+	27TCTIiIXMcqGZXljpPckTAyhUeLJzwd4_1I0wwIG0MwTiTd-V5xMDcB2yZV
+	OlL0z99cvlAEkwxQCIbpnKBA7Olm0-EHRzNUB_Ush3C5YDA9AJFnC06J0F2a
+	aTIgEO6MaQIg1GB2mHcuNWdqxtIJoAsSCoFC8lKKkNblRd3MViNxxydoktOo
+	e-UKYKVJkvBZwYchkhPQnlSZuy3EJPj9CVDnD__r3wakqZ2Wo8tcMNLxIMua
+	wbw1V_zzUxV5-mznf_XLff3GL2pomZhmF4iPNJeAmAwalSS3jA824UvD9_lh
+	91PauVskq6FzUrsOJ1lmlmFO4BQNZFXlWY6xlIWyFPf_bnN4cCaU3wFFfx2B
+	ewf1zvHjdkXOwOwPIUCKGj4eZKVHNDCBOrnWddaBG5BQWOfV8P_pcmE0gItp
+	QEozW0kvvCMl5jCGckLhkJ8PZSuUCKcVsQjzPAWB-yuO2DAXm8vpokL6AsrS
+	ILA8yIipKHs-lxqaXR994or5rmKktOTSrneuPJ6PuAMoovoPmifZc-IhKxPr
+	Sd2SSo1iQi8t04Fx5cLPQ`)
 	})
 
 	AfterEach(func() {
@@ -222,7 +248,7 @@ SLKh9n6qnPj0Lef3Nw==
 	})
 	// Finding and removing all active maintenances
 	Context("Build Alert Manager in production", func() {
-		It("Build an Alert Manager Client and not return an error", func() {
+		It("Build an Alert Manager Client with test token and not return an error", func() {
 			var ammb alertManagerMaintenanceBuilder
 			mockSecretList := &corev1.SecretList{}
 			mockAmService := &corev1.Service{}
@@ -231,8 +257,43 @@ SLKh9n6qnPj0Lef3Nw==
 				Data: fakeCAMap,
 			}
 
+			secrets := &corev1.SecretList{
+				Items: []corev1.Secret{
+					{
+						ObjectMeta: metav1.ObjectMeta{Name: alertManagerServiceAccountName + "-token"},
+						Data:       fakeTokenMap,
+					},
+				},
+			}
+
+			mockKubeClient.EXPECT().Get(context.TODO(), types.NamespacedName{Namespace: metrics.MonitoringNS, Name: alertManagerApp}, mockAmService)
+			mockKubeClient.EXPECT().List(context.TODO(), mockSecretList, &client.ListOptions{Namespace: metrics.MonitoringNS}).SetArg(1, *secrets)
+			mockKubeClient.EXPECT().Get(context.TODO(), client.ObjectKey{Name: metrics.MonitoringCAConfigMapName, Namespace: metrics.MonitoringNS}, mockMonConfigMap).SetArg(2, *fakeMonConfigMap).Return(nil)
+
+			_, err := ammb.NewClient(mockKubeClient)
+			Expect(err).ShouldNot(HaveOccurred())
+		})
+
+		It("Build an Alert Manager Client with token request and not return an error", func() {
+			var ammb alertManagerMaintenanceBuilder
+			mockSecretList := &corev1.SecretList{}
+			mockAmService := &corev1.Service{}
+			mockMonConfigMap := &corev1.ConfigMap{}
+			fakeMonConfigMap := &corev1.ConfigMap{
+				Data: fakeCAMap,
+			}
+
+			mockSubResourceClient := mocks.NewMockSubResourceClient(mockCtrl)
+			expirationSeconds := int64(24 * time.Hour / time.Second)
+			mockToken := &authenticationv1.TokenRequest{
+				Spec: authenticationv1.TokenRequestSpec{ExpirationSeconds: &expirationSeconds},
+			}
+			mockSA := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: metrics.MonitoringNS, Name: "prometheus-k8s"}}
+
 			mockKubeClient.EXPECT().Get(context.TODO(), types.NamespacedName{Namespace: metrics.MonitoringNS, Name: alertManagerApp}, mockAmService)
 			mockKubeClient.EXPECT().List(context.TODO(), mockSecretList, &client.ListOptions{Namespace: metrics.MonitoringNS})
+			mockKubeClient.EXPECT().SubResource("token").Return(mockSubResourceClient)
+			mockSubResourceClient.EXPECT().Create(context.TODO(), mockSA, mockToken)
 			mockKubeClient.EXPECT().Get(context.TODO(), client.ObjectKey{Name: metrics.MonitoringCAConfigMapName, Namespace: metrics.MonitoringNS}, mockMonConfigMap).SetArg(2, *fakeMonConfigMap).Return(nil)
 
 			_, err := ammb.NewClient(mockKubeClient)
@@ -250,8 +311,17 @@ SLKh9n6qnPj0Lef3Nw==
 				Data: fakeCAMap,
 			}
 
+			secrets := &corev1.SecretList{
+				Items: []corev1.Secret{
+					{
+						ObjectMeta: metav1.ObjectMeta{Name: alertManagerServiceAccountName + "-token"},
+						Data:       fakeTokenMap,
+					},
+				},
+			}
+
 			mockKubeClient.EXPECT().Get(context.TODO(), types.NamespacedName{Namespace: metrics.MonitoringNS, Name: alertManagerApp}, mockAmService)
-			mockKubeClient.EXPECT().List(context.TODO(), mockSecretList, &client.ListOptions{Namespace: metrics.MonitoringNS})
+			mockKubeClient.EXPECT().List(context.TODO(), mockSecretList, &client.ListOptions{Namespace: metrics.MonitoringNS}).SetArg(1, *secrets)
 			mockKubeClient.EXPECT().Get(context.TODO(), client.ObjectKey{Name: metrics.MonitoringCAConfigMapName, Namespace: metrics.MonitoringNS}, mockMonConfigMap).SetArg(2, *fakeMonConfigMap).Return(nil)
 
 			_, err := ammb.NewClient(mockKubeClient)
@@ -265,9 +335,17 @@ SLKh9n6qnPj0Lef3Nw==
 			var ammb alertManagerMaintenanceBuilder
 			mockAmRoute := &routev1.Route{}
 			mockSecretList := &corev1.SecretList{}
+			secrets := &corev1.SecretList{
+				Items: []corev1.Secret{
+					{
+						ObjectMeta: metav1.ObjectMeta{Name: alertManagerServiceAccountName + "-token"},
+						Data:       fakeTokenMap,
+					},
+				},
+			}
 
 			mockKubeClient.EXPECT().Get(context.TODO(), types.NamespacedName{Namespace: metrics.MonitoringNS, Name: alertManagerApp}, mockAmRoute)
-			mockKubeClient.EXPECT().List(context.TODO(), mockSecretList, &client.ListOptions{Namespace: metrics.MonitoringNS})
+			mockKubeClient.EXPECT().List(context.TODO(), mockSecretList, &client.ListOptions{Namespace: metrics.MonitoringNS}).SetArg(1, *secrets)
 
 			_, err := ammb.NewClient(mockKubeClient)
 			Expect(err).ShouldNot(HaveOccurred())
