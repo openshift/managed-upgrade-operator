@@ -33,8 +33,8 @@ const (
 	helpRemoveControlPlaneMaintWindowTimestamp = "Unix Timestamp indicating removal of control plane maintenance window"
 	helpWorkersWindowTimestamp                 = "Unix Timestamp indicating start time of workers maintenance" //nolint:gosec
 	helpAllWorkerNodesUpgradedTimestamp        = "Unix Timestamp indicating all worker nodes have upgraded"
-	helpRemoveExtraScaledNodesTimestamp        = "Unix Timestamp indicating time of addtional compute removed"
-	helpRemoveMaintWindow                      = "Unix Timestamp indicating end of workers maintenace"
+	helpRemoveExtraScaledNodesTimestamp        = "Unix Timestamp indicating time of additional compute removed"
+	helpRemoveMaintWindow                      = "Unix Timestamp indicating end of workers maintenance"
 	helpPostClusterHealthCheck                 = "Unix Timestamp indicating time of post cluster health check"
 	helpSendCompletedNotificationTimestamp     = "Unix Timestamp indicating time of complete upgrade notification event"
 
@@ -339,7 +339,7 @@ func (uc *UpgradeCollector) collectUpgradeConditions(ch chan<- prometheus.Metric
 		return err
 	}
 
-	// Collect metrics based on observing availble conditions in the target
+	// Collect metrics based on observing available conditions in the target
 	// versions upgrade history.
 	for _, c := range h.Conditions {
 		c := c

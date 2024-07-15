@@ -164,7 +164,7 @@ var _ = Describe("Stuck Terminating Strategy", func() {
 			Expect(err).To(BeNil())
 		})
 
-		It("Returns false if there are any errors while getting list of pods stuck in terminating wtih no finalizers", func() {
+		It("Returns false if there are any errors while getting list of pods stuck in terminating with no finalizers", func() {
 			gomock.InOrder(
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(1, podList).Return(fmt.Errorf("fake error")),
 			)

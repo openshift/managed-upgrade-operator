@@ -38,7 +38,7 @@ func (c *clusterUpgrader) CreateWorkerMaintWindow(ctx context.Context, logger lo
 
 	// Depending on how long the Control Plane takes all workers may be already upgraded.
 	if !upgradingResult.IsUpgrading {
-		logger.Info(fmt.Sprintf("Worker nodes are already upgraded. Skipping worker maintenace for %s", c.upgradeConfig.Spec.Desired.Version))
+		logger.Info(fmt.Sprintf("Worker nodes are already upgraded. Skipping worker maintenance for %s", c.upgradeConfig.Spec.Desired.Version))
 		return true, nil
 	}
 
@@ -64,7 +64,7 @@ func (c *clusterUpgrader) CreateWorkerMaintWindow(ctx context.Context, logger lo
 	totalWorkerMaintenanceDuration := waitTimePeriod + actionTimePeriod
 
 	endTime := time.Now().Add(totalWorkerMaintenanceDuration)
-	logger.Info(fmt.Sprintf("Creating worker node maintenace for %d remaining nodes if no previous silence, ending at %v", pendingWorkerCount, endTime))
+	logger.Info(fmt.Sprintf("Creating worker node maintenance for %d remaining nodes if no previous silence, ending at %v", pendingWorkerCount, endTime))
 	err = c.maintenance.SetWorker(endTime, c.upgradeConfig.Spec.Desired.Version, pendingWorkerCount)
 	if err != nil {
 		return false, err
