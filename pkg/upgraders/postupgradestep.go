@@ -54,6 +54,6 @@ func (c *clusterUpgrader) postUpgradeFIOReInit(ctx context.Context, logger logr.
 		logger.Error(err, "Failed to annotate File Integrity object")
 		return err
 	}
-	logger.Info("File Integrity Operator AIDE Datbase reinitialized")
+	logger.Info("File Integrity Operator AIDE Database reinitialized")
 	return nil
 }

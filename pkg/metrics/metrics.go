@@ -475,7 +475,7 @@ func (c *Counter) IsAlertFiring(alert string, checkedNS, ignoredNS []string) (bo
 	return false, nil
 }
 
-// GetService accepts a client,namespace,svcName and portName and attempts to retrive
+// GetService accepts a client,namespace,svcName and portName and attempts to retrieve
 // the services endpoint in the form of resolveable.service:portnumber.
 func GetService(c client.Client, namespace, svcName, portName string) (string, error) {
 	svc := &corev1.Service{}
