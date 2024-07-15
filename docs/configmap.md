@@ -174,3 +174,19 @@ Example:
         urls:
           - http://www.example.com
 ```
+
+#### featureGate
+
+| Key | Description |
+| --- | --- |
+| `enabled` | a list of feature gates to be enabled when managed-upgrade-operator starts |
+
+Currently available featureGates:
+- PreHealthCheck
+
+Example:
+```yaml
+    featureGate:
+      enabled:
+      - PreHealthCheck
+```

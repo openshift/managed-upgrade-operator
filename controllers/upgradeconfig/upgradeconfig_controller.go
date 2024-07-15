@@ -136,6 +136,12 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 	cfm := r.ConfigManagerBuilder.New(r.Client, cmTarget)
 	cfg := &config{}
 
+	err = cfm.Into(cfg)
+	if err != nil {
+		reqLogger.Error(err, "Failed to sync configmap")
+		return reconcile.Result{}, err
+	}
+
 	upgrader, err := r.ClusterUpgraderBuilder.NewClient(r.Client, cfm, metricsClient, eventClient, instance.Spec.Type)
 	if err != nil {
 		return reconcile.Result{}, err
@@ -153,12 +159,6 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 	// in "New" phase and move to "Pending" phase once healthcheck
 	// is done.
 	case upgradev1alpha1.UpgradePhaseNew:
-
-		err = cfm.Into(cfg)
-		if err != nil {
-			reqLogger.Error(err, "Failed to sync configmap")
-			return reconcile.Result{}, err
-		}
 
 		schedulerResult := r.Scheduler.IsReadyToUpgrade(instance, cfg.GetUpgradeWindowTimeOutDuration())
 		timeToUpgrade := schedulerResult.TimeUntilUpgrade.Minutes()
