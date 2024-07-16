@@ -15,38 +15,59 @@ import (
 // It returns true if the health check passes, false otherwise.
 // It also returns an error if there was an issue performing the health check.
 func HealthCheckPDB(metricsClient metrics.Metrics, c client.Client) (bool, error) {
+
+	err := checkPodDisruptionBudgets(c)
+	if err != nil {
+		return false, err
+	}
+
+	err = checkDvoMetrics(c)
+	if err != nil {
+		return false, err
+	}
+
+	// Health check passed
+	return true, nil
+}
+
+func checkPodDisruptionBudgets(c client.Client) error {
 	// List all PodDisruptionBudgets
 	pdbList := &policyv1.PodDisruptionBudgetList{}
-	err1 := c.List(context.TODO(), pdbList)
-	if err1 != nil {
+	err := c.List(context.TODO(), pdbList)
+	if err != nil {
 		fmt.Print("unable to list PodDisruptionBudgets/v1")
-		return false, err1
+		return err
 	}
 
 	for _, pdb := range pdbList.Items {
 		if !strings.HasPrefix(pdb.Namespace, "openshift-*") {
 			if pdb.Spec.MaxUnavailable != nil && pdb.Spec.MaxUnavailable.IntVal == 0 {
 				//BAD pdb
-				return false, fmt.Errorf("found a PodDisruptionBudget with MaxUnavailable set to 0")
+				return fmt.Errorf("found a PodDisruptionBudget with MaxUnavailable set to 0")
 			} else if pdb.Status.CurrentHealthy < pdb.Status.DesiredHealthy {
 				//BAD pdb
-				return false, fmt.Errorf("found a PodDisruptionBudget with CurrentHealthy less than DesiredHealthy")
+				return fmt.Errorf("found a PodDisruptionBudget with CurrentHealthy less than DesiredHealthy")
 			}
 		}
 	}
 
-	// Create a new DVO client using the builder and the provided Kubernetes client
+	return nil
+}
+
+func checkDvoMetrics(c client.Client) error {
+	// Create a new DVO client using the builder and the provided metrics client
 	builder := dvo.NewBuilder()
 	client, err := builder.New(c)
 	if err != nil {
-		return false, err
+		return err
 	}
 
 	// Get the PDB metrics
 	dvoMetricsResult, err := client.GetMetrics()
+	fmt.Printf("Getting metrics from DVO... %s", dvoMetricsResult)
 	if err != nil {
 		fmt.Println("Error getting metrics")
-		return false, err
+		return err
 	}
 
 	badPDBExists := false
@@ -57,9 +78,8 @@ func HealthCheckPDB(metricsClient metrics.Metrics, c client.Client) (bool, error
 		}
 	}
 	if badPDBExists {
-		return false, fmt.Errorf("found a PodDisruptionBudget with incorrect configurations")
+		return fmt.Errorf("found a PodDisruptionBudget with incorrect configurations")
 	}
 
-	// Health check passed
-	return true, nil
+	return nil
 }

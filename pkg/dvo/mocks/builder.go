@@ -5,10 +5,9 @@
 package mocks
 
 import (
-	url "net/url"
 	reflect "reflect"
 
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 	dvo "github.com/openshift/managed-upgrade-operator/pkg/dvo"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -37,16 +36,16 @@ func (m *MockDvoClientBuilder) EXPECT() *MockDvoClientBuilderMockRecorder {
 }
 
 // New mocks base method.
-func (m *MockDvoClientBuilder) New(arg0 client.Client, arg1 *url.URL) (dvo.DvoClient, error) {
+func (m *MockDvoClientBuilder) New(arg0 client.Client) (dvo.DvoClient, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "New", arg0, arg1)
+	ret := m.ctrl.Call(m, "New", arg0)
 	ret0, _ := ret[0].(dvo.DvoClient)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // New indicates an expected call of New.
-func (mr *MockDvoClientBuilderMockRecorder) New(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockDvoClientBuilderMockRecorder) New(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "New", reflect.TypeOf((*MockDvoClientBuilder)(nil).New), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "New", reflect.TypeOf((*MockDvoClientBuilder)(nil).New), arg0)
 }

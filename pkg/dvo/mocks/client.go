@@ -7,7 +7,7 @@ package mocks
 import (
 	reflect "reflect"
 
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockDvoClient is a mock of DvoClient interface.
@@ -34,11 +34,12 @@ func (m *MockDvoClient) EXPECT() *MockDvoClientMockRecorder {
 }
 
 // GetMetrics mocks base method.
-func (m *MockDvoClient) GetMetrics() error {
+func (m *MockDvoClient) GetMetrics() ([]byte, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetMetrics")
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // GetMetrics indicates an expected call of GetMetrics.
