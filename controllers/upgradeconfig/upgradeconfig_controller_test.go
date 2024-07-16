@@ -354,32 +354,6 @@ var _ = Describe("UpgradeConfigController", func() {
 						Expect(result.RequeueAfter).To(Equal(time.Minute * 1))
 					})
 				})
-				Context("When the time to upgrade is more than the HealthCheckDuration and feature flag is set", func() {
-					sr := scheduler.SchedulerResult{
-						IsReady:          false,
-						IsBreached:       false,
-						TimeUntilUpgrade: 5 * time.Hour,
-					}
-					It("Should run pre-health check", func() {
-						gomock.InOrder(
-							mockEMBuilder.EXPECT().NewManager(gomock.Any()).Return(mockEMClient, nil),
-							mockKubeClient.EXPECT().Get(gomock.Any(), upgradeConfigName, gomock.Any()).SetArg(2, *upgradeConfig),
-							mockCVClientBuilder.EXPECT().New(gomock.Any()).Return(mockCVClient),
-							mockCVClient.EXPECT().GetClusterVersion().Return(testClusterVersion, nil),
-							mockConfigManagerBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockConfigManager),
-							mockConfigManager.EXPECT().Into(gomock.Any()).SetArg(0, cfg),
-							mockClusterUpgraderBuilder.EXPECT().NewClient(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), upgradeConfig.Spec.Type).Return(mockClusterUpgrader, nil),
-							mockScheduler.EXPECT().IsReadyToUpgrade(gomock.Any(), gomock.Any()).Return(sr),
-							mockClusterUpgrader.EXPECT().HealthCheck(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil),
-							mockKubeClient.EXPECT().Status().Return(mockUpdater),
-							mockUpdater.EXPECT().Update(gomock.Any(), gomock.Any()),
-						)
-						result, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: upgradeConfigName})
-						Expect(err).NotTo(HaveOccurred())
-						Expect(upgradeConfig.Status.History.GetHistory("a version").Phase == upgradev1alpha1.UpgradePhasePending).To(BeTrue())
-						Expect(result.RequeueAfter).To(Equal(time.Minute * 1))
-					})
-				})
 				Context("When the time to upgrade is more than the HealthCheckDuration and feature flag is not set", func() {
 					sr := scheduler.SchedulerResult{
 						IsReady:          false,
@@ -406,13 +380,39 @@ var _ = Describe("UpgradeConfigController", func() {
 						Expect(result.RequeueAfter).To(Equal(time.Minute * 1))
 					})
 				})
-				Context("When the upgrade time is less than the healthcheck duration", func() {
+				Context("When the upgrade time is less than the healthcheck duration and feature flag is set", func() {
 					sr := scheduler.SchedulerResult{
 						IsReady:          false,
 						IsBreached:       false,
 						TimeUntilUpgrade: 1 * time.Hour,
 					}
 					It("Should skip prehealth check and move to pending phase", func() {
+						gomock.InOrder(
+							mockEMBuilder.EXPECT().NewManager(gomock.Any()).Return(mockEMClient, nil),
+							mockKubeClient.EXPECT().Get(gomock.Any(), upgradeConfigName, gomock.Any()).SetArg(2, *upgradeConfig),
+							mockCVClientBuilder.EXPECT().New(gomock.Any()).Return(mockCVClient),
+							mockCVClient.EXPECT().GetClusterVersion().Return(testClusterVersion, nil),
+							mockConfigManagerBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockConfigManager),
+							mockConfigManager.EXPECT().Into(gomock.Any()).SetArg(0, cfg),
+							mockClusterUpgraderBuilder.EXPECT().NewClient(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), upgradeConfig.Spec.Type).Return(mockClusterUpgrader, nil),
+							mockScheduler.EXPECT().IsReadyToUpgrade(gomock.Any(), gomock.Any()).Return(sr),
+							mockKubeClient.EXPECT().Status().Return(mockUpdater),
+							mockUpdater.EXPECT().Update(gomock.Any(), gomock.Any()),
+						)
+						result, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: upgradeConfigName})
+						Expect(err).NotTo(HaveOccurred())
+						Expect(upgradeConfig.Status.History.GetHistory("a version").Phase == upgradev1alpha1.UpgradePhasePending).To(BeTrue())
+						Expect(result.RequeueAfter).To(Equal(time.Minute * 1))
+					})
+				})
+				Context("When the upgrade time is less than the healthcheck duration and feature flag is not set", func() {
+					sr := scheduler.SchedulerResult{
+						IsReady:          false,
+						IsBreached:       false,
+						TimeUntilUpgrade: 1 * time.Hour,
+					}
+					It("Should skip prehealth check and move to pending phase", func() {
+						cfg = config{}
 						gomock.InOrder(
 							mockEMBuilder.EXPECT().NewManager(gomock.Any()).Return(mockEMClient, nil),
 							mockKubeClient.EXPECT().Get(gomock.Any(), upgradeConfigName, gomock.Any()).SetArg(2, *upgradeConfig),
