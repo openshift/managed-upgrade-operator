@@ -89,6 +89,7 @@ var _ = Describe("HealthCheck Step", func() {
 			maintenance:          mockMaintClient,
 			machinery:            mockMachineryClient,
 			upgradeConfig:        upgradeConfig,
+			dvo:                  mockdvobuilderclient,
 		}
 	})
 

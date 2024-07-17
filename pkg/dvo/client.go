@@ -71,11 +71,6 @@ func (c *dvoClient) GetMetrics() ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error when querying prometheus: %s", err)
 	}
-
-	if resp != nil {
-		fmt.Printf("********%s", body)
-	}
-
 	return body, nil
 
 }

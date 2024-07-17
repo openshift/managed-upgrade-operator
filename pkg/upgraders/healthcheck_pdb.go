@@ -14,14 +14,14 @@ import (
 // HealthCheckPDB performs a health check on the PodDisruptionBudget (PDB) metrics.
 // It returns true if the health check passes, false otherwise.
 // It also returns an error if there was an issue performing the health check.
-func HealthCheckPDB(metricsClient metrics.Metrics, c client.Client) (bool, error) {
+func HealthCheckPDB(metricsClient metrics.Metrics, c client.Client, dvo dvo.DvoClientBuilder) (bool, error) {
 
 	err := checkPodDisruptionBudgets(c)
 	if err != nil {
 		return false, err
 	}
 
-	err = checkDvoMetrics(c)
+	err = checkDvoMetrics(c, dvo)
 	if err != nil {
 		return false, err
 	}
@@ -54,10 +54,9 @@ func checkPodDisruptionBudgets(c client.Client) error {
 	return nil
 }
 
-func checkDvoMetrics(c client.Client) error {
+func checkDvoMetrics(c client.Client, dvo dvo.DvoClientBuilder) error {
 	// Create a new DVO client using the builder and the provided metrics client
-	builder := dvo.NewBuilder()
-	client, err := builder.New(c)
+	client, err := dvo.New(c)
 	if err != nil {
 		return err
 	}

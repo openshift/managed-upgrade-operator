@@ -58,9 +58,9 @@ func (c *clusterUpgrader) PreUpgradeHealthCheck(ctx context.Context, logger logr
 		logger.Info(fmt.Sprintf("upgrade delayed due to there are unschedulable taints on nodes: %s", err))
 		healthCheckFailed = append(healthCheckFailed, "NodeUnschedulableTaintHealthcheckFailed")
 	}
-
+	
 	// add error handling and servicelog send
-	ok, err = HealthCheckPDB(c.metrics, c.client)
+	ok, err = HealthCheckPDB(c.metrics, c.client, c.dvo)
 	if err != nil || !ok {
 		logger.Info(fmt.Sprintf("upgrade delayed due PDB %s", err))
 		//errResult := c.notifier.Notify(notifier.MuoStateHealthCheck)
