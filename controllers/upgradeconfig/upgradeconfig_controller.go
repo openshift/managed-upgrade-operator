@@ -136,6 +136,12 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 	cfm := r.ConfigManagerBuilder.New(r.Client, cmTarget)
 	cfg := &config{}
 
+	err = cfm.Into(cfg)
+	if err != nil {
+		reqLogger.Error(err, "Failed to sync configmap")
+		return reconcile.Result{}, err
+	}
+
 	upgrader, err := r.ClusterUpgraderBuilder.NewClient(r.Client, cfm, metricsClient, eventClient, instance.Spec.Type)
 	if err != nil {
 		return reconcile.Result{}, err
@@ -157,7 +163,8 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 		schedulerResult := r.Scheduler.IsReadyToUpgrade(instance, cfg.GetUpgradeWindowTimeOutDuration())
 		timeToUpgrade := schedulerResult.TimeUntilUpgrade.Minutes()
 		healthCheckDuration := instance.GetHealthCheckDuration().Minutes()
-		if time.Duration(timeToUpgrade) > time.Duration(healthCheckDuration) {
+
+		if (time.Duration(timeToUpgrade) > time.Duration(healthCheckDuration)) && cfg.IsFeatureEnabled(string(upgradev1alpha1.PreHealthCheckFeatureGate)) {
 			reqLogger.Info("Running Pre-Health Check for upgrade")
 			// We do not block the upgrade from going to pending state deliberately
 			// since we want to notify and give a heads up regarding pre healthcheck
@@ -168,7 +175,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 				reqLogger.Error(err, "Pre HealthCheck failed on scheduling upgrade")
 			}
 		} else {
-			reqLogger.Info("Skipping pre healthcheck")
+			reqLogger.Info("Skipping PreHealthCheck")
 		}
 
 		history.Phase = upgradev1alpha1.UpgradePhasePending
@@ -187,11 +194,6 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 	// configmanager (as relevant) and proceed to "Upgrading" phase.
 	case upgradev1alpha1.UpgradePhasePending:
 		reqLogger.Info("Validating UpgradeConfig")
-
-		err = cfm.Into(cfg)
-		if err != nil {
-			return reconcile.Result{}, err
-		}
 
 		// Build a Validator
 		validator, err := r.ValidationBuilder.NewClient(cfm)

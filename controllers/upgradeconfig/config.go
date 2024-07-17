@@ -7,6 +7,7 @@ import (
 
 type config struct {
 	UpgradeWindow upgradeWindow `yaml:"upgradeWindow"`
+	FeatureGate   featureGate   `yaml:"featureGate"`
 }
 
 type upgradeWindow struct {
@@ -30,4 +31,19 @@ func (cfg *config) GetUpgradeWindowTimeOutDuration() time.Duration {
 
 func (cfg *config) GetUpgradeWindowDelayTriggerDuration() time.Duration {
 	return time.Duration(cfg.UpgradeWindow.DelayTrigger) * time.Minute
+}
+
+type featureGate struct {
+	Enabled []string `yaml:"enabled"`
+}
+
+func (cfg *config) IsFeatureEnabled(feature string) bool {
+	if len(cfg.FeatureGate.Enabled) > 0 {
+		for _, f := range cfg.FeatureGate.Enabled {
+			if f == feature {
+				return true
+			}
+		}
+	}
+	return false
 }
