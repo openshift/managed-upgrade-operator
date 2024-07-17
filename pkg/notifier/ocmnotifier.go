@@ -69,8 +69,10 @@ var (
 	ServiceLogStateControlPlaneFinished = ServiceLogState{Severity: servicelogsv1.SeverityInfo, Summary: "Cluster has finished control plane upgrade"}
 	// ServiceLogStateWorkerPlaneFinished defines the summary for worker plane upgrade finished servicelog
 	ServiceLogStateWorkerPlaneFinished = ServiceLogState{Severity: servicelogsv1.SeverityInfo, Summary: "Cluster has finished with worker plane upgrade"}
-	//ServiceLogStateHealthCheckSL defines the summary for finsihed cluster healthcheck
-	ServiceLogStateHealthCheckSL = ServiceLogState{Severity: servicelogsv1.SeverityInfo, Summary: "Cluster has finished Healthcheck"}
+	//ServiceLogStateHealthCheckSL defines the summary for finished cluster healthcheck
+	ServiceLogStateHealthCheckSL = ServiceLogState{Severity: servicelogsv1.SeverityInfo, Summary: "Cluster has finished healthcheck during the upgrade"}
+	//ServiceLogStatePreHealthCheckSL defines the summary for finished cluster pre-upgrade healthcheck
+	ServiceLogStatePreHealthCheckSL = ServiceLogState{Severity: servicelogsv1.SeverityInfo, Summary: "Cluster has finished pre-upgrade healthcheck"}
 )
 
 // ServiceLogState type defines the ServiceLog metadata
@@ -81,6 +83,7 @@ var serviceLogMap = map[MuoState]ServiceLogState{
 	MuoStateControlPlaneUpgradeFinishedSL: ServiceLogStateControlPlaneFinished,
 	MuoStateWorkerPlaneUpgradeFinishedSL:  ServiceLogStateWorkerPlaneFinished,
 	MuoStateHealthCheckSL:                 ServiceLogStateHealthCheckSL,
+	MuoStatePreHealthCheckSL:              ServiceLogStatePreHealthCheckSL,
 }
 
 type ocmNotifier struct {

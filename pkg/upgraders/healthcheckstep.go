@@ -63,9 +63,19 @@ func (c *clusterUpgrader) PreUpgradeHealthCheck(ctx context.Context, logger logr
 		result := strings.Join(healthCheckFailed, ",")
 		logger.Info(fmt.Sprintf("Upgrade may delay due to following PreHealthCheck failure: %s", result))
 
-		err := c.notifier.NotifyResult(notifier.MuoStateHealthCheckSL, result)
-		if err != nil {
-			return false, err
+		switch history := c.upgradeConfig.Status.History.GetHistory(c.upgradeConfig.Spec.Desired.Version); history.Phase {
+		case upgradev1alpha1.UpgradePhaseNew:
+			err := c.notifier.NotifyResult(notifier.MuoStatePreHealthCheckSL, result)
+			if err != nil {
+				return false, err
+			}
+		case upgradev1alpha1.UpgradePhaseUpgrading:
+			err := c.notifier.NotifyResult(notifier.MuoStateHealthCheckSL, result)
+			if err != nil {
+				return false, err
+			}
+		case " ":
+			logger.Info(fmt.Sprintf("upgradeconfig history doesn't exist for version: %s", c.upgradeConfig.Spec.Desired.Version))
 		}
 		return false, nil
 	}

@@ -58,7 +58,7 @@ var _ = Describe("HealthCheck Step", func() {
 			Name:      "test-upgradeconfig",
 			Namespace: "test-namespace",
 		}
-		upgradeConfig = testStructs.NewUpgradeConfigBuilder().WithNamespacedName(upgradeConfigName).GetUpgradeConfig()
+		upgradeConfig = testStructs.NewUpgradeConfigBuilder().WithNamespacedName(upgradeConfigName).WithPhase(upgradev1alpha1.UpgradePhaseNew).GetUpgradeConfig()
 		mockCtrl = gomock.NewController(GinkgoT())
 		mockKubeClient = mocks.NewMockClient(mockCtrl)
 		mockMaintClient = mockMaintenance.NewMockMaintenance(mockCtrl)
@@ -379,6 +379,33 @@ var _ = Describe("HealthCheck Step", func() {
 				}
 			})
 			It("will not satisfy a pre-Upgrade health check", func() {
+				gomock.InOrder(
+					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
+					mockMetricsClient.EXPECT().Query(gomock.Any()).Return(alertsResponse, nil),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, gomock.Any()),
+					mockCVClient.EXPECT().HasDegradedOperators().Return(&clusterversion.HasDegradedOperatorsResult{Degraded: []string{}}, nil),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterOperatorsStatusFailed),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterOperatorsDegraded),
+					mockScalerClient.EXPECT().CanScale(gomock.Any(), logger).Return(true, nil),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.DefaultWorkerMachinepoolNotFound),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *nodes),
+					mockMachineryClient.EXPECT().IsNodeCordoned(gomock.Any()).Return(&machinery.IsCordonedResult{IsCordoned: false, AddedAt: cordonAddedTime}),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterNodeQueryFailed),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterNodesManuallyCordoned),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *nodes),
+					mockMachineryClient.EXPECT().HasMemoryPressure(gomock.Any()).Return(false),
+					mockMachineryClient.EXPECT().HasDiskPressure(gomock.Any()).Return(false),
+					mockMachineryClient.EXPECT().HasPidPressure(gomock.Any()).Return(false),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterNodeQueryFailed),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterNodesTaintedUnschedulable),
+					mockEMClient.EXPECT().NotifyResult(gomock.Any(), gomock.Any()).Return(nil),
+				)
+				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
+				Expect(err).To(BeNil())
+				Expect(result).To(BeFalse())
+			})
+			It("will not satisfy a pre-Upgrade health check in the upgrade phase", func() {
+				upgradeConfig = testStructs.NewUpgradeConfigBuilder().WithNamespacedName(upgradeConfigName).WithPhase(upgradev1alpha1.UpgradePhaseUpgrading).GetUpgradeConfig()
 				gomock.InOrder(
 					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
 					mockMetricsClient.EXPECT().Query(gomock.Any()).Return(alertsResponse, nil),
