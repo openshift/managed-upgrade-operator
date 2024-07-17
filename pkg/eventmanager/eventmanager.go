@@ -43,7 +43,7 @@ const (
 	// UPGRADE_HEALTHCHECK_DELAY_DESC describes the upgrade pre health check delay
 	UPGRADE_HEALTHCHECK_DELAY_DESC = "Cluster upgrade to version %s may experience a delay as following healthcheck(s): %s are failing for the cluster which could impact the upgrade's operation."
 	// UPGRADE_HEALTHCHECK_DELAY_DESC describes the upgrade pre health check delay
-	UPGRADE_PREHEALTHCHECK_WARNING_DESC = "Cluster upgrade to version %s has been scheduled for more than 2 hours, cluster pre-upgrade health check has identified the following points which may impact the upgrade process: %s. Please take actions to review and fix the issues before the upgrade begin to have seamless upgrade experience"
+	UPGRADE_PREHEALTHCHECK_WARNING_DESC = "Cluster upgrade to version %s has been scheduled for more than 2 hours, cluster pre-upgrade health check has identified the following points which may impact the upgrade process: %s. Please take actions to review and fix the issues before the upgrade begins to have seamless upgrade experience"
 	// UPGRADE_CONTROL_PLANE_STARTED_DESC describes the control plane upgrade started
 	UPGRADE_CONTROL_PLANE_STARTED_DESC = "Cluster upgrade to version %s is starting with control and worker plane upgrade. This is an informational notification and no action is required"
 	// UPGRADE_CONTROL_PLANE_FINISHED_DESC describes the control plane upgrade finished
