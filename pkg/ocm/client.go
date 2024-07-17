@@ -68,7 +68,7 @@ type ocmClient struct {
 
 // ServiceLog is the internal representation of a service log
 type ServiceLog struct {
-	Severity     string
+	Severity     servicelogsv1.Severity
 	ServiceName  string
 	Summary      string
 	Description  string
@@ -237,8 +237,13 @@ func (s *ocmClient) PostServiceLog(sl *ServiceLog, description string) error {
 	}
 	builder := &servicelogsv1.LogEntryBuilder{}
 
+	// Set the severity
+	if sl.Severity != "" {
+		builder.Severity(sl.Severity)
+	} else {
+		builder.Severity(servicelogsv1.SeverityInfo)
+	}
 	// We set standard fields here which are common across different ServiceLogs sent
-	builder.Severity(servicelogsv1.Severity(servicelogsv1.SeverityInfo))
 	builder.InternalOnly(SERVICELOG_INTERNAL_ONLY)
 	builder.ServiceName(SERVICELOG_SERVICE_NAME)
 	builder.LogType(SERVICELOG_LOG_TYPE)
