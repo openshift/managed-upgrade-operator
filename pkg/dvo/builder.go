@@ -35,7 +35,6 @@ func (dcb *dvoClientBuilder) New(c client.Client) (DvoClient, error) {
 	// Fetch the cluster AccessToken
 	accessToken, err := util.GetAccessToken(c)
 	if err != nil {
-		fmt.Printf("err accestoken%s", err)
 		return nil, fmt.Errorf("failed to retrieve cluster access token")
 	}
 

@@ -59,7 +59,7 @@ func (c *dvoClient) GetMetrics() ([]byte, error) {
 
 	req, err := http.NewRequest("GET", metricsURL, nil)
 	if err != nil {
-		return nil, fmt.Errorf("could not query prometheus: %s", err)
+		return nil, fmt.Errorf("could not query DVO metrics endpoint: %v", err)
 	}
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -69,7 +69,7 @@ func (c *dvoClient) GetMetrics() ([]byte, error) {
 	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("error when querying prometheus: %s", err)
+		return nil, fmt.Errorf("error when querying dvo endpoint: %v", err)
 	}
 	return body, nil
 
