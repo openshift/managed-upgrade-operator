@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/openshift/managed-upgrade-operator/util"
 )
@@ -16,8 +15,6 @@ const (
 	// CLUSTERS_V1_PATH is a path to the OCM clusters service
 	METRICS_API_PATH = "/metrics"
 )
-
-var log = logf.Log.WithName("dvo-client")
 
 var (
 	// ErrClusterIdNotFound is an error describing the cluster ID can not be found
