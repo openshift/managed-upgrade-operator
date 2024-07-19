@@ -45,7 +45,7 @@ func (m *MockDvoClientBuilder) New(arg0 client.Client) (dvo.DvoClient, error) {
 }
 
 // New indicates an expected call of New.
-func (mr *MockDvoClientBuilderMockRecorder) New(arg0 interface{}) *gomock.Call {
+func (mr *MockDvoClientBuilderMockRecorder) New(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "New", reflect.TypeOf((*MockDvoClientBuilder)(nil).New), arg0)
 }
