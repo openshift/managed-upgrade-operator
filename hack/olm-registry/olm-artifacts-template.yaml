@@ -129,6 +129,20 @@ objects:
             - list
             - watch
         - apiVersion: rbac.authorization.k8s.io/v1
+          kind: Role
+          metadata:
+            name: muo-dvo-reader
+            namespace: openshift-deployment-validation-operator
+          rules:
+          - apiGroups:
+            - ""
+            resources:
+            - services
+            verbs:
+            - get
+            - list
+            - watch
+        - apiVersion: rbac.authorization.k8s.io/v1
           kind: RoleBinding
           metadata:
             name: muo-monitoring-interactor
@@ -152,3 +166,30 @@ objects:
           - kind: ServiceAccount
             name: managed-upgrade-operator
             namespace: openshift-managed-upgrade-operator
+        - apiVersion: rbac.authorization.k8s.io/v1
+          kind: RoleBinding
+          metadata:
+            name: muo-dvo-reader
+            namespace: openshift-deployment-validation-operator
+          roleRef:
+            apiGroup: rbac.authorization.k8s.io
+            kind: Role
+            name: muo-dvo-reader
+          subjects:
+          - kind: ServiceAccount
+            name: managed-upgrade-operator
+            namespace: openshift-managed-upgrade-operator
+        - apiVersion: networking.k8s.io/v1
+          kind: NetworkPolicy
+          metadata:
+            name: allow-from-openshift-managed-upgrade-operator
+            namespace: openshift-deployment-validation-operator
+          spec:
+            ingress:
+            - from:
+              - namespaceSelector:
+                  matchLabels:
+                    kubernetes.io/metadata.name: openshift-managed-upgrade-operator
+            podSelector: {}
+            policyTypes:
+            - Ingress

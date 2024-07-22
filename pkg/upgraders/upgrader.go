@@ -10,6 +10,7 @@ import (
 	ac "github.com/openshift/managed-upgrade-operator/pkg/availabilitychecks"
 	cv "github.com/openshift/managed-upgrade-operator/pkg/clusterversion"
 	"github.com/openshift/managed-upgrade-operator/pkg/drain"
+	"github.com/openshift/managed-upgrade-operator/pkg/dvo"
 	"github.com/openshift/managed-upgrade-operator/pkg/eventmanager"
 	"github.com/openshift/managed-upgrade-operator/pkg/machinery"
 	"github.com/openshift/managed-upgrade-operator/pkg/maintenance"
@@ -55,6 +56,8 @@ type clusterUpgrader struct {
 
 	// Model of the cluster upgrader's ConfigMap configuration
 	config *upgraderConfig
+
+	dvo dvo.DvoClientBuilder
 }
 
 // runSteps runs the upgrader's upgrade steps and returns the last-executed

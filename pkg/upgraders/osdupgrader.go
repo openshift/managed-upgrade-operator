@@ -13,6 +13,7 @@ import (
 	cv "github.com/openshift/managed-upgrade-operator/pkg/clusterversion"
 	"github.com/openshift/managed-upgrade-operator/pkg/configmanager"
 	"github.com/openshift/managed-upgrade-operator/pkg/drain"
+	"github.com/openshift/managed-upgrade-operator/pkg/dvo"
 	"github.com/openshift/managed-upgrade-operator/pkg/eventmanager"
 	"github.com/openshift/managed-upgrade-operator/pkg/machinery"
 	"github.com/openshift/managed-upgrade-operator/pkg/maintenance"
@@ -58,6 +59,8 @@ func NewOSDUpgrader(c client.Client, cfm configmanager.ConfigManager, mc metrics
 			maintenance:          m,
 			machinery:            machinery.NewMachinery(),
 			availabilityCheckers: acs,
+			dvo:                  dvo.NewBuilder(),
+			
 		},
 	}
 
