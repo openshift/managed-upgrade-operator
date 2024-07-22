@@ -16,6 +16,7 @@ import (
 	"github.com/openshift/managed-upgrade-operator/pkg/clusterversion"
 	cv "github.com/openshift/managed-upgrade-operator/pkg/clusterversion"
 	"github.com/openshift/managed-upgrade-operator/pkg/configmanager"
+	"github.com/openshift/managed-upgrade-operator/pkg/dvo"
 	"github.com/openshift/managed-upgrade-operator/pkg/eventmanager"
 	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
 	"github.com/openshift/managed-upgrade-operator/pkg/scheduler"
@@ -50,6 +51,7 @@ type ReconcileUpgradeConfig struct {
 	CvClientBuilder        cv.ClusterVersionBuilder
 	EventManagerBuilder    eventmanager.EventManagerBuilder
 	UcMgrBuilder           ucmgr.UpgradeConfigManagerBuilder
+	DvoClientBuilder       dvo.DvoClientBuilder
 }
 
 // Reconcile reads that state of the cluster for a UpgradeConfig object and makes changes based on the state read

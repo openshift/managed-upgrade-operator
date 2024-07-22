@@ -58,6 +58,13 @@ func (c *clusterUpgrader) PreUpgradeHealthCheck(ctx context.Context, logger logr
 		logger.Info(fmt.Sprintf("upgrade delayed due to there are unschedulable taints on nodes: %s", err))
 		healthCheckFailed = append(healthCheckFailed, "NodeUnschedulableTaintHealthcheckFailed")
 	}
+	
+	// HealthCheckPDB
+	ok, err = HealthCheckPDB(c.metrics, c.client, c.dvo, c.upgradeConfig, logger)
+	if err != nil || !ok {
+		logger.Info(fmt.Sprintf("upgrade delayed due PDB %s", err))
+		healthCheckFailed = append(healthCheckFailed, "PDBHealthcheckFailed")
+	}
 
 	if len(healthCheckFailed) > 0 {
 		result := strings.Join(healthCheckFailed, ",")

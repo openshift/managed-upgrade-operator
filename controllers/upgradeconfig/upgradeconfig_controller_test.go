@@ -18,6 +18,7 @@ import (
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/api/v1alpha1"
 	cvMocks "github.com/openshift/managed-upgrade-operator/pkg/clusterversion/mocks"
 	configMocks "github.com/openshift/managed-upgrade-operator/pkg/configmanager/mocks"
+	dvomocks "github.com/openshift/managed-upgrade-operator/pkg/dvo/mocks"
 	emMocks "github.com/openshift/managed-upgrade-operator/pkg/eventmanager/mocks"
 	mockMetrics "github.com/openshift/managed-upgrade-operator/pkg/metrics/mocks"
 	"github.com/openshift/managed-upgrade-operator/pkg/scheduler"
@@ -69,6 +70,7 @@ var _ = Describe("UpgradeConfigController", func() {
 		cfg                        config
 		upgradingReconcileTime     time.Duration
 		testClusterVersion         *configv1.ClusterVersion
+		mockdvobuilder             *dvomocks.MockDvoClientBuilder
 	)
 
 	BeforeEach(func() {
@@ -90,6 +92,7 @@ var _ = Describe("UpgradeConfigController", func() {
 		mockEMClient = emMocks.NewMockEventManager(mockCtrl)
 		mockUCMgrBuilder = ucMgrMocks.NewMockUpgradeConfigManagerBuilder(mockCtrl)
 		mockUCMgr = ucMgrMocks.NewMockUpgradeConfigManager(mockCtrl)
+		mockdvobuilder = dvomocks.NewMockDvoClientBuilder(mockCtrl)
 		upgradeConfigName = types.NamespacedName{
 			Name:      "managed-upgrade-config",
 			Namespace: "test-namespace",
@@ -135,6 +138,7 @@ var _ = Describe("UpgradeConfigController", func() {
 			mockCVClientBuilder,
 			mockEMBuilder,
 			mockUCMgrBuilder,
+			mockdvobuilder,
 		}
 	})
 

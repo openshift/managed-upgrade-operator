@@ -23,8 +23,9 @@ import (
 	"fmt"
 	"os"
 	"runtime"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"time"
+
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -61,6 +62,7 @@ import (
 	"github.com/openshift/managed-upgrade-operator/pkg/collector"
 	"github.com/openshift/managed-upgrade-operator/pkg/configmanager"
 	"github.com/openshift/managed-upgrade-operator/pkg/drain"
+	"github.com/openshift/managed-upgrade-operator/pkg/dvo"
 	"github.com/openshift/managed-upgrade-operator/pkg/eventmanager"
 	"github.com/openshift/managed-upgrade-operator/pkg/k8sutil"
 	"github.com/openshift/managed-upgrade-operator/pkg/machinery"
@@ -202,6 +204,7 @@ func main() {
 		CvClientBuilder:        cv.NewBuilder(),
 		EventManagerBuilder:    eventmanager.NewBuilder(),
 		UcMgrBuilder:           ucm.NewBuilder(),
+		DvoClientBuilder:       dvo.NewBuilder(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "UpgradeConfig")
 		os.Exit(1)

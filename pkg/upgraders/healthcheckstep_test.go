@@ -11,6 +11,7 @@ import (
 	"github.com/go-logr/logr"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -19,6 +20,7 @@ import (
 	"github.com/openshift/managed-upgrade-operator/pkg/clusterversion"
 	cvMocks "github.com/openshift/managed-upgrade-operator/pkg/clusterversion/mocks"
 	mockDrain "github.com/openshift/managed-upgrade-operator/pkg/drain/mocks"
+	dvoMocks "github.com/openshift/managed-upgrade-operator/pkg/dvo/mocks"
 	emMocks "github.com/openshift/managed-upgrade-operator/pkg/eventmanager/mocks"
 	"github.com/openshift/managed-upgrade-operator/pkg/machinery"
 	mockMachinery "github.com/openshift/managed-upgrade-operator/pkg/machinery/mocks"
@@ -43,6 +45,8 @@ var _ = Describe("HealthCheck Step", func() {
 		mockCVClient             *cvMocks.MockClusterVersion
 		mockDrainStrategyBuilder *mockDrain.MockNodeDrainStrategyBuilder
 		mockEMClient             *emMocks.MockEventManager
+		mockdvoclient            *dvoMocks.MockDvoClient
+		mockdvobuilderclient     *dvoMocks.MockDvoClientBuilder
 
 		// upgradeconfig to be used during tests
 		upgradeConfigName types.NamespacedName
@@ -68,6 +72,8 @@ var _ = Describe("HealthCheck Step", func() {
 		mockCVClient = cvMocks.NewMockClusterVersion(mockCtrl)
 		mockDrainStrategyBuilder = mockDrain.NewMockNodeDrainStrategyBuilder(mockCtrl)
 		mockEMClient = emMocks.NewMockEventManager(mockCtrl)
+		mockdvoclient = dvoMocks.NewMockDvoClient(mockCtrl)
+		mockdvobuilderclient = dvoMocks.NewMockDvoClientBuilder(mockCtrl)
 		logger = logf.Log.WithName("cluster upgrader test logger")
 		config = buildTestUpgraderConfig(90, 30, 8, 120, 30)
 		config.HealthCheck = healthCheck{
@@ -85,6 +91,7 @@ var _ = Describe("HealthCheck Step", func() {
 			maintenance:          mockMaintClient,
 			machinery:            mockMachineryClient,
 			upgradeConfig:        upgradeConfig,
+			dvo:                  mockdvobuilderclient,
 		}
 	})
 
@@ -105,6 +112,7 @@ var _ = Describe("HealthCheck Step", func() {
 		var cordonAddedTime *metav1.Time
 		Context("When no critical alerts are firing", func() {
 			var alertsResponse *metrics.AlertResponse
+			pdb := &policyv1.PodDisruptionBudgetList{}
 
 			JustBeforeEach(func() {
 				alertsResponse = &metrics.AlertResponse{}
@@ -131,6 +139,10 @@ var _ = Describe("HealthCheck Step", func() {
 					mockMachineryClient.EXPECT().HasPidPressure(gomock.Any()).Return(false),
 					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterNodeQueryFailed),
 					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterNodesTaintedUnschedulable),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *pdb),
+					mockdvobuilderclient.EXPECT().New(gomock.Any()).Return(mockdvoclient, nil),
+					mockdvoclient.EXPECT().GetMetrics().Return([]byte{}, nil),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterInvalidPDB),
 				)
 				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
 				Expect(err).NotTo(HaveOccurred())
@@ -162,6 +174,10 @@ var _ = Describe("HealthCheck Step", func() {
 					mockMachineryClient.EXPECT().HasPidPressure(gomock.Any()).Return(false),
 					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterNodeQueryFailed),
 					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterNodesTaintedUnschedulable),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *pdb),
+					mockdvobuilderclient.EXPECT().New(gomock.Any()).Return(mockdvoclient, nil),
+					mockdvoclient.EXPECT().GetMetrics().Return([]byte{}, nil),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterInvalidPDB),
 				)
 				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
 				Expect(err).To(Not(HaveOccurred()))
@@ -192,6 +208,10 @@ var _ = Describe("HealthCheck Step", func() {
 					mockMachineryClient.EXPECT().HasPidPressure(gomock.Any()).Return(false),
 					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterNodeQueryFailed),
 					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterNodesTaintedUnschedulable),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *pdb),
+					mockdvobuilderclient.EXPECT().New(gomock.Any()).Return(mockdvoclient, nil),
+					mockdvoclient.EXPECT().GetMetrics().Return([]byte{}, nil),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterInvalidPDB),
 				)
 				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
 				Expect(err).To(Not(HaveOccurred()))
@@ -213,6 +233,7 @@ var _ = Describe("HealthCheck Step", func() {
 		})
 		Context("When no operators are degraded", func() {
 			var alertsResponse *metrics.AlertResponse
+			pdb := &policyv1.PodDisruptionBudgetList{}
 
 			JustBeforeEach(func() {
 				alertsResponse = &metrics.AlertResponse{}
@@ -240,6 +261,10 @@ var _ = Describe("HealthCheck Step", func() {
 					mockMachineryClient.EXPECT().HasPidPressure(gomock.Any()).Return(false),
 					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterNodeQueryFailed),
 					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterNodesTaintedUnschedulable),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *pdb),
+					mockdvobuilderclient.EXPECT().New(gomock.Any()).Return(mockdvoclient, nil),
+					mockdvoclient.EXPECT().GetMetrics().Return([]byte{}, nil),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterInvalidPDB),
 				)
 				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
 				Expect(err).NotTo(HaveOccurred())
@@ -261,6 +286,7 @@ var _ = Describe("HealthCheck Step", func() {
 		})
 		Context("When no node is manually cordoned", func() {
 			var alertsResponse *metrics.AlertResponse
+			pdb := &policyv1.PodDisruptionBudgetList{}
 
 			JustBeforeEach(func() {
 				alertsResponse = &metrics.AlertResponse{}
@@ -287,6 +313,10 @@ var _ = Describe("HealthCheck Step", func() {
 					mockMachineryClient.EXPECT().HasPidPressure(gomock.Any()).Return(false),
 					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterNodeQueryFailed),
 					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterNodesTaintedUnschedulable),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *pdb),
+					mockdvobuilderclient.EXPECT().New(gomock.Any()).Return(mockdvoclient, nil),
+					mockdvoclient.EXPECT().GetMetrics().Return([]byte{}, nil),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterInvalidPDB),
 				)
 				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
 				Expect(err).NotTo(HaveOccurred())
@@ -308,9 +338,11 @@ var _ = Describe("HealthCheck Step", func() {
 		})
 		Context("When node is cordoned by upgrade", func() {
 			var alertsResponse *metrics.AlertResponse
+			pdb := &policyv1.PodDisruptionBudgetList{}
 
 			JustBeforeEach(func() {
 				alertsResponse = &metrics.AlertResponse{}
+				pdb = &policyv1.PodDisruptionBudgetList{}
 			})
 
 			It("will satisfy a pre-Upgrade health check", func() {
@@ -334,6 +366,10 @@ var _ = Describe("HealthCheck Step", func() {
 					mockMachineryClient.EXPECT().HasPidPressure(gomock.Any()).Return(false),
 					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterNodeQueryFailed),
 					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterNodesTaintedUnschedulable),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *pdb),
+					mockdvobuilderclient.EXPECT().New(gomock.Any()).Return(mockdvoclient, nil),
+					mockdvoclient.EXPECT().GetMetrics().Return([]byte{}, nil),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterInvalidPDB),
 				)
 				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
 				Expect(err).NotTo(HaveOccurred())
@@ -356,6 +392,16 @@ var _ = Describe("HealthCheck Step", func() {
 	})
 
 	Context("When the cluster is unhealthy", func() {
+		pdb := &policyv1.PodDisruptionBudgetList{
+			TypeMeta: metav1.TypeMeta{},
+			ListMeta: metav1.ListMeta{},
+			Items: []policyv1.PodDisruptionBudget{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "testPDB"},
+					Spec:       policyv1.PodDisruptionBudgetSpec{},
+				},
+			},
+		}
 		nodes := &corev1.NodeList{
 			TypeMeta: metav1.TypeMeta{},
 			ListMeta: metav1.ListMeta{},
@@ -398,33 +444,10 @@ var _ = Describe("HealthCheck Step", func() {
 					mockMachineryClient.EXPECT().HasPidPressure(gomock.Any()).Return(false),
 					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterNodeQueryFailed),
 					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterNodesTaintedUnschedulable),
-					mockEMClient.EXPECT().NotifyResult(gomock.Any(), gomock.Any()).Return(nil),
-				)
-				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
-				Expect(err).To(BeNil())
-				Expect(result).To(BeFalse())
-			})
-			It("will not satisfy a pre-Upgrade health check in the upgrade phase", func() {
-				upgradeConfig = testStructs.NewUpgradeConfigBuilder().WithNamespacedName(upgradeConfigName).WithPhase(upgradev1alpha1.UpgradePhaseUpgrading).GetUpgradeConfig()
-				gomock.InOrder(
-					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
-					mockMetricsClient.EXPECT().Query(gomock.Any()).Return(alertsResponse, nil),
-					mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, gomock.Any()),
-					mockCVClient.EXPECT().HasDegradedOperators().Return(&clusterversion.HasDegradedOperatorsResult{Degraded: []string{}}, nil),
-					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterOperatorsStatusFailed),
-					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterOperatorsDegraded),
-					mockScalerClient.EXPECT().CanScale(gomock.Any(), logger).Return(true, nil),
-					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.DefaultWorkerMachinepoolNotFound),
-					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *nodes),
-					mockMachineryClient.EXPECT().IsNodeCordoned(gomock.Any()).Return(&machinery.IsCordonedResult{IsCordoned: false, AddedAt: cordonAddedTime}),
-					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterNodeQueryFailed),
-					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterNodesManuallyCordoned),
-					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *nodes),
-					mockMachineryClient.EXPECT().HasMemoryPressure(gomock.Any()).Return(false),
-					mockMachineryClient.EXPECT().HasDiskPressure(gomock.Any()).Return(false),
-					mockMachineryClient.EXPECT().HasPidPressure(gomock.Any()).Return(false),
-					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterNodeQueryFailed),
-					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterNodesTaintedUnschedulable),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *pdb),
+					mockdvobuilderclient.EXPECT().New(gomock.Any()).Return(mockdvoclient, nil),
+					mockdvoclient.EXPECT().GetMetrics().Return([]byte{}, nil),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterInvalidPDB),
 					mockEMClient.EXPECT().NotifyResult(gomock.Any(), gomock.Any()).Return(nil),
 				)
 				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
@@ -444,6 +467,7 @@ var _ = Describe("HealthCheck Step", func() {
 
 		Context("When operators are degraded", func() {
 			var alertsResponse *metrics.AlertResponse
+			pdb := &policyv1.PodDisruptionBudgetList{}
 
 			JustBeforeEach(func() {
 				alertsResponse = &metrics.AlertResponse{}
@@ -468,6 +492,10 @@ var _ = Describe("HealthCheck Step", func() {
 					mockMachineryClient.EXPECT().HasPidPressure(gomock.Any()).Return(false),
 					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterNodeQueryFailed),
 					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterNodesTaintedUnschedulable),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *pdb),
+					mockdvobuilderclient.EXPECT().New(gomock.Any()).Return(mockdvoclient, nil),
+					mockdvoclient.EXPECT().GetMetrics().Return([]byte{}, nil),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterInvalidPDB),
 					mockEMClient.EXPECT().NotifyResult(gomock.Any(), gomock.Any()).Return(nil),
 				)
 				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
@@ -499,6 +527,7 @@ var _ = Describe("HealthCheck Step", func() {
 					},
 				},
 			}
+			pdb := &policyv1.PodDisruptionBudgetList{}
 			var cordonAddedTime *metav1.Time
 			JustBeforeEach(func() {
 				alertsResponse = &metrics.AlertResponse{}
@@ -524,6 +553,10 @@ var _ = Describe("HealthCheck Step", func() {
 					mockMachineryClient.EXPECT().HasPidPressure(gomock.Any()).Return(false),
 					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterNodeQueryFailed),
 					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterNodesTaintedUnschedulable),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *pdb),
+					mockdvobuilderclient.EXPECT().New(gomock.Any()).Return(mockdvoclient, nil),
+					mockdvoclient.EXPECT().GetMetrics().Return([]byte{}, nil),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterInvalidPDB),
 					mockEMClient.EXPECT().NotifyResult(gomock.Any(), gomock.Any()).Return(nil),
 				)
 				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
@@ -535,6 +568,7 @@ var _ = Describe("HealthCheck Step", func() {
 		Context("When node unschedulable taint check failed", func() {
 			var alertsResponse *metrics.AlertResponse
 			var addedTime *metav1.Time
+			pdb := &policyv1.PodDisruptionBudgetList{}
 			JustBeforeEach(func() {
 				alertsResponse = &metrics.AlertResponse{}
 			})
@@ -575,6 +609,10 @@ var _ = Describe("HealthCheck Step", func() {
 					mockMachineryClient.EXPECT().HasDiskPressure(gomock.Any()).Return(false),
 					mockMachineryClient.EXPECT().HasPidPressure(gomock.Any()).Return(false),
 					mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, gomock.Any()),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *pdb),
+					mockdvobuilderclient.EXPECT().New(gomock.Any()).Return(mockdvoclient, nil),
+					mockdvoclient.EXPECT().GetMetrics().Return([]byte{}, nil),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterInvalidPDB),
 					mockEMClient.EXPECT().NotifyResult(gomock.Any(), gomock.Any()).Return(nil),
 				)
 				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
@@ -619,6 +657,10 @@ var _ = Describe("HealthCheck Step", func() {
 					mockMachineryClient.EXPECT().HasDiskPressure(gomock.Any()).Return(true),
 					mockMachineryClient.EXPECT().HasPidPressure(gomock.Any()).Return(false),
 					mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, gomock.Any()),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *pdb),
+					mockdvobuilderclient.EXPECT().New(gomock.Any()).Return(mockdvoclient, nil),
+					mockdvoclient.EXPECT().GetMetrics().Return([]byte{}, nil),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterInvalidPDB),
 					mockEMClient.EXPECT().NotifyResult(gomock.Any(), gomock.Any()).Return(nil),
 				)
 				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
@@ -663,6 +705,10 @@ var _ = Describe("HealthCheck Step", func() {
 					mockMachineryClient.EXPECT().HasDiskPressure(gomock.Any()).Return(false),
 					mockMachineryClient.EXPECT().HasPidPressure(gomock.Any()).Return(true),
 					mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, gomock.Any()),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *pdb),
+					mockdvobuilderclient.EXPECT().New(gomock.Any()).Return(mockdvoclient, nil),
+					mockdvoclient.EXPECT().GetMetrics().Return([]byte{}, nil),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterInvalidPDB),
 					mockEMClient.EXPECT().NotifyResult(gomock.Any(), gomock.Any()).Return(nil),
 				)
 				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
@@ -712,6 +758,10 @@ var _ = Describe("HealthCheck Step", func() {
 					mockMachineryClient.EXPECT().HasDiskPressure(gomock.Any()).Return(false),
 					mockMachineryClient.EXPECT().HasPidPressure(gomock.Any()).Return(true),
 					mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, gomock.Any()),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *pdb),
+					mockdvobuilderclient.EXPECT().New(gomock.Any()).Return(mockdvoclient, nil),
+					mockdvoclient.EXPECT().GetMetrics().Return([]byte{}, nil),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterInvalidPDB),
 					mockEMClient.EXPECT().NotifyResult(gomock.Any(), gomock.Any()).Return(nil),
 				)
 				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
@@ -777,6 +827,10 @@ var _ = Describe("HealthCheck Step", func() {
 					mockMachineryClient.EXPECT().HasDiskPressure(gomock.Any()).Return(true),
 					mockMachineryClient.EXPECT().HasPidPressure(gomock.Any()).Return(true),
 					mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, gomock.Any()),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *pdb),
+					mockdvobuilderclient.EXPECT().New(gomock.Any()).Return(mockdvoclient, nil),
+					mockdvoclient.EXPECT().GetMetrics().Return([]byte{}, nil),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterInvalidPDB),
 					mockEMClient.EXPECT().NotifyResult(gomock.Any(), gomock.Any()).Return(nil),
 				)
 				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
