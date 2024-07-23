@@ -14,7 +14,7 @@ import (
 )
 
 // NewOCMNotifier returns a ocmNotifier
-func NewOCMNotifier(client client.Client, ocmBaseUrl *url.URL, upgradeConfigManager upgradeconfigmanager.UpgradeConfigManager) (*ocmNotifier, error) {
+func NewOCMNotifier(client client.Client, ocmBaseUrl *url.URL, upgradeConfigManager upgradeconfigmanager.UpgradeConfigManager, isEnabled bool) (*ocmNotifier, error) {
 	var (
 		ocmClient ocm.OcmClient
 		err       error
@@ -33,6 +33,7 @@ func NewOCMNotifier(client client.Client, ocmBaseUrl *url.URL, upgradeConfigMana
 		client:               client,
 		ocmClient:            ocmClient,
 		upgradeConfigManager: upgradeConfigManager,
+		notifications:        isEnabled,
 	}, nil
 }
 
@@ -93,6 +94,8 @@ type ocmNotifier struct {
 	ocmClient ocm.OcmClient
 	// Retrieves the upgrade config from the cluster
 	upgradeConfigManager upgradeconfigmanager.UpgradeConfigManager
+	// If the SendSerivceLogNotifications feature is enabled or not
+	notifications bool
 }
 
 func (s *ocmNotifier) NotifyState(state MuoState, description string) error {
@@ -102,14 +105,17 @@ func (s *ocmNotifier) NotifyState(state MuoState, description string) error {
 		return fmt.Errorf("failed to retrieve internal ocm cluster ID: %v", err)
 	}
 
-	if strings.HasSuffix(toString(state), "SL") {
-		slState, ok := mapSLState(state, serviceLogMap)
-		if !ok {
-			return fmt.Errorf("failed to map the servicelog state for MUO state %s", state)
-		}
-		err = s.ocmClient.PostServiceLog((*ocm.ServiceLog)(&slState), description)
-		if err != nil {
-			return fmt.Errorf("failed to send servicelog notification: %v", err)
+	// Enable sending the servicelog notifications only if the featuregate is enabled
+	if s.notifications {
+		if strings.HasSuffix(toString(state), "SL") {
+			slState, ok := mapSLState(state, serviceLogMap)
+			if !ok {
+				return fmt.Errorf("failed to map the servicelog state for MUO state %s", state)
+			}
+			err = s.ocmClient.PostServiceLog((*ocm.ServiceLog)(&slState), description)
+			if err != nil {
+				return fmt.Errorf("failed to send servicelog notification: %v", err)
+			}
 		}
 	}
 

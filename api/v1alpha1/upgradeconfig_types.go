@@ -26,6 +26,9 @@ const (
 	// beyond two hours from current time. PreHealthCheck during "Upgrading" phase is always run irregard of whether
 	// the featuregate is enabled or not.
 	PreHealthCheckFeatureGate FeatureGate = "PreHealthCheck"
+	// ServiceLogNotificationFeatureGate enables sending the additional servicelog notifications from managed-upgrade-operator during an upgrade.
+	// This feature can be optionally enabled/disabled based on the featureGate configuration in the configmap.
+	ServiceLogNotificationFeatureGate FeatureGate = "ServiceLogNotification"
 )
 
 // UpgradeConfigSpec defines the desired state of UpgradeConfig and upgrade window and freeze window
