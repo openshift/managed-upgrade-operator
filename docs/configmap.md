@@ -183,10 +183,14 @@ Example:
 
 Currently available featureGates:
 - PreHealthCheck
+  - PreHealthCheck featureGate will selectively enable/disable the run of upgrade health check in the "New" upgrade phase if the upgrade is scheduled more than 2 hours. It is disabled by default if the configuration is not part of the configmap.
+- ServiceLogNotification
+  - ServiceLogNotification featureGate will selectively enable/disable the servicelog notifications during an upgrade if the configuration is part of the configmap. It is disabled by default if the configuration is not part of the configmap.
 
 Example:
 ```yaml
     featureGate:
       enabled:
       - PreHealthCheck
+      - ServiceLogNotification
 ```
