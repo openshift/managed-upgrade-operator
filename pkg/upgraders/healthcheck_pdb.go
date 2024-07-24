@@ -62,17 +62,6 @@ func checkPodDisruptionBudgets(c client.Client, logger logr.Logger) (string, err
 			}
 		}
 
-		for _, pdb := range pdbList.Items {
-			if strings.HasPrefix(pdb.Namespace, "openshift-*") || checkNamespaceExistsInArray(namespaceException, pdb.Namespace) {
-				continue
-			}
-	
-			if pdb.Spec.MaxUnavailable != nil && pdb.Spec.MaxUnavailable.StrVal == "0" {
-				//misconfigured pdb
-				fmt.Printf("PodDisruptionBudget: %s/%s\n", pdb.Namespace, pdb.Name)
-				return metrics.ClusterInvalidPDBConf, fmt.Errorf("found a PodDisruptionBudget with MaxUnavailable set to 0")
-			}
-		}
 	}
 
 	return "", nil
