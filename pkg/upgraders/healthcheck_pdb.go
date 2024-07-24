@@ -10,6 +10,7 @@ import (
 	"github.com/openshift/managed-upgrade-operator/pkg/dvo"
 	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
 	policyv1 "k8s.io/api/policy/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -44,11 +45,31 @@ func checkPodDisruptionBudgets(c client.Client, logger logr.Logger) (string, err
 		logger.Info("unable to list PodDisruptionBudgets/v1")
 		return metrics.PDBQueryFailed, err
 	}
-
+	var value string
 	for _, pdb := range pdbList.Items {
 		if !strings.HasPrefix(pdb.Namespace, "openshift-*") || checkNamespaceExistsInArray(namespaceException, pdb.Namespace) {
-			if pdb.Spec.MaxUnavailable != nil && pdb.Spec.MaxUnavailable.IntVal == 0 {
+			if pdb.Spec.MaxUnavailable != nil {
+				if pdb.Spec.MaxUnavailable.Type == intstr.Int { //Type is a iota variable
+					value = fmt.Sprintf("%d", pdb.Spec.MaxUnavailable.IntVal)
+				} else {
+					value = pdb.Spec.MaxUnavailable.StrVal
+				}
+			}
+			if pdb.Spec.MaxUnavailable != nil && value == "0" {
 				//misconfigured pdb
+				fmt.Printf("PodDisruptionBudget: %s/%s\n", pdb.Namespace, pdb.Name)
+				return metrics.ClusterInvalidPDBConf, fmt.Errorf("found a PodDisruptionBudget with MaxUnavailable set to 0")
+			}
+		}
+
+		for _, pdb := range pdbList.Items {
+			if strings.HasPrefix(pdb.Namespace, "openshift-*") || checkNamespaceExistsInArray(namespaceException, pdb.Namespace) {
+				continue
+			}
+	
+			if pdb.Spec.MaxUnavailable != nil && pdb.Spec.MaxUnavailable.StrVal == "0" {
+				//misconfigured pdb
+				fmt.Printf("PodDisruptionBudget: %s/%s\n", pdb.Namespace, pdb.Name)
 				return metrics.ClusterInvalidPDBConf, fmt.Errorf("found a PodDisruptionBudget with MaxUnavailable set to 0")
 			}
 		}
@@ -57,7 +78,7 @@ func checkPodDisruptionBudgets(c client.Client, logger logr.Logger) (string, err
 	return "", nil
 }
 
-func checkNamespaceExistsInArray(namespaceException []string, s string) bool{
+func checkNamespaceExistsInArray(namespaceException []string, s string) bool {
 	for _, namespace := range namespaceException {
 		if namespace == s {
 			return true
