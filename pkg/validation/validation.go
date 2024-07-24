@@ -14,6 +14,7 @@ import (
 
 	"github.com/openshift/cluster-version-operator/pkg/cincinnati"
 	"github.com/openshift/managed-upgrade-operator/pkg/configmanager"
+	"github.com/openshift/managed-upgrade-operator/pkg/notifier"
 
 	"github.com/blang/semver/v4"
 	"github.com/go-logr/logr"
@@ -34,6 +35,11 @@ const (
 // NewBuilder returns a validationBuilder object that implements the ValidationBuilder interface.
 func NewBuilder() ValidationBuilder {
 	return &validationBuilder{}
+}
+
+// Send notification to ocm
+type edgeRemoved struct {
+	notifier notifier.Notifier
 }
 
 // Validator knows how to validate UpgradeConfig CRs.
@@ -454,7 +460,14 @@ func fetchCVOUpdates(cV *configv1.ClusterVersion, uc *upgradev1alpha1.UpgradeCon
 		return nil, err
 	}
 
-	cvVersion, _ := cv.GetCurrentVersion(cV)
+	// Validate if edge is removed & send an notification to ocm
+	cvVersion, err := cv.GetCurrentVersion(cV)
+	if err != nil {
+		eR := &edgeRemoved{}
+		msg := "Edge has been removed"
+		eR.notifier.NotifyState(notifier.MuoStateCancelled, msg)
+
+	}
 	parsedCvVersion, _ := semver.Parse(cvVersion)
 
 	transport := &http.Transport{}
