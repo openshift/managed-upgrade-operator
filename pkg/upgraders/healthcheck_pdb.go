@@ -45,21 +45,13 @@ func checkPodDisruptionBudgets(c client.Client, logger logr.Logger) (string, err
 		logger.Info("unable to list PodDisruptionBudgets/v1")
 		return metrics.PDBQueryFailed, err
 	}
-	var value string
 	for _, pdb := range pdbList.Items {
 		if !strings.HasPrefix(pdb.Namespace, "openshift-*") || checkNamespaceExistsInArray(namespaceException, pdb.Namespace) {
-			if pdb.Spec.MaxUnavailable != nil {
-				if pdb.Spec.MaxUnavailable.Type == intstr.Int { //Type is a iota variable
-					value = fmt.Sprintf("%d", pdb.Spec.MaxUnavailable.IntVal)
-				} else {
-					value = pdb.Spec.MaxUnavailable.StrVal
-				}
-			}
-			if pdb.Spec.MaxUnavailable != nil && value == "0" {
-				//misconfigured pdb
+			if pdb.Spec.MaxUnavailable != nil && ((pdb.Spec.MaxUnavailable.Type == intstr.Int) && (pdb.Spec.MaxUnavailable.IntVal == 0)) {
 				fmt.Printf("PodDisruptionBudget: %s/%s\n", pdb.Namespace, pdb.Name)
 				return metrics.ClusterInvalidPDBConf, fmt.Errorf("found a PodDisruptionBudget with MaxUnavailable set to 0")
 			}
+
 		}
 
 	}
@@ -85,7 +77,7 @@ func checkDvoMetrics(c client.Client, dvo dvo.DvoClientBuilder, logger logr.Logg
 
 	// Get the PDB metrics
 	dvoMetricsResult, err := client.GetMetrics()
-	logger.Info("Metrics from DVO... %s", len(dvoMetricsResult))
+	logger.Info(fmt.Sprintf("Metrics from DVO... %d", len(dvoMetricsResult)))
 	if err != nil {
 		logger.Info("Error getting metrics")
 		return metrics.DvoMetricsQueryFailed, err
