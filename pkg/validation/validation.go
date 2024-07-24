@@ -464,10 +464,11 @@ func fetchCVOUpdates(cV *configv1.ClusterVersion, uc *upgradev1alpha1.UpgradeCon
 	cvVersion, err := cv.GetCurrentVersion(cV)
 	if err != nil {
 		eR := &edgeRemoved{}
-		msg := "Edge has been removed"
+		msg := "Edge is not present"
 		eR.notifier.NotifyState(notifier.MuoStateCancelled, msg)
 
 	}
+
 	parsedCvVersion, _ := semver.Parse(cvVersion)
 
 	transport := &http.Transport{}
