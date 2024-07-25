@@ -29,20 +29,21 @@ type NotifierBuilder interface {
 
 // Represents valid notify states that can be reported
 const (
-	MuoStatePending                       MuoState = "StatePending"
-	MuoStateStarted                       MuoState = "StateStarted"
-	MuoStateCompleted                     MuoState = "StateCompleted"
-	MuoStateDelayed                       MuoState = "StateDelayed"
-	MuoStateFailed                        MuoState = "StateFailed"
-	MuoStateCancelled                     MuoState = "StateCancelled"
-	MuoStateScheduled                     MuoState = "StateScheduled"
-	MuoStateScaleSkipped                  MuoState = "StateScaleSkipped"
-	MuoStateSkipped                       MuoState = "StateSkipped"
-	MuoStateHealthCheckSL                 MuoState = "StateHealthCheckSL"
-	MuoStatePreHealthCheckSL              MuoState = "StatePreHealthCheckSL"
-	MuoStateControlPlaneUpgradeStartedSL  MuoState = "StateControlPlaneStartedSL"
-	MuoStateControlPlaneUpgradeFinishedSL MuoState = "StateControlPlaneFinishedSL"
-	MuoStateWorkerPlaneUpgradeFinishedSL  MuoState = "StateWorkerPlaneFinishedSL"
+	MuoStatePending                          MuoState = "StatePending"
+	MuoStateStarted                          MuoState = "StateStarted"
+	MuoStateCompleted                        MuoState = "StateCompleted"
+	MuoStateDelayed                          MuoState = "StateDelayed"
+	MuoStateFailed                           MuoState = "StateFailed"
+	MuoStateCancelled                        MuoState = "StateCancelled"
+	MuoStateScheduled                        MuoState = "StateScheduled"
+	MuoStateScaleSkipped                     MuoState = "StateScaleSkipped"
+	MuoStateSkipped                          MuoState = "StateSkipped"
+	MuoStateHealthCheckSL                    MuoState = "StateHealthCheckSL"
+	MuoStatePreHealthCheckSL                 MuoState = "StatePreHealthCheckSL"
+	MuoStateControlPlaneUpgradeStartedSL     MuoState = "StateControlPlaneStartedSL"
+	MuoStateControlPlaneUpgradeFinishedSL    MuoState = "StateControlPlaneFinishedSL"
+	MuoStateWorkerPlaneUpgradeFinishedSL     MuoState = "StateWorkerPlaneFinishedSL"
+	MuoStateDelayedWorkerMachinepoolNotFound MuoState = "StateDelayedWorkerMachinepoolNotFoundSL"
 )
 
 // MuoState is a type

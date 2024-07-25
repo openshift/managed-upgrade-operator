@@ -63,9 +63,12 @@ func (c *clusterUpgrader) PreUpgradeHealthCheck(ctx context.Context, logger logr
 		if c.upgradeConfig.Spec.CapacityReservation {
 			ok, err := c.scaler.CanScale(c.client, logger)
 			if !ok || err != nil {
-				capacityReservationFailed = true
+				// HealthCheck should not fail in this senario. Have to inform the customer about the upgrade delay.
 				c.metrics.UpdateMetricHealthcheckFailed(c.upgradeConfig.Name, metrics.DefaultWorkerMachinepoolNotFound, version, state)
-				healthCheckFailed = append(healthCheckFailed, "CapacityReservationHealthcheckFailed")
+				err = c.notifier.Notify(notifier.MuoStateDelayedWorkerMachinepoolNotFound)
+				if err != nil {
+					return false, err
+				}
 			} else {
 				logger.Info("Prehealth check for CapacityReservation passed")
 				c.metrics.UpdateMetricHealthcheckSucceeded(c.upgradeConfig.Name, metrics.DefaultWorkerMachinepoolNotFound, version, state)

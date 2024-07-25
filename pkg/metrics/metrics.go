@@ -292,7 +292,6 @@ func (c *Counter) UpdateMetricValidationSucceeded(upgradeConfigName string) {
 		float64(0))
 }
 
-
 func (c *Counter) UpdateMetricHealthcheckSucceeded(upgradeConfigName string, reason string, version string, state string) {
 	metricHealthcheckFailed.With(prometheus.Labels{
 		nameLabel:    upgradeConfigName,
