@@ -28,7 +28,7 @@ var _ = Describe("Config", func() {
 		mockCtrl.Finish()
 	})
 
-	Context("Get OCM Base URL", func() {
+	Context("Test OCM Config functions", func() {
 		It("Test isvalid function -  success scenario", func() {
 			config.ConfigManager.OcmBaseUrl = baseUrl
 			err := config.IsValid()
