@@ -50,7 +50,8 @@ func checkPodDisruptionBudgets(c client.Client, logger logr.Logger) (string, err
 			if pdb.Spec.MaxUnavailable != nil && ((pdb.Spec.MaxUnavailable.Type == intstr.Int) && (pdb.Spec.MaxUnavailable.IntVal == 0)) {
 				logger.Info(fmt.Sprintf("PodDisruptionBudget: %s/%s\n", pdb.Namespace, pdb.Name))
 				return metrics.ClusterInvalidPDBConf, fmt.Errorf("found a PodDisruptionBudget with MaxUnavailable set to 0")
-			} else if pdb.Spec.MinAvailable != nil && ((pdb.Spec.MinAvailable.Type == intstr.String) && (pdb.Spec.MinAvailable.StrVal == "100%")) {
+			}
+			if pdb.Spec.MinAvailable != nil && ((pdb.Spec.MinAvailable.Type == intstr.String) && (pdb.Spec.MinAvailable.StrVal == "100%")) {
 				logger.Info(fmt.Sprintf("PodDisruptionBudget: %s/%s\n", pdb.Namespace, pdb.Name))
 				return metrics.ClusterInvalidPDBConf, fmt.Errorf("found a PodDisruptionBudget with MinAvailable set to 100 percent")
 			}
