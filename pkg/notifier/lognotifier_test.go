@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	value       = "StateCompleted"
+	value       = MuoStateStarted
 	description = "Testing"
 )
 
