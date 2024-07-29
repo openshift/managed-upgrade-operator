@@ -27,7 +27,6 @@ var _ = Describe("logNotifier", func() {
 	Context("LogNotifier", func() {
 		// Test NewLogNotifier returns a new logNotifier
 		It("NewLogNotifier return struct", func() {
-			//lNotify = logNotifier{}
 			logNotifier, err := NewLogNotifier()
 			Expect(err).To(BeNil())
 			Expect(logNotifier).To(Equal(&lNotify))
