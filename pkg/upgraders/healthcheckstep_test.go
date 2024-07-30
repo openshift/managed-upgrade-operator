@@ -100,7 +100,143 @@ var _ = Describe("HealthCheck Step", func() {
 		mockCtrl.Finish()
 	})
 
-	Context("When the cluster healthy", func() {
+	Context("When the cluster is healthy and featuregate is disabled", func() {
+		Context("When no critical alerts are firing", func() {
+			var alertsResponse *metrics.AlertResponse
+
+			JustBeforeEach(func() {
+				config.FeatureGate = featureGate{}
+				alertsResponse = &metrics.AlertResponse{}
+			})
+			It("will satisfy a pre-upgrade health check", func() {
+				gomock.InOrder(
+					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
+					mockMetricsClient.EXPECT().Query(gomock.Any()).Return(alertsResponse, nil),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.MetricsQueryFailed),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.CriticalAlertsFiring),
+					mockCVClient.EXPECT().HasDegradedOperators().Return(&clusterversion.HasDegradedOperatorsResult{Degraded: []string{}}, nil),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterOperatorsStatusFailed),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterOperatorsDegraded),
+				)
+				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(BeTrue())
+			})
+			It("will have ignored some critical alerts", func() {
+				gomock.InOrder(
+					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
+					mockMetricsClient.EXPECT().Query(gomock.Any()).DoAndReturn(
+						func(query string) (*metrics.AlertResponse, error) {
+							Expect(strings.Contains(query, `alertname!="`+config.HealthCheck.IgnoredCriticals[0]+`"`)).To(BeTrue())
+							Expect(strings.Contains(query, `alertname!="`+config.HealthCheck.IgnoredCriticals[1]+`"`)).To(BeTrue())
+							return &metrics.AlertResponse{}, nil
+						}),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.MetricsQueryFailed),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.CriticalAlertsFiring),
+					mockCVClient.EXPECT().HasDegradedOperators().Return(&clusterversion.HasDegradedOperatorsResult{Degraded: []string{}}, nil),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterOperatorsStatusFailed),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterOperatorsDegraded),
+				)
+				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(result).To(BeTrue())
+			})
+			It("will have ignored alerts in specified namespaces", func() {
+				gomock.InOrder(
+					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
+					mockMetricsClient.EXPECT().Query(gomock.Any()).DoAndReturn(
+						func(query string) (*metrics.AlertResponse, error) {
+							Expect(strings.Contains(query, `namespace!="`+config.HealthCheck.IgnoredNamespaces[0]+`"`)).To(BeTrue())
+							return &metrics.AlertResponse{}, nil
+						}),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.MetricsQueryFailed),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.CriticalAlertsFiring),
+					mockCVClient.EXPECT().HasDegradedOperators().Return(&clusterversion.HasDegradedOperatorsResult{Degraded: []string{}}, nil),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterOperatorsStatusFailed),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterOperatorsDegraded),
+				)
+				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(result).To(BeTrue())
+			})
+		})
+		Context("When no operators are degraded and featuregate is disabled", func() {
+			var alertsResponse *metrics.AlertResponse
+
+			JustBeforeEach(func() {
+				config.FeatureGate = featureGate{}
+				alertsResponse = &metrics.AlertResponse{}
+			})
+			It("will satisfy a pre-Upgrade health check", func() {
+				gomock.InOrder(
+					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
+					mockMetricsClient.EXPECT().Query(gomock.Any()).Return(alertsResponse, nil),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.MetricsQueryFailed),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.CriticalAlertsFiring),
+					mockCVClient.EXPECT().HasDegradedOperators().Return(&clusterversion.HasDegradedOperatorsResult{Degraded: []string{}}, nil),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterOperatorsStatusFailed),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterOperatorsDegraded),
+				)
+				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(BeTrue())
+			})
+
+		})
+	})
+
+	Context("When the cluster is unhealthy and featuregate is disabled", func() {
+		Context("When critical alerts are firing", func() {
+			var alertsResponse *metrics.AlertResponse
+			JustBeforeEach(func() {
+				alertsResponse = &metrics.AlertResponse{
+					Data: metrics.AlertData{
+						Result: []metrics.AlertResult{
+							{Metric: make(map[string]string), Value: nil},
+							{Metric: make(map[string]string), Value: nil},
+						},
+					},
+				}
+				config.FeatureGate = featureGate{}
+			})
+			It("will not satisfy a pre-Upgrade health check", func() {
+				gomock.InOrder(
+					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
+					mockMetricsClient.EXPECT().Query(gomock.Any()).Return(alertsResponse, nil),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, gomock.Any()),
+				)
+				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
+				Expect(err).ToNot(BeNil())
+				Expect(result).To(BeFalse())
+
+			})
+		})
+
+		Context("When operators are degraded", func() {
+			var alertsResponse *metrics.AlertResponse
+
+			JustBeforeEach(func() {
+				alertsResponse = &metrics.AlertResponse{}
+				config.FeatureGate = featureGate{}
+			})
+			It("will not satisfy a pre-Upgrade health check", func() {
+				gomock.InOrder(
+					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
+					mockMetricsClient.EXPECT().Query(gomock.Any()).Return(alertsResponse, nil),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.MetricsQueryFailed),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.CriticalAlertsFiring),
+					mockCVClient.EXPECT().HasDegradedOperators().Return(&clusterversion.HasDegradedOperatorsResult{Degraded: []string{"ClusterOperator"}}, nil),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, gomock.Any()),
+				)
+				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
+				Expect(err).ToNot(BeNil())
+				Expect(result).To(BeFalse())
+			})
+		})
+
+	})
+
+	Context("When the cluster healthy and featuregate is enabled", func() {
 		nodes := &corev1.NodeList{
 			TypeMeta: metav1.TypeMeta{},
 			ListMeta: metav1.ListMeta{},

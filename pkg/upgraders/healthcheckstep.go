@@ -23,68 +23,86 @@ func (c *clusterUpgrader) PreUpgradeHealthCheck(ctx context.Context, logger logr
 		return true, nil
 	}
 
-	healthCheckFailed := []string{}
+	// Based on the "PreHealthCheck" featuregate, we invoke the legacy healthchecks for clusteroperator and critical alerts
+	// which will not be tied to the notifications but only log the error and set metric.
+	if !c.config.IsFeatureEnabled(string(upgradev1alpha1.PreHealthCheckFeatureGate)) {
+		ok, err := CriticalAlerts(c.metrics, c.config, c.upgradeConfig, logger)
+		if err != nil || !ok {
+			return false, err
+		}
 
-	ok, err := CriticalAlerts(c.metrics, c.config, c.upgradeConfig, logger)
-	if err != nil || !ok {
-		logger.Info("upgrade may delay due to firing critical alerts")
-		healthCheckFailed = append(healthCheckFailed, "CriticalAlertsHealthcheckFailed")
-	}
-
-	ok, err = ClusterOperators(c.metrics, c.cvClient, c.upgradeConfig, logger)
-	if err != nil || !ok {
-		logger.Info("upgrade may delay due to cluster operators not ready")
-		healthCheckFailed = append(healthCheckFailed, "ClusterOperatorsHealthcheckFailed")
-	}
-
-	if c.upgradeConfig.Spec.CapacityReservation {
-		ok, err := c.scaler.CanScale(c.client, logger)
-		if !ok || err != nil {
-			c.metrics.UpdateMetricHealthcheckFailed(c.upgradeConfig.Name, metrics.DefaultWorkerMachinepoolNotFound)
-			healthCheckFailed = append(healthCheckFailed, "CapacityReservationHealthcheckFailed")
-		} else {
-			c.metrics.UpdateMetricHealthcheckSucceeded(c.upgradeConfig.Name, metrics.DefaultWorkerMachinepoolNotFound)
+		ok, err = ClusterOperators(c.metrics, c.cvClient, c.upgradeConfig, logger)
+		if err != nil || !ok {
+			return false, err
 		}
 	}
 
-	ok, err = ManuallyCordonedNodes(c.metrics, c.machinery, c.client, c.upgradeConfig, logger)
-	if err != nil || !ok {
-		logger.Info(fmt.Sprintf("upgrade may delay due to there are manually cordoned nodes: %s", err))
-		healthCheckFailed = append(healthCheckFailed, "NodeUnschedulableHealthcheckFailed")
-	}
+	// We invoke and handle the additional healthchecks accordingly with notifications enabled (or disabled via it's own featuregate)
+	if len(c.config.FeatureGate.Enabled) > 0 && c.config.IsFeatureEnabled(string(upgradev1alpha1.PreHealthCheckFeatureGate)) {
 
-	ok, err = NodeUnschedulableTaints(c.metrics, c.machinery, c.client, c.upgradeConfig, logger)
-	if err != nil || !ok {
-		logger.Info(fmt.Sprintf("upgrade delayed due to there are unschedulable taints on nodes: %s", err))
-		healthCheckFailed = append(healthCheckFailed, "NodeUnschedulableTaintHealthcheckFailed")
-	}
-	
-	// HealthCheckPDB
-	ok, err = HealthCheckPDB(c.metrics, c.client, c.dvo, c.upgradeConfig, logger)
-	if err != nil || !ok {
-		logger.Info(fmt.Sprintf("upgrade delayed due PDB %s", err))
-		healthCheckFailed = append(healthCheckFailed, "PDBHealthcheckFailed")
-	}
+		healthCheckFailed := []string{}
 
-	if len(healthCheckFailed) > 0 {
-		result := strings.Join(healthCheckFailed, ",")
-		logger.Info(fmt.Sprintf("Upgrade may delay due to following PreHealthCheck failure: %s", result))
-
-		switch history := c.upgradeConfig.Status.History.GetHistory(c.upgradeConfig.Spec.Desired.Version); history.Phase {
-		case upgradev1alpha1.UpgradePhaseNew:
-			err := c.notifier.NotifyResult(notifier.MuoStatePreHealthCheckSL, result)
-			if err != nil {
-				return false, err
-			}
-		case upgradev1alpha1.UpgradePhaseUpgrading:
-			err := c.notifier.NotifyResult(notifier.MuoStateHealthCheckSL, result)
-			if err != nil {
-				return false, err
-			}
-		case " ":
-			logger.Info(fmt.Sprintf("upgradeconfig history doesn't exist for version: %s", c.upgradeConfig.Spec.Desired.Version))
+		ok, err := CriticalAlerts(c.metrics, c.config, c.upgradeConfig, logger)
+		if err != nil || !ok {
+			logger.Info("upgrade may delay due to firing critical alerts")
+			healthCheckFailed = append(healthCheckFailed, "CriticalAlertsHealthcheckFailed")
 		}
-		return false, nil
+
+		ok, err = ClusterOperators(c.metrics, c.cvClient, c.upgradeConfig, logger)
+		if err != nil || !ok {
+			logger.Info("upgrade may delay due to cluster operators not ready")
+			healthCheckFailed = append(healthCheckFailed, "ClusterOperatorsHealthcheckFailed")
+		}
+
+		if c.upgradeConfig.Spec.CapacityReservation {
+			ok, err := c.scaler.CanScale(c.client, logger)
+			if !ok || err != nil {
+				c.metrics.UpdateMetricHealthcheckFailed(c.upgradeConfig.Name, metrics.DefaultWorkerMachinepoolNotFound)
+				healthCheckFailed = append(healthCheckFailed, "CapacityReservationHealthcheckFailed")
+			} else {
+				c.metrics.UpdateMetricHealthcheckSucceeded(c.upgradeConfig.Name, metrics.DefaultWorkerMachinepoolNotFound)
+			}
+		}
+
+		ok, err = ManuallyCordonedNodes(c.metrics, c.machinery, c.client, c.upgradeConfig, logger)
+		if err != nil || !ok {
+			logger.Info(fmt.Sprintf("upgrade may delay due to there are manually cordoned nodes: %s", err))
+			healthCheckFailed = append(healthCheckFailed, "NodeUnschedulableHealthcheckFailed")
+		}
+
+		ok, err = NodeUnschedulableTaints(c.metrics, c.machinery, c.client, c.upgradeConfig, logger)
+		if err != nil || !ok {
+			logger.Info(fmt.Sprintf("upgrade delayed due to there are unschedulable taints on nodes: %s", err))
+			healthCheckFailed = append(healthCheckFailed, "NodeUnschedulableTaintHealthcheckFailed")
+		}
+
+		// HealthCheckPDB
+		ok, err = HealthCheckPDB(c.metrics, c.client, c.dvo, c.upgradeConfig, logger)
+		if err != nil || !ok {
+			logger.Info(fmt.Sprintf("upgrade delayed due PDB %s", err))
+			healthCheckFailed = append(healthCheckFailed, "PDBHealthcheckFailed")
+		}
+
+		if len(healthCheckFailed) > 0 {
+			result := strings.Join(healthCheckFailed, ",")
+			logger.Info(fmt.Sprintf("Upgrade may delay due to following PreHealthCheck failure: %s", result))
+
+			switch history := c.upgradeConfig.Status.History.GetHistory(c.upgradeConfig.Spec.Desired.Version); history.Phase {
+			case upgradev1alpha1.UpgradePhaseNew:
+				err := c.notifier.NotifyResult(notifier.MuoStatePreHealthCheckSL, result)
+				if err != nil {
+					return false, err
+				}
+			case upgradev1alpha1.UpgradePhaseUpgrading:
+				err := c.notifier.NotifyResult(notifier.MuoStateHealthCheckSL, result)
+				if err != nil {
+					return false, err
+				}
+			case " ":
+				logger.Info(fmt.Sprintf("upgradeconfig history doesn't exist for version: %s", c.upgradeConfig.Spec.Desired.Version))
+			}
+			return false, nil
+		}
 	}
 	return true, nil
 }
