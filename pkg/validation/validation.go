@@ -564,7 +564,10 @@ func EdgeValidation(uC *upgradev1alpha1.UpgradeConfig, cV *configv1.ClusterVersi
 	if !i {
 		eR := &edgeRemoved{}
 		msg := "Edge is not present"
-		eR.notifier.NotifyState(notifier.MuoStateCancelled, msg)
+		err = eR.notifier.NotifyState(notifier.MuoStateCancelled, msg)
+		if err != nil {
+			return err
+		}
 		return fmt.Errorf("%v -> %v: Edge is not present", cVer, edgeVersion)
 	}
 	return nil
