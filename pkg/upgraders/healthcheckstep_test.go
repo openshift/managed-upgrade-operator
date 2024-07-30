@@ -14,6 +14,7 @@ import (
 	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/api/v1alpha1"
@@ -398,7 +399,9 @@ var _ = Describe("HealthCheck Step", func() {
 			Items: []policyv1.PodDisruptionBudget{
 				{
 					ObjectMeta: metav1.ObjectMeta{Name: "testPDB"},
-					Spec:       policyv1.PodDisruptionBudgetSpec{},
+					Spec: policyv1.PodDisruptionBudgetSpec{
+						MinAvailable: &intstr.IntOrString{Type: intstr.Int, IntVal: 0},
+					},
 				},
 			},
 		}
