@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"go.uber.org/mock/gomock"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -43,6 +44,7 @@ var _ = Describe("NodeKeeperController", func() {
 		testNodeName                    types.NamespacedName
 		upgradeConfigName               types.NamespacedName
 		config                          nodeKeeperConfig
+		node                            corev1.Node
 	)
 
 	BeforeEach(func() {
@@ -190,6 +192,46 @@ var _ = Describe("NodeKeeperController", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result.Requeue).To(BeFalse())
 				Expect(result.RequeueAfter).To(BeZero())
+			})
+		})
+		Context("Metric reset", func() {
+			var uc upgradev1alpha1.UpgradeConfig
+			BeforeEach(func() {
+				uc = *testStructs.NewUpgradeConfigBuilder().WithNamespacedName(upgradeConfigName).WithPhase(upgradev1alpha1.UpgradePhaseUpgrading).GetUpgradeConfig()
+				config = nodeKeeperConfig{
+					NodeDrain: drain.NodeDrain{
+						DisableDrainStrategies: false,
+						Timeout:                5,
+						ExpectedNodeDrainTime:  8,
+					},
+				}
+				node = corev1.Node{}
+				node.Name = testNodeName.Name
+				node.DeletionTimestamp = &metav1.Time{
+					Time: time.Now(),
+				}
+			})
+			It("should reset NodeDraingFailed metric when node DeletionTimestamp set", func() {
+				gomock.InOrder(
+					mockUpgradeConfigManagerBuilder.EXPECT().NewManager(gomock.Any()).Return(mockUpgradeConfigManager, nil),
+					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
+					mockMachineryClient.EXPECT().IsUpgrading(mockKubeClient, "worker").Return(&machinery.UpgradingResult{IsUpgrading: true}, nil),
+					mockKubeClient.EXPECT().Get(context.TODO(), testNodeName, gomock.Any()).SetArg(2, node),
+					mockMachineryClient.EXPECT().IsNodeCordoned(gomock.Any()).Return(&machinery.IsCordonedResult{IsCordoned: true, AddedAt: &metav1.Time{Time: time.Now().Add(-10 * time.Minute)}}),
+					mockMetricsBuilder.EXPECT().NewClient(gomock.Any()).Return(mockMetricsClient, nil),
+					mockConfigManagerBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockConfigManager),
+					mockConfigManager.EXPECT().Into(gomock.Any()).SetArg(0, config),
+					mockDrainStrategyBuilder.EXPECT().NewNodeDrainStrategy(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(mockDrainStrategy, nil),
+					mockDrainStrategy.EXPECT().Execute(gomock.Any(), gomock.Any()).Return([]*drain.DrainStrategyResult{}, nil),
+					mockDrainStrategy.EXPECT().HasFailed(gomock.Any(), gomock.Any()).Return(true, nil),
+					mockMetricsClient.EXPECT().ResetMetricNodeDrainFailed(gomock.Any()).Times(1),
+					mockMachineryClient.EXPECT().IsNodeUpgrading(gomock.Any()).Times(0),
+					mockMetricsClient.EXPECT().UpdateMetricNodeDrainFailed(gomock.Any()).Times(0),
+				)
+				result, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: testNodeName})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result.Requeue).To(BeFalse())
+				Expect(result.RequeueAfter).To(Not(BeNil()))
 			})
 		})
 	})

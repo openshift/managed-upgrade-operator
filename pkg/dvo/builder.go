@@ -27,7 +27,7 @@ type dvoClientBuilder struct{}
 func (dcb *dvoClientBuilder) New(c client.Client) (DvoClient, error) {
 
 	// Get the service URL for the deployment-validation-operator-metrics service
-	svcURL, err := metrics.NetworkTarget(c, "openshift-deployment-validation-operator", "deployment-validation-operator-metrics", "8383")
+	svcURL, err := metrics.NetworkTarget(c, "openshift-deployment-validation-operator", "deployment-validation-operator-metrics", "http-metrics")
 	if err != nil {
 		return nil, err
 	}

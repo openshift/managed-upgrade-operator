@@ -1,8 +1,9 @@
 package upgraders
 
 import (
-	"github.com/openshift/managed-upgrade-operator/pkg/drain"
 	"testing"
+
+	"github.com/openshift/managed-upgrade-operator/pkg/drain"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -28,6 +29,9 @@ func buildTestUpgraderConfig(controlPlaneTimeout int, scaleTimeOut int, nodeDrai
 		UpgradeWindow: upgradeWindow{
 			TimeOut:      upgradeWindowTimeout,
 			DelayTrigger: delayTimeout,
+		},
+		FeatureGate: featureGate{
+			Enabled: []string{"PreHealthCheck"},
 		},
 	}
 }

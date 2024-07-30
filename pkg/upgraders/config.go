@@ -16,6 +16,22 @@ type upgraderConfig struct {
 	ExtDependencyAvailabilityCheck ac.ExtDependencyAvailabilityCheck `yaml:"extDependencyAvailabilityChecks"`
 	UpgradeWindow                  upgradeWindow                     `yaml:"upgradeWindow"`
 	Environment                    environment                       `yaml:"environment"`
+	FeatureGate                    featureGate                       `yaml:"featureGate"`
+}
+
+type featureGate struct {
+	Enabled []string `yaml:"enabled"`
+}
+
+func (cfg *upgraderConfig) IsFeatureEnabled(feature string) bool {
+	if len(cfg.FeatureGate.Enabled) > 0 {
+		for _, f := range cfg.FeatureGate.Enabled {
+			if f == feature {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 type maintenanceConfig struct {

@@ -9,6 +9,8 @@ import (
 	"github.com/openshift/managed-upgrade-operator/config"
 	"github.com/openshift/managed-upgrade-operator/pkg/configmanager"
 	"github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager"
+
+	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/api/v1alpha1"
 )
 
 // Notifier is an interface that enables implementation of a Notifier
@@ -65,6 +67,13 @@ func (nb *notifierBuilder) New(client client.Client, cfgBuilder configmanager.Co
 		return nil, err
 	}
 
+	featCfg, err := readOcmFeatureGate(client, cfgBuilder)
+	if err != nil {
+		return nil, err
+	}
+
+	notificationsEnabled := isOCMFeatureEnabled(*featCfg, string(upgradev1alpha1.ServiceLogNotificationFeatureGate))
+
 	// Initialise upgrade config manager
 	upgradeConfigManager, err := upgradeConfigManagerBuilder.NewManager(client)
 	if err != nil {
@@ -77,7 +86,7 @@ func (nb *notifierBuilder) New(client client.Client, cfgBuilder configmanager.Co
 		if err != nil {
 			return nil, err
 		}
-		mgr, err := NewOCMNotifier(client, cfg.GetOCMBaseURL(), upgradeConfigManager)
+		mgr, err := NewOCMNotifier(client, cfg.GetOCMBaseURL(), upgradeConfigManager, notificationsEnabled)
 		if err != nil {
 			return nil, err
 		}
@@ -123,4 +132,34 @@ func readOcmNotifierConfig(client client.Client, cfb configmanager.ConfigManager
 		return cfg, err
 	}
 	return cfg, cfg.IsValid()
+}
+
+// Read featuregate configuration
+func readOcmFeatureGate(client client.Client, cfb configmanager.ConfigManagerBuilder) (*OcmFeatureConfig, error) {
+	cfg := &OcmFeatureConfig{}
+
+	target := config.CMTarget{}
+	cmTarget, err := target.NewCMTarget()
+	if err != nil {
+		return cfg, err
+	}
+
+	cfm := cfb.New(client, cmTarget)
+	err = cfm.Into(cfg)
+	if err != nil {
+		return cfg, err
+	}
+	return cfg, cfg.IsValid()
+}
+
+// isOCMFeatureEnabled checks if a feature is enabled as part of OCM Feature config or not
+func isOCMFeatureEnabled(cfg OcmFeatureConfig, feature string) bool {
+	if len(cfg.OCMFeatureGate.Enabled) > 0 {
+		for _, f := range cfg.OCMFeatureGate.Enabled {
+			if f == feature {
+				return true
+			}
+		}
+	}
+	return false
 }
