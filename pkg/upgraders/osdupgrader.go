@@ -60,7 +60,6 @@ func NewOSDUpgrader(c client.Client, cfm configmanager.ConfigManager, mc metrics
 			machinery:            machinery.NewMachinery(),
 			availabilityCheckers: acs,
 			dvo:                  dvo.NewBuilder(),
-			
 		},
 	}
 
