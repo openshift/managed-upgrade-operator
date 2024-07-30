@@ -541,7 +541,7 @@ func EdgeValidation(uC *upgradev1alpha1.UpgradeConfig, cV *configv1.ClusterVersi
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Errorf("Unable to get response")
+		e
 	}
 	defer resp.Body.Close()
 
@@ -551,17 +551,16 @@ func EdgeValidation(uC *upgradev1alpha1.UpgradeConfig, cV *configv1.ClusterVersi
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("Something gone wrong, please retry")
+		return err
 	}
 
 	test := edgeValidate{}
 	err = json.Unmarshal(body, &test)
 	if err != nil {
-		return fmt.Errorf("Unable to unmarshal the json response.")
+		return err
 	}
 
 	i := slices.Contains(test.AvaiableUpgrade, edgeVersion)
-
 	if !i {
 		eR := &edgeRemoved{}
 		msg := "Edge is not present"
