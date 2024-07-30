@@ -546,7 +546,7 @@ func EdgeValidation(uC *upgradev1alpha1.UpgradeConfig, cV *configv1.ClusterVersi
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("return code is not 200")
+		return err
 	}
 
 	body, err := io.ReadAll(resp.Body)
