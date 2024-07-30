@@ -2,6 +2,7 @@
 package validation
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -10,11 +11,13 @@ import (
 	"net/http"
 	"net/url"
 	"runtime"
+	"slices"
 	"time"
 
 	"github.com/openshift/cluster-version-operator/pkg/cincinnati"
 	"github.com/openshift/managed-upgrade-operator/pkg/configmanager"
 	"github.com/openshift/managed-upgrade-operator/pkg/notifier"
+	"github.com/openshift/managed-upgrade-operator/util"
 
 	"github.com/blang/semver/v4"
 	"github.com/go-logr/logr"
@@ -30,16 +33,12 @@ import (
 
 const (
 	defaultUpstreamServer = "https://api.openshift.com/api/upgrades_info/v1/graph"
+	edgeUrl               = "https://api.openshift.com/api/clusters_mgmt/v1/versions/openshift-v"
 )
 
 // NewBuilder returns a validationBuilder object that implements the ValidationBuilder interface.
 func NewBuilder() ValidationBuilder {
 	return &validationBuilder{}
-}
-
-// Send notification to ocm
-type edgeRemoved struct {
-	notifier notifier.Notifier
 }
 
 // Validator knows how to validate UpgradeConfig CRs.
@@ -66,6 +65,21 @@ type ValidatorResult struct {
 
 // VersionComparison is an in used to compare versions
 type VersionComparison int
+
+// Get access token for edge access
+type edgeRoundTripper struct {
+	authorization util.AccessToken
+}
+
+// Struct used to prase json for edge validation
+type edgeValidate struct {
+	AvaiableUpgrade []string `json:"available_upgrades"`
+}
+
+// Send notification to ocm
+type edgeRemoved struct {
+	notifier notifier.Notifier
+}
 
 const (
 	// VersionUnknown is of type VersionComparision and is used to idicate an unknown version
@@ -100,6 +114,16 @@ func (v *validator) IsValidUpgradeConfig(c client.Client, uC *upgradev1alpha1.Up
 	ucImage := uC.Spec.Desired.Image
 	ucVersion := uC.Spec.Desired.Version
 	ucChannel := uC.Spec.Desired.Channel
+
+	// Edge Validation
+	err = EdgeValidation(uC, cV)
+	if err != nil {
+		return ValidatorResult{
+			IsValid:           false,
+			IsAvailableUpdate: false,
+			Message:           err.Error(),
+		}, err
+	}
 
 	// Validate the spec.desired.image if it is specified
 	// Write the spec.desired.version from the image version since we need the version in the history
@@ -460,15 +484,7 @@ func fetchCVOUpdates(cV *configv1.ClusterVersion, uc *upgradev1alpha1.UpgradeCon
 		return nil, err
 	}
 
-	// Validate if edge is removed & send an notification to ocm
-	cvVersion, err := cv.GetCurrentVersion(cV)
-	if err != nil {
-		eR := &edgeRemoved{}
-		msg := "Edge is not present"
-		eR.notifier.NotifyState(notifier.MuoStateCancelled, msg)
-
-	}
-
+	cvVersion, _ := cv.GetCurrentVersion(cV)
 	parsedCvVersion, _ := semver.Parse(cvVersion)
 
 	transport := &http.Transport{}
@@ -498,4 +514,59 @@ func fetchCVOUpdates(cV *configv1.ClusterVersion, uc *upgradev1alpha1.UpgradeCon
 	}
 
 	return nil, fmt.Errorf("no available upgrade for the given clusterversion %s", cvVersion)
+}
+
+// The following code block used to validate edge & send notification to OCM if in case edge has been removed
+func EdgeValidation(uC *upgradev1alpha1.UpgradeConfig, cV *configv1.ClusterVersion) error {
+	ed := edgeRoundTripper{}
+	cVer, _ := cv.GetCurrentVersion(cV)
+	edgeVersion := uC.Spec.Desired.Version
+	eurl := edgeUrl + cVer
+
+	authVal := fmt.Sprintf("AccessToken %s:%s", ed.authorization.ClusterId, ed.authorization.PullSecret)
+
+	req, err := http.NewRequest("GET", eurl, bytes.NewBuffer(nil))
+	req.Header.Set("Authorization", authVal)
+	req.Header.Add("Accept", "application/json")
+
+	client := http.Client{
+		Timeout: time.Second * 20,
+	}
+
+	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		for key, val := range via[0].Header {
+			req.Header[key] = val
+		}
+		return err
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Errorf("Unable to get response")
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("return code is not 200")
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("Something gone wrong, please retry")
+	}
+
+	test := edgeValidate{}
+	err = json.Unmarshal(body, &test)
+	if err != nil {
+		return fmt.Errorf("Unable to unmarshal the json response.")
+	}
+
+	i := slices.Contains(test.AvaiableUpgrade, edgeVersion)
+
+	if !i {
+		eR := &edgeRemoved{}
+		msg := "Edge is not present"
+		eR.notifier.NotifyState(notifier.MuoStateCancelled, msg)
+		return fmt.Errorf("Edge is not present")
+	}
+	return nil
 }
