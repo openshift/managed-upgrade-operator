@@ -112,11 +112,11 @@ var _ = Describe("HealthCheck Step", func() {
 				gomock.InOrder(
 					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
 					mockMetricsClient.EXPECT().Query(gomock.Any()).Return(alertsResponse, nil),
-					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.MetricsQueryFailed),
-					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.CriticalAlertsFiring),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.MetricsQueryFailed, gomock.Any(), gomock.Any()),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.CriticalAlertsFiring, gomock.Any(), gomock.Any()),
 					mockCVClient.EXPECT().HasDegradedOperators().Return(&clusterversion.HasDegradedOperatorsResult{Degraded: []string{}}, nil),
-					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterOperatorsStatusFailed),
-					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterOperatorsDegraded),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterOperatorsStatusFailed, gomock.Any(), gomock.Any()),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterOperatorsDegraded, gomock.Any(), gomock.Any()),
 				)
 				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
 				Expect(err).NotTo(HaveOccurred())
@@ -131,11 +131,11 @@ var _ = Describe("HealthCheck Step", func() {
 							Expect(strings.Contains(query, `alertname!="`+config.HealthCheck.IgnoredCriticals[1]+`"`)).To(BeTrue())
 							return &metrics.AlertResponse{}, nil
 						}),
-					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.MetricsQueryFailed),
-					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.CriticalAlertsFiring),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.MetricsQueryFailed, gomock.Any(), gomock.Any()),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.CriticalAlertsFiring, gomock.Any(), gomock.Any()),
 					mockCVClient.EXPECT().HasDegradedOperators().Return(&clusterversion.HasDegradedOperatorsResult{Degraded: []string{}}, nil),
-					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterOperatorsStatusFailed),
-					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterOperatorsDegraded),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterOperatorsStatusFailed, gomock.Any(), gomock.Any()),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterOperatorsDegraded, gomock.Any(), gomock.Any()),
 				)
 				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
 				Expect(err).To(Not(HaveOccurred()))
@@ -149,11 +149,11 @@ var _ = Describe("HealthCheck Step", func() {
 							Expect(strings.Contains(query, `namespace!="`+config.HealthCheck.IgnoredNamespaces[0]+`"`)).To(BeTrue())
 							return &metrics.AlertResponse{}, nil
 						}),
-					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.MetricsQueryFailed),
-					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.CriticalAlertsFiring),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.MetricsQueryFailed, gomock.Any(), gomock.Any()),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.CriticalAlertsFiring, gomock.Any(), gomock.Any()),
 					mockCVClient.EXPECT().HasDegradedOperators().Return(&clusterversion.HasDegradedOperatorsResult{Degraded: []string{}}, nil),
-					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterOperatorsStatusFailed),
-					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterOperatorsDegraded),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterOperatorsStatusFailed, gomock.Any(), gomock.Any()),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterOperatorsDegraded, gomock.Any(), gomock.Any()),
 				)
 				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
 				Expect(err).To(Not(HaveOccurred()))
@@ -171,11 +171,11 @@ var _ = Describe("HealthCheck Step", func() {
 				gomock.InOrder(
 					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
 					mockMetricsClient.EXPECT().Query(gomock.Any()).Return(alertsResponse, nil),
-					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.MetricsQueryFailed),
-					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.CriticalAlertsFiring),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.MetricsQueryFailed, gomock.Any(), gomock.Any()),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.CriticalAlertsFiring, gomock.Any(), gomock.Any()),
 					mockCVClient.EXPECT().HasDegradedOperators().Return(&clusterversion.HasDegradedOperatorsResult{Degraded: []string{}}, nil),
-					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterOperatorsStatusFailed),
-					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterOperatorsDegraded),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterOperatorsStatusFailed, gomock.Any(), gomock.Any()),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterOperatorsDegraded, gomock.Any(), gomock.Any()),
 				)
 				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
 				Expect(err).NotTo(HaveOccurred())
@@ -203,7 +203,7 @@ var _ = Describe("HealthCheck Step", func() {
 				gomock.InOrder(
 					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
 					mockMetricsClient.EXPECT().Query(gomock.Any()).Return(alertsResponse, nil),
-					mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, gomock.Any()),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, gomock.Any(), gomock.Any(), gomock.Any()),
 				)
 				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
 				Expect(err).ToNot(BeNil())
@@ -223,10 +223,10 @@ var _ = Describe("HealthCheck Step", func() {
 				gomock.InOrder(
 					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
 					mockMetricsClient.EXPECT().Query(gomock.Any()).Return(alertsResponse, nil),
-					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.MetricsQueryFailed),
-					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.CriticalAlertsFiring),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.MetricsQueryFailed, gomock.Any(), gomock.Any()),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.CriticalAlertsFiring, gomock.Any(), gomock.Any()),
 					mockCVClient.EXPECT().HasDegradedOperators().Return(&clusterversion.HasDegradedOperatorsResult{Degraded: []string{"ClusterOperator"}}, nil),
-					mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, gomock.Any()),
+					mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, gomock.Any(), gomock.Any(), gomock.Any()),
 				)
 				result, err := upgrader.PreUpgradeHealthCheck(context.TODO(), logger)
 				Expect(err).ToNot(BeNil())
