@@ -800,7 +800,7 @@ var _ = Describe("Node scaling tests", func() {
 			Expect(err).Error()
 			Expect(result).To(BeFalse())
 		})
-		It("Handle Drain strategy has failed", func() {
+		It("Handle Drain strategy has failed due to timeout", func() {
 
 			var node1Name = "test-node-1"
 			var timeoutError = &drainTimeOutError{
