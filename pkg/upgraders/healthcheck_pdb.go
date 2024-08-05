@@ -10,6 +10,7 @@ import (
 	"github.com/openshift/managed-upgrade-operator/pkg/dvo"
 	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
 	policyv1 "k8s.io/api/policy/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -44,20 +45,25 @@ func checkPodDisruptionBudgets(c client.Client, logger logr.Logger) (string, err
 		logger.Info("unable to list PodDisruptionBudgets/v1")
 		return metrics.PDBQueryFailed, err
 	}
-
 	for _, pdb := range pdbList.Items {
 		if !strings.HasPrefix(pdb.Namespace, "openshift-*") || checkNamespaceExistsInArray(namespaceException, pdb.Namespace) {
-			if pdb.Spec.MaxUnavailable != nil && pdb.Spec.MaxUnavailable.IntVal == 0 {
-				//misconfigured pdb
+			if pdb.Spec.MaxUnavailable != nil && ((pdb.Spec.MaxUnavailable.Type == intstr.Int) && (pdb.Spec.MaxUnavailable.IntVal == 0)) {
+				logger.Info(fmt.Sprintf("PodDisruptionBudget: %s/%s\n", pdb.Namespace, pdb.Name))
 				return metrics.ClusterInvalidPDBConf, fmt.Errorf("found a PodDisruptionBudget with MaxUnavailable set to 0")
 			}
+			if pdb.Spec.MinAvailable != nil && ((pdb.Spec.MinAvailable.Type == intstr.String) && (pdb.Spec.MinAvailable.StrVal == "100%")) {
+				logger.Info(fmt.Sprintf("PodDisruptionBudget: %s/%s\n", pdb.Namespace, pdb.Name))
+				return metrics.ClusterInvalidPDBConf, fmt.Errorf("found a PodDisruptionBudget with MinAvailable set to 100 percent")
+			}
+
 		}
+
 	}
 
 	return "", nil
 }
 
-func checkNamespaceExistsInArray(namespaceException []string, s string) bool{
+func checkNamespaceExistsInArray(namespaceException []string, s string) bool {
 	for _, namespace := range namespaceException {
 		if namespace == s {
 			return true
@@ -75,7 +81,7 @@ func checkDvoMetrics(c client.Client, dvo dvo.DvoClientBuilder, logger logr.Logg
 
 	// Get the PDB metrics
 	dvoMetricsResult, err := client.GetMetrics()
-	logger.Info("Metrics from DVO... %s", len(dvoMetricsResult))
+	logger.Info(fmt.Sprintf("Metrics from DVO... %d", len(dvoMetricsResult)))
 	if err != nil {
 		logger.Info("Error getting metrics")
 		return metrics.DvoMetricsQueryFailed, err
