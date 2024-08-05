@@ -8,18 +8,16 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/go-logr/logr"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	machineapi "github.com/openshift/api/machine/v1beta1"
+	"github.com/openshift/managed-upgrade-operator/pkg/drain"
+	mockDrain "github.com/openshift/managed-upgrade-operator/pkg/drain/mocks"
+	"github.com/openshift/managed-upgrade-operator/util/mocks"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-
-	"github.com/openshift/managed-upgrade-operator/pkg/drain"
-	mockDrain "github.com/openshift/managed-upgrade-operator/pkg/drain/mocks"
-	"github.com/openshift/managed-upgrade-operator/util/mocks"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Node scaling tests", func() {
@@ -830,5 +828,30 @@ var _ = Describe("Node scaling tests", func() {
 			Expect(err).Should(HaveOccurred())
 			Expect(result).To(BeFalse())
 		})
+	})
+	Context("Return label.Selector", func() {
+		nml := make(map[string]string)
+		nml["TEST"] = "TEST"
+		It("Return new label selector", func() {
+			selector := NotSelectorFromSet(nil)
+			Expect(selector).To(HaveLen(0))
+
+		})
+		It("Update existing label selector", func() {
+			selector := NotSelectorFromSet(nml)
+			Expect(selector).NotTo(BeNil())
+
+		})
+	})
+
+	Context("Apply list option to non matching labels", func() {
+
+		It("Apply list option to non matching labels", func() {
+			notLabels := NotMatchingLabels{}
+			listOpts := &client.ListOptions{}
+			notLabels.ApplyToList(listOpts)
+			Expect(listOpts.LabelSelector).To(HaveLen(0))
+		})
+
 	})
 })
