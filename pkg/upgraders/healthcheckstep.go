@@ -60,6 +60,7 @@ func (c *clusterUpgrader) PreUpgradeHealthCheck(ctx context.Context, logger logr
 				c.metrics.UpdateMetricHealthcheckFailed(c.upgradeConfig.Name, metrics.DefaultWorkerMachinepoolNotFound)
 				healthCheckFailed = append(healthCheckFailed, "CapacityReservationHealthcheckFailed")
 			} else {
+				logger.Info("Prehealth check for CapacityReservation passed")
 				c.metrics.UpdateMetricHealthcheckSucceeded(c.upgradeConfig.Name, metrics.DefaultWorkerMachinepoolNotFound)
 			}
 		}

@@ -33,6 +33,8 @@ func HealthCheckPDB(metricsClient metrics.Metrics, c client.Client, dvo dvo.DvoC
 		return false, err
 	}
 	// Health check passed
+
+	logger.Info("Prehealth check for PodDisruptionBudget passed")
 	metricsClient.UpdateMetricHealthcheckSucceeded(ug.Name, metrics.ClusterInvalidPDB)
 	return true, nil
 }
@@ -81,9 +83,8 @@ func checkDvoMetrics(c client.Client, dvo dvo.DvoClientBuilder, logger logr.Logg
 
 	// Get the PDB metrics
 	dvoMetricsResult, err := client.GetMetrics()
-	logger.Info(fmt.Sprintf("Metrics from DVO... %d", len(dvoMetricsResult)))
 	if err != nil {
-		logger.Info("Error getting metrics")
+		logger.Info("Error getting DVO metrics")
 		return metrics.DvoMetricsQueryFailed, err
 	}
 
