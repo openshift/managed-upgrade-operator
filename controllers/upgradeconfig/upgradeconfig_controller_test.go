@@ -357,6 +357,27 @@ var _ = Describe("UpgradeConfigController", func() {
 						Expect(upgradeConfig.Status.History.GetHistory("a version").Phase == upgradev1alpha1.UpgradePhasePending).To(BeTrue())
 						Expect(result.RequeueAfter).To(Equal(time.Minute * 1))
 					})
+
+					var fakeError = fmt.Errorf("a healthcheck error")
+					It("Should move to pending phase if the HealthCheck fails", func() {
+						gomock.InOrder(
+							mockEMBuilder.EXPECT().NewManager(gomock.Any()).Return(mockEMClient, nil),
+							mockKubeClient.EXPECT().Get(gomock.Any(), upgradeConfigName, gomock.Any()).SetArg(2, *upgradeConfig),
+							mockCVClientBuilder.EXPECT().New(gomock.Any()).Return(mockCVClient),
+							mockCVClient.EXPECT().GetClusterVersion().Return(testClusterVersion, nil),
+							mockConfigManagerBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockConfigManager),
+							mockConfigManager.EXPECT().Into(gomock.Any()).SetArg(0, cfg),
+							mockClusterUpgraderBuilder.EXPECT().NewClient(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), upgradeConfig.Spec.Type).Return(mockClusterUpgrader, nil),
+							mockScheduler.EXPECT().IsReadyToUpgrade(gomock.Any(), gomock.Any()).Return(sr),
+							mockClusterUpgrader.EXPECT().HealthCheck(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, fakeError),
+							mockKubeClient.EXPECT().Status().Return(mockUpdater),
+							mockUpdater.EXPECT().Update(gomock.Any(), gomock.Any()),
+						)
+						result, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: upgradeConfigName})
+						Expect(err).ToNot(HaveOccurred())
+						Expect(upgradeConfig.Status.History.GetHistory("a version").Phase == upgradev1alpha1.UpgradePhasePending).To(BeTrue())
+						Expect(result.RequeueAfter).To(Equal(time.Minute * 1))
+					})
 				})
 				Context("When the time to upgrade is more than the HealthCheckDuration and feature flag is not set", func() {
 					sr := scheduler.SchedulerResult{
@@ -480,12 +501,57 @@ var _ = Describe("UpgradeConfigController", func() {
 						Expect(upgradeConfig.Status.History.GetHistory("a version").Phase == upgradev1alpha1.UpgradePhasePending).To(BeTrue())
 					})
 				})
+				Context("When the status update fails to set to pending phase", func() {
+					BeforeEach(func() {
+						upgradeConfig.Status.History[0].Phase = upgradev1alpha1.UpgradePhaseNew
+					})
+					var fakeError = fmt.Errorf("a status update error")
+					sr := scheduler.SchedulerResult{
+						IsReady:          false,
+						IsBreached:       false,
+						TimeUntilUpgrade: 1 * time.Hour,
+					}
+					It("should report reconcile failure", func() {
+						gomock.InOrder(
+							mockEMBuilder.EXPECT().NewManager(gomock.Any()).Return(mockEMClient, nil),
+							mockKubeClient.EXPECT().Get(gomock.Any(), upgradeConfigName, gomock.Any()).SetArg(2, *upgradeConfig),
+							mockCVClientBuilder.EXPECT().New(gomock.Any()).Return(mockCVClient),
+							mockCVClient.EXPECT().GetClusterVersion().Return(testClusterVersion, nil),
+							mockConfigManagerBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockConfigManager),
+							mockConfigManager.EXPECT().Into(gomock.Any()).SetArg(0, cfg),
+							mockClusterUpgraderBuilder.EXPECT().NewClient(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), upgradeConfig.Spec.Type).Return(mockClusterUpgrader, nil),
+							mockScheduler.EXPECT().IsReadyToUpgrade(gomock.Any(), gomock.Any()).Return(sr),
+							mockKubeClient.EXPECT().Status().Return(mockUpdater),
+							mockUpdater.EXPECT().Update(gomock.Any(), gomock.Any()).Return(fakeError),
+						)
+						_, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: upgradeConfigName})
+						Expect(err).To(HaveOccurred())
+					})
+				})
 
 			})
 
 			Context("When the UpgradePhase is Pending", func() {
 				BeforeEach(func() {
 					upgradeConfig.Status.History[0].Phase = upgradev1alpha1.UpgradePhasePending
+				})
+
+				Context("When building the validator client fails", func() {
+					var fakeError = fmt.Errorf("an validator builder error")
+					It("reconcile should fail", func() {
+						gomock.InOrder(
+							mockEMBuilder.EXPECT().NewManager(gomock.Any()).Return(mockEMClient, nil),
+							mockKubeClient.EXPECT().Get(gomock.Any(), upgradeConfigName, gomock.Any()).SetArg(2, *upgradeConfig),
+							mockCVClientBuilder.EXPECT().New(gomock.Any()).Return(mockCVClient),
+							mockCVClient.EXPECT().GetClusterVersion().Return(testClusterVersion, nil),
+							mockConfigManagerBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockConfigManager),
+							mockConfigManager.EXPECT().Into(gomock.Any()).SetArg(0, cfg),
+							mockClusterUpgraderBuilder.EXPECT().NewClient(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), upgradeConfig.Spec.Type).Return(mockClusterUpgrader, nil),
+							mockValidationBuilder.EXPECT().NewClient(mockConfigManager).Return(mockValidator, fakeError),
+						)
+						_, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: upgradeConfigName})
+						Expect(err).To(HaveOccurred())
+					})
 				})
 
 				Context("When the upgradeconfig validation fails", func() {
@@ -527,6 +593,25 @@ var _ = Describe("UpgradeConfigController", func() {
 				})
 
 				Context("When the cluster is ready to upgrade", func() {
+					var fakeError = fmt.Errorf("fake upgradeconfig manager builder error")
+					It("Should fail if cannot create upgradeconfig manager builder", func() {
+						gomock.InOrder(
+							mockEMBuilder.EXPECT().NewManager(gomock.Any()).Return(mockEMClient, nil),
+							mockKubeClient.EXPECT().Get(gomock.Any(), upgradeConfigName, gomock.Any()).SetArg(2, *upgradeConfig),
+							mockCVClientBuilder.EXPECT().New(gomock.Any()).Return(mockCVClient),
+							mockCVClient.EXPECT().GetClusterVersion().Return(testClusterVersion, nil),
+							mockConfigManagerBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockConfigManager),
+							mockConfigManager.EXPECT().Into(gomock.Any()).SetArg(0, cfg),
+							mockClusterUpgraderBuilder.EXPECT().NewClient(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), upgradeConfig.Spec.Type).Return(mockClusterUpgrader, nil),
+							mockValidationBuilder.EXPECT().NewClient(mockConfigManager).Return(mockValidator, nil),
+							mockValidator.EXPECT().IsValidUpgradeConfig(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(validation.ValidatorResult{IsValid: true, IsAvailableUpdate: true}, nil),
+							mockMetricsClient.EXPECT().UpdateMetricValidationSucceeded(gomock.Any()),
+							mockScheduler.EXPECT().IsReadyToUpgrade(gomock.Any(), gomock.Any()).Return(scheduler.SchedulerResult{IsReady: true}),
+							mockUCMgrBuilder.EXPECT().NewManager(gomock.Any()).Return(mockUCMgr, fakeError),
+						)
+						_, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: upgradeConfigName})
+						Expect(err).To(HaveOccurred())
+					})
 					It("Adds a new Upgrade history to the UpgradeConfig", func() {
 						gomock.InOrder(
 							mockEMBuilder.EXPECT().NewManager(gomock.Any()).Return(mockEMClient, nil),
@@ -552,29 +637,101 @@ var _ = Describe("UpgradeConfigController", func() {
 						Expect(err).NotTo(HaveOccurred())
 						Expect(result.Requeue).To(BeFalse())
 					})
-					It("Remote upgrade policy changed", func() {
-						gomock.InOrder(
-							mockEMBuilder.EXPECT().NewManager(gomock.Any()).Return(mockEMClient, nil),
-							mockKubeClient.EXPECT().Get(gomock.Any(), upgradeConfigName, gomock.Any()).SetArg(2, *upgradeConfig),
-							mockCVClientBuilder.EXPECT().New(gomock.Any()).Return(mockCVClient),
-							mockCVClient.EXPECT().GetClusterVersion().Return(testClusterVersion, nil),
-							mockConfigManagerBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockConfigManager),
-							mockConfigManager.EXPECT().Into(gomock.Any()).SetArg(0, cfg),
-							mockClusterUpgraderBuilder.EXPECT().NewClient(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), upgradeConfig.Spec.Type).Return(mockClusterUpgrader, nil),
-							mockValidationBuilder.EXPECT().NewClient(mockConfigManager).Return(mockValidator, nil),
-							mockValidator.EXPECT().IsValidUpgradeConfig(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(validation.ValidatorResult{IsValid: true, IsAvailableUpdate: true}, nil),
-							mockMetricsClient.EXPECT().UpdateMetricValidationSucceeded(gomock.Any()),
-							mockScheduler.EXPECT().IsReadyToUpgrade(gomock.Any(), gomock.Any()).Return(scheduler.SchedulerResult{IsReady: true}),
-							mockUCMgrBuilder.EXPECT().NewManager(gomock.Any()).Return(mockUCMgr, nil),
-							mockUCMgr.EXPECT().Refresh().Return(true, nil),
-							mockKubeClient.EXPECT().Status().Return(mockUpdater),
-							mockUpdater.EXPECT().Update(gomock.Any(), gomock.Any()),
-						)
-						result, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: upgradeConfigName})
-						Expect(err).NotTo(HaveOccurred())
-						Expect(result.Requeue).To(BeFalse())
-						Expect(upgradeConfig.Status.History.GetHistory("a version").Phase == upgradev1alpha1.UpgradePhaseNew).To(BeTrue())
+					Context("When remote upgrade policy is attempted to be fetched", func() {
+						It("should reconcile and set phase to New phase if remote policy has changed", func() {
+							gomock.InOrder(
+								mockEMBuilder.EXPECT().NewManager(gomock.Any()).Return(mockEMClient, nil),
+								mockKubeClient.EXPECT().Get(gomock.Any(), upgradeConfigName, gomock.Any()).SetArg(2, *upgradeConfig),
+								mockCVClientBuilder.EXPECT().New(gomock.Any()).Return(mockCVClient),
+								mockCVClient.EXPECT().GetClusterVersion().Return(testClusterVersion, nil),
+								mockConfigManagerBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockConfigManager),
+								mockConfigManager.EXPECT().Into(gomock.Any()).SetArg(0, cfg),
+								mockClusterUpgraderBuilder.EXPECT().NewClient(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), upgradeConfig.Spec.Type).Return(mockClusterUpgrader, nil),
+								mockValidationBuilder.EXPECT().NewClient(mockConfigManager).Return(mockValidator, nil),
+								mockValidator.EXPECT().IsValidUpgradeConfig(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(validation.ValidatorResult{IsValid: true, IsAvailableUpdate: true}, nil),
+								mockMetricsClient.EXPECT().UpdateMetricValidationSucceeded(gomock.Any()),
+								mockScheduler.EXPECT().IsReadyToUpgrade(gomock.Any(), gomock.Any()).Return(scheduler.SchedulerResult{IsReady: true}),
+								mockUCMgrBuilder.EXPECT().NewManager(gomock.Any()).Return(mockUCMgr, nil),
+								mockUCMgr.EXPECT().Refresh().Return(true, nil),
+								mockKubeClient.EXPECT().Status().Return(mockUpdater),
+								mockUpdater.EXPECT().Update(gomock.Any(), gomock.Any()),
+							)
+							result, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: upgradeConfigName})
+							Expect(err).NotTo(HaveOccurred())
+							Expect(result.Requeue).To(BeFalse())
+							Expect(upgradeConfig.Status.History.GetHistory("a version").Phase == upgradev1alpha1.UpgradePhaseNew).To(BeTrue())
+						})
+
+						It("should reconcile error if status update for new phase fails after remote change", func() {
+							gomock.InOrder(
+								mockEMBuilder.EXPECT().NewManager(gomock.Any()).Return(mockEMClient, nil),
+								mockKubeClient.EXPECT().Get(gomock.Any(), upgradeConfigName, gomock.Any()).SetArg(2, *upgradeConfig),
+								mockCVClientBuilder.EXPECT().New(gomock.Any()).Return(mockCVClient),
+								mockCVClient.EXPECT().GetClusterVersion().Return(testClusterVersion, nil),
+								mockConfigManagerBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockConfigManager),
+								mockConfigManager.EXPECT().Into(gomock.Any()).SetArg(0, cfg),
+								mockClusterUpgraderBuilder.EXPECT().NewClient(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), upgradeConfig.Spec.Type).Return(mockClusterUpgrader, nil),
+								mockValidationBuilder.EXPECT().NewClient(mockConfigManager).Return(mockValidator, nil),
+								mockValidator.EXPECT().IsValidUpgradeConfig(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(validation.ValidatorResult{IsValid: true, IsAvailableUpdate: true}, nil),
+								mockMetricsClient.EXPECT().UpdateMetricValidationSucceeded(gomock.Any()),
+								mockScheduler.EXPECT().IsReadyToUpgrade(gomock.Any(), gomock.Any()).Return(scheduler.SchedulerResult{IsReady: true}),
+								mockUCMgrBuilder.EXPECT().NewManager(gomock.Any()).Return(mockUCMgr, nil),
+								mockUCMgr.EXPECT().Refresh().Return(true, nil),
+								mockKubeClient.EXPECT().Status().Return(mockUpdater),
+								mockUpdater.EXPECT().Update(gomock.Any(), gomock.Any()).Return(fmt.Errorf("status update failure")),
+							)
+							_, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: upgradeConfigName})
+							Expect(err).To(HaveOccurred())
+							Expect(upgradeConfig.Status.History.GetHistory("a version").Phase == upgradev1alpha1.UpgradePhaseNew).To(BeTrue())
+						})
+
+						var fakeError = fmt.Errorf("fake remote config error")
+						It("should reconcile with failure if error is other than remote config manager not configured", func() {
+							gomock.InOrder(
+								mockEMBuilder.EXPECT().NewManager(gomock.Any()).Return(mockEMClient, nil),
+								mockKubeClient.EXPECT().Get(gomock.Any(), upgradeConfigName, gomock.Any()).SetArg(2, *upgradeConfig),
+								mockCVClientBuilder.EXPECT().New(gomock.Any()).Return(mockCVClient),
+								mockCVClient.EXPECT().GetClusterVersion().Return(testClusterVersion, nil),
+								mockConfigManagerBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockConfigManager),
+								mockConfigManager.EXPECT().Into(gomock.Any()).SetArg(0, cfg),
+								mockClusterUpgraderBuilder.EXPECT().NewClient(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), upgradeConfig.Spec.Type).Return(mockClusterUpgrader, nil),
+								mockValidationBuilder.EXPECT().NewClient(mockConfigManager).Return(mockValidator, nil),
+								mockValidator.EXPECT().IsValidUpgradeConfig(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(validation.ValidatorResult{IsValid: true, IsAvailableUpdate: true}, nil),
+								mockMetricsClient.EXPECT().UpdateMetricValidationSucceeded(gomock.Any()),
+								mockScheduler.EXPECT().IsReadyToUpgrade(gomock.Any(), gomock.Any()).Return(scheduler.SchedulerResult{IsReady: true}),
+								mockUCMgrBuilder.EXPECT().NewManager(gomock.Any()).Return(mockUCMgr, nil),
+								mockUCMgr.EXPECT().Refresh().Return(true, fakeError),
+							)
+							_, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: upgradeConfigName})
+							Expect(err).To(HaveOccurred())
+							Expect(upgradeConfig.Status.History.GetHistory("a version").Phase == upgradev1alpha1.UpgradePhaseNew).To(BeFalse())
+						})
+
+						fakeError = fmt.Errorf("fake error to set status update in history")
+						It("should reconcile with failure if not able to update status for upgrading phase", func() {
+							gomock.InOrder(
+								mockEMBuilder.EXPECT().NewManager(gomock.Any()).Return(mockEMClient, nil),
+								mockKubeClient.EXPECT().Get(gomock.Any(), upgradeConfigName, gomock.Any()).SetArg(2, *upgradeConfig),
+								mockCVClientBuilder.EXPECT().New(gomock.Any()).Return(mockCVClient),
+								mockCVClient.EXPECT().GetClusterVersion().Return(testClusterVersion, nil),
+								mockConfigManagerBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockConfigManager),
+								mockConfigManager.EXPECT().Into(gomock.Any()).SetArg(0, cfg),
+								mockClusterUpgraderBuilder.EXPECT().NewClient(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), upgradeConfig.Spec.Type).Return(mockClusterUpgrader, nil),
+								mockValidationBuilder.EXPECT().NewClient(mockConfigManager).Return(mockValidator, nil),
+								mockValidator.EXPECT().IsValidUpgradeConfig(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(validation.ValidatorResult{IsValid: true, IsAvailableUpdate: true}, nil),
+								mockMetricsClient.EXPECT().UpdateMetricValidationSucceeded(gomock.Any()),
+								mockScheduler.EXPECT().IsReadyToUpgrade(gomock.Any(), gomock.Any()).Return(scheduler.SchedulerResult{IsReady: true}),
+								mockUCMgrBuilder.EXPECT().NewManager(gomock.Any()).Return(mockUCMgr, nil),
+								mockUCMgr.EXPECT().Refresh().Return(false, nil),
+								mockKubeClient.EXPECT().Status().Return(mockUpdater),
+								mockUpdater.EXPECT().Update(gomock.Any(), gomock.Any()).Return(fakeError),
+							)
+							_, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: upgradeConfigName})
+							Expect(err).To(HaveOccurred())
+							Expect(upgradeConfig.Status.History.GetHistory("a version").Phase == upgradev1alpha1.UpgradePhaseUpgrading).To(BeTrue())
+						})
 					})
+
 					It("Invokes the upgrader", func() {
 						gomock.InOrder(
 							mockEMBuilder.EXPECT().NewManager(gomock.Any()).Return(mockEMClient, nil),
@@ -659,6 +816,85 @@ var _ = Describe("UpgradeConfigController", func() {
 							Expect(err).To(HaveOccurred())
 							Expect(result.Requeue).To(BeFalse())
 							Expect(result.RequeueAfter).To(Equal(upgradingReconcileTime))
+						})
+					})
+				})
+
+				Context("When the cluster is not ready to upgrade", func() {
+
+					It("Should update phase status to be pending phase", func() {
+						gomock.InOrder(
+							mockEMBuilder.EXPECT().NewManager(gomock.Any()).Return(mockEMClient, nil),
+							mockKubeClient.EXPECT().Get(gomock.Any(), upgradeConfigName, gomock.Any()).SetArg(2, *upgradeConfig),
+							mockCVClientBuilder.EXPECT().New(gomock.Any()).Return(mockCVClient),
+							mockCVClient.EXPECT().GetClusterVersion().Return(testClusterVersion, nil),
+							mockConfigManagerBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockConfigManager),
+							mockConfigManager.EXPECT().Into(gomock.Any()).SetArg(0, cfg),
+							mockClusterUpgraderBuilder.EXPECT().NewClient(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), upgradeConfig.Spec.Type).Return(mockClusterUpgrader, nil),
+							mockValidationBuilder.EXPECT().NewClient(mockConfigManager).Return(mockValidator, nil),
+							mockValidator.EXPECT().IsValidUpgradeConfig(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(validation.ValidatorResult{IsValid: true, IsAvailableUpdate: true}, nil),
+							mockMetricsClient.EXPECT().UpdateMetricValidationSucceeded(gomock.Any()),
+							mockScheduler.EXPECT().IsReadyToUpgrade(gomock.Any(), gomock.Any()).Return(scheduler.SchedulerResult{IsReady: false}),
+							mockKubeClient.EXPECT().Status().Return(mockUpdater),
+							mockUpdater.EXPECT().Update(gomock.Any(), gomock.Any()),
+						)
+						_, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: upgradeConfigName})
+						Expect(err).ToNot(HaveOccurred())
+						Expect(upgradeConfig.Status.History.GetHistory("a version").Phase == upgradev1alpha1.UpgradePhasePending).To(BeTrue())
+					})
+
+					Context("When the status update fails to set to pending phase", func() {
+						var statusError = fmt.Errorf("a status update error")
+						It("Should reconcile error", func() {
+							gomock.InOrder(
+								mockEMBuilder.EXPECT().NewManager(gomock.Any()).Return(mockEMClient, nil),
+								mockKubeClient.EXPECT().Get(gomock.Any(), upgradeConfigName, gomock.Any()).SetArg(2, *upgradeConfig),
+								mockCVClientBuilder.EXPECT().New(gomock.Any()).Return(mockCVClient),
+								mockCVClient.EXPECT().GetClusterVersion().Return(testClusterVersion, nil),
+								mockConfigManagerBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockConfigManager),
+								mockConfigManager.EXPECT().Into(gomock.Any()).SetArg(0, cfg),
+								mockClusterUpgraderBuilder.EXPECT().NewClient(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), upgradeConfig.Spec.Type).Return(mockClusterUpgrader, nil),
+								mockValidationBuilder.EXPECT().NewClient(mockConfigManager).Return(mockValidator, nil),
+								mockValidator.EXPECT().IsValidUpgradeConfig(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(validation.ValidatorResult{IsValid: true, IsAvailableUpdate: true}, nil),
+								mockMetricsClient.EXPECT().UpdateMetricValidationSucceeded(gomock.Any()),
+								mockScheduler.EXPECT().IsReadyToUpgrade(gomock.Any(), gomock.Any()).Return(scheduler.SchedulerResult{IsReady: false}),
+								mockKubeClient.EXPECT().Status().Return(mockUpdater),
+								mockUpdater.EXPECT().Update(gomock.Any(), gomock.Any()).Return(statusError),
+							)
+							_, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: upgradeConfigName})
+							Expect(err).To(HaveOccurred())
+							Expect(upgradeConfig.Status.History.GetHistory("a version").Phase == upgradev1alpha1.UpgradePhasePending).To(BeTrue())
+						})
+					})
+
+					Context("When the time to upgrade is quite near to the next reconcile", func() {
+						sr := scheduler.SchedulerResult{
+							IsReady:    false,
+							IsBreached: false,
+							// We keep time until upgrade to be less than SyncPeriodDefault i.e, 5 minutes
+							TimeUntilUpgrade: 3 * time.Minute,
+						}
+						It("Should reconcile based on the time until upgrade interval", func() {
+							gomock.InOrder(
+								mockEMBuilder.EXPECT().NewManager(gomock.Any()).Return(mockEMClient, nil),
+								mockKubeClient.EXPECT().Get(gomock.Any(), upgradeConfigName, gomock.Any()).SetArg(2, *upgradeConfig),
+								mockCVClientBuilder.EXPECT().New(gomock.Any()).Return(mockCVClient),
+								mockCVClient.EXPECT().GetClusterVersion().Return(testClusterVersion, nil),
+								mockConfigManagerBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockConfigManager),
+								mockConfigManager.EXPECT().Into(gomock.Any()).SetArg(0, cfg),
+								mockClusterUpgraderBuilder.EXPECT().NewClient(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), upgradeConfig.Spec.Type).Return(mockClusterUpgrader, nil),
+								mockValidationBuilder.EXPECT().NewClient(mockConfigManager).Return(mockValidator, nil),
+								mockValidator.EXPECT().IsValidUpgradeConfig(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(validation.ValidatorResult{IsValid: true, IsAvailableUpdate: true}, nil),
+								mockMetricsClient.EXPECT().UpdateMetricValidationSucceeded(gomock.Any()),
+								mockScheduler.EXPECT().IsReadyToUpgrade(gomock.Any(), gomock.Any()).Return(sr),
+								mockKubeClient.EXPECT().Status().Return(mockUpdater),
+								mockUpdater.EXPECT().Update(gomock.Any(), gomock.Any()),
+							)
+							result, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: upgradeConfigName})
+							Expect(err).ToNot(HaveOccurred())
+							Expect(upgradeConfig.Status.History.GetHistory("a version").Phase == upgradev1alpha1.UpgradePhasePending).To(BeTrue())
+							Expect(result.Requeue).To(BeFalse())
+							Expect(result.RequeueAfter).To(Equal(sr.TimeUntilUpgrade))
 						})
 					})
 				})
