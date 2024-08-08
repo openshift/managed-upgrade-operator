@@ -135,6 +135,8 @@ func (s *eventManager) Notify(state notifier.MuoState) error {
 		description = fmt.Sprintf(UPGRADE_SCALE_SKIP_DESC, uc.Spec.Desired.Version)
 	case notifier.MuoStateDelayed:
 		description = createDelayedDescription(uc)
+	case notifier.MuoStateDelayedWorkerMachinepoolNotFound:
+		description = fmt.Sprintf(UPGRADE_DEFAULT_DELAY_DESC, uc.Spec.Desired.Version)
 	case notifier.MuoStateSkipped:
 		description = fmt.Sprintf(UPGRADE_SCALE_DELAY_SKIP_DESC, uc.Spec.Desired.Version)
 	case notifier.MuoStateCompleted:
