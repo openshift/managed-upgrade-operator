@@ -33,6 +33,10 @@ const (
 
 	// OCM test constants
 	TEST_OCM_SERVER_URL = "https://fakeapi.openshift.com"
+
+	//setstate
+	TEST_VALUE       = "New"
+	TEST_DESCRIPTION = "New Upgrade"
 )
 
 var _ = Describe("OCM Client", func() {
@@ -179,6 +183,17 @@ var _ = Describe("OCM Client", func() {
 			Expect(*result).To(Equal(upgradePolicyStateResponse))
 			Expect(err).To(BeNil())
 		})
+
+		It("Setting policy state", func() {
+			upsResponder, _ := httpmock.NewJsonResponder(http.StatusOK, upgradePolicyStateResponse)
+			upsUrl := path.Join(CLUSTERS_V1_PATH, TEST_CLUSTER_ID, UPGRADEPOLICIES_V1_PATH, TEST_POLICY_ID_MANUAL, STATE_V1_PATH)
+			httpmock.RegisterResponder(http.MethodPatch, upsUrl, upsResponder)
+
+			err := oc.SetState(TEST_VALUE, TEST_DESCRIPTION, TEST_POLICY_ID_MANUAL, TEST_CLUSTER_ID)
+
+			Expect(err).To(BeNil())
+		})
+
 	})
 
 })

@@ -8,18 +8,16 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/go-logr/logr"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	machineapi "github.com/openshift/api/machine/v1beta1"
+	"github.com/openshift/managed-upgrade-operator/pkg/drain"
+	mockDrain "github.com/openshift/managed-upgrade-operator/pkg/drain/mocks"
+	"github.com/openshift/managed-upgrade-operator/util/mocks"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-
-	"github.com/openshift/managed-upgrade-operator/pkg/drain"
-	mockDrain "github.com/openshift/managed-upgrade-operator/pkg/drain/mocks"
-	"github.com/openshift/managed-upgrade-operator/util/mocks"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Node scaling tests", func() {
@@ -60,6 +58,14 @@ var _ = Describe("Node scaling tests", func() {
 				Expect(err).To(BeNil())
 				Expect(result).To(BeFalse())
 			})
+		})
+		It("fail to get original machine", func() {
+			// originalMachineSets = &machineapi.MachineSetList{}
+
+			mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("failed to get original machinesets"))
+			result, err := scaler.CanScale(mockKubeClient, logger)
+			Expect(err).To(HaveOccurred())
+			Expect(result).To(BeFalse())
 		})
 		Context("and there is a worker machineset", func() {
 			It("will flag that scaling is possible", func() {
@@ -434,6 +440,112 @@ var _ = Describe("Node scaling tests", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(BeTrue())
 			})
+			It("Machineset provising timeout error ", func() {
+				testMachineSet := "test-infra"
+				upgradeMachinesets = &machineapi.MachineSetList{
+					Items: []machineapi.MachineSet{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:              testMachineSet + "-upgrade",
+								Namespace:         MACHINE_API_NAMESPACE,
+								CreationTimestamp: metav1.Time{Time: time.Now().Add(-1 * time.Hour)},
+							},
+							Status: machineapi.MachineSetStatus{
+								Replicas:      2,
+								ReadyReplicas: 1,
+							},
+						},
+					},
+				}
+				result, err := nodesAreReady(mockKubeClient, testDuration, *upgradeMachinesets, logger)
+				Expect(err).Should(HaveOccurred())
+				Expect(result).To(BeFalse())
+			})
+			It("Failed to list extra upgrade machine", func() {
+				testMachineSet := "test-infra"
+
+				upgradeMachinesets = &machineapi.MachineSetList{
+					Items: []machineapi.MachineSet{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      testMachineSet + "-upgrade",
+								Namespace: MACHINE_API_NAMESPACE,
+							},
+							Status: machineapi.MachineSetStatus{
+								Replicas:      1,
+								ReadyReplicas: 1,
+							},
+						},
+					},
+				}
+				fakeError := fmt.Errorf("fake error")
+				gomock.InOrder(
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
+						client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{LABEL_UPGRADE: "true"}, client.MatchingLabels{LABEL_MACHINESET: upgradeMachinesets.Items[0].ObjectMeta.Name},
+					}).Return(fakeError),
+				)
+				result, err := nodesAreReady(mockKubeClient, testDuration, *upgradeMachinesets, logger)
+				Expect(err).Should(HaveOccurred())
+				Expect(result).To(BeFalse())
+			})
+			It("Failed to get node", func() {
+				testMachineSet := "test-infra"
+				// var nodeType = "worker"
+				testMachineName := "test-machine"
+				testMachineNamespace := MACHINE_API_NAMESPACE
+				node := corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							"machine.openshift.io/machine": MACHINE_API_NAMESPACE + testMachineName,
+						},
+					},
+					Status: corev1.NodeStatus{
+						Conditions: []corev1.NodeCondition{{Type: corev1.NodeReady, Status: corev1.ConditionTrue}},
+					},
+				}
+				upgradeMachines := &machineapi.MachineList{
+					Items: []machineapi.Machine{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:              testMachineName,
+								Namespace:         testMachineNamespace,
+								CreationTimestamp: metav1.Time{Time: time.Now()},
+								Labels:            map[string]string{LABEL_UPGRADE: "true"},
+							},
+							Spec: machineapi.MachineSpec{},
+							Status: machineapi.MachineStatus{
+								NodeRef: &corev1.ObjectReference{
+									Name: node.Name,
+								},
+							},
+						},
+					},
+				}
+				upgradeMachinesets = &machineapi.MachineSetList{
+					Items: []machineapi.MachineSet{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      testMachineSet + "-upgrade",
+								Namespace: MACHINE_API_NAMESPACE,
+							},
+							Status: machineapi.MachineSetStatus{
+								Replicas:      1,
+								ReadyReplicas: 1,
+							},
+						},
+					},
+				}
+				fakeError := fmt.Errorf("fake error")
+				gomock.InOrder(
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
+						client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{LABEL_UPGRADE: "true"}, client.MatchingLabels{LABEL_MACHINESET: upgradeMachinesets.Items[0].ObjectMeta.Name},
+					}).SetArg(1, *upgradeMachines),
+					mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(fakeError),
+				)
+				result, err := nodesAreReady(mockKubeClient, testDuration, *upgradeMachinesets, logger)
+				Expect(err).Should(HaveOccurred())
+				Expect(result).To(BeFalse())
+			})
 		})
 
 	})
@@ -635,5 +747,111 @@ var _ = Describe("Node scaling tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(BeTrue())
 		})
+
+	})
+
+	Context("Handle Drain Strategy", func() {
+
+		It("Execute function return error", func() {
+			var node1Name = "test-node-1"
+			nodes := &corev1.NodeList{
+				Items: []corev1.Node{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: node1Name,
+						},
+					},
+					{},
+				},
+			}
+			mockDrainStrategy := mockDrain.NewMockNodeDrainStrategy(mockCtrl)
+			strategy := []*drain.DrainStrategyResult{{Message: "TEST", HasExecuted: true}, {}}
+
+			gomock.InOrder(
+				mockDrainStrategy.EXPECT().Execute(gomock.Any(), gomock.Any()).Return(strategy, fmt.Errorf("error in execute function")),
+				// mockDrainStrategy.EXPECT().HasFailed(gomock.Any(), gomock.Any()).Return(true, fmt.Errorf("error in Hasfailed function")),
+			)
+			result, err := handleDrainStrategy(mockKubeClient, mockDrainStrategy, *nodes, logger)
+			Expect(err).Should(HaveOccurred())
+			Expect(result).To(BeFalse())
+		})
+		It("Handle Drain strategy has failed", func() {
+
+			var node1Name = "test-node-1"
+
+			nodes := &corev1.NodeList{
+				Items: []corev1.Node{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: node1Name,
+						},
+					},
+					{},
+				},
+			}
+			mockDrainStrategy := mockDrain.NewMockNodeDrainStrategy(mockCtrl)
+			strategy := []*drain.DrainStrategyResult{{Message: "TEST", HasExecuted: true}, {}}
+
+			gomock.InOrder(
+				mockDrainStrategy.EXPECT().Execute(gomock.Any(), gomock.Any()).Return(strategy, nil).AnyTimes(),
+				mockDrainStrategy.EXPECT().HasFailed(gomock.Any(), gomock.Any()).Return(true, nil),
+			)
+			result, err := handleDrainStrategy(mockKubeClient, mockDrainStrategy, *nodes, logger)
+			Expect(err).Error()
+			Expect(result).To(BeFalse())
+		})
+		It("Handle Drain strategy has failed due to timeout", func() {
+
+			var node1Name = "test-node-1"
+			var timeoutError = &drainTimeOutError{
+				nodeName: "test-node-1",
+			}
+			nodes := &corev1.NodeList{
+				Items: []corev1.Node{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: node1Name,
+						},
+					},
+					{},
+				},
+			}
+			mockDrainStrategy := mockDrain.NewMockNodeDrainStrategy(mockCtrl)
+			strategy := []*drain.DrainStrategyResult{{Message: "TEST", HasExecuted: true}, {}}
+
+			gomock.InOrder(
+				mockDrainStrategy.EXPECT().Execute(gomock.Any(), gomock.Any()).Return(strategy, nil).AnyTimes(),
+				mockDrainStrategy.EXPECT().HasFailed(gomock.Any(), gomock.Any()).Return(false, timeoutError),
+			)
+			result, err := handleDrainStrategy(mockKubeClient, mockDrainStrategy, *nodes, logger)
+
+			Expect(err).Should(HaveOccurred())
+			Expect(result).To(BeFalse())
+		})
+	})
+	Context("Return label.Selector", func() {
+		nml := make(map[string]string)
+		nml["TEST"] = "TEST"
+		It("Return new label selector", func() {
+			selector := NotSelectorFromSet(nil)
+			Expect(selector).To(HaveLen(0))
+
+		})
+		It("Update existing label selector", func() {
+			selector := NotSelectorFromSet(nml)
+			Expect(selector).NotTo(BeNil())
+
+		})
+	})
+
+	Context("Apply list option to non matching labels", func() {
+
+		It("Apply list option to non matching labels", func() {
+			notLabels := NotMatchingLabels{}
+			listOpts := &client.ListOptions{}
+			notLabels.ApplyToList(listOpts)
+			Expect(listOpts.LabelSelector).To(HaveLen(0))
+		})
+
 	})
 })
