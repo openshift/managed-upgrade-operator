@@ -17,6 +17,17 @@ The Managed Upgrade Operator reports the following metrics via direct instrument
 The following metrics are forwarded to Observatorium-MST for fleetwide monitoring via grafana
 
 - `upgradeoperator_upgrade_result`: Contains results from the previous upgrade. If upgrade fired a paging alert `value == 0` and the `alerts` field contains the name of alerts fired
+- `upgradeoperator_healthcheck_failed`: Contains preflight health check results from the previous upgrade. If upgrade preflight health check success `value == 0` otherwise `value == 1`. The `state` field contains in which upgrade state the PHC is performed. The `reason` field indicates which type of health check is performed.
+
+### How to expose the metric to RHOBS for fleet-wide monitoring
+
+The metrics defined in MUO only live inside the container. Each metric that needs to be sent to RHOBS via remoteWrite should be combined with the `sre:telemetry:managed_labels`. Details could be found in [doc](https://github.com/openshift/managed-cluster-config/blob/master/deploy/sre-prometheus/centralized-observability/README.md). Follow the steps below to set up the rule to expose metric to RHOBS.
+
+- Make sure the metric has label could be used to combine to `sre:telemetry:managed_labels`
+- Create/update a record rule in [centralized-observability](https://github.com/openshift/managed-cluster-config/blob/master/deploy/sre-prometheus/centralized-observability)
+- Update the [cluster monitoring config](https://github.com/openshift/managed-cluster-config/blob/master/resources/cluster-monitoring-config/config.yaml) to include the new record rule
+- Generate the new cluster monitoring config configMap via [script](https://github.com/openshift/managed-cluster-config/blob/master/scripts/generate-cmo-config.py) then update the [managed-cluster-config repo](https://github.com/openshift/managed-cluster-config) with the new record rule, new cluster monitoring config, and updated new configMaps.
+
 
 ## Metrics for upgrade conditions and state
 
