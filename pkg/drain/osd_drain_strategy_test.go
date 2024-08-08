@@ -12,13 +12,26 @@ import (
 	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/api/v1alpha1"
 	"github.com/openshift/managed-upgrade-operator/pkg/machinery"
 	mockMachinery "github.com/openshift/managed-upgrade-operator/pkg/machinery/mocks"
+	mockMetrics "github.com/openshift/managed-upgrade-operator/pkg/metrics/mocks"
+	mockNotifier "github.com/openshift/managed-upgrade-operator/pkg/notifier/mocks"
 	"github.com/openshift/managed-upgrade-operator/pkg/pod"
 	"github.com/openshift/managed-upgrade-operator/util/mocks"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+)
+
+const (
+	TEST_OPERATOR_NAMESPACE = "test-namespace"
+	TEST_UPGRADECONFIG_CR   = "managed-upgrade-config"
+	TEST_UPGRADE_VERSION    = "4.14.14"
+	TEST_UPGRADE_CHANNEL    = "stable-4.14"
+	TEST_UPGRADE_TIME       = "2024-06-20T00:00:00Z"
+	TEST_UPGRADE_PDB_TIME   = 60
+	TEST_UPGRADE_TYPE       = "OSD"
 )
 
 var _ = Describe("OSD Drain Strategy", func() {
@@ -34,6 +47,9 @@ var _ = Describe("OSD Drain Strategy", func() {
 		mockTimedDrainTwo   *MockTimedDrainStrategy
 		mockStrategyTwo     *MockDrainStrategy
 		nodeDrainConfig     *NodeDrain
+		mockUpgradeConfig   *upgradev1alpha1.UpgradeConfig
+		mockNotifierClient  *mockNotifier.MockNotifier
+		mockMetricsClient   *mockMetrics.MockMetrics
 	)
 
 	Context("Node drain Time Based Strategy execution", func() {
@@ -46,6 +62,23 @@ var _ = Describe("OSD Drain Strategy", func() {
 			mockTimedDrainTwo = NewMockTimedDrainStrategy(mockCtrl)
 			mockStrategyTwo = NewMockDrainStrategy(mockCtrl)
 			logger = logf.Log.WithName("drain strategy test logger")
+			mockNotifierClient = mockNotifier.NewMockNotifier(mockCtrl)
+			mockMetricsClient = mockMetrics.NewMockMetrics(mockCtrl)
+			mockUpgradeConfig = &upgradev1alpha1.UpgradeConfig{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      TEST_UPGRADECONFIG_CR,
+					Namespace: TEST_OPERATOR_NAMESPACE,
+				},
+				Spec: upgradev1alpha1.UpgradeConfigSpec{
+					Desired: upgradev1alpha1.Update{
+						Version: TEST_UPGRADE_VERSION,
+						Channel: TEST_UPGRADE_CHANNEL,
+					},
+					UpgradeAt:            TEST_UPGRADE_TIME,
+					PDBForceDrainTimeout: TEST_UPGRADE_PDB_TIME,
+					Type:                 TEST_UPGRADE_TYPE,
+				},
+			}
 		})
 		AfterEach(func() {
 			mockCtrl.Finish()
@@ -56,6 +89,9 @@ var _ = Describe("OSD Drain Strategy", func() {
 				mockMachineryClient,
 				&NodeDrain{},
 				[]TimedDrainStrategy{},
+				mockUpgradeConfig,
+				mockNotifierClient,
+				mockMetricsClient,
 			}
 			fiveMinsAgo := &metav1.Time{Time: time.Now().Add(-5 * time.Minute)}
 			gomock.InOrder(
@@ -72,6 +108,9 @@ var _ = Describe("OSD Drain Strategy", func() {
 				mockMachineryClient,
 				&NodeDrain{},
 				[]TimedDrainStrategy{mockTimedDrainOne},
+				mockUpgradeConfig,
+				mockNotifierClient,
+				mockMetricsClient,
 			}
 			fortyFiveMinsAgo := &metav1.Time{Time: time.Now().Add(-45 * time.Minute)}
 			gomock.InOrder(
@@ -92,6 +131,9 @@ var _ = Describe("OSD Drain Strategy", func() {
 				mockMachineryClient,
 				&NodeDrain{},
 				[]TimedDrainStrategy{mockTimedDrainOne},
+				mockUpgradeConfig,
+				mockNotifierClient,
+				mockMetricsClient,
 			}
 			fortyFiveMinsAgo := &metav1.Time{Time: time.Now().Add(-45 * time.Minute)}
 			gomock.InOrder(
@@ -112,6 +154,9 @@ var _ = Describe("OSD Drain Strategy", func() {
 				mockMachineryClient,
 				&NodeDrain{},
 				[]TimedDrainStrategy{mockTimedDrainOne, mockTimedDrainTwo},
+				mockUpgradeConfig,
+				mockNotifierClient,
+				mockMetricsClient,
 			}
 			fortyFiveMinsAgo := &metav1.Time{Time: time.Now().Add(-45 * time.Minute)}
 			gomock.InOrder(
@@ -135,6 +180,9 @@ var _ = Describe("OSD Drain Strategy", func() {
 				mockMachineryClient,
 				&NodeDrain{},
 				[]TimedDrainStrategy{mockTimedDrainOne},
+				mockUpgradeConfig,
+				mockNotifierClient,
+				mockMetricsClient,
 			}
 			gomock.InOrder(
 				mockMachineryClient.EXPECT().IsNodeCordoned(gomock.Any()).Times(1).Return(&machinery.IsCordonedResult{IsCordoned: true, AddedAt: nil}),
@@ -148,6 +196,9 @@ var _ = Describe("OSD Drain Strategy", func() {
 				mockMachineryClient,
 				&NodeDrain{},
 				[]TimedDrainStrategy{mockTimedDrainOne},
+				mockUpgradeConfig,
+				mockNotifierClient,
+				mockMetricsClient,
 			}
 			fortyFiveMinsAgo := &metav1.Time{Time: time.Now().Add(-45 * time.Minute)}
 			gomock.InOrder(
@@ -176,6 +227,9 @@ var _ = Describe("OSD Drain Strategy", func() {
 					mockMachineryClient,
 					nodeDrainConfig,
 					[]TimedDrainStrategy{},
+					mockUpgradeConfig,
+					mockNotifierClient,
+					mockMetricsClient,
 				}
 			})
 			AfterEach(func() {
@@ -216,6 +270,9 @@ var _ = Describe("OSD Drain Strategy", func() {
 					mockMachineryClient,
 					nodeDrainConfig,
 					[]TimedDrainStrategy{mockTimedDrainTwo, mockTimedDrainOne},
+					mockUpgradeConfig,
+					mockNotifierClient,
+					mockMetricsClient,
 				}
 			})
 			AfterEach(func() {
