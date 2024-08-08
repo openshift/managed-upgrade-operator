@@ -12,7 +12,7 @@ import (
 
 // CriticalAlerts function will check the list of alerts and namespaces to be ignored for healthcheck
 // and filter the critical open firing alerts via the ALERTS metric.
-func CriticalAlerts(metricsClient metrics.Metrics, cfg *upgraderConfig, ug *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
+func CriticalAlerts(metricsClient metrics.Metrics, cfg *upgraderConfig, ug *upgradev1alpha1.UpgradeConfig, logger logr.Logger, version string) (bool, error) {
 	ic := cfg.HealthCheck.IgnoredCriticals
 	icQuery := ""
 	if len(ic) > 0 {
@@ -25,10 +25,9 @@ func CriticalAlerts(metricsClient metrics.Metrics, cfg *upgraderConfig, ug *upgr
 		ignoredNamespaceQuery = `,namespace!="` + strings.Join(ignoredNamespace, `",namespace!="`) + `"`
 	}
 
-	// Get current cluster version and upgrade state info
+	// Get current upgrade state
 	history := ug.Status.History.GetHistory(ug.Spec.Desired.Version)
 	state := string(history.Phase)
-	version := getCurrentVersion(ug)
 
 	healthCheckQuery := `ALERTS{alertstate="firing",severity="critical",namespace=~"^openshift.*|^kube-.*|^default$"` + ignoredNamespaceQuery + icQuery + "}"
 	alerts, err := metricsClient.Query(healthCheckQuery)

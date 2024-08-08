@@ -19,12 +19,11 @@ var namespaceException = []string{"openshift-logging", "openshift-redhat-marketp
 // HealthCheckPDB performs a health check on the PodDisruptionBudget (PDB) metrics.
 // It returns true if the health check passes, false otherwise.
 // It also returns an error if there was an issue performing the health check.
-func HealthCheckPDB(metricsClient metrics.Metrics, c client.Client, dvo dvo.DvoClientBuilder, ug *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
+func HealthCheckPDB(metricsClient metrics.Metrics, c client.Client, dvo dvo.DvoClientBuilder, ug *upgradev1alpha1.UpgradeConfig, logger logr.Logger, version string) (bool, error) {
 
 	// Get current cluster version and upgrade state info
 	history := ug.Status.History.GetHistory(ug.Spec.Desired.Version)
 	state := string(history.Phase)
-	version := getCurrentVersion(ug)
 
 	reason, err := checkPodDisruptionBudgets(c, logger)
 	if err != nil {

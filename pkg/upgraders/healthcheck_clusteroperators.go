@@ -13,11 +13,10 @@ import (
 
 // ClusterOperators function will check the degraded ClusterOperators and if there are any found then
 // error is reported.
-func ClusterOperators(metricsClient metrics.Metrics, cvClient cv.ClusterVersion, ug *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
-	// Get current cluster version and upgrade state info
+func ClusterOperators(metricsClient metrics.Metrics, cvClient cv.ClusterVersion, ug *upgradev1alpha1.UpgradeConfig, logger logr.Logger, version string) (bool, error) {
+	// Get current upgrade state
 	history := ug.Status.History.GetHistory(ug.Spec.Desired.Version)
 	state := string(history.Phase)
-	version := getCurrentVersion(ug)
 
 	result, err := cvClient.HasDegradedOperators()
 	if err != nil {

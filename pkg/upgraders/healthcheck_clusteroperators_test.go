@@ -32,7 +32,8 @@ var _ = Describe("HealthCheck ClusterOperators", func() {
 		upgradeConfig     *upgradev1alpha1.UpgradeConfig
 
 		// upgrader to be used during tests
-		config *upgraderConfig
+		config  *upgraderConfig
+		version string
 	)
 
 	BeforeEach(func() {
@@ -50,6 +51,7 @@ var _ = Describe("HealthCheck ClusterOperators", func() {
 			IgnoredCriticals:  []string{"alert1", "alert2"},
 			IgnoredNamespaces: []string{"ns1"},
 		}
+		version = "mockVersion"
 	})
 
 	AfterEach(func() {
@@ -63,7 +65,7 @@ var _ = Describe("HealthCheck ClusterOperators", func() {
 				mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterOperatorsStatusFailed, gomock.Any(), gomock.Any()),
 				mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterOperatorsDegraded, gomock.Any(), gomock.Any()),
 			)
-			result, err := ClusterOperators(mockMetricsClient, mockCVClient, upgradeConfig, logger)
+			result, err := ClusterOperators(mockMetricsClient, mockCVClient, upgradeConfig, logger, version)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(result).Should(BeTrue())
 		})
@@ -75,7 +77,7 @@ var _ = Describe("HealthCheck ClusterOperators", func() {
 				mockCVClient.EXPECT().HasDegradedOperators().Return(&clusterversion.HasDegradedOperatorsResult{Degraded: []string{"test-clusteroperator"}}, nil),
 				mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, gomock.Any(), gomock.Any(), gomock.Any()),
 			)
-			result, err := ClusterOperators(mockMetricsClient, mockCVClient, upgradeConfig, logger)
+			result, err := ClusterOperators(mockMetricsClient, mockCVClient, upgradeConfig, logger, version)
 			Expect(err).Should(HaveOccurred())
 			Expect(result).Should(BeFalse())
 		})
@@ -88,7 +90,7 @@ var _ = Describe("HealthCheck ClusterOperators", func() {
 				mockCVClient.EXPECT().HasDegradedOperators().Return(&clusterversion.HasDegradedOperatorsResult{Degraded: []string{}}, fakeError),
 				mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, gomock.Any(), gomock.Any(), gomock.Any()),
 			)
-			result, err := ClusterOperators(mockMetricsClient, mockCVClient, upgradeConfig, logger)
+			result, err := ClusterOperators(mockMetricsClient, mockCVClient, upgradeConfig, logger, version)
 			Expect(err).Should(HaveOccurred())
 			Expect(result).Should(BeFalse())
 		})

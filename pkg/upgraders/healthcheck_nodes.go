@@ -15,7 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func ManuallyCordonedNodes(metricsClient metrics.Metrics, machinery machinery.Machinery, c client.Client, ug *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
+func ManuallyCordonedNodes(metricsClient metrics.Metrics, machinery machinery.Machinery, c client.Client, ug *upgradev1alpha1.UpgradeConfig, logger logr.Logger, version string) (bool, error) {
 	nodes := &corev1.NodeList{}
 	cops := &client.ListOptions{
 		Raw: &metav1.ListOptions{
@@ -23,10 +23,9 @@ func ManuallyCordonedNodes(metricsClient metrics.Metrics, machinery machinery.Ma
 		},
 	}
 
-	// Get current cluster version and upgrade state info
+	// Get current upgrade state
 	history := ug.Status.History.GetHistory(ug.Spec.Desired.Version)
 	state := string(history.Phase)
-	version := getCurrentVersion(ug)
 
 	// Get the list of worker nodes
 	err := c.List(context.TODO(), nodes, cops)
@@ -62,14 +61,13 @@ func ManuallyCordonedNodes(metricsClient metrics.Metrics, machinery machinery.Ma
 	return true, nil
 }
 
-func NodeUnschedulableTaints(metricsClient metrics.Metrics, machinery machinery.Machinery, c client.Client, ug *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
+func NodeUnschedulableTaints(metricsClient metrics.Metrics, machinery machinery.Machinery, c client.Client, ug *upgradev1alpha1.UpgradeConfig, logger logr.Logger, version string) (bool, error) {
 	nodes := &corev1.NodeList{}
 	cops := &client.ListOptions{}
 
-	// Get current cluster version and upgrade state info
+	// Get current upgrade state
 	history := ug.Status.History.GetHistory(ug.Spec.Desired.Version)
 	state := string(history.Phase)
-	version := getCurrentVersion(ug)
 
 	// Get the list of worker nodes
 	err := c.List(context.TODO(), nodes, cops)
