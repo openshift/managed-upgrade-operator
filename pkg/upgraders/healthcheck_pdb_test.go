@@ -227,10 +227,10 @@ var _ = Describe("checkPodDisruptionBudgets", func() {
 
 	Context("When there is an error getting DVO metrics", func() {
 		It("should return DvoMetricsQueryFailed", func() {
-			
+
 			gomock.InOrder(
 				mockdvoclientbulder.EXPECT().New(gomock.Any()).Return(mockdvoclient, nil),
-			mockdvoclient.EXPECT().GetMetrics().Return(nil, fmt.Errorf("failed to get DVO metrics")),
+				mockdvoclient.EXPECT().GetMetrics().Return(nil, fmt.Errorf("failed to get DVO metrics")),
 			)
 			reason, err := checkDvoMetrics(mockClient, mockdvoclientbulder, logger)
 			Expect(err).To(HaveOccurred())
@@ -241,8 +241,7 @@ var _ = Describe("checkPodDisruptionBudgets", func() {
 	Context("When there is an error creating DVO client", func() {
 		It("should return DvoClientCreationFailed", func() {
 			gomock.InOrder(
-				
-			mockdvoclientbulder.EXPECT().New(mockClient).Return(nil, fmt.Errorf("failed to create DVO client")),
+				mockdvoclientbulder.EXPECT().New(mockClient).Return(nil, fmt.Errorf("failed to create DVO client")),
 			)
 			reason, err := checkDvoMetrics(mockClient, mockdvoclientbulder, logger)
 			Expect(err).To(HaveOccurred())
