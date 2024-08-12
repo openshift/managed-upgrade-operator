@@ -45,6 +45,7 @@ var _ = Describe("HealthCheck Alerts", func() {
 		// upgrader to be used during tests
 		config   *upgraderConfig
 		upgrader *clusterUpgrader
+		version  string
 	)
 
 	BeforeEach(func() {
@@ -52,7 +53,7 @@ var _ = Describe("HealthCheck Alerts", func() {
 			Name:      "test-upgradeconfig",
 			Namespace: "test-namespace",
 		}
-		upgradeConfig = testStructs.NewUpgradeConfigBuilder().WithNamespacedName(upgradeConfigName).GetUpgradeConfig()
+		upgradeConfig = testStructs.NewUpgradeConfigBuilder().WithNamespacedName(upgradeConfigName).WithPhase(upgradev1alpha1.UpgradePhaseNew).GetUpgradeConfig()
 		mockCtrl = gomock.NewController(GinkgoT())
 		mockKubeClient = mocks.NewMockClient(mockCtrl)
 		mockMaintClient = mockMaintenance.NewMockMaintenance(mockCtrl)
@@ -80,6 +81,7 @@ var _ = Describe("HealthCheck Alerts", func() {
 			machinery:            mockMachineryClient,
 			upgradeConfig:        upgradeConfig,
 		}
+		version = "mockVersion"
 	})
 
 	AfterEach(func() {
@@ -95,10 +97,10 @@ var _ = Describe("HealthCheck Alerts", func() {
 		It("Prehealth check should pass", func() {
 			gomock.InOrder(
 				mockMetricsClient.EXPECT().Query(gomock.Any()).Return(alertsResponse, nil),
-				mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, gomock.Any()),
-				mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, gomock.Any()),
+				mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.MetricsQueryFailed, gomock.Any(), gomock.Any()),
+				mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.CriticalAlertsFiring, gomock.Any(), gomock.Any()),
 			)
-			result, err := CriticalAlerts(mockMetricsClient, upgrader.config, upgradeConfig, logger)
+			result, err := CriticalAlerts(mockMetricsClient, upgrader.config, upgradeConfig, logger, version)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(result).Should(BeTrue())
 		})
@@ -119,9 +121,9 @@ var _ = Describe("HealthCheck Alerts", func() {
 		It("Prehealth check should not pass", func() {
 			gomock.InOrder(
 				mockMetricsClient.EXPECT().Query(gomock.Any()).Return(alertsResponse, nil),
-				mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, gomock.Any()),
+				mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, gomock.Any(), gomock.Any(), gomock.Any()),
 			)
-			result, err := CriticalAlerts(mockMetricsClient, upgrader.config, upgradeConfig, logger)
+			result, err := CriticalAlerts(mockMetricsClient, upgrader.config, upgradeConfig, logger, version)
 			Expect(err).Should(HaveOccurred())
 			Expect(result).Should(BeFalse())
 		})
@@ -136,9 +138,9 @@ var _ = Describe("HealthCheck Alerts", func() {
 		It("Prehealth check should not pass", func() {
 			gomock.InOrder(
 				mockMetricsClient.EXPECT().Query(gomock.Any()).Return(alertsResponse, fakeError),
-				mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, gomock.Any()),
+				mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, gomock.Any(), gomock.Any(), gomock.Any()),
 			)
-			result, err := CriticalAlerts(mockMetricsClient, upgrader.config, upgradeConfig, logger)
+			result, err := CriticalAlerts(mockMetricsClient, upgrader.config, upgradeConfig, logger, version)
 			Expect(err).Should(HaveOccurred())
 			Expect(result).Should(BeFalse())
 		})

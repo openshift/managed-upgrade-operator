@@ -82,7 +82,7 @@ var pagingAlerts = []string{
 type Metrics interface {
 	UpdateMetricValidationFailed(string)
 	UpdateMetricValidationSucceeded(string)
-	UpdateMetricHealthcheckSucceeded(string, string)
+	UpdateMetricHealthcheckSucceeded(string, string, string, string)
 	UpdateMetricScalingFailed(string)
 	UpdateMetricScalingSucceeded(string)
 	UpdateMetricUpgradeWindowNotBreached(string)
@@ -90,7 +90,7 @@ type Metrics interface {
 	UpdateMetricUpgradeWindowBreached(string)
 	UpdateMetricUpgradeControlPlaneTimeout(string, string)
 	ResetMetricUpgradeControlPlaneTimeout(string, string)
-	UpdateMetricHealthcheckFailed(string, string)
+	UpdateMetricHealthcheckFailed(string, string, string, string)
 	UpdateMetricUpgradeWorkerTimeout(string, string)
 	ResetMetricUpgradeWorkerTimeout(string, string)
 	UpdateMetricNodeDrainFailed(string)
@@ -227,7 +227,7 @@ var (
 		Subsystem: metricsTag,
 		Name:      "healthcheck_failed",
 		Help:      "Upgrade Opertaor health check failed",
-	}, []string{nameLabel, failedReason})
+	}, []string{nameLabel, StateLabel, VersionLabel, failedReason})
 	metricUpgradeWorkerTimeout = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Subsystem: metricsTag,
 		Name:      "worker_timeout",
@@ -292,9 +292,12 @@ func (c *Counter) UpdateMetricValidationSucceeded(upgradeConfigName string) {
 		float64(0))
 }
 
-func (c *Counter) UpdateMetricHealthcheckSucceeded(upgradeConfigName, reason string) {
+
+func (c *Counter) UpdateMetricHealthcheckSucceeded(upgradeConfigName string, reason string, version string, state string) {
 	metricHealthcheckFailed.With(prometheus.Labels{
 		nameLabel:    upgradeConfigName,
+		StateLabel:   state,
+		VersionLabel: version,
 		failedReason: reason}).Set(
 		float64(0))
 }
@@ -329,9 +332,11 @@ func (c *Counter) ResetMetricUpgradeControlPlaneTimeout(upgradeConfigName, versi
 		float64(0))
 }
 
-func (c *Counter) UpdateMetricHealthcheckFailed(upgradeConfigName, reason string) {
+func (c *Counter) UpdateMetricHealthcheckFailed(upgradeConfigName, reason string, version string, state string) {
 	metricHealthcheckFailed.With(prometheus.Labels{
 		failedReason: reason,
+		StateLabel:   state,
+		VersionLabel: version,
 		nameLabel:    upgradeConfigName}).Set(
 		float64(1))
 }
