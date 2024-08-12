@@ -46,8 +46,10 @@ var _ = Describe("checkPodDisruptionBudgets", func() {
 		upgradeConfig = testStructs.NewUpgradeConfigBuilder().WithNamespacedName(upgradeConfigName).GetUpgradeConfig()
 	})
 
+	version := "4.15"
 	Context("When there is invalid PDB configuration", func() {
 		It("HealthCheckPDB check will fail", func() {
+			reason := "fake reason"
 			pdbList := &policyv1.PodDisruptionBudgetList{
 				Items: []policyv1.PodDisruptionBudget{
 					{
@@ -78,16 +80,17 @@ var _ = Describe("checkPodDisruptionBudgets", func() {
 			}
 			gomock.InOrder(
 				mockClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *pdbList),
-				mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, metrics.ClusterInvalidPDBConf),
+				mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, reason, version, metrics.ClusterInvalidPDBConf),
 			)
-			reason, err := HealthCheckPDB(mockMetricsClient, mockClient, mockdvoclientbulder, upgradeConfig, logger)
+			result, err := HealthCheckPDB(mockMetricsClient, mockClient, mockdvoclientbulder, upgradeConfig, logger, version)
 			Expect(err).To(HaveOccurred())
-			Expect(reason).To(Equal(false))
+			Expect(result).To(Equal(false))
 		})
 	})
 
 	Context("When no invalid PDB", func() {
 		It("Prehealth PDB check will pass", func() {
+			reason := "fake reason"
 			pdbList := &policyv1.PodDisruptionBudgetList{
 				Items: []policyv1.PodDisruptionBudget{
 					{
@@ -118,16 +121,17 @@ var _ = Describe("checkPodDisruptionBudgets", func() {
 			}
 			gomock.InOrder(
 				mockClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *pdbList),
-				mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterInvalidPDB),
+				mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, reason, version, metrics.ClusterInvalidPDB),
 			)
-			reason, err := checkPodDisruptionBudgets(mockClient, logger)
+			result, err := checkPodDisruptionBudgets(mockClient, logger)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(reason).To(BeEmpty())
+			Expect(result).To(BeEmpty())
 		})
 	})
 
 	Context("When there is invalid PDB configuration incorrect MaxUnavailable", func() {
 		It("Prehealth PDB check will fail", func() {
+			reason := "found a PodDisruptionBudget with MaxUnavailable set to 0"
 			pdbList := &policyv1.PodDisruptionBudgetList{
 				Items: []policyv1.PodDisruptionBudget{
 					{
@@ -146,16 +150,17 @@ var _ = Describe("checkPodDisruptionBudgets", func() {
 			}
 			gomock.InOrder(
 				mockClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *pdbList),
-				mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, metrics.ClusterInvalidPDBConf),
+				mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, reason, version, metrics.ClusterInvalidPDBConf),
 			)
-			reason, err := checkPodDisruptionBudgets(mockClient, logger)
+			result, err := checkPodDisruptionBudgets(mockClient, logger)
 			Expect(err).To(HaveOccurred())
-			Expect(reason).To(Equal(metrics.ClusterInvalidPDBConf))
+			Expect(result).To(Equal(metrics.ClusterInvalidPDBConf))
 		})
 	})
 
 	Context("When there is invalid PDB configuration with incorrect minavailable", func() {
 		It("Prehealth PDB check will fail", func() {
+			reason := "found a PodDisruptionBudget with MinAvailable set to 100 percent"
 			pdbList := &policyv1.PodDisruptionBudgetList{
 				Items: []policyv1.PodDisruptionBudget{
 					{
@@ -174,38 +179,38 @@ var _ = Describe("checkPodDisruptionBudgets", func() {
 			}
 			gomock.InOrder(
 				mockClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *pdbList),
-				mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, metrics.ClusterInvalidPDBConf),
+				mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, reason, version, metrics.ClusterInvalidPDBConf),
 			)
-			reason, err := checkPodDisruptionBudgets(mockClient, logger)
+			result, err := checkPodDisruptionBudgets(mockClient, logger)
 			Expect(err).To(HaveOccurred())
-			Expect(reason).To(Equal(metrics.ClusterInvalidPDBConf))
+			Expect(result).To(Equal(metrics.ClusterInvalidPDBConf))
 		})
 	})
 
 	Context("When there is invalid PDB configuration with PDBQueryFailed", func() {
 		It("Prehealth PDB check will fail", func() {
-
+			reason := "cannot fetch all pdb"
 			gomock.InOrder(
 				mockClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("Fake cannot fetch all pdb ")),
-				mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, metrics.PDBQueryFailed),
+				mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, reason, version, metrics.PDBQueryFailed),
 			)
-			reason, err := checkPodDisruptionBudgets(mockClient, logger)
+			result, err := checkPodDisruptionBudgets(mockClient, logger)
 			Expect(err).To(HaveOccurred())
-			Expect(reason).To(Equal(metrics.PDBQueryFailed))
+			Expect(result).To(Equal(metrics.PDBQueryFailed))
 		})
 	})
 
 	Context("When DVO service is down", func() {
 		It("checkDvoMetrics check will fail", func() {
-
+			reason := "DVO metrics query failed"
 			gomock.InOrder(
 				mockdvoclientbulder.EXPECT().New(gomock.Any()).Return(mockdvoclient, nil),
 				mockdvoclient.EXPECT().GetMetrics().Return(nil, fmt.Errorf("Fake cannot fetch all metrics ")),
-				mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, metrics.DvoMetricsQueryFailed),
+				mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, reason, version, metrics.DvoMetricsQueryFailed),
 			)
-			reason, err := checkDvoMetrics(mockClient, mockdvoclientbulder, logger)
+			result, err := checkDvoMetrics(mockClient, mockdvoclientbulder, logger)
 			Expect(err).To(HaveOccurred())
-			Expect(reason).To(Equal(metrics.DvoMetricsQueryFailed))
+			Expect(result).To(Equal(metrics.DvoMetricsQueryFailed))
 		})
 	})
 
@@ -232,9 +237,9 @@ var _ = Describe("checkPodDisruptionBudgets", func() {
 				mockdvoclientbulder.EXPECT().New(gomock.Any()).Return(mockdvoclient, nil),
 				mockdvoclient.EXPECT().GetMetrics().Return(nil, fmt.Errorf("failed to get DVO metrics")),
 			)
-			reason, err := checkDvoMetrics(mockClient, mockdvoclientbulder, logger)
+			result, err := checkDvoMetrics(mockClient, mockdvoclientbulder, logger)
 			Expect(err).To(HaveOccurred())
-			Expect(reason).To(Equal(metrics.DvoMetricsQueryFailed))
+			Expect(result).To(Equal(metrics.DvoMetricsQueryFailed))
 		})
 	})
 
@@ -243,9 +248,9 @@ var _ = Describe("checkPodDisruptionBudgets", func() {
 			gomock.InOrder(
 				mockdvoclientbulder.EXPECT().New(mockClient).Return(nil, fmt.Errorf("failed to create DVO client")),
 			)
-			reason, err := checkDvoMetrics(mockClient, mockdvoclientbulder, logger)
+			result, err := checkDvoMetrics(mockClient, mockdvoclientbulder, logger)
 			Expect(err).To(HaveOccurred())
-			Expect(reason).To(Equal(metrics.DvoClientCreationFailed))
+			Expect(result).To(Equal(metrics.DvoClientCreationFailed))
 		})
 	})
 })
