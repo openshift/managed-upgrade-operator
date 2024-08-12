@@ -150,9 +150,9 @@ var _ = Describe("HealthCheck Manually Cordoned node", func() {
 
 			gomock.InOrder(
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("Fake cannot fetch all worker nodes")),
-				mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, gomock.Any()),
+				mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, gomock.Any(), gomock.Any(), gomock.Any()),
 			)
-			result, err := NodeUnschedulableTaints(mockMetricsClient, mockMachineryClient, mockKubeClient, upgradeConfig, logger)
+			result, err := NodeUnschedulableTaints(mockMetricsClient, mockMachineryClient, mockKubeClient, upgradeConfig, logger, version)
 			Expect(err).Should(HaveOccurred())
 			Expect(result).Should(BeFalse())
 		})
