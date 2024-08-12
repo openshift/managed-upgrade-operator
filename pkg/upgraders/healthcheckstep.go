@@ -106,9 +106,9 @@ func (c *clusterUpgrader) PreUpgradeHealthCheck(ctx context.Context, logger logr
 				if err != nil {
 					return false, err
 				}
+				// In the upgrade stage,if the only failure is the capacity reservation,
+				// should not block the upgrade
 				if capacityReservationFailed && len(healthCheckFailed) == 1 {
-					// In the upgrade stage,if there is only one failure and it's capacity reservation failure,
-					// return true which doesn't block the upgrade
 					return true, nil
 				}
 			case " ":
