@@ -244,9 +244,18 @@ var _ = Describe("OCM Provider", func() {
 		})
 
 		It("Errors if the internal cluster ID can't be retrieved", func() {
-
 			gomock.InOrder(
-				mockOcmClient.EXPECT().GetCluster().Return(nil, ocm.ErrClusterIdNotFound),
+				mockOcmClient.EXPECT().GetCluster().Return(&cluster, ocm.ErrClusterIdNotFound),
+			)
+			specs, err := provider.Get()
+			Expect(err).To(Equal(ocm.ErrClusterIdNotFound))
+			Expect(specs).To(BeNil())
+		})
+
+		It("Errors if the internal cluster ID is blank", func() {
+			cluster = ocm.ClusterInfo{}
+			gomock.InOrder(
+				mockOcmClient.EXPECT().GetCluster().Return(&cluster, nil),
 			)
 			specs, err := provider.Get()
 			Expect(err).To(Equal(ocm.ErrClusterIdNotFound))

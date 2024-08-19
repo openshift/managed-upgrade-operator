@@ -93,6 +93,17 @@ var _ = Describe("NotifierStep", func() {
 				Expect(result).To(BeTrue())
 			})
 		})
+		Context("When the cluster is upgrading", func() {
+			It("will return return error if can't know if upgrade commenced or not", func() {
+				fakeError := fmt.Errorf("fake upgradecommenced error")
+				gomock.InOrder(
+					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, fakeError),
+				)
+				result, err := upgrader.SendStartedNotification(context.TODO(), logger)
+				Expect(err).To(HaveOccurred())
+				Expect(result).To(BeFalse())
+			})
+		})
 		Context("When the cluster has not started upgrading yet", func() {
 			It("will send the correct notification", func() {
 				gomock.InOrder(
@@ -143,6 +154,16 @@ var _ = Describe("NotifierStep", func() {
 				)
 				err := upgrader.SendScaleSkippedNotification(context.TODO(), logger)
 				Expect(err).NotTo(HaveOccurred())
+			})
+		})
+		Context("When notifying on scale skipped phase", func() {
+			It("Should return error if there's a failure", func() {
+				fakeError := fmt.Errorf("fake notification error")
+				gomock.InOrder(
+					mockEMClient.EXPECT().Notify(notifier.MuoStateScaleSkipped).Return(fakeError),
+				)
+				err := upgrader.SendScaleSkippedNotification(context.TODO(), logger)
+				Expect(err).To(HaveOccurred())
 			})
 		})
 	})
