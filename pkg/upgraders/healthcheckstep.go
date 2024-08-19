@@ -46,7 +46,6 @@ func (c *clusterUpgrader) PreUpgradeHealthCheck(ctx context.Context, logger logr
 		healthCheckFailed := []string{}
 		history := c.upgradeConfig.Status.History.GetHistory(c.upgradeConfig.Spec.Desired.Version)
 		state := string(history.Phase)
-		capacityReservationFailed := false
 
 		ok, err := CriticalAlerts(c.metrics, c.config, c.upgradeConfig, logger, version)
 		if err != nil || !ok {
@@ -63,7 +62,6 @@ func (c *clusterUpgrader) PreUpgradeHealthCheck(ctx context.Context, logger logr
 		if c.upgradeConfig.Spec.CapacityReservation {
 			ok, err := c.scaler.CanScale(c.client, logger)
 			if !ok || err != nil {
-				capacityReservationFailed = true
 				c.metrics.UpdateMetricHealthcheckFailed(c.upgradeConfig.Name, metrics.DefaultWorkerMachinepoolNotFound, version, state)
 				healthCheckFailed = append(healthCheckFailed, "CapacityReservationHealthcheckFailed")
 			} else {
@@ -106,11 +104,14 @@ func (c *clusterUpgrader) PreUpgradeHealthCheck(ctx context.Context, logger logr
 				if err != nil {
 					return false, err
 				}
-				// In the upgrade stage,if the only failure is the capacity reservation,
-				// should not block the upgrade
-				if capacityReservationFailed && len(healthCheckFailed) == 1 {
-					return true, nil
+
+				// Return false if the healthCheckFailed slice contains "CriticalAlertsHealthcheckFailed" or "ClusterOperatorsHealthcheckFailed"
+				for _, healthcheck := range healthCheckFailed {
+					if healthcheck == "CriticalAlertsHealthcheckFailed" || healthcheck == "ClusterOperatorsHealthcheckFailed" {
+						return false, nil
+					}
 				}
+				return true, nil
 			case " ":
 				logger.Info(fmt.Sprintf("upgradeconfig history doesn't exist for version: %s", c.upgradeConfig.Spec.Desired.Version))
 			}
