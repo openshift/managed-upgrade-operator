@@ -23,9 +23,10 @@ func (c *clusterUpgrader) AllWorkersUpgraded(ctx context.Context, logger logr.Lo
 	if upgradingResult.IsUpgrading {
 		logger.Info(fmt.Sprintf("not all workers are upgraded, upgraded: %v, total: %v", upgradingResult.UpdatedCount, upgradingResult.MachineCount))
 		if !silenceActive {
-			logger.Info("Worker upgrade timeout.")
+			logger.Info("Workers upgrading and no maintenance window active. Setting worker upgrade timeout metric.")
 			c.metrics.UpdateMetricUpgradeWorkerTimeout(c.upgradeConfig.Name, c.upgradeConfig.Spec.Desired.Version)
 		} else {
+			logger.Info("Workers upgrading and maintenance window active. Resetting worker timeout metric.")
 			c.metrics.ResetMetricUpgradeWorkerTimeout(c.upgradeConfig.Name, c.upgradeConfig.Spec.Desired.Version)
 		}
 		return false, nil

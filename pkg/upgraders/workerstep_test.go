@@ -2,6 +2,7 @@ package upgraders
 
 import (
 	"context"
+	"fmt"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -97,6 +98,29 @@ var _ = Describe("WorkerStep", func() {
 	})
 
 	Context("When assessing whether all workers are upgraded", func() {
+		Context("When cannot fetch upgrading result", func() {
+			It("Should return error", func() {
+				fakeError := fmt.Errorf("fake upgrading result error")
+				gomock.InOrder(
+					mockMachineryClient.EXPECT().IsUpgrading(gomock.Any(), "worker").Return(&machinery.UpgradingResult{IsUpgrading: true}, fakeError),
+				)
+				result, err := upgrader.AllWorkersUpgraded(context.TODO(), logger)
+				Expect(err).To(HaveOccurred())
+				Expect(result).To(BeFalse())
+			})
+		})
+		Context("When cannot fetch if the maintenance is active or not", func() {
+			It("Should return error", func() {
+				fakeError := fmt.Errorf("fake cannot fetch maintenance window error")
+				gomock.InOrder(
+					mockMachineryClient.EXPECT().IsUpgrading(gomock.Any(), "worker").Return(&machinery.UpgradingResult{IsUpgrading: true}, nil),
+					mockMaintClient.EXPECT().IsActive().Return(false, fakeError),
+				)
+				result, err := upgrader.AllWorkersUpgraded(context.TODO(), logger)
+				Expect(err).To(HaveOccurred())
+				Expect(result).To(BeFalse())
+			})
+		})
 		Context("When all workers are upgraded", func() {
 			It("Indicates that all workers are upgraded", func() {
 				gomock.InOrder(
@@ -110,6 +134,18 @@ var _ = Describe("WorkerStep", func() {
 				Expect(result).To(BeTrue())
 			})
 		})
+		Context("When the workers are upgrading and the silence is active", func() {
+			It("Should reset the upgrade worker timeout metric", func() {
+				gomock.InOrder(
+					mockMachineryClient.EXPECT().IsUpgrading(gomock.Any(), "worker").Return(&machinery.UpgradingResult{IsUpgrading: true}, nil),
+					mockMaintClient.EXPECT().IsActive().Return(true, nil),
+					mockMetricsClient.EXPECT().ResetMetricUpgradeWorkerTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version),
+				)
+				result, err := upgrader.AllWorkersUpgraded(context.TODO(), logger)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(BeFalse())
+			})
+		})
 		Context("When all workers are not upgraded", func() {
 			It("Indicates that all workers are not upgraded", func() {
 				gomock.InOrder(
@@ -119,6 +155,19 @@ var _ = Describe("WorkerStep", func() {
 				)
 				result, err := upgrader.AllWorkersUpgraded(context.TODO(), logger)
 				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(BeFalse())
+			})
+		})
+		Context("When failing to notify on worker plane upgrade finished", func() {
+			It("Should return error", func() {
+				fakeError := fmt.Errorf("fake notification error")
+				gomock.InOrder(
+					mockMachineryClient.EXPECT().IsUpgrading(gomock.Any(), "worker").Return(&machinery.UpgradingResult{IsUpgrading: false}, nil),
+					mockMaintClient.EXPECT().IsActive(),
+					mockEMClient.EXPECT().Notify(gomock.Any()).Return(fakeError),
+				)
+				result, err := upgrader.AllWorkersUpgraded(context.TODO(), logger)
+				Expect(err).To(HaveOccurred())
 				Expect(result).To(BeFalse())
 			})
 		})

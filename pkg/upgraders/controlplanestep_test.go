@@ -96,6 +96,20 @@ var _ = Describe("ControlPlaneStep", func() {
 			})
 		})
 
+		Context("When cannot notify control plane upgrade finished", func() {
+			It("Should report error", func() {
+				fakeError := fmt.Errorf("fake notification error")
+				gomock.InOrder(
+					mockCVClient.EXPECT().GetClusterVersion().Return(nil, nil),
+					mockCVClient.EXPECT().HasUpgradeCompleted(gomock.Any(), gomock.Any()).Return(true),
+					mockEMClient.EXPECT().Notify(gomock.Any()).Return(fakeError),
+				)
+				result, err := upgrader.ControlPlaneUpgraded(context.TODO(), logger)
+				Expect(err).To(HaveOccurred())
+				Expect(result).To(BeFalse())
+			})
+		})
+
 		Context("When that version is recorded in clusterversion's history", func() {
 			var clusterVersion *configv1.ClusterVersion
 			BeforeEach(func() {
@@ -221,6 +235,35 @@ var _ = Describe("ControlPlaneStep", func() {
 				Expect(err).To(Equal(fakeError))
 				Expect(result).To(BeFalse())
 			})
+		})
+
+		Context("When sending notification for control plane upgrade start fails", func() {
+			It("Should report error", func() {
+				fakeError := fmt.Errorf("fake notification error")
+				gomock.InOrder(
+					mockMetricsClient.EXPECT().UpdateMetricUpgradeWindowNotBreached(gomock.Any()),
+					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
+					mockEMClient.EXPECT().Notify(gomock.Any()).Return(fakeError),
+				)
+				result, err := upgrader.CommenceUpgrade(context.TODO(), logger)
+				Expect(err).To(HaveOccurred())
+				Expect(result).To(BeFalse())
+			})
+		})
+
+		Context("When clusterversion is upgraded to desired version", func() {
+			It("Should return the control plane upgrade completion with no error", func() {
+				gomock.InOrder(
+					mockMetricsClient.EXPECT().UpdateMetricUpgradeWindowNotBreached(gomock.Any()),
+					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
+					mockEMClient.EXPECT().Notify(gomock.Any()),
+					mockCVClient.EXPECT().EnsureDesiredConfig(gomock.Any()).Return(true, nil),
+				)
+				result, err := upgrader.CommenceUpgrade(context.TODO(), logger)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result).To(BeTrue())
+			})
+
 		})
 	})
 
