@@ -15,7 +15,7 @@ const (
 	// Failed and Skipped descriptions
 
 	// UPGRADE_PRECHECK_FAILED_DESC describes the upgrade pre check failure
-	UPGRADE_PRECHECK_FAILED_DESC = "Cluster upgrade to version %s was cancelled as the cluster did not pass its pre-upgrade verification checks. Automated upgrades will be retried on their next scheduling cycle. If you have manually scheduled an upgrade instead, it must now be rescheduled."
+	UPGRADE_PRECHECK_FAILED_DESC = "Cluster upgrade to version %s was cancelled as the cluster did not pass its pre-upgrade verification checks. Automated upgrades will be retried on their next scheduling cycle. If you have manually scheduled an upgrade instead, it must now be rescheduled"
 	// UPGRADE_PREHEALTHCHECK_FAILED_DESC describes the upgrade pre health check failure
 	UPGRADE_PREHEALTHCHECK_FAILED_DESC = "Cluster upgrade to version %s was cancelled during the Pre-Health Check step. Health alerts are firing in the cluster which could impact the upgrade's operation, so the upgrade did not proceed. Automated upgrades will be retried on their next scheduling cycle. If you have manually scheduled an upgrade instead, it must now be rescheduled"
 	// UPGRADE_EXTDEPCHECK_FAILED_DESC describes the upgrade external dependency check failure
@@ -30,7 +30,7 @@ const (
 	// UPGRADE_DEFAULT_DELAY_DESC describes the upgrade default delay
 	UPGRADE_DEFAULT_DELAY_DESC = "Cluster upgrade to version %s is experiencing a delay whilst it performs necessary pre-upgrade procedures. The upgrade will continue to retry. This is an informational notification and no action is required"
 	// UPGRADE_PREHEALTHCHECK_DELAY_DESC describes the upgrade pre health check delay
-	UPGRADE_PREHEALTHCHECK_DELAY_DESC = "Cluster upgrade to version %s is experiencing a delay as health alerts are firing in the cluster which could impact the upgrade's operation. The upgrade will continue to retry. This is an informational notification and no action is required by you."
+	UPGRADE_PREHEALTHCHECK_DELAY_DESC = "Cluster upgrade to version %s is experiencing a delay as health alerts are firing in the cluster which could impact the upgrade's operation. The upgrade will continue to retry. This is an informational notification and no action is required by you"
 	// UPGRADE_EXTDEPCHECK_DELAY_DESC describes the upgrade external dependency check delay
 	UPGRADE_EXTDEPCHECK_DELAY_DESC = "Cluster upgrade to version %s is experiencing a delay as an external dependency of the upgrade is currently unavailable. The upgrade will continue to retry. This is an informational notification and no action is required by you"
 	// UPGRADE_SCALE_DELAY_DESC describes the upgrade scaling delayed
