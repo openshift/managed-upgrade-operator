@@ -12,13 +12,12 @@ import (
 )
 
 const (
-	upgrade_healthcheck_kcs = "https://access.redhat.com/solutions/7081505"
 	// Failed and Skipped descriptions
 
 	// UPGRADE_PRECHECK_FAILED_DESC describes the upgrade pre check failure
-	UPGRADE_PRECHECK_FAILED_DESC = "Cluster upgrade to version %s was cancelled as the cluster did not pass its pre-upgrade verification checks. Automated upgrades will be retried on their next scheduling cycle. If you have manually scheduled an upgrade instead, it must now be rescheduled. Please refer to the article for further details " + upgrade_healthcheck_kcs
+	UPGRADE_PRECHECK_FAILED_DESC = "Cluster upgrade to version %s was cancelled as the cluster did not pass its pre-upgrade verification checks. Automated upgrades will be retried on their next scheduling cycle. If you have manually scheduled an upgrade instead, it must now be rescheduled."
 	// UPGRADE_PREHEALTHCHECK_FAILED_DESC describes the upgrade pre health check failure
-	UPGRADE_PREHEALTHCHECK_FAILED_DESC = "Cluster upgrade to version %s was cancelled during the Pre-Health Check step. Health alerts are firing in the cluster which could impact the upgrade's operation, so the upgrade did not proceed. Automated upgrades will be retried on their next scheduling cycle. If you have manually scheduled an upgrade instead, it must now be rescheduled. Please refer to the article for further details " + upgrade_healthcheck_kcs
+	UPGRADE_PREHEALTHCHECK_FAILED_DESC = "Cluster upgrade to version %s was cancelled during the Pre-Health Check step. Health alerts are firing in the cluster which could impact the upgrade's operation, so the upgrade did not proceed. Automated upgrades will be retried on their next scheduling cycle. If you have manually scheduled an upgrade instead, it must now be rescheduled"
 	// UPGRADE_EXTDEPCHECK_FAILED_DESC describes the upgrade external dependency check failure
 	UPGRADE_EXTDEPCHECK_FAILED_DESC = "Cluster upgrade to version %s was cancelled during the External Dependency Availability Check step. A required external dependency of the upgrade was unavailable, so the upgrade did not proceed. Automated upgrades will be retried on their next scheduling cycle. If you have manually scheduled an upgrade instead, it must now be rescheduled"
 	// UPGRADE_SCALE_FAILED_DESC describes the upgrade scaling failed
@@ -31,7 +30,7 @@ const (
 	// UPGRADE_DEFAULT_DELAY_DESC describes the upgrade default delay
 	UPGRADE_DEFAULT_DELAY_DESC = "Cluster upgrade to version %s is experiencing a delay whilst it performs necessary pre-upgrade procedures. The upgrade will continue to retry. This is an informational notification and no action is required"
 	// UPGRADE_PREHEALTHCHECK_DELAY_DESC describes the upgrade pre health check delay
-	UPGRADE_PREHEALTHCHECK_DELAY_DESC = "Cluster upgrade to version %s is experiencing a delay as health alerts are firing in the cluster which could impact the upgrade's operation. The upgrade will continue to retry. This is an informational notification and no action is required by you. Please refer to the article for further details " + upgrade_healthcheck_kcs
+	UPGRADE_PREHEALTHCHECK_DELAY_DESC = "Cluster upgrade to version %s is experiencing a delay as health alerts are firing in the cluster which could impact the upgrade's operation. The upgrade will continue to retry. This is an informational notification and no action is required by you."
 	// UPGRADE_EXTDEPCHECK_DELAY_DESC describes the upgrade external dependency check delay
 	UPGRADE_EXTDEPCHECK_DELAY_DESC = "Cluster upgrade to version %s is experiencing a delay as an external dependency of the upgrade is currently unavailable. The upgrade will continue to retry. This is an informational notification and no action is required by you"
 	// UPGRADE_SCALE_DELAY_DESC describes the upgrade scaling delayed
@@ -42,9 +41,9 @@ const (
 	// ServiceLog descriptions
 
 	// UPGRADE_HEALTHCHECK_DELAY_DESC describes the upgrade pre health check delay
-	UPGRADE_HEALTHCHECK_DELAY_DESC = "Cluster upgrade to version %s may experience a delay as following healthcheck(s): %s are failing for the cluster which could impact the upgrade's operation. Please refer to the article for further details " + upgrade_healthcheck_kcs
+	UPGRADE_HEALTHCHECK_DELAY_DESC = "Cluster upgrade to version %s may experience a delay as following healthcheck(s): %s are failing for the cluster which could impact the upgrade's operation."
 	// UPGRADE_HEALTHCHECK_DELAY_DESC describes the upgrade pre health check delay
-	UPGRADE_PREHEALTHCHECK_WARNING_DESC = "Cluster upgrade to version %s has been scheduled for more than 2 hours, cluster pre-upgrade health check has identified the following points which may impact the upgrade process: %s. Please take actions to review and fix the issues before the upgrade begins to have seamless upgrade experience" + " " + upgrade_healthcheck_kcs
+	UPGRADE_PREHEALTHCHECK_WARNING_DESC = "Cluster upgrade to version %s has been scheduled for more than 2 hours, cluster pre-upgrade health check has identified the following points which may impact the upgrade process: %s. Please take actions to review and fix the issues before the upgrade begins to have seamless upgrade experience"
 	// UPGRADE_CONTROL_PLANE_STARTED_DESC describes the control plane upgrade started
 	UPGRADE_CONTROL_PLANE_STARTED_DESC = "Cluster upgrade to version %s is starting with control and worker plane upgrade. This is an informational notification and no action is required"
 	// UPGRADE_CONTROL_PLANE_FINISHED_DESC describes the control plane upgrade finished
