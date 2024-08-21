@@ -38,6 +38,7 @@ func NewOCMNotifier(client client.Client, ocmBaseUrl *url.URL, upgradeConfigMana
 }
 
 const SLserviceName string = "MUO"
+const upgrade_healthcheck_kcs string = "https://access.redhat.com/solutions/7081505"
 
 type OcmState string
 
@@ -111,6 +112,9 @@ func (s *ocmNotifier) NotifyState(state MuoState, description string) error {
 			slState, ok := mapSLState(state, serviceLogMap)
 			if !ok {
 				return fmt.Errorf("failed to map the servicelog state for MUO state %s", state)
+			}
+			if state == MuoStateHealthCheckSL || state == MuoStatePreHealthCheckSL {
+				slState.DocReferences = upgrade_healthcheck_kcs
 			}
 			err = s.ocmClient.PostServiceLog((*ocm.ServiceLog)(&slState), description)
 			if err != nil {

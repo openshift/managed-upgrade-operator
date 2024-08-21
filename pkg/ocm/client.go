@@ -68,11 +68,12 @@ type ocmClient struct {
 
 // ServiceLog is the internal representation of a service log
 type ServiceLog struct {
-	Severity     servicelogsv1.Severity
-	ServiceName  string
-	Summary      string
-	Description  string
-	InternalOnly bool
+	Severity      servicelogsv1.Severity
+	ServiceName   string
+	Summary       string
+	Description   string
+	InternalOnly  bool
+	DocReferences string
 }
 
 type ocmRoundTripper struct {
@@ -252,6 +253,9 @@ func (s *ocmClient) PostServiceLog(sl *ServiceLog, description string) error {
 
 	// Else refer to the values in 'sl'
 	builder.Summary(sl.Summary)
+	if len(sl.DocReferences) > 0 {
+		builder.DocReferences(sl.DocReferences)
+	}
 
 	le, err := builder.Build()
 	if err != nil {
