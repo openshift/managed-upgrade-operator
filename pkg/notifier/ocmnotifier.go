@@ -72,9 +72,9 @@ var (
 	// ServiceLogStateWorkerPlaneFinished defines the summary for worker plane upgrade finished servicelog
 	ServiceLogStateWorkerPlaneFinished = ServiceLogState{Severity: servicelogsv1.SeverityInfo, Summary: "Cluster has finished with worker plane upgrade"}
 	//ServiceLogStateHealthCheckSL defines the summary for finished cluster healthcheck
-	ServiceLogStateHealthCheckSL = ServiceLogState{Severity: servicelogsv1.SeverityInfo, Summary: "Cluster has finished healthcheck during the upgrade"}
+	ServiceLogStateHealthCheckSL = ServiceLogState{Severity: servicelogsv1.SeverityInfo, Summary: "Cluster has encountered healthcheck failure during upgrade"}
 	//ServiceLogStatePreHealthCheckSL defines the summary for finished cluster pre-upgrade healthcheck
-	ServiceLogStatePreHealthCheckSL = ServiceLogState{Severity: servicelogsv1.SeverityInfo, Summary: "Cluster has finished pre-upgrade healthcheck"}
+	ServiceLogStatePreHealthCheckSL = ServiceLogState{Severity: servicelogsv1.SeverityInfo, Summary: "Cluster has encountered pre-upgrade healthcheck failure"}
 )
 
 // ServiceLogState type defines the ServiceLog metadata
