@@ -51,19 +51,20 @@ func checkPodDisruptionBudgets(c client.Client, logger logr.Logger) (string, err
 		logger.Info("unable to list PodDisruptionBudgets/v1")
 		return metrics.PDBQueryFailed, err
 	}
+
 	for _, pdb := range pdbList.Items {
 		if !strings.HasPrefix(pdb.Namespace, "openshift-*") || checkNamespaceExistsInArray(namespaceException, pdb.Namespace) {
-			if pdb.Spec.MaxUnavailable != nil && ((pdb.Spec.MaxUnavailable.Type == intstr.Int) && (pdb.Spec.MaxUnavailable.IntVal == 0)) {
-				logger.Info(fmt.Sprintf("PodDisruptionBudget: %s/%s\n", pdb.Namespace, pdb.Name))
-				return metrics.ClusterInvalidPDBConf, fmt.Errorf("found a PodDisruptionBudget with MaxUnavailable set to 0")
-			}
-			if pdb.Spec.MinAvailable != nil && ((pdb.Spec.MinAvailable.Type == intstr.String) && (pdb.Spec.MinAvailable.StrVal == "100%")) {
-				logger.Info(fmt.Sprintf("PodDisruptionBudget: %s/%s\n", pdb.Namespace, pdb.Name))
-				return metrics.ClusterInvalidPDBConf, fmt.Errorf("found a PodDisruptionBudget with MinAvailable set to 100 percent")
+
+			maxResult, err := validateMaxUnavailable(pdb, logger)
+			if !maxResult {
+				return metrics.ClusterInvalidPDBConf, err
 			}
 
+			minResult, err := validateMinAvailable(pdb, logger)
+			if !minResult {
+				return metrics.ClusterInvalidPDBConf, err
+			}
 		}
-
 	}
 
 	return "", nil
@@ -104,4 +105,39 @@ func checkDvoMetrics(c client.Client, dvo dvo.DvoClientBuilder, logger logr.Logg
 	}
 
 	return "", nil
+}
+
+// validateMaxUnavailable function will return false for failures if
+// MaxUnavailable for a PDB is 0 or 0% if defined
+func validateMaxUnavailable(p policyv1.PodDisruptionBudget, l logr.Logger) (bool, error) {
+	if p.Spec.MaxUnavailable != nil {
+		switch p.Spec.MaxUnavailable.Type {
+		case intstr.Int:
+			if p.Spec.MaxUnavailable.IntVal == 0 {
+				l.Info(fmt.Sprintf("MaxUnavailable 0 found in PodDisruptionBudget: %s/%s\n", p.Namespace, p.Name))
+				return false, fmt.Errorf("found a PodDisruptionBudget with MaxUnavailable set to 0")
+			}
+		case intstr.String:
+			if p.Spec.MaxUnavailable.StrVal == "0%" {
+				l.Info(fmt.Sprintf("MaxUnavailable 0%% found in PodDisruptionBudget: %s/%s\n", p.Namespace, p.Name))
+				return false, fmt.Errorf("found a PodDisruptionBudget with MaxUnavailable set to 0%%")
+			}
+		}
+	}
+	return true, nil
+}
+
+// validateMinAvailable function will return false for failures if
+// MinAvailable for a PDB is 100% if defined
+func validateMinAvailable(p policyv1.PodDisruptionBudget, l logr.Logger) (bool, error) {
+	if p.Spec.MinAvailable != nil {
+		switch p.Spec.MinAvailable.Type {
+		case intstr.String:
+			if p.Spec.MinAvailable.StrVal == "100%" {
+				l.Info(fmt.Sprintf("MinAvailable 100%% found in PodDisruptionBudget: %s/%s\n", p.Namespace, p.Name))
+				return false, fmt.Errorf("found a PodDisruptionBudget with MinUnavailable set to 100%%")
+			}
+		}
+	}
+	return true, nil
 }
