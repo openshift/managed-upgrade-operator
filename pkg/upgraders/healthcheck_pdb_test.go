@@ -131,7 +131,7 @@ var _ = Describe("checkPodDisruptionBudgets", func() {
 	})
 
 	Context("When there is invalid PDB configuration incorrect MaxUnavailable", func() {
-		It("Prehealth PDB check will fail", func() {
+		It("Prehealth PDB check will fail when maxunavailable is 0", func() {
 			reason := "found a PodDisruptionBudget with MaxUnavailable set to 0"
 			pdbList := &policyv1.PodDisruptionBudgetList{
 				Items: []policyv1.PodDisruptionBudget{
@@ -144,6 +144,33 @@ var _ = Describe("checkPodDisruptionBudgets", func() {
 							MaxUnavailable: &intstr.IntOrString{
 								Type:   intstr.Int,
 								IntVal: 0,
+							},
+						},
+					},
+				},
+			}
+			gomock.InOrder(
+				mockClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *pdbList),
+				mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, reason, version, "New"),
+			)
+			result, err := checkPodDisruptionBudgets(mockClient, logger)
+			Expect(err).To(HaveOccurred())
+			Expect(result).To(Equal(metrics.ClusterInvalidPDBConf))
+		})
+
+		It("Prehealth PDB check will fail will fail when maxunavailable is 0%", func() {
+			reason := "found a PodDisruptionBudget with MaxUnavailable set to 0%"
+			pdbList := &policyv1.PodDisruptionBudgetList{
+				Items: []policyv1.PodDisruptionBudget{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "openshift-logging",
+							Name:      "pdb-1",
+						},
+						Spec: policyv1.PodDisruptionBudgetSpec{
+							MaxUnavailable: &intstr.IntOrString{
+								Type:   intstr.String,
+								StrVal: "0%",
 							},
 						},
 					},
