@@ -97,7 +97,11 @@ var (
 	scheme                  = apiruntime.NewScheme()
 	setupLog                = ctrl.Log.WithName("setup")
 )
-var log = logf.Log.WithName("cmd")
+
+var (
+	log                  = logf.Log.WithName("cmd")
+	muoLockConfigMapName = "managed-upgrade-operator-lock"
+)
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
@@ -115,6 +119,24 @@ func printVersion() {
 	log.Info(fmt.Sprintf("Go Version: %s", runtime.Version()))
 	log.Info(fmt.Sprintf("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH))
 	log.Info(fmt.Sprintf("Version of operator-sdk: v%v", version.SDKVersion))
+}
+
+// This function is used to pre-emptively avoid a deadlock
+func cleanupLockForLeader(ns string, crclient client.Client) {
+	lockConfigMap := &corev1.ConfigMap{}
+	key := client.ObjectKey{Namespace: ns, Name: muoLockConfigMapName}
+	err := crclient.Get(context.TODO(), key, lockConfigMap)
+	if err != nil {
+		setupLog.Error(err, fmt.Sprintf("Could not find a lock with name %s in namespace %s", key.Name, key.Namespace))
+		return
+	}
+	setupLog.Info(fmt.Sprintf("Lock already exists with name %s in namespace %s, attempting to delete", key.Name, key.Namespace))
+	err = crclient.Delete(context.TODO(), lockConfigMap)
+	if err != nil {
+		setupLog.Error(err, "Failed to delete lock %v", err)
+		os.Exit(1)
+	}
+	setupLog.Info(fmt.Sprintf("Lock deleted with name %s in namespace %s", key.Name, key.Namespace))
 }
 
 func main() {
@@ -178,9 +200,10 @@ func main() {
 	}
 
 	// Ensure lock for leader election
-	_, err = k8sutil.GetOperatorNamespace()
+	ns, err := k8sutil.GetOperatorNamespace()
 	if err == nil {
-		err = leader.Become(context.TODO(), "managed-upgrade-operator-lock")
+		cleanupLockForLeader(ns, mgr.GetClient())
+		err = leader.Become(context.TODO(), muoLockConfigMapName)
 		if err != nil {
 			setupLog.Error(err, "failed to create leader lock")
 			os.Exit(1)
@@ -262,7 +285,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	ns, err := util.GetOperatorNamespace()
+	ns, err = util.GetOperatorNamespace()
 	if err != nil {
 		os.Exit(1)
 	}
@@ -359,7 +382,7 @@ func addMetrics(ctx context.Context, cl client.Client, cfg *rest.Config) error {
 		sm := opmetrics.GenerateServiceMonitor(s)
 
 		// ErrSMMetricsExists is used to detect if the -metrics ServiceMonitor already exists
-		var ErrSMMetricsExists = fmt.Sprintf("servicemonitors.monitoring.coreos.com \"%s-metrics\" already exists", muocfg.OperatorName)
+		ErrSMMetricsExists := fmt.Sprintf("servicemonitors.monitoring.coreos.com \"%s-metrics\" already exists", muocfg.OperatorName)
 
 		log.Info(fmt.Sprintf("Attempting to create service monitor %s", sm.Name))
 		// TODO: Get SM and compare to see if an UPDATE is required
