@@ -130,13 +130,53 @@ func cleanupLockForLeader(ns string, crclient client.Client) {
 		setupLog.Error(err, fmt.Sprintf("Could not find a lock with name %s in namespace %s", key.Name, key.Namespace))
 		return
 	}
-	setupLog.Info(fmt.Sprintf("Lock already exists with name %s in namespace %s, attempting to delete", key.Name, key.Namespace))
+
+	setupLog.Info(fmt.Sprintf("Lock already exists with name %s in namespace %s", key.Name, key.Namespace))
+
+	pods, err := getMUOPods(ns, crclient)
+	if err != nil {
+		setupLog.Error(err, "Failed to fetch MUO pods")
+		os.Exit(1)
+	}
+
+	cmOwnerRefs := lockConfigMap.GetOwnerReferences()
+	if len(cmOwnerRefs) != 1 {
+		setupLog.Error(err, "Lock ConfigMap must have exactly 1 owner reference")
+		os.Exit(1)
+	}
+
+	cmOwner := cmOwnerRefs[0]
+	for _, pod := range pods.Items {
+		if pod.Name == cmOwner.Name && pod.UID == cmOwner.UID {
+			setupLog.Info(fmt.Sprintf("Lock already has existing owner %s, skipping deletion", pod.Name))
+			return
+		}
+	}
+
+	setupLog.Info("Lock has no existing owner, attempting to delete")
 	err = crclient.Delete(context.TODO(), lockConfigMap)
 	if err != nil {
-		setupLog.Error(err, "Failed to delete lock %v", err)
+		setupLog.Error(err, "Failed to delete lock")
 		os.Exit(1)
 	}
 	setupLog.Info(fmt.Sprintf("Lock deleted with name %s in namespace %s", key.Name, key.Namespace))
+}
+
+func getMUOPods(ns string, crclient client.Client) (corev1.PodList, error) {
+	fmt.Printf("Looking in %s\n", ns)
+	pods := &corev1.PodList{}
+	podSelectionOptions := &client.ListOptions{
+		Namespace: ns,
+		Raw: &metav1.ListOptions{
+			LabelSelector: "name=managed-upgrade-operator",
+		},
+	}
+	err := crclient.List(context.TODO(), pods, podSelectionOptions)
+	if err != nil {
+		return *pods, fmt.Errorf("Failed to list pods %v", err)
+	}
+
+	return *pods, nil
 }
 
 func main() {
