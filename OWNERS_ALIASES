@@ -46,12 +46,13 @@ aliases:
     - nephomaniac
     - tnierman
   srep-functional-team-security:
-    - gsleeman
     - jaybeeunix
     - sam-nguyen7
     - wshearn
     - dem4gus
     - npecka
+    - pshickeydev
+    - casey-williams-rh
   srep-functional-team-thor:
     - bmeng
     - MitaliBhalla

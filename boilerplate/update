@@ -11,7 +11,7 @@
 
 set -e
 if [ "$BOILERPLATE_SET_X" ]; then
-    set -x
+  set -x
 fi
 
 # The directory in which this script lives is the CONVENTION_ROOT. Export
@@ -104,11 +104,15 @@ EOF
   if [ -z "$BOILERPLATE_GIT_REPO" ]; then
     BOILERPLATE_GIT_REPO=git@github.com:openshift/boilerplate.git
   fi
-  if [ -z "$BOILERPLATE_GIT_CLONE" ]; then
-    BOILERPLATE_GIT_CLONE="git clone $BOILERPLATE_GIT_REPO"
-  fi
   BP_CLONE="$(mktemp -d)"
-  $BOILERPLATE_GIT_CLONE "${BP_CLONE}"
+
+  if [[ -z "${BOILERPLATE_IN_CI}" ]]; then
+    git clone "${BOILERPLATE_GIT_REPO}" "${BP_CLONE}"
+  else
+    # HACK: We can't get around safe.directory in CI, so just leverage cp instead of git
+    cp -rf /go/src/github.com/openshift/boilerplate/* "${BP_CLONE}"
+    cp -rf /go/src/github.com/openshift/boilerplate/.git "${BP_CLONE}"
+  fi
   echo "Updating the update script."
   rsync -a "${BP_CLONE}/boilerplate/update" "$0"
   echo "Copying utilities"
