@@ -22,7 +22,7 @@ var reinitAnnotation = map[string]string{"file-integrity.openshift.io/re-init": 
 func (c *clusterUpgrader) PostUpgradeProcedures(ctx context.Context, logger logr.Logger) (bool, error) {
 
 	if !c.config.Environment.IsFedramp() {
-		logger.Info("Non-FedRAMP environment...skipping PostUpgradeFIOReInit ")
+		logger.Info("Non-FIO environment...skipping PostUpgradeFIOReInit ")
 		return true, nil
 	}
 	err := c.postUpgradeFIOReInit(ctx, logger)
