@@ -1,4 +1,5 @@
 FIPS_ENABLED=true
+export LATEST_IMAGE_TAG=image-v5.0.1
 
 include boilerplate/generated-includes.mk
 
@@ -9,7 +10,7 @@ boilerplate-update: ## Make boilerplate update itself
 	@boilerplate/update
 
 .PHONY: run
-run: 
+run:
 	OPERATOR_NAMESPACE="openshift-managed-upgrade-operator" WATCH_NAMESPACE="" go run ./main.go
 
 .PHONY: tools
