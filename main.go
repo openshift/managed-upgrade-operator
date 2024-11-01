@@ -122,6 +122,9 @@ func printVersion() {
 }
 
 // This function is used to pre-emptively avoid a deadlock
+// Note: This is a stop-gap solution until a fix has been implemented
+// upstream in operator-framework/operator-lib. This function and it's
+// usage should be removed once a fix is implemented upstream.
 func cleanupLockForLeader(ns string, crclient client.Client) {
 	lockConfigMap := &corev1.ConfigMap{}
 	key := client.ObjectKey{Namespace: ns, Name: muoLockConfigMapName}
@@ -162,6 +165,9 @@ func cleanupLockForLeader(ns string, crclient client.Client) {
 	setupLog.Info(fmt.Sprintf("Lock deleted with name %s in namespace %s", key.Name, key.Namespace))
 }
 
+// Note: This function is used by a stop-gap solution until a fix has been implemented
+// upstream in operator-framework/operator-lib. This function and it's
+// usage should be removed once a fix is implemented upstream.
 func getMUOPods(ns string, crclient client.Client) (corev1.PodList, error) {
 	fmt.Printf("Looking in %s\n", ns)
 	pods := &corev1.PodList{}
