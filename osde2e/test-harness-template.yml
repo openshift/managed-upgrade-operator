@@ -11,12 +11,16 @@ parameters:
     required: true
   - name: OCM_TOKEN
     required: true
+  - name: OCM_CCS
+    required: false
   - name: AWS_ACCESS_KEY_ID
-    required: true
+    required: false
   - name: AWS_SECRET_ACCESS_KEY
-    required: true
-  - name: AWS_REGION
-    required: true
+    required: false
+  - name: CLOUD_PROVIDER_REGION
+    required: false
+  - name: GCP_CREDS_JSON
+    required: false
   - name: JOBID
     generate: expression
     from: "[0-9a-z]{7}"
@@ -37,7 +41,7 @@ objects:
           restartPolicy: Never
           containers:
             - name: osde2e
-              image: quay.io/app-sre/osde2e:latest
+              image: quay.io/redhat-services-prod/osde2e-cicada-tenant/osde2e:latest
               command:
                 - /osde2e
               args:
@@ -56,11 +60,15 @@ objects:
                   value: ${TEST_HARNESS_IMAGE}:${IMAGE_TAG}
                 - name: OCM_TOKEN
                   value: ${OCM_TOKEN}
+                - name: OCM_CCS
+                  value: ${OCM_CCS}
                 - name: AWS_ACCESS_KEY_ID
                   value: ${AWS_ACCESS_KEY_ID}
                 - name: AWS_SECRET_ACCESS_KEY
                   value: ${AWS_SECRET_ACCESS_KEY}
-                - name: AWS_REGION
-                  value: ${AWS_REGION}
+                - name: CLOUD_PROVIDER_REGION
+                  value: ${CLOUD_PROVIDER_REGION}
+                - name: GCP_CREDS_JSON
+                  value: ${GCP_CREDS_JSON}
                 - name: LOG_BUCKET
                   value: ${LOG_BUCKET}                 

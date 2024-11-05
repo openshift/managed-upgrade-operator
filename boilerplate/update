@@ -104,10 +104,13 @@ EOF
   if [ -z "$BOILERPLATE_GIT_REPO" ]; then
     BOILERPLATE_GIT_REPO=git@github.com:openshift/boilerplate.git
   fi
+  if [ -z "$BOILERPLATE_GIT_CLONE" ]; then
+    BOILERPLATE_GIT_CLONE="git clone"
+  fi
   BP_CLONE="$(mktemp -d)"
 
   if [[ -z "${BOILERPLATE_IN_CI}" ]]; then
-    git clone "${BOILERPLATE_GIT_REPO}" "${BP_CLONE}"
+    ${BOILERPLATE_GIT_CLONE} "${BOILERPLATE_GIT_REPO}" "${BP_CLONE}"
   else
     # HACK: We can't get around safe.directory in CI, so just leverage cp instead of git
     cp -rf /go/src/github.com/openshift/boilerplate/* "${BP_CLONE}"
