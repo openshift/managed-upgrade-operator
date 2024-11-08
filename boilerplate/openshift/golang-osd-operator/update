@@ -32,6 +32,8 @@ if [[ -f ${REPO_ROOT}/.gitignore ]]; then
   ${SED?} -i "/Dockerfile.olm-registry/d" ${REPO_ROOT}/.gitignore
 fi
 
+IMAGE_PULL_PATH="quay.io/redhat-services-prod/openshift/boilerplate:${LATEST_IMAGE_TAG}"
+
 # Update Dockerfile builder image
 DOCKERFILES=$(ls -1 $REPO_ROOT/build/Dockerfile*)
 for file in $DOCKERFILES; do
