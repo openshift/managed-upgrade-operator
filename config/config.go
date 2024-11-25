@@ -21,6 +21,8 @@ const (
 	ConfigField string = "config.yaml"
 	// EnvRoutes is used to determine if routes should be used during development
 	EnvRoutes string = "ROUTES"
+
+	EnableOLMSkipRange = "true"
 )
 
 type CMTarget configmanager.Target
