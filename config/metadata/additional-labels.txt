@@ -1,0 +1,4 @@
+LABEL com.redhat.component="openshift-managed-upgrade-operator
+-config"       io.k8s.description="..."       description="..."       distribution-scope="public"       name="openshift/managed-upgrade-operator
+-config"       url="https://github.com/openshift/managed-upgrade-operator
+-config"       vendor="Red Hat, Inc."       release="v0.0.0"       version="v0.0.0"
