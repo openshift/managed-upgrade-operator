@@ -184,6 +184,12 @@ func buildUpgradeConfigSpecs(upgradePolicy *ocm.UpgradePolicy, cluster *ocm.Clus
 	if err != nil {
 		return nil, fmt.Errorf("unable to determine channel from channel group '%v' and version '%v' for policy ID '%v'", cluster.Version.ChannelGroup, upgradePolicy.Version, upgradePolicy.Id)
 	}
+
+	// https://issues.redhat.com/browse/SDCICD-1365
+	// use "eus" channel only for integration and staging.
+	// for every other environment always change "eus" to "stable".
+	// WHAT? look at the cluster's channel, which is patched by MCC.  if prefix is not "eus" then it is fine.
+
 	upgradeConfigSpec := upgradev1alpha1.UpgradeConfigSpec{
 		Desired: upgradev1alpha1.Update{
 			Version: upgradePolicy.Version,
@@ -211,6 +217,17 @@ func inferUpgradeChannelFromChannelGroup(channelGroup string, toVersion string) 
 	toSV, err := semver.Parse(toVersion)
 	if err != nil {
 		return nil, fmt.Errorf("invalid semantic TO version: %v", toVersion)
+	}
+
+	// https://issues.redhat.com/browse/SDCICD-1365
+	// Added initially for testing in int/stage.
+	// Relying on operator promotion to control release to production.
+
+	// minor is assumed to be a positive number, so % works like modulus and returns integer 0 or 1
+	// start with supported EUS version: 4.12
+	// use "eus" instead of "stable" for even minor versions
+	if toSV.Major == 4 && toSV.Minor >= 12 && toSV.Minor%2 == 0 && channelGroup == "stable" {
+		channelGroup = "eus"
 	}
 
 	channel := fmt.Sprintf("%v-%v.%v", channelGroup, toSV.Major, toSV.Minor)
