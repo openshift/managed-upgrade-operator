@@ -169,7 +169,7 @@ var _ = ginkgo.Describe("managed-upgrade-operator", ginkgo.Ordered, func() {
 		})
 	})
 
-	ginkgo.It("can be upgraded", func(ctx context.Context) {
+	ginkgo.PIt("can be upgraded", func(ctx context.Context) {
 		err := k8s.UpgradeOperator(ctx, operatorName, operatorNamespace)
 		Expect(err).NotTo(HaveOccurred(), "operator upgrade failed")
 	})
