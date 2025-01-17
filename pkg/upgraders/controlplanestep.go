@@ -51,7 +51,7 @@ func (c *clusterUpgrader) ControlPlaneUpgraded(ctx context.Context, logger logr.
 	if isCompleted {
 		err = c.notifier.Notify(notifier.MuoStateControlPlaneUpgradeFinishedSL)
 		if err != nil {
-			return false, err
+			logger.Error(err, fmt.Sprintf("Failed to notify upon upgrade completion %v", err))
 		}
 		c.metrics.ResetMetricUpgradeControlPlaneTimeout(c.upgradeConfig.Name, c.upgradeConfig.Spec.Desired.Version)
 		return true, nil
