@@ -238,16 +238,17 @@ var _ = Describe("ControlPlaneStep", func() {
 		})
 
 		Context("When sending notification for control plane upgrade start fails", func() {
-			It("Should report error", func() {
+			It("Should continue with upgrade", func() {
 				fakeError := fmt.Errorf("fake notification error")
 				gomock.InOrder(
 					mockMetricsClient.EXPECT().UpdateMetricUpgradeWindowNotBreached(gomock.Any()),
 					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
 					mockEMClient.EXPECT().Notify(gomock.Any()).Return(fakeError),
+					mockCVClient.EXPECT().EnsureDesiredConfig(gomock.Any()).Return(true, nil),
 				)
 				result, err := upgrader.CommenceUpgrade(context.TODO(), logger)
-				Expect(err).To(HaveOccurred())
-				Expect(result).To(BeFalse())
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result).To(BeTrue())
 			})
 		})
 
@@ -263,7 +264,6 @@ var _ = Describe("ControlPlaneStep", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(result).To(BeTrue())
 			})
-
 		})
 	})
 
@@ -280,7 +280,7 @@ var _ = Describe("ControlPlaneStep", func() {
 	})
 
 	Context("When the upgrader can't tell if the cluster's upgrade has commenced", func() {
-		var fakeError = fmt.Errorf("fake upgradeCommenced error")
+		fakeError := fmt.Errorf("fake upgradeCommenced error")
 		It("will abort the commencing of an upgrade", func() {
 			gomock.InOrder(
 				mockMetricsClient.EXPECT().UpdateMetricUpgradeWindowNotBreached(gomock.Any()),
@@ -292,5 +292,4 @@ var _ = Describe("ControlPlaneStep", func() {
 			Expect(result).To(BeFalse())
 		})
 	})
-
 })

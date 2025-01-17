@@ -14,7 +14,6 @@ import (
 
 // CommenceUpgrade will update the clusterversion object to apply the desired version to trigger real OCP upgrade
 func (c *clusterUpgrader) CommenceUpgrade(ctx context.Context, logger logr.Logger) (bool, error) {
-
 	// We can reset the window breached metric if we're commencing
 	c.metrics.UpdateMetricUpgradeWindowNotBreached(c.upgradeConfig.Name)
 
@@ -29,7 +28,7 @@ func (c *clusterUpgrader) CommenceUpgrade(ctx context.Context, logger logr.Logge
 
 	err = c.notifier.Notify(notifier.MuoStateControlPlaneUpgradeStartedSL)
 	if err != nil {
-		return false, err
+		logger.Error(err, fmt.Sprintf("Failed to notify upon upgrade start %v", err))
 	}
 
 	isComplete, err := c.cvClient.EnsureDesiredConfig(c.upgradeConfig)
@@ -65,7 +64,7 @@ func (c *clusterUpgrader) ControlPlaneUpgraded(ctx context.Context, logger logr.
 	} else {
 		upgradeStartTime, err = time.Parse(time.RFC3339, c.upgradeConfig.Spec.UpgradeAt)
 		if err != nil {
-			return false, err //error parsing time string
+			return false, err // error parsing time string
 		}
 	}
 
