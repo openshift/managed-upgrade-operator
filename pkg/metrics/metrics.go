@@ -87,7 +87,7 @@ type Metrics interface {
 	UpdateMetricScalingFailed(string)
 	UpdateMetricScalingSucceeded(string)
 	UpdateMetricUpgradeWindowNotBreached(string)
-	UpdatemetricUpgradeNotificationFailed(string, string)
+	UpdatemetricUpgradeNotificationFailed(string)
 	UpdateMetricUpgradeConfigSyncTimestamp(string, time.Time)
 	UpdateMetricUpgradeWindowBreached(string)
 	UpdateMetricUpgradeControlPlaneTimeout(string, string)
@@ -251,10 +251,9 @@ var (
 		Help:      "Alerts fired during latest upgrade",
 	}, []string{nameLabel, PrecedingVersionLabel, StreamLabel, VersionLabel, alertsLabel})
 	metricUpgradeNotificationFailed = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Subsystem: metricsTag,
-		Name:      "upgrade_notification_failed",
-		Help:      "Failed to send notification",
-	}, []string{nameLabel, eventLabel})
+		Name: "upgrade_notification_failed",
+		Help: "Failed to send notification",
+	}, []string{nameLabel})
 	metricUpgradeConfigSyncTimestamp = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Subsystem: metricsTag,
 		Name:      "upgradeconfig_sync_timestamp",
@@ -398,10 +397,9 @@ func (c *Counter) UpdateMetricNotificationEventSent(upgradeConfigName string, ev
 		float64(1))
 }
 
-func (c *Counter) UpdatemetricUpgradeNotificationFailed(upgradeConfigName string, event string) {
+func (c *Counter) UpdatemetricUpgradeNotificationFailed(upgradeConfigName string) {
 	metricUpgradeNotificationFailed.With(prometheus.Labels{
-		eventLabel: event,
-		nameLabel:  upgradeConfigName}).Set(
+		nameLabel: upgradeConfigName}).Set(
 		float64(0))
 }
 
