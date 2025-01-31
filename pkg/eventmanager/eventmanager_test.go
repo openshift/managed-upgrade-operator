@@ -105,7 +105,6 @@ var _ = Describe("OCM Notifier", func() {
 				gomock.InOrder(
 					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
 					mockMetricsClient.EXPECT().UpdatemetricUpgradeNotificationFailed(TEST_UPGRADECONFIG_CR),
-					mockMetricsClient.EXPECT().IsMetricNotificationEventSentSet(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION).Return(false, nil),
 					mockNotifier.EXPECT().NotifyState(testState, gomock.Any()).Return(fakeError),
 				)
 				err := manager.Notify(testState)
