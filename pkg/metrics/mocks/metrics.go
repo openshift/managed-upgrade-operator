@@ -356,13 +356,13 @@ func (mr *MockMetricsMockRecorder) UpdateMetricValidationSucceeded(arg0 any) *go
 }
 
 // UpdatemetricNotificationFailed mocks base method.
-func (m *MockMetrics) UpdatemetricUpgradeNotificationFailed(arg0 string, arg1 string) {
+func (m *MockMetrics) UpdatemetricUpgradeNotificationFailed(arg0 string) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "UpdatemetricNotificationFailed", arg0, arg1)
+	m.ctrl.Call(m, "UpdatemetricNotificationFailed", arg0)
 }
 
 // UpdatemetricNotificationFailed indicates an expected call of UpdatemetricNotificationFailed.
-func (mr *MockMetricsMockRecorder) UpdatemetricUpgradeNotificationFailed(arg0,arg1 any) *gomock.Call {
+func (mr *MockMetricsMockRecorder) UpdatemetricUpgradeNotificationFailed(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdatemetricNotificationFailed", reflect.TypeOf((*MockMetrics)(nil).UpdatemetricUpgradeNotificationFailed), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdatemetricNotificationFailed", reflect.TypeOf((*MockMetrics)(nil).UpdatemetricUpgradeNotificationFailed), arg0)
 }
