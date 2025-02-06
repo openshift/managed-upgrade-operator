@@ -93,6 +93,7 @@ var _ = Describe("OCM Notifier", func() {
 					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
 					mockMetricsClient.EXPECT().IsMetricNotificationEventSentSet(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION).Return(false, nil),
 					mockNotifier.EXPECT().NotifyState(testState, gomock.Any()),
+					mockMetricsClient.EXPECT().UpdatemetricUpgradeNotificationSucceeded(TEST_UPGRADECONFIG_CR, string(testState)),
 					mockMetricsClient.EXPECT().UpdateMetricNotificationEventSent(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION),
 				)
 				err := manager.Notify(testState)
@@ -106,6 +107,7 @@ var _ = Describe("OCM Notifier", func() {
 					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
 					mockMetricsClient.EXPECT().IsMetricNotificationEventSentSet(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION).Return(false, nil),
 					mockNotifier.EXPECT().NotifyState(testState, gomock.Any()).Return(fakeError),
+					mockMetricsClient.EXPECT().UpdatemetricUpgradeNotificationFailed(TEST_UPGRADECONFIG_CR, string(testState)),
 				)
 				err := manager.Notify(testState)
 				Expect(err).NotTo(BeNil())
@@ -143,6 +145,7 @@ var _ = Describe("OCM Notifier", func() {
 					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
 					mockMetricsClient.EXPECT().IsMetricNotificationEventSentSet(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION).Return(false, nil),
 					mockNotifier.EXPECT().NotifyState(testState, expectedDescription),
+					mockMetricsClient.EXPECT().UpdatemetricUpgradeNotificationSucceeded(TEST_UPGRADECONFIG_CR, string(testState)),
 					mockMetricsClient.EXPECT().UpdateMetricNotificationEventSent(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION),
 				)
 				err := manager.Notify(testState)
@@ -165,6 +168,7 @@ var _ = Describe("OCM Notifier", func() {
 					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
 					mockMetricsClient.EXPECT().IsMetricNotificationEventSentSet(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION).Return(false, nil),
 					mockNotifier.EXPECT().NotifyState(testState, expectedDescription),
+					mockMetricsClient.EXPECT().UpdatemetricUpgradeNotificationSucceeded(TEST_UPGRADECONFIG_CR, string(testState)),
 					mockMetricsClient.EXPECT().UpdateMetricNotificationEventSent(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION),
 				)
 				err := manager.Notify(testState)
@@ -187,6 +191,7 @@ var _ = Describe("OCM Notifier", func() {
 					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
 					mockMetricsClient.EXPECT().IsMetricNotificationEventSentSet(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION).Return(false, nil),
 					mockNotifier.EXPECT().NotifyState(testState, expectedDescription),
+					mockMetricsClient.EXPECT().UpdatemetricUpgradeNotificationSucceeded(TEST_UPGRADECONFIG_CR, string(testState)),
 					mockMetricsClient.EXPECT().UpdateMetricNotificationEventSent(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION),
 				)
 				err := manager.Notify(testState)
@@ -209,6 +214,7 @@ var _ = Describe("OCM Notifier", func() {
 					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
 					mockMetricsClient.EXPECT().IsMetricNotificationEventSentSet(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION).Return(false, nil),
 					mockNotifier.EXPECT().NotifyState(testState, expectedDescription),
+					mockMetricsClient.EXPECT().UpdatemetricUpgradeNotificationSucceeded(TEST_UPGRADECONFIG_CR, string(testState)),
 					mockMetricsClient.EXPECT().UpdateMetricNotificationEventSent(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION),
 				)
 				err := manager.Notify(testState)
@@ -247,6 +253,7 @@ var _ = Describe("OCM Notifier", func() {
 					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
 					mockMetricsClient.EXPECT().IsMetricNotificationEventSentSet(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION).Return(false, nil),
 					mockNotifier.EXPECT().NotifyState(testState, expectedDescription),
+					mockMetricsClient.EXPECT().UpdatemetricUpgradeNotificationSucceeded(TEST_UPGRADECONFIG_CR, string(testState)),
 					mockMetricsClient.EXPECT().UpdateMetricNotificationEventSent(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION),
 				)
 				err := manager.Notify(testState)
@@ -269,6 +276,7 @@ var _ = Describe("OCM Notifier", func() {
 					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
 					mockMetricsClient.EXPECT().IsMetricNotificationEventSentSet(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION).Return(false, nil),
 					mockNotifier.EXPECT().NotifyState(testState, expectedDescription),
+					mockMetricsClient.EXPECT().UpdatemetricUpgradeNotificationSucceeded(TEST_UPGRADECONFIG_CR, string(testState)),
 					mockMetricsClient.EXPECT().UpdateMetricNotificationEventSent(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION),
 				)
 				err := manager.Notify(testState)
@@ -291,6 +299,7 @@ var _ = Describe("OCM Notifier", func() {
 					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
 					mockMetricsClient.EXPECT().IsMetricNotificationEventSentSet(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION).Return(false, nil),
 					mockNotifier.EXPECT().NotifyState(testState, expectedDescription),
+					mockMetricsClient.EXPECT().UpdatemetricUpgradeNotificationSucceeded(TEST_UPGRADECONFIG_CR, string(testState)),
 					mockMetricsClient.EXPECT().UpdateMetricNotificationEventSent(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION),
 				)
 				err := manager.Notify(testState)
@@ -313,6 +322,7 @@ var _ = Describe("OCM Notifier", func() {
 					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
 					mockMetricsClient.EXPECT().IsMetricNotificationEventSentSet(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION).Return(false, nil),
 					mockNotifier.EXPECT().NotifyState(testState, expectedDescription),
+					mockMetricsClient.EXPECT().UpdatemetricUpgradeNotificationSucceeded(TEST_UPGRADECONFIG_CR, string(testState)),
 					mockMetricsClient.EXPECT().UpdateMetricNotificationEventSent(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION),
 				)
 				err := manager.Notify(testState)
