@@ -354,3 +354,27 @@ func (mr *MockMetricsMockRecorder) UpdateMetricValidationSucceeded(arg0 any) *go
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricValidationSucceeded", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricValidationSucceeded), arg0)
 }
+
+// UpdatemetricUpgradeNotificationFailed mocks base method.
+func (m *MockMetrics) UpdatemetricUpgradeNotificationFailed(arg0, arg1 string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "UpdatemetricUpgradeNotificationFailed", arg0, arg1)
+}
+
+// UpdatemetricUpgradeNotificationFailed indicates an expected call of UpdatemetricUpgradeNotificationFailed.
+func (mr *MockMetricsMockRecorder) UpdatemetricUpgradeNotificationFailed(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdatemetricUpgradeNotificationFailed", reflect.TypeOf((*MockMetrics)(nil).UpdatemetricUpgradeNotificationFailed), arg0, arg1)
+}
+
+// UpdatemetricUpgradeNotificationSucceeded mocks base method.
+func (m *MockMetrics) UpdatemetricUpgradeNotificationSucceeded(arg0, arg1 string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "UpdatemetricUpgradeNotificationSucceeded", arg0, arg1)
+}
+
+// UpdatemetricUpgradeNotificationSucceeded indicates an expected call of UpdatemetricUpgradeNotificationSucceeded.
+func (mr *MockMetricsMockRecorder) UpdatemetricUpgradeNotificationSucceeded(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdatemetricUpgradeNotificationSucceeded", reflect.TypeOf((*MockMetrics)(nil).UpdatemetricUpgradeNotificationSucceeded), arg0, arg1)
+}

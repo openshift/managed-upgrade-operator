@@ -76,6 +76,7 @@ var pagingAlerts = []string{
 	"UpgradeControlPlaneUpgradeTimeoutSRE",
 	"UpgradeNodeUpgradeTimeoutSRE",
 	"UpgradeNodeDrainFailedSRE",
+	//"UpgradeNotificationFailedSRE", TODO: OSD-26790 - Create an Alert in mcc repo
 }
 
 //go:generate mockgen -destination=mocks/metrics.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/metrics Metrics
@@ -86,6 +87,8 @@ type Metrics interface {
 	UpdateMetricScalingFailed(string)
 	UpdateMetricScalingSucceeded(string)
 	UpdateMetricUpgradeWindowNotBreached(string)
+	UpdatemetricUpgradeNotificationFailed(string, string)
+	UpdatemetricUpgradeNotificationSucceeded(string, string)
 	UpdateMetricUpgradeConfigSyncTimestamp(string, time.Time)
 	UpdateMetricUpgradeWindowBreached(string)
 	UpdateMetricUpgradeControlPlaneTimeout(string, string)
@@ -248,6 +251,10 @@ var (
 		Name:      "upgrade_result",
 		Help:      "Alerts fired during latest upgrade",
 	}, []string{nameLabel, PrecedingVersionLabel, StreamLabel, VersionLabel, alertsLabel})
+	metricUpgradeNotificationFailed = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "upgrade_notification_failed",
+		Help: "Failed to send notification",
+	}, []string{nameLabel, eventLabel})
 	metricUpgradeConfigSyncTimestamp = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Subsystem: metricsTag,
 		Name:      "upgradeconfig_sync_timestamp",
@@ -265,6 +272,7 @@ var (
 		metricNodeDrainFailed,
 		metricUpgradeNotification,
 		metricUpgradeConfigSyncTimestamp,
+		metricUpgradeNotificationFailed,
 	}
 
 	// persistentMetrics defines metrics whose data should not be cleared when an upgrade completes
@@ -291,7 +299,6 @@ func (c *Counter) UpdateMetricValidationSucceeded(upgradeConfigName string) {
 		nameLabel: upgradeConfigName}).Set(
 		float64(0))
 }
-
 
 func (c *Counter) UpdateMetricHealthcheckSucceeded(upgradeConfigName string, reason string, version string, state string) {
 	metricHealthcheckFailed.With(prometheus.Labels{
@@ -391,6 +398,20 @@ func (c *Counter) UpdateMetricNotificationEventSent(upgradeConfigName string, ev
 		float64(1))
 }
 
+func (c *Counter) UpdatemetricUpgradeNotificationFailed(upgradeConfigName string, event string) {
+	metricUpgradeNotificationFailed.With(prometheus.Labels{
+		eventLabel: event,
+		nameLabel:  upgradeConfigName}).Set(
+		float64(1))
+}
+
+func (c *Counter) UpdatemetricUpgradeNotificationSucceeded(upgradeConfigName string, event string) {
+	metricUpgradeNotificationFailed.With(prometheus.Labels{
+		eventLabel: event,
+		nameLabel:  upgradeConfigName}).Set(
+		float64(0))
+}
+
 func (c *Counter) UpdateMetricUpgradeResult(name string, precedingVersion string, version string, stream string, alerts []string) {
 	val := float64(1)
 	if len(alerts) > 0 {
@@ -422,6 +443,7 @@ func (c *Counter) ResetFailureMetrics() {
 		metricUpgradeWorkerTimeout,
 		metricNodeDrainFailed,
 		metricUpgradeNotification,
+		metricUpgradeNotificationFailed,
 	}
 	for _, m := range failureMetricsList {
 		m.Reset()

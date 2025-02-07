@@ -154,8 +154,10 @@ func (s *eventManager) Notify(state notifier.MuoState) error {
 	// Send the notification
 	err = s.notifier.NotifyState(state, description)
 	if err != nil {
+		s.metrics.UpdatemetricUpgradeNotificationFailed(uc.Name, string(state))
 		return fmt.Errorf("can't send notification '%s': %v", state, err)
 	}
+	s.metrics.UpdatemetricUpgradeNotificationSucceeded(uc.Name, string(state))
 	s.metrics.UpdateMetricNotificationEventSent(uc.Name, string(state), uc.Spec.Desired.Version)
 
 	return nil
