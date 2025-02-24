@@ -15,6 +15,7 @@ var (
 )
 
 // Scheduler is an interface that enables implementations of type Scheduler
+//
 //go:generate mockgen -destination=mocks/mockScheduler.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/scheduler Scheduler
 type Scheduler interface {
 	IsReadyToUpgrade(*upgradev1alpha1.UpgradeConfig, time.Duration) SchedulerResult
@@ -37,7 +38,7 @@ type SchedulerResult struct {
 func (s *scheduler) IsReadyToUpgrade(upgradeConfig *upgradev1alpha1.UpgradeConfig, timeOut time.Duration) SchedulerResult {
 	upgradeTime, err := time.Parse(time.RFC3339, upgradeConfig.Spec.UpgradeAt)
 	if err != nil {
-		logger.Error(err, "failed to parse spec.upgradeAt", upgradeConfig.Spec.UpgradeAt)
+		logger.Error(err, "failed to parse spec.upgradeAt", "upgradeAt", upgradeConfig.Spec.UpgradeAt)
 		return SchedulerResult{IsReady: false, IsBreached: false, TimeUntilUpgrade: 0}
 	}
 	now := time.Now()
