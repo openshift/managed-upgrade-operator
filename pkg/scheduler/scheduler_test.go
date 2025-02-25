@@ -48,7 +48,6 @@ var _ = Describe("Scheduler", func() {
 			result := s.IsReadyToUpgrade(upgradeConfig, 60*time.Minute)
 			Expect(result.IsReady).To(BeFalse())
 			Expect(result.IsBreached).To(BeFalse())
-			//Expect(result.TimeUntilUpgrade).To(BeZero())
 		}
 	})
 })
