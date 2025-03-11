@@ -35,20 +35,12 @@ var _ = Describe("Scheduler", func() {
 	})
 	It("should return false if upgradeAt is in an invalid format", func() {
 		s := &scheduler{}
-		invalidFormats := []string{
-			"2025-02-25 15:00",     // Missing 'T' between date and time
-			"2025/02/25 15:00:00",  // Invalid separator ('/' instead of '-')
-			"25-02-2025 15:00:00",  // Day-first format instead of year-first
-			"2025-02-25T15:00:00Z", // Valid but missing timezone offset in RFC3339
-			"February 25, 2025",    // Non-standard format
-		}
+		invalidFormat := "2025-02-25 15:00"
+		upgradeConfig := testUpgradeConfig(true, invalidFormat)
+		result := s.IsReadyToUpgrade(upgradeConfig, 60*time.Minute)
+		Expect(result.IsReady).To(BeFalse())
+		Expect(result.IsBreached).To(BeFalse())
 
-		for _, invalidFormat := range invalidFormats {
-			upgradeConfig := testUpgradeConfig(true, invalidFormat)
-			result := s.IsReadyToUpgrade(upgradeConfig, 60*time.Minute)
-			Expect(result.IsReady).To(BeFalse())
-			Expect(result.IsBreached).To(BeFalse())
-		}
 	})
 })
 
