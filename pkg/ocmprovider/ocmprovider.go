@@ -190,7 +190,7 @@ func buildUpgradeConfigSpecs(upgradePolicy *ocm.UpgradePolicy, cluster *ocm.Clus
 			Channel: *upgradeChannel,
 		},
 		UpgradeAt:            upgradePolicy.NextRun,
-		PDBForceDrainTimeout: int32(cluster.NodeDrainGracePeriod.Value), // nosec: G115
+		PDBForceDrainTimeout: int32(cluster.NodeDrainGracePeriod.Value), //#nosec G115 -- NodeDrainGracePeriod is expected to be within int32 range as it represents seconds for drain timeout, which is unlikely to exceed 2B seconds
 		Type:                 upgradeType,
 		CapacityReservation:  capacityReservation,
 	}
