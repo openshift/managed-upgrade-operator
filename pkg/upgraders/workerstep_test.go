@@ -127,6 +127,7 @@ var _ = Describe("WorkerStep", func() {
 					mockMachineryClient.EXPECT().IsUpgrading(gomock.Any(), "worker").Return(&machinery.UpgradingResult{IsUpgrading: false}, nil),
 					mockMaintClient.EXPECT().IsActive(),
 					mockEMClient.EXPECT().Notify(gomock.Any()),
+					mockMetricsClient.EXPECT().UpdateMetricWorkernodeUpgradeCompletedTimestamp(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version, gomock.Any()),
 					mockMetricsClient.EXPECT().ResetMetricUpgradeWorkerTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version),
 				)
 				result, err := upgrader.AllWorkersUpgraded(context.TODO(), logger)

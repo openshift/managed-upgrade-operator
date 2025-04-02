@@ -109,6 +109,7 @@ var _ = Describe("NotifierStep", func() {
 				gomock.InOrder(
 					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
 					mockEMClient.EXPECT().Notify(notifier.MuoStateStarted),
+					mockMetricsClient.EXPECT().UpdateMetricUpgradeStartedTimestamp(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version, gomock.Any()),
 				)
 				result, err := upgrader.SendStartedNotification(context.TODO(), logger)
 				Expect(err).NotTo(HaveOccurred())
@@ -131,6 +132,7 @@ var _ = Describe("NotifierStep", func() {
 		It("will send the notification", func() {
 			gomock.InOrder(
 				mockEMClient.EXPECT().Notify(notifier.MuoStateCompleted),
+				mockMetricsClient.EXPECT().UpdateMetricUpgradeCompletedTimestamp(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version, gomock.Any()),
 			)
 			result, err := upgrader.SendCompletedNotification(context.TODO(), logger)
 			Expect(err).NotTo(HaveOccurred())

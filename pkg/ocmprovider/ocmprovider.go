@@ -190,7 +190,7 @@ func buildUpgradeConfigSpecs(upgradePolicy *ocm.UpgradePolicy, cluster *ocm.Clus
 			Channel: *upgradeChannel,
 		},
 		UpgradeAt:            upgradePolicy.NextRun,
-		PDBForceDrainTimeout: int32(cluster.NodeDrainGracePeriod.Value),
+		PDBForceDrainTimeout: int32(cluster.NodeDrainGracePeriod.Value), // nosec: G115
 		Type:                 upgradeType,
 		CapacityReservation:  capacityReservation,
 	}

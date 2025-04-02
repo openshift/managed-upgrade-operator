@@ -63,11 +63,6 @@ container-engine-login:
 # Targets used by e2e test harness
 ######################
 
-# create e2e scaffolding
-.PHONY: e2e-harness-generate
-e2e-harness-generate:
-	${OSDE2E_CONVENTION_DIR}/e2e-harness-generate.sh $(OPERATOR_NAME) $(OSDE2E_CONVENTION_DIR)
-
 # create binary
 .PHONY: e2e-harness-build
 e2e-harness-build: GOFLAGS_MOD=-mod=mod

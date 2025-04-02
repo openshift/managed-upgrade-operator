@@ -3,6 +3,7 @@ package upgraders
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/openshift/managed-upgrade-operator/pkg/notifier"
@@ -37,6 +38,8 @@ func (c *clusterUpgrader) AllWorkersUpgraded(ctx context.Context, logger logr.Lo
 		logger.Error(err, "failed to notify worker plane upgrade completion")
 		return false, err
 	}
+
+	c.metrics.UpdateMetricWorkernodeUpgradeCompletedTimestamp(c.upgradeConfig.Name, c.upgradeConfig.Spec.Desired.Version, time.Now())
 
 	c.metrics.ResetMetricUpgradeWorkerTimeout(c.upgradeConfig.Name, c.upgradeConfig.Spec.Desired.Version)
 	return true, nil
