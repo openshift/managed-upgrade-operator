@@ -11,6 +11,12 @@ The Managed Upgrade Operator reports the following metrics via direct instrument
 - `upgradeoperator_worker_timeout`: If worker nodes upgrade timeout `value > 0`
 - `upgradeoperator_node_drain_timeout`: If node cannot be drained successfully in time `value > 0`
 - `upgradeoperator_upgradeconfig_sync_timestamp`: Set a timestamp as the value of the metric if the upgradeconfig sync succeeded
+- `upgradeoperator_upgrade_started_timestamp`: Set a timestamp as the value of the metric when the upgrade commenced
+- `upgradeoperator_upgrade_completed_timestamp`: Set a timestamp as the value of the metric when the upgrade finished
+- `upgradeoperator_controlplane_upgrade_started_timestamp`: Set a timestamp as the value of the metric when the controlplane upgrade commenced
+- `upgradeoperator_controlplane_upgrade_completed_timestamp`: Set a timestamp as the value of the metric when the the controlplane upgrade finished
+- `upgradeoperator_workernode_upgrade_started_timestamp`: Set a timestamp as the value of the metric when the workerpool upgrade commenced
+- `upgradeoperator_workernode_upgrade_completed_timestamp`: Set a timestamp as the value of the metric when the workerpool upgrade finished
 
 ## Metrics for fleet-wide monitoring
 
