@@ -129,8 +129,9 @@ var _ = Describe("ControlPlaneStep", func() {
 					mockCVClient.EXPECT().HasUpgradeCompleted(gomock.Any(), gomock.Any()).Return(true),
 					mockEMClient.EXPECT().Notify(gomock.Any()),
 					mockMetricsClient.EXPECT().ResetMetricUpgradeControlPlaneTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version),
-					mockMetricsClient.EXPECT().UpdateMetricControlplaneUpgradeCompletedTimestamp(upgradeConfig.Name, gomock.Any(), gomock.Any()),
-					mockMetricsClient.EXPECT().UpdateMetricWorkernodeUpgradeStartedTimestamp(upgradeConfig.Name, gomock.Any(), gomock.Any()),
+					mockCVClient.EXPECT().GetClusterId(),
+					mockMetricsClient.EXPECT().UpdateMetricControlplaneUpgradeCompletedTimestamp(gomock.Any(), upgradeConfig.Name, gomock.Any(), gomock.Any()),
+					mockMetricsClient.EXPECT().UpdateMetricWorkernodeUpgradeStartedTimestamp(gomock.Any(), upgradeConfig.Name, gomock.Any(), gomock.Any()),
 				)
 				result, err := upgrader.ControlPlaneUpgraded(context.TODO(), logger)
 				Expect(err).NotTo(HaveOccurred())
@@ -230,7 +231,8 @@ var _ = Describe("ControlPlaneStep", func() {
 					mockMetricsClient.EXPECT().UpdateMetricUpgradeWindowNotBreached(gomock.Any()),
 					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
 					mockEMClient.EXPECT().Notify(gomock.Any()),
-					mockMetricsClient.EXPECT().UpdateMetricControlplaneUpgradeStartedTimestamp(gomock.Any(), gomock.Any(), gomock.Any()),
+					mockCVClient.EXPECT().GetClusterId(),
+					mockMetricsClient.EXPECT().UpdateMetricControlplaneUpgradeStartedTimestamp(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()),
 					mockCVClient.EXPECT().EnsureDesiredConfig(gomock.Any()).Return(false, fakeError),
 				)
 				result, err := upgrader.CommenceUpgrade(context.TODO(), logger)
@@ -260,7 +262,8 @@ var _ = Describe("ControlPlaneStep", func() {
 					mockMetricsClient.EXPECT().UpdateMetricUpgradeWindowNotBreached(gomock.Any()),
 					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
 					mockEMClient.EXPECT().Notify(gomock.Any()),
-					mockMetricsClient.EXPECT().UpdateMetricControlplaneUpgradeStartedTimestamp(gomock.Any(), gomock.Any(), gomock.Any()),
+					mockCVClient.EXPECT().GetClusterId(),
+					mockMetricsClient.EXPECT().UpdateMetricControlplaneUpgradeStartedTimestamp(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()),
 					mockCVClient.EXPECT().EnsureDesiredConfig(gomock.Any()).Return(true, nil),
 				)
 				result, err := upgrader.CommenceUpgrade(context.TODO(), logger)

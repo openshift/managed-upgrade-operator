@@ -40,6 +40,7 @@ const (
 	VersionLabel          = "version"
 	PrecedingVersionLabel = "preceding_version"
 	StreamLabel           = "stream"
+	ClusterIdLabel        = "_id"
 
 	ScheduledStateValue             = "scheduled"
 	StartedStateValue               = "started"
@@ -91,12 +92,12 @@ type Metrics interface {
 	UpdatemetricUpgradeNotificationSucceeded(string, string)
 	UpdateMetricUpgradeConfigSyncTimestamp(string, time.Time)
 	UpdateMetricUpgradeWindowBreached(string)
-	UpdateMetricUpgradeStartedTimestamp(string, string, time.Time)
-	UpdateMetricUpgradeCompletedTimestamp(string, string, time.Time)
-	UpdateMetricControlplaneUpgradeStartedTimestamp(string, string, time.Time)
-	UpdateMetricControlplaneUpgradeCompletedTimestamp(string, string, time.Time)
-	UpdateMetricWorkernodeUpgradeStartedTimestamp(string, string, time.Time)
-	UpdateMetricWorkernodeUpgradeCompletedTimestamp(string, string, time.Time)
+	UpdateMetricUpgradeStartedTimestamp(string, string, string, time.Time)
+	UpdateMetricUpgradeCompletedTimestamp(string, string, string, time.Time)
+	UpdateMetricControlplaneUpgradeStartedTimestamp(string, string, string, time.Time)
+	UpdateMetricControlplaneUpgradeCompletedTimestamp(string, string, string, time.Time)
+	UpdateMetricWorkernodeUpgradeStartedTimestamp(string, string, string, time.Time)
+	UpdateMetricWorkernodeUpgradeCompletedTimestamp(string, string, string, time.Time)
 	UpdateMetricUpgradeControlPlaneTimeout(string, string)
 	ResetMetricUpgradeControlPlaneTimeout(string, string)
 	UpdateMetricHealthcheckFailed(string, string, string, string)
@@ -270,32 +271,32 @@ var (
 		Subsystem: metricsTag,
 		Name:      "upgrade_started_timestamp",
 		Help:      "UpgradeConfig start upgrade commenced with timestamp",
-	}, []string{nameLabel, VersionLabel})
+	}, []string{ClusterIdLabel, nameLabel, VersionLabel})
 	upgradeCompletedTimestamp = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Subsystem: metricsTag,
 		Name:      "upgrade_completed_timestamp",
 		Help:      "UpgradeConfig finished upgrade successfully with timestamp",
-	}, []string{nameLabel, VersionLabel})
+	}, []string{ClusterIdLabel, nameLabel, VersionLabel})
 	controlplaneUpgradeStartedTimestamp = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Subsystem: metricsTag,
 		Name:      "controlplane_upgrade_started_timestamp",
 		Help:      "Controlplane upgrade has been commenced with timestamp",
-	}, []string{nameLabel, VersionLabel})
+	}, []string{ClusterIdLabel, nameLabel, VersionLabel})
 	controlplaneUpgradeCompletedTimestamp = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Subsystem: metricsTag,
 		Name:      "controlplane_upgrade_completed_timestamp",
 		Help:      "Controlplane upgrade finished successfully with timestamp",
-	}, []string{nameLabel, VersionLabel})
+	}, []string{ClusterIdLabel, nameLabel, VersionLabel})
 	workernodeUpgradeStartedTimestamp = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Subsystem: metricsTag,
 		Name:      "workernode_upgrade_started_timestamp",
 		Help:      "Workerpool upgrade commenced with timestamp",
-	}, []string{nameLabel, VersionLabel})
+	}, []string{ClusterIdLabel, nameLabel, VersionLabel})
 	workernodeUpgradeCompletedTimestamp = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Subsystem: metricsTag,
 		Name:      "workernode_upgrade_completed_timestamp",
 		Help:      "Workerpool upgrade finished successfully with timestamp",
-	}, []string{nameLabel, VersionLabel})
+	}, []string{ClusterIdLabel, nameLabel, VersionLabel})
 
 	// ephemeralMetrics defines temporary metrics whose data should be cleared when an upgrade completes
 	ephemeralMetrics = []*prometheus.GaugeVec{
@@ -454,45 +455,51 @@ func (c *Counter) UpdatemetricUpgradeNotificationSucceeded(upgradeConfigName str
 		float64(0))
 }
 
-func (c *Counter) UpdateMetricUpgradeStartedTimestamp(name string, version string, time time.Time) {
+func (c *Counter) UpdateMetricUpgradeStartedTimestamp(cluster_id string, name string, version string, time time.Time) {
 	upgradeStartedTimestamp.With(prometheus.Labels{
-		nameLabel:    name,
-		VersionLabel: version}).Set(
+		ClusterIdLabel: cluster_id,
+		nameLabel:      name,
+		VersionLabel:   version}).Set(
 		float64(time.Unix()))
 }
 
-func (c *Counter) UpdateMetricUpgradeCompletedTimestamp(name string, version string, time time.Time) {
+func (c *Counter) UpdateMetricUpgradeCompletedTimestamp(cluster_id string, name string, version string, time time.Time) {
 	upgradeCompletedTimestamp.With(prometheus.Labels{
-		nameLabel:    name,
-		VersionLabel: version}).Set(
+		ClusterIdLabel: cluster_id,
+		nameLabel:      name,
+		VersionLabel:   version}).Set(
 		float64(time.Unix()))
 }
 
-func (c *Counter) UpdateMetricControlplaneUpgradeStartedTimestamp(name string, version string, time time.Time) {
+func (c *Counter) UpdateMetricControlplaneUpgradeStartedTimestamp(cluster_id string, name string, version string, time time.Time) {
 	controlplaneUpgradeStartedTimestamp.With(prometheus.Labels{
-		nameLabel:    name,
-		VersionLabel: version}).Set(
+		ClusterIdLabel: cluster_id,
+		nameLabel:      name,
+		VersionLabel:   version}).Set(
 		float64(time.Unix()))
 }
 
-func (c *Counter) UpdateMetricControlplaneUpgradeCompletedTimestamp(name string, version string, time time.Time) {
+func (c *Counter) UpdateMetricControlplaneUpgradeCompletedTimestamp(cluster_id string, name string, version string, time time.Time) {
 	controlplaneUpgradeCompletedTimestamp.With(prometheus.Labels{
-		nameLabel:    name,
-		VersionLabel: version}).Set(
+		ClusterIdLabel: cluster_id,
+		nameLabel:      name,
+		VersionLabel:   version}).Set(
 		float64(time.Unix()))
 }
 
-func (c *Counter) UpdateMetricWorkernodeUpgradeStartedTimestamp(name string, version string, time time.Time) {
+func (c *Counter) UpdateMetricWorkernodeUpgradeStartedTimestamp(cluster_id string, name string, version string, time time.Time) {
 	workernodeUpgradeStartedTimestamp.With(prometheus.Labels{
-		nameLabel:    name,
-		VersionLabel: version}).Set(
+		ClusterIdLabel: cluster_id,
+		nameLabel:      name,
+		VersionLabel:   version}).Set(
 		float64(time.Unix()))
 }
 
-func (c *Counter) UpdateMetricWorkernodeUpgradeCompletedTimestamp(name string, version string, time time.Time) {
+func (c *Counter) UpdateMetricWorkernodeUpgradeCompletedTimestamp(cluster_id string, name string, version string, time time.Time) {
 	workernodeUpgradeCompletedTimestamp.With(prometheus.Labels{
-		nameLabel:    name,
-		VersionLabel: version}).Set(
+		ClusterIdLabel: cluster_id,
+		nameLabel:      name,
+		VersionLabel:   version}).Set(
 		float64(time.Unix()))
 }
 

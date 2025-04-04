@@ -188,27 +188,27 @@ func (mr *MockMetricsMockRecorder) ResetMetricUpgradeWorkerTimeout(arg0, arg1 an
 }
 
 // UpdateMetricControlplaneUpgradeCompletedTimestamp mocks base method.
-func (m *MockMetrics) UpdateMetricControlplaneUpgradeCompletedTimestamp(arg0, arg1 string, arg2 time.Time) {
+func (m *MockMetrics) UpdateMetricControlplaneUpgradeCompletedTimestamp(arg0, arg1, arg2 string, arg3 time.Time) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "UpdateMetricControlplaneUpgradeCompletedTimestamp", arg0, arg1, arg2)
+	m.ctrl.Call(m, "UpdateMetricControlplaneUpgradeCompletedTimestamp", arg0, arg1, arg2, arg3)
 }
 
 // UpdateMetricControlplaneUpgradeCompletedTimestamp indicates an expected call of UpdateMetricControlplaneUpgradeCompletedTimestamp.
-func (mr *MockMetricsMockRecorder) UpdateMetricControlplaneUpgradeCompletedTimestamp(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockMetricsMockRecorder) UpdateMetricControlplaneUpgradeCompletedTimestamp(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricControlplaneUpgradeCompletedTimestamp", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricControlplaneUpgradeCompletedTimestamp), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricControlplaneUpgradeCompletedTimestamp", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricControlplaneUpgradeCompletedTimestamp), arg0, arg1, arg2, arg3)
 }
 
 // UpdateMetricControlplaneUpgradeStartedTimestamp mocks base method.
-func (m *MockMetrics) UpdateMetricControlplaneUpgradeStartedTimestamp(arg0, arg1 string, arg2 time.Time) {
+func (m *MockMetrics) UpdateMetricControlplaneUpgradeStartedTimestamp(arg0, arg1, arg2 string, arg3 time.Time) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "UpdateMetricControlplaneUpgradeStartedTimestamp", arg0, arg1, arg2)
+	m.ctrl.Call(m, "UpdateMetricControlplaneUpgradeStartedTimestamp", arg0, arg1, arg2, arg3)
 }
 
 // UpdateMetricControlplaneUpgradeStartedTimestamp indicates an expected call of UpdateMetricControlplaneUpgradeStartedTimestamp.
-func (mr *MockMetricsMockRecorder) UpdateMetricControlplaneUpgradeStartedTimestamp(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockMetricsMockRecorder) UpdateMetricControlplaneUpgradeStartedTimestamp(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricControlplaneUpgradeStartedTimestamp", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricControlplaneUpgradeStartedTimestamp), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricControlplaneUpgradeStartedTimestamp", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricControlplaneUpgradeStartedTimestamp), arg0, arg1, arg2, arg3)
 }
 
 // UpdateMetricHealthcheckFailed mocks base method.
@@ -284,15 +284,15 @@ func (mr *MockMetricsMockRecorder) UpdateMetricScalingSucceeded(arg0 any) *gomoc
 }
 
 // UpdateMetricUpgradeCompletedTimestamp mocks base method.
-func (m *MockMetrics) UpdateMetricUpgradeCompletedTimestamp(arg0, arg1 string, arg2 time.Time) {
+func (m *MockMetrics) UpdateMetricUpgradeCompletedTimestamp(arg0, arg1, arg2 string, arg3 time.Time) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "UpdateMetricUpgradeCompletedTimestamp", arg0, arg1, arg2)
+	m.ctrl.Call(m, "UpdateMetricUpgradeCompletedTimestamp", arg0, arg1, arg2, arg3)
 }
 
 // UpdateMetricUpgradeCompletedTimestamp indicates an expected call of UpdateMetricUpgradeCompletedTimestamp.
-func (mr *MockMetricsMockRecorder) UpdateMetricUpgradeCompletedTimestamp(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockMetricsMockRecorder) UpdateMetricUpgradeCompletedTimestamp(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricUpgradeCompletedTimestamp", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricUpgradeCompletedTimestamp), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricUpgradeCompletedTimestamp", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricUpgradeCompletedTimestamp), arg0, arg1, arg2, arg3)
 }
 
 // UpdateMetricUpgradeConfigSyncTimestamp mocks base method.
@@ -332,15 +332,15 @@ func (mr *MockMetricsMockRecorder) UpdateMetricUpgradeResult(arg0, arg1, arg2, a
 }
 
 // UpdateMetricUpgradeStartedTimestamp mocks base method.
-func (m *MockMetrics) UpdateMetricUpgradeStartedTimestamp(arg0, arg1 string, arg2 time.Time) {
+func (m *MockMetrics) UpdateMetricUpgradeStartedTimestamp(arg0, arg1, arg2 string, arg3 time.Time) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "UpdateMetricUpgradeStartedTimestamp", arg0, arg1, arg2)
+	m.ctrl.Call(m, "UpdateMetricUpgradeStartedTimestamp", arg0, arg1, arg2, arg3)
 }
 
 // UpdateMetricUpgradeStartedTimestamp indicates an expected call of UpdateMetricUpgradeStartedTimestamp.
-func (mr *MockMetricsMockRecorder) UpdateMetricUpgradeStartedTimestamp(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockMetricsMockRecorder) UpdateMetricUpgradeStartedTimestamp(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricUpgradeStartedTimestamp", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricUpgradeStartedTimestamp), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricUpgradeStartedTimestamp", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricUpgradeStartedTimestamp), arg0, arg1, arg2, arg3)
 }
 
 // UpdateMetricUpgradeWindowBreached mocks base method.
@@ -404,27 +404,27 @@ func (mr *MockMetricsMockRecorder) UpdateMetricValidationSucceeded(arg0 any) *go
 }
 
 // UpdateMetricWorkernodeUpgradeCompletedTimestamp mocks base method.
-func (m *MockMetrics) UpdateMetricWorkernodeUpgradeCompletedTimestamp(arg0, arg1 string, arg2 time.Time) {
+func (m *MockMetrics) UpdateMetricWorkernodeUpgradeCompletedTimestamp(arg0, arg1, arg2 string, arg3 time.Time) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "UpdateMetricWorkernodeUpgradeCompletedTimestamp", arg0, arg1, arg2)
+	m.ctrl.Call(m, "UpdateMetricWorkernodeUpgradeCompletedTimestamp", arg0, arg1, arg2, arg3)
 }
 
 // UpdateMetricWorkernodeUpgradeCompletedTimestamp indicates an expected call of UpdateMetricWorkernodeUpgradeCompletedTimestamp.
-func (mr *MockMetricsMockRecorder) UpdateMetricWorkernodeUpgradeCompletedTimestamp(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockMetricsMockRecorder) UpdateMetricWorkernodeUpgradeCompletedTimestamp(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricWorkernodeUpgradeCompletedTimestamp", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricWorkernodeUpgradeCompletedTimestamp), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricWorkernodeUpgradeCompletedTimestamp", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricWorkernodeUpgradeCompletedTimestamp), arg0, arg1, arg2, arg3)
 }
 
 // UpdateMetricWorkernodeUpgradeStartedTimestamp mocks base method.
-func (m *MockMetrics) UpdateMetricWorkernodeUpgradeStartedTimestamp(arg0, arg1 string, arg2 time.Time) {
+func (m *MockMetrics) UpdateMetricWorkernodeUpgradeStartedTimestamp(arg0, arg1, arg2 string, arg3 time.Time) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "UpdateMetricWorkernodeUpgradeStartedTimestamp", arg0, arg1, arg2)
+	m.ctrl.Call(m, "UpdateMetricWorkernodeUpgradeStartedTimestamp", arg0, arg1, arg2, arg3)
 }
 
 // UpdateMetricWorkernodeUpgradeStartedTimestamp indicates an expected call of UpdateMetricWorkernodeUpgradeStartedTimestamp.
-func (mr *MockMetricsMockRecorder) UpdateMetricWorkernodeUpgradeStartedTimestamp(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockMetricsMockRecorder) UpdateMetricWorkernodeUpgradeStartedTimestamp(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricWorkernodeUpgradeStartedTimestamp", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricWorkernodeUpgradeStartedTimestamp), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMetricWorkernodeUpgradeStartedTimestamp", reflect.TypeOf((*MockMetrics)(nil).UpdateMetricWorkernodeUpgradeStartedTimestamp), arg0, arg1, arg2, arg3)
 }
 
 // UpdatemetricUpgradeNotificationFailed mocks base method.
