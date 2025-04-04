@@ -36,6 +36,7 @@ type ClusterVersion interface {
 	EnsureDesiredConfig(uc *upgradev1alpha1.UpgradeConfig) (bool, error)
 	HasUpgradeCompleted(*configv1.ClusterVersion, *upgradev1alpha1.UpgradeConfig) bool
 	HasDegradedOperators() (*HasDegradedOperatorsResult, error)
+	GetClusterId() string
 }
 
 // ClusterVersionBuilder returns a ClusterVersion interface
@@ -207,6 +208,20 @@ func (c *clusterVersionClient) HasUpgradeCommenced(uc *upgradev1alpha1.UpgradeCo
 	}
 
 	return false, fmt.Errorf("failed to check if the upgrade has commenced")
+}
+
+// GetClusterId returns the cluster id from the ClusterVersion object
+// This is used to enrich metrics with the cluster id label
+func (c *clusterVersionClient) GetClusterId() string {
+	cv, err := c.GetClusterVersion()
+	if err != nil {
+		return "unknown"
+	}
+	clusterId := string(cv.Spec.ClusterID)
+	if len(clusterId) == 0 {
+		return "unknown"
+	}
+	return clusterId
 }
 
 // GetHistory returns a configv1.UpdateHistory from a ClusterVersion

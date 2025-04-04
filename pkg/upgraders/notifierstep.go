@@ -2,6 +2,7 @@ package upgraders
 
 import (
 	"context"
+	"time"
 
 	"github.com/go-logr/logr"
 
@@ -25,6 +26,11 @@ func (c *clusterUpgrader) SendStartedNotification(ctx context.Context, logger lo
 		return false, err
 	}
 
+	clusterid := c.cvClient.GetClusterId()
+
+	// Update the metrics with the upgrade started timestamp
+	c.metrics.UpdateMetricUpgradeStartedTimestamp(clusterid, c.upgradeConfig.Name, c.upgradeConfig.Spec.Desired.Version, time.Now())
+
 	return true, nil
 }
 
@@ -34,6 +40,9 @@ func (c *clusterUpgrader) SendCompletedNotification(ctx context.Context, logger 
 	if err != nil {
 		return false, err
 	}
+	clusterid := c.cvClient.GetClusterId()
+	// Update the metrics with the upgrade finished timestamp
+	c.metrics.UpdateMetricUpgradeCompletedTimestamp(clusterid, c.upgradeConfig.Name, c.upgradeConfig.Spec.Desired.Version, time.Now())
 	return true, nil
 }
 

@@ -3,14 +3,15 @@ package upgraders
 import (
 	"context"
 	"fmt"
-	"github.com/openshift/managed-upgrade-operator/pkg/notifier"
 	"time"
+
+	"github.com/openshift/managed-upgrade-operator/pkg/notifier"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	"github.com/go-logr/logr"
-	"go.uber.org/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
