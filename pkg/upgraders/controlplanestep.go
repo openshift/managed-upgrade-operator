@@ -31,6 +31,8 @@ func (c *clusterUpgrader) CommenceUpgrade(ctx context.Context, logger logr.Logge
 	if err != nil {
 		return false, err
 	}
+	clusterid := c.cvClient.GetClusterId()
+	c.metrics.UpdateMetricControlplaneUpgradeStartedTimestamp(clusterid, c.upgradeConfig.Name, c.upgradeConfig.Spec.Desired.Version, time.Now())
 
 	isComplete, err := c.cvClient.EnsureDesiredConfig(c.upgradeConfig)
 	if err != nil {
@@ -55,6 +57,9 @@ func (c *clusterUpgrader) ControlPlaneUpgraded(ctx context.Context, logger logr.
 			return false, err
 		}
 		c.metrics.ResetMetricUpgradeControlPlaneTimeout(c.upgradeConfig.Name, c.upgradeConfig.Spec.Desired.Version)
+		clusterid := c.cvClient.GetClusterId()
+		c.metrics.UpdateMetricControlplaneUpgradeCompletedTimestamp(clusterid, c.upgradeConfig.Name, c.upgradeConfig.Spec.Desired.Version, time.Now())
+		c.metrics.UpdateMetricWorkernodeUpgradeStartedTimestamp(clusterid, c.upgradeConfig.Name, c.upgradeConfig.Spec.Desired.Version, time.Now())
 		return true, nil
 	}
 

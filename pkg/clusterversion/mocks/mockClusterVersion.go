@@ -56,6 +56,20 @@ func (mr *MockClusterVersionMockRecorder) EnsureDesiredConfig(arg0 any) *gomock.
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureDesiredConfig", reflect.TypeOf((*MockClusterVersion)(nil).EnsureDesiredConfig), arg0)
 }
 
+// GetClusterId mocks base method.
+func (m *MockClusterVersion) GetClusterId() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetClusterId")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// GetClusterId indicates an expected call of GetClusterId.
+func (mr *MockClusterVersionMockRecorder) GetClusterId() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClusterId", reflect.TypeOf((*MockClusterVersion)(nil).GetClusterId))
+}
+
 // GetClusterVersion mocks base method.
 func (m *MockClusterVersion) GetClusterVersion() (*v1.ClusterVersion, error) {
 	m.ctrl.T.Helper()
