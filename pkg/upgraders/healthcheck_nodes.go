@@ -15,7 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func ManuallyCordonedNodes(metricsClient metrics.Metrics, machinery machinery.Machinery, c client.Client, ug *upgradev1alpha1.UpgradeConfig, logger logr.Logger, version string) (bool, error) {
+func ManuallyCordonedNodes(metricsClient metrics.Metrics, machinery machinery.Machinery, c client.Client, ug *upgradev1alpha1.UpgradeConfig, logger logr.Logger, version string) ([]string, error) {
 	nodes := &corev1.NodeList{}
 	cops := &client.ListOptions{
 		Raw: &metav1.ListOptions{
@@ -33,7 +33,7 @@ func ManuallyCordonedNodes(metricsClient metrics.Metrics, machinery machinery.Ma
 		logger.Info("Unable to fetch node list")
 		// Use PrecedingVersion as the versionLabel here because preflight check is performed before the upgrade
 		metricsClient.UpdateMetricHealthcheckFailed(ug.Name, metrics.ClusterNodeQueryFailed, version, state)
-		return false, err
+		return nil, err
 	}
 
 	// Check if worker node has been manually cordoned.
@@ -53,15 +53,15 @@ func ManuallyCordonedNodes(metricsClient metrics.Metrics, machinery machinery.Ma
 		// Manually cordon node check failed, fail the healthcheck and return failed nodes
 		// Use PrecedingVersion as the versionLabel here because preflight check is performed before the upgrade
 		metricsClient.UpdateMetricHealthcheckFailed(ug.Name, metrics.ClusterNodesManuallyCordoned, version, state)
-		return false, fmt.Errorf("cordoned nodes: %s", strings.Join(manuallyCordonNodes, ", "))
+		return manuallyCordonNodes, fmt.Errorf("cordoned nodes: %s", strings.Join(manuallyCordonNodes, ", "))
 	}
 	logger.Info("Prehealth check for manually cordoned node passed")
 	metricsClient.UpdateMetricHealthcheckSucceeded(ug.Name, metrics.ClusterNodeQueryFailed, version, state)
 	metricsClient.UpdateMetricHealthcheckSucceeded(ug.Name, metrics.ClusterNodesManuallyCordoned, version, state)
-	return true, nil
+	return nil, nil
 }
 
-func NodeUnschedulableTaints(metricsClient metrics.Metrics, machinery machinery.Machinery, c client.Client, ug *upgradev1alpha1.UpgradeConfig, logger logr.Logger, version string) (bool, error) {
+func NodeUnschedulableTaints(metricsClient metrics.Metrics, machinery machinery.Machinery, c client.Client, ug *upgradev1alpha1.UpgradeConfig, logger logr.Logger, version string) ([]string, error) {
 	nodes := &corev1.NodeList{}
 	cops := &client.ListOptions{}
 
@@ -75,7 +75,7 @@ func NodeUnschedulableTaints(metricsClient metrics.Metrics, machinery machinery.
 		logger.Info("Unable to fetch node list")
 		// Use PrecedingVersion as the versionLabel here because preflight check is performed before the upgrade
 		metricsClient.UpdateMetricHealthcheckFailed(ug.Name, metrics.ClusterNodeQueryFailed, version, state)
-		return false, err
+		return nil, err
 	}
 
 	// Check if worker node has been manually cordoned.
@@ -125,10 +125,10 @@ func NodeUnschedulableTaints(metricsClient metrics.Metrics, machinery machinery.
 			unschedulableNodes = append(unschedulableNodes, pidPressureNodes...)
 		}
 
-		return false, fmt.Errorf("unschedulable taints on nodes: %s", strings.Join(unschedulableNodes, ", "))
+		return unschedulableNodes, fmt.Errorf("unschedulable taints on nodes: %s", strings.Join(unschedulableNodes, ", "))
 	}
 	logger.Info("Prehealth check for unschedulable node taints passed")
 	metricsClient.UpdateMetricHealthcheckSucceeded(ug.Name, metrics.ClusterNodeQueryFailed, version, state)
 	metricsClient.UpdateMetricHealthcheckSucceeded(ug.Name, metrics.ClusterNodesTaintedUnschedulable, version, state)
-	return true, nil
+	return nil, nil
 }
