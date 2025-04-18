@@ -69,17 +69,19 @@ func (c *clusterUpgrader) PreUpgradeHealthCheck(ctx context.Context, logger logr
 				c.metrics.UpdateMetricHealthcheckSucceeded(c.upgradeConfig.Name, metrics.DefaultWorkerMachinepoolNotFound, version, state)
 			}
 		}
-
-		ok, err = ManuallyCordonedNodes(c.metrics, c.machinery, c.client, c.upgradeConfig, logger, version)
-		if err != nil || !ok {
+		var nodes []string
+		nodes, err = ManuallyCordonedNodes(c.metrics, c.machinery, c.client, c.upgradeConfig, logger, version)
+		if err != nil || nodes != nil {
 			logger.Info(fmt.Sprintf("upgrade may delay due to there are manually cordoned nodes: %s", err))
-			healthCheckFailed = append(healthCheckFailed, "NodeUnschedulableHealthcheckFailed")
+			nodeNames := strings.Join(nodes, ",")
+			healthCheckFailed = append(healthCheckFailed, fmt.Sprintf("NodeUnschedulableHealthcheckFailed:(%s)", nodeNames))
 		}
 
-		ok, err = NodeUnschedulableTaints(c.metrics, c.machinery, c.client, c.upgradeConfig, logger, version)
-		if err != nil || !ok {
+		nodes, err = NodeUnschedulableTaints(c.metrics, c.machinery, c.client, c.upgradeConfig, logger, version)
+		if err != nil || nodes != nil {
 			logger.Info(fmt.Sprintf("upgrade delayed due to there are unschedulable taints on nodes: %s", err))
-			healthCheckFailed = append(healthCheckFailed, "NodeUnschedulableTaintHealthcheckFailed")
+			nodeNames := strings.Join(nodes, ",")
+			healthCheckFailed = append(healthCheckFailed, fmt.Sprintf("NodeUnschedulableTaintHealthcheckFailed:(%s)", nodeNames))
 		}
 
 		// HealthCheckPDB

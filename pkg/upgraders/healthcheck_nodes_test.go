@@ -83,7 +83,7 @@ var _ = Describe("HealthCheck Manually Cordoned node", func() {
 			)
 			result, err := ManuallyCordonedNodes(mockMetricsClient, mockMachineryClient, mockKubeClient, upgradeConfig, logger, version)
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(result).Should(BeTrue())
+			Expect(result).Should(BeNil())
 		})
 	})
 
@@ -108,7 +108,7 @@ var _ = Describe("HealthCheck Manually Cordoned node", func() {
 			)
 			result, err := ManuallyCordonedNodes(mockMetricsClient, mockMachineryClient, mockKubeClient, upgradeConfig, logger, version)
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(result).Should(BeTrue())
+			Expect(result).Should(BeNil())
 		})
 	})
 
@@ -118,7 +118,7 @@ var _ = Describe("HealthCheck Manually Cordoned node", func() {
 			mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, gomock.Any(), gomock.Any(), gomock.Any())
 			result, err := ManuallyCordonedNodes(mockMetricsClient, mockMachineryClient, mockKubeClient, upgradeConfig, logger, version)
 			Expect(err).Should(HaveOccurred())
-			Expect(result).Should(BeFalse())
+			Expect(result).Should(BeNil())
 		})
 	})
 
@@ -142,7 +142,7 @@ var _ = Describe("HealthCheck Manually Cordoned node", func() {
 			)
 			result, err := ManuallyCordonedNodes(mockMetricsClient, mockMachineryClient, mockKubeClient, upgradeConfig, logger, version)
 			Expect(err).Should(HaveOccurred())
-			Expect(result).Should(BeFalse())
+			Expect(result).Should(Not(BeNil()))
 		})
 	})
 	Context("When nodes has unschedule taints", func() {
@@ -154,7 +154,7 @@ var _ = Describe("HealthCheck Manually Cordoned node", func() {
 			)
 			result, err := NodeUnschedulableTaints(mockMetricsClient, mockMachineryClient, mockKubeClient, upgradeConfig, logger, version)
 			Expect(err).Should(HaveOccurred())
-			Expect(result).Should(BeFalse())
+			Expect(result).Should(BeNil())
 		})
 
 	})
