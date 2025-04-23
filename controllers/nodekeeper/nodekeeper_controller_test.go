@@ -126,7 +126,7 @@ var _ = Describe("NodeKeeperController", func() {
 					},
 				}
 			})
-			It("should not execute drain strategies if disabled", func() {
+			It("Alerting if nodedrain takes long time when strategies if disabled", func() {
 				gomock.InOrder(
 					mockUpgradeConfigManagerBuilder.EXPECT().NewManager(gomock.Any()).Return(mockUpgradeConfigManager, nil),
 					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
@@ -136,6 +136,11 @@ var _ = Describe("NodeKeeperController", func() {
 					mockMetricsBuilder.EXPECT().NewClient(gomock.Any()).Return(mockMetricsClient, nil),
 					mockConfigManagerBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockConfigManager),
 					mockConfigManager.EXPECT().Into(gomock.Any()).SetArg(0, config),
+					mockDrainStrategyBuilder.EXPECT().NewDefaultNodeDrainStrategy(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(mockDrainStrategy, nil),
+					mockDrainStrategy.EXPECT().HasFailed(gomock.Any(), gomock.Any()).Return(true, nil),
+					mockMachineryClient.EXPECT().IsNodeUpgrading(gomock.Any()).Return(true),
+					mockMetricsClient.EXPECT().UpdateMetricNodeDrainFailed(gomock.Any()).Times(1),
+					mockMetricsClient.EXPECT().ResetMetricNodeDrainFailed(gomock.Any()).Times(0),
 				)
 				result, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: testNodeName})
 				Expect(err).NotTo(HaveOccurred())

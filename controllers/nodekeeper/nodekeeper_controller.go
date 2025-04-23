@@ -145,7 +145,7 @@ func (r *ReconcileNodeKeeper) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-// SetupWithManager sets up the controller with the Manager.
+// Check the NodeDrainResult
 func (r *ReconcileNodeKeeper) NodeDrainResult(node *corev1.Node, reqLogger logr.Logger, hasFailed bool, metricsClient metrics.Metrics) {
 
 	if hasFailed {
