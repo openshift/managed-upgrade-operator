@@ -24,6 +24,7 @@ import (
 //go:generate mockgen -destination=mocks/nodeDrainStrategyBuilder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/drain NodeDrainStrategyBuilder
 type NodeDrainStrategyBuilder interface {
 	NewNodeDrainStrategy(c client.Client, logger logr.Logger, uc *upgradev1alpha1.UpgradeConfig, cfg *NodeDrain) (NodeDrainStrategy, error)
+	NewDefaultNodeDrainStrategy(c client.Client, logger logr.Logger, uc *upgradev1alpha1.UpgradeConfig, cfg *NodeDrain) (NodeDrainStrategy, error)
 }
 
 // NodeDrainStrategy enables implementation for a NodeDrainStrategy
@@ -119,6 +120,27 @@ func (dsb *drainStrategyBuilder) NewNodeDrainStrategy(c client.Client, logger lo
 			filters: append(defaultOsdPodPredicates, isPdbPod, isAllowedNamespace),
 		}),
 	}
+
+	return NewNodeDrainStrategy(c, cfg, ts, uc, notifier, metricsClient)
+}
+
+// NewDefaultNodeDrainStrategy returns a NodeDrainStrategy without any timed strategy
+func (dsb *drainStrategyBuilder) NewDefaultNodeDrainStrategy(c client.Client, logger logr.Logger, uc *upgradev1alpha1.UpgradeConfig, cfg *NodeDrain) (NodeDrainStrategy, error) {
+
+	cmBuilder := configmanager.NewBuilder()
+	ucb := upgradeconfigmanager.NewBuilder()
+	// Notification Client Build
+	notifier, err := notifier.NewBuilder().New(c, cmBuilder, ucb)
+	if err != nil {
+		return nil, err
+	}
+	// Metrics Client Build
+	metricsClient, err := metrics.NewBuilder().NewClient(c)
+	if err != nil {
+		return nil, err
+	}
+
+	ts := []TimedDrainStrategy{}
 
 	return NewNodeDrainStrategy(c, cfg, ts, uc, notifier, metricsClient)
 }
