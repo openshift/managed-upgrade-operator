@@ -2,6 +2,7 @@ package upgraders
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -12,6 +13,11 @@ import (
 	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
 	"github.com/openshift/managed-upgrade-operator/pkg/notifier"
 )
+
+type PDBDetails struct {
+	Name      string
+	Namespace string
+}
 
 // PreUpgradeHealthCheck performs cluster healthy check
 func (c *clusterUpgrader) PreUpgradeHealthCheck(ctx context.Context, logger logr.Logger) (bool, error) {
@@ -44,6 +50,7 @@ func (c *clusterUpgrader) PreUpgradeHealthCheck(ctx context.Context, logger logr
 	if len(c.config.FeatureGate.Enabled) > 0 && c.config.IsFeatureEnabled(string(upgradev1alpha1.PreHealthCheckFeatureGate)) {
 
 		healthCheckFailed := []string{}
+		var pdbDetails []PDBDetails
 		history := c.upgradeConfig.Status.History.GetHistory(c.upgradeConfig.Spec.Desired.Version)
 		state := string(history.Phase)
 
@@ -85,10 +92,14 @@ func (c *clusterUpgrader) PreUpgradeHealthCheck(ctx context.Context, logger logr
 		}
 
 		// HealthCheckPDB
-		ok, err = HealthCheckPDB(c.metrics, c.client, c.dvo, c.upgradeConfig, logger, version)
+		pdbDetails, ok, err = HealthCheckPDB(c.metrics, c.client, c.dvo, c.upgradeConfig, logger, version)
 		if err != nil || !ok {
 			logger.Info(fmt.Sprintf("upgrade delayed due PDB %s", err))
-			healthCheckFailed = append(healthCheckFailed, "PDBHealthcheckFailed")
+			pdbList, err := json.Marshal(&pdbDetails)
+			if err != nil {
+				logger.Info(fmt.Sprintf("upgrade delayed due PDB: Marshal error %s", err))
+			}
+			healthCheckFailed = append(healthCheckFailed, "PDBHealthcheckFailed: "+string(pdbList))
 		}
 
 		if len(healthCheckFailed) > 0 {
