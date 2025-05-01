@@ -8,12 +8,15 @@ reviewers:
 - chamalabey
 - TheUndeadKing
 - vaidehi411
+- charlesgong
+- rbhilare
 
 approvers:
 - wanghaoran1988
 - bmeng
 - ravitri
 - a7vicky
+- tkong-redhat
 - srep-functional-leads
 - srep-team-leads
 
