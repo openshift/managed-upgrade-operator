@@ -28,13 +28,15 @@ aliases:
     - chamalabey
   srep-functional-team-orange:
     - bergmannf
-    - bng0y
-    - typeid
     - Makdaam
-    - mrWinston
     - Nikokolas3270
-    - ninabauer
     - RaphaelBut
+    - MateSaary
+    - rolandmkunkel 
+    - petrkotas
+    - zmird-r
+    - evlin-rh
+    - hectorakemp
   srep-functional-team-rocket:
     - aliceh
     - anispate
@@ -54,7 +56,6 @@ aliases:
   srep-functional-team-thor:
     - bmeng
     - MitaliBhalla
-    - hectorakemp
     - feichashao
     - samanthajayasinghe
     - xiaoyu74
@@ -71,7 +72,7 @@ aliases:
     - clcollins
     - Nikokolas3270
     - theautoroboto
-    - bmeng
+    - smarthall
     - sam-nguyen7
     - ravitri
   srep-team-leads:
@@ -82,11 +83,12 @@ aliases:
     - dustman9000
     - wanghaoran1988
     - bng0y
+    - bmeng
+    - typeid
   sre-group-leads:
     - apahim
     - maorfr
     - rogbas
   srep-architects:
-    - jewzaam
     - jharrington22
     - cblecker
