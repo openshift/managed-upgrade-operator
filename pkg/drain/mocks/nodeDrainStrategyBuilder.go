@@ -42,6 +42,21 @@ func (m *MockNodeDrainStrategyBuilder) EXPECT() *MockNodeDrainStrategyBuilderMoc
 	return m.recorder
 }
 
+// NewDefaultNodeDrainStrategy mocks base method.
+func (m *MockNodeDrainStrategyBuilder) NewDefaultNodeDrainStrategy(arg0 client.Client, arg1 logr.Logger, arg2 *v1alpha1.UpgradeConfig, arg3 *drain.NodeDrain) (drain.NodeDrainStrategy, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewDefaultNodeDrainStrategy", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(drain.NodeDrainStrategy)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// NewDefaultNodeDrainStrategy indicates an expected call of NewDefaultNodeDrainStrategy.
+func (mr *MockNodeDrainStrategyBuilderMockRecorder) NewDefaultNodeDrainStrategy(arg0, arg1, arg2, arg3 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewDefaultNodeDrainStrategy", reflect.TypeOf((*MockNodeDrainStrategyBuilder)(nil).NewDefaultNodeDrainStrategy), arg0, arg1, arg2, arg3)
+}
+
 // NewNodeDrainStrategy mocks base method.
 func (m *MockNodeDrainStrategyBuilder) NewNodeDrainStrategy(arg0 client.Client, arg1 logr.Logger, arg2 *v1alpha1.UpgradeConfig, arg3 *drain.NodeDrain) (drain.NodeDrainStrategy, error) {
 	m.ctrl.T.Helper()

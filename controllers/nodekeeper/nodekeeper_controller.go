@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/go-logr/logr"
 	"github.com/openshift/managed-upgrade-operator/config"
 
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/api/v1alpha1"
@@ -119,23 +120,18 @@ func (r *ReconcileNodeKeeper) Reconcile(ctx context.Context, request reconcile.R
 		if err != nil {
 			return reconcile.Result{}, err
 		}
-		if hasFailed {
-			// If the node.DeletionTimestamp is set NodeDrainFailed metric needs to be reset
-			if node.DeletionTimestamp != nil {
-				reqLogger.Info(fmt.Sprintf("DeletionTimestamp set for the node %s. Re-setting NodeDrainFailed metric",
-					node.Name))
-				metricsClient.ResetMetricNodeDrainFailed(node.Name)
-			} else {
-				reqLogger.Info(fmt.Sprintf("Node drain timed out %s. Alerting.", node.Name))
-				// Set metric only for the node going through upgrade
-				if r.Machinery.IsNodeUpgrading(node) {
-					metricsClient.UpdateMetricNodeDrainFailed(node.Name)
-				}
-				return reconcile.Result{RequeueAfter: time.Minute * 1}, nil
-			}
-		} else {
-			metricsClient.ResetMetricNodeDrainFailed(node.Name)
+		r.NodeDrainResult(node, reqLogger, hasFailed, metricsClient)
+	} else {
+		drainStrategy, err := r.DrainstrategyBuilder.NewDefaultNodeDrainStrategy(r.Client, reqLogger, uc, &cfg.NodeDrain)
+		if err != nil {
+			reqLogger.Error(err, "Error while executing drain.")
+			return reconcile.Result{}, err
 		}
+		hasFailed, err := drainStrategy.HasFailed(node, reqLogger)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+		r.NodeDrainResult(node, reqLogger, hasFailed, metricsClient)
 	}
 
 	return reconcile.Result{RequeueAfter: time.Minute * 1}, nil
@@ -147,4 +143,25 @@ func (r *ReconcileNodeKeeper) SetupWithManager(mgr ctrl.Manager) error {
 		For(&corev1.Node{}).
 		WithEventFilter(IgnoreMasterPredicate()).
 		Complete(r)
+}
+
+// Check the NodeDrainResult
+func (r *ReconcileNodeKeeper) NodeDrainResult(node *corev1.Node, reqLogger logr.Logger, hasFailed bool, metricsClient metrics.Metrics) {
+
+	if hasFailed {
+		// If the node.DeletionTimestamp is set NodeDrainFailed metric needs to be reset
+		if node.DeletionTimestamp != nil {
+			reqLogger.Info(fmt.Sprintf("DeletionTimestamp set for the node %s. Re-setting NodeDrainFailed metric",
+				node.Name))
+			metricsClient.ResetMetricNodeDrainFailed(node.Name)
+		} else {
+			reqLogger.Info(fmt.Sprintf("Node drain timed out %s. Alerting.", node.Name))
+			// Set metric only for the node going through upgrade
+			if r.Machinery.IsNodeUpgrading(node) {
+				metricsClient.UpdateMetricNodeDrainFailed(node.Name)
+			}
+		}
+	} else {
+		metricsClient.ResetMetricNodeDrainFailed(node.Name)
+	}
 }

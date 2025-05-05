@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestUpgradeConfig(t *testing.T) {
+func TestNodeKeeperController(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "NodeKeeperController Suite")
 }
