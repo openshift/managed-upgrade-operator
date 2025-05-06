@@ -113,7 +113,7 @@ func (s *machineSetScaler) EnsureScaleDownNodes(c client.Client, nds drain.NodeD
 
 	for _, ms := range upgradeMachinesets.Items {
 		ms := ms
-		if ms.ObjectMeta.DeletionTimestamp == nil {
+		if ms.DeletionTimestamp == nil {
 			err = c.Delete(context.TODO(), &ms)
 			if err != nil {
 				return false, err
@@ -259,7 +259,7 @@ func nodesAreReady(c client.Client, timeOut time.Duration, upgradeMachinesets ma
 		startTime := ms.CreationTimestamp
 		if ms.Status.Replicas != ms.Status.ReadyReplicas {
 
-			if time.Now().After(startTime.Time.Add(timeOut)) {
+			if time.Now().After(startTime.Add(timeOut)) {
 				return false, NewScaleTimeOutError(fmt.Sprintf("Machineset %s provisioning timout", ms.Name))
 			}
 			logger.Info(fmt.Sprintf("not all machines are ready for machineset:%s", ms.Name))
@@ -294,7 +294,7 @@ func nodesAreReady(c client.Client, timeOut time.Duration, upgradeMachinesets ma
 			}
 		}
 		if !nodeReady {
-			if time.Now().After(startTime.Time.Add(timeOut)) {
+			if time.Now().After(startTime.Add(timeOut)) {
 				logger.Info("node is not ready within timeout time")
 				return false, NewScaleTimeOutError(fmt.Sprintf("Timeout waiting for node:%s to become ready", nodeName))
 			}

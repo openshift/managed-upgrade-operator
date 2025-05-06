@@ -69,7 +69,6 @@ import (
 	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
 	"github.com/openshift/managed-upgrade-operator/pkg/scheduler"
 	"github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager"
-	ucm "github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager"
 	cub "github.com/openshift/managed-upgrade-operator/pkg/upgraders"
 	"github.com/openshift/managed-upgrade-operator/pkg/validation"
 	"github.com/openshift/managed-upgrade-operator/util"
@@ -179,15 +178,16 @@ func main() {
 
 	// Ensure lock for leader election
 	_, err = k8sutil.GetOperatorNamespace()
-	if err == nil {
+	switch err {
+	case nil:
 		err = leader.Become(context.TODO(), "managed-upgrade-operator-lock")
 		if err != nil {
 			setupLog.Error(err, "failed to create leader lock")
 			os.Exit(1)
 		}
-	} else if err == k8sutil.ErrRunLocal || err == k8sutil.ErrNoNamespace {
+	case k8sutil.ErrRunLocal, k8sutil.ErrNoNamespace:
 		setupLog.Info("Skipping leader election; not running in a cluster.")
-	} else {
+	default:
 		setupLog.Error(err, "Failed to get operator namespace")
 		os.Exit(1)
 	}
@@ -203,7 +203,7 @@ func main() {
 		Scheduler:              scheduler.NewScheduler(),
 		CvClientBuilder:        cv.NewBuilder(),
 		EventManagerBuilder:    eventmanager.NewBuilder(),
-		UcMgrBuilder:           ucm.NewBuilder(),
+		UcMgrBuilder:           upgradeconfigmanager.NewBuilder(),
 		DvoClientBuilder:       dvo.NewBuilder(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "UpgradeConfig")
@@ -228,7 +228,7 @@ func main() {
 	if err = (&machineconfigpool.ReconcileMachineConfigPool{
 		Client:                      mgr.GetClient(),
 		Scheme:                      mgr.GetScheme(),
-		UpgradeConfigManagerBuilder: ucm.NewBuilder(),
+		UpgradeConfigManagerBuilder: upgradeconfigmanager.NewBuilder(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "MachineConfigPool")
 		os.Exit(1)

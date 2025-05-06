@@ -62,7 +62,7 @@ func (r *ReconcileNodeKeeper) Reconcile(ctx context.Context, request reconcile.R
 	}
 
 	history := uc.Status.History.GetHistory(uc.Spec.Desired.Version)
-	if !(history != nil && history.Phase == upgradev1alpha1.UpgradePhaseUpgrading && upgradeResult.IsUpgrading) {
+	if history == nil || history.Phase != upgradev1alpha1.UpgradePhaseUpgrading || !upgradeResult.IsUpgrading {
 		return reconcile.Result{}, nil
 	}
 

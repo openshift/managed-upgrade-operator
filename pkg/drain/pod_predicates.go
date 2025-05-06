@@ -58,11 +58,11 @@ func containsMatchLabel(p corev1.Pod, pdbList *policyv1.PodDisruptionBudgetList)
 }
 
 func hasFinalizers(p corev1.Pod) bool {
-	return len(p.ObjectMeta.GetFinalizers()) > 0
+	return len(p.GetFinalizers()) > 0
 }
 
 func hasNoFinalizers(p corev1.Pod) bool {
-	return len(p.ObjectMeta.GetFinalizers()) == 0
+	return len(p.GetFinalizers()) == 0
 }
 
 func isTerminating(p corev1.Pod) bool {

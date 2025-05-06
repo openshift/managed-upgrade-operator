@@ -14,7 +14,6 @@ import (
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/api/v1alpha1"
 	muocfg "github.com/openshift/managed-upgrade-operator/config"
 	"github.com/openshift/managed-upgrade-operator/pkg/clusterversion"
-	cv "github.com/openshift/managed-upgrade-operator/pkg/clusterversion"
 	"github.com/openshift/managed-upgrade-operator/pkg/configmanager"
 	"github.com/openshift/managed-upgrade-operator/pkg/dvo"
 	"github.com/openshift/managed-upgrade-operator/pkg/eventmanager"
@@ -48,7 +47,7 @@ type ReconcileUpgradeConfig struct {
 	ValidationBuilder      validation.ValidationBuilder
 	ConfigManagerBuilder   configmanager.ConfigManagerBuilder
 	Scheduler              scheduler.Scheduler
-	CvClientBuilder        cv.ClusterVersionBuilder
+	CvClientBuilder        clusterversion.ClusterVersionBuilder
 	EventManagerBuilder    eventmanager.EventManagerBuilder
 	UcMgrBuilder           ucmgr.UpgradeConfigManagerBuilder
 	DvoClientBuilder       dvo.DvoClientBuilder
