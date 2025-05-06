@@ -41,8 +41,8 @@ func NewUpgradeConfigBuilder() *testUpgradeConfigBuilder {
 }
 
 func (t *testUpgradeConfigBuilder) WithNamespacedName(namespacedName types.NamespacedName) *testUpgradeConfigBuilder {
-	t.uc.ObjectMeta.Name = namespacedName.Name
-	t.uc.ObjectMeta.Namespace = namespacedName.Namespace
+	t.uc.Name = namespacedName.Name
+	t.uc.Namespace = namespacedName.Namespace
 	return t
 }
 

@@ -78,10 +78,10 @@ func RemoveFinalizersFromPod(c client.Client, logger logr.Logger, pl *corev1.Pod
 	me := &multierror.Error{}
 	for _, p := range pl.Items {
 		p := p
-		if len(p.ObjectMeta.GetFinalizers()) != 0 {
+		if len(p.GetFinalizers()) != 0 {
 			logger.Info(fmt.Sprintf("Applying remove finalizer strategy to pod %v/%v", p.Namespace, p.Name))
 			emptyFinalizer := make([]string, 0)
-			p.ObjectMeta.SetFinalizers(emptyFinalizer)
+			p.SetFinalizers(emptyFinalizer)
 
 			err := c.Update(context.TODO(), &p)
 			if err != nil {

@@ -325,7 +325,7 @@ var _ = Describe("Node scaling tests", func() {
 			})
 			Context("When a scaled node is not ready within 30 minutes", func() {
 				JustBeforeEach(func() {
-					upgradeMachinesets.Items[0].ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Now().Add(-60 * time.Minute)}
+					upgradeMachinesets.Items[0].CreationTimestamp = metav1.Time{Time: time.Now().Add(-60 * time.Minute)}
 				})
 				It("Raises an error", func() {
 					gomock.InOrder(

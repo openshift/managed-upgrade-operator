@@ -28,7 +28,7 @@ func GetHTTPAvailabilityChecker(c Config) (AvailabilityChecker, error) {
 			Timeout: data.Timeout,
 		}, nil
 	}
-	return &HTTPAvailabilityChecker{}, fmt.Errorf("Attempt to get HTTP implementation failed ascertation as HTTPConfig")
+	return &HTTPAvailabilityChecker{}, fmt.Errorf("attempt to get http implementation failed ascertation as httpconfig")
 }
 
 // AvailabilityCheck accepts a slice of HTTP targets accompanied by a timeout

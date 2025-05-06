@@ -7,7 +7,6 @@ import (
 
 	"github.com/go-logr/logr"
 	configv1 "github.com/openshift/api/config/v1"
-	v1 "github.com/openshift/api/config/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -159,7 +158,7 @@ func isEqualVersion(cv *configv1.ClusterVersion, uc *upgradev1alpha1.UpgradeConf
 func GetPrecedingVersion(clusterVersion *configv1.ClusterVersion, uc *upgradev1alpha1.UpgradeConfig) string {
 	if clusterVersion.Status.Desired.Version == uc.Spec.Desired.Version {
 		for _, clusterVersionHistory := range clusterVersion.Status.History {
-			if clusterVersionHistory.State == v1.CompletedUpdate &&
+			if clusterVersionHistory.State == configv1.CompletedUpdate &&
 				clusterVersionHistory.Version != "" &&
 				clusterVersionHistory.Version != uc.Spec.Desired.Version {
 				return clusterVersionHistory.Version
@@ -272,7 +271,7 @@ func GetCurrentVersionMinusOne(clusterVersion *configv1.ClusterVersion) (string,
 
 	// sort time from latest to earliest. Return 2nd index (latest -1)
 	sort.Slice(completedTimes, func(i, j int) bool {
-		return completedTimes[i].Time.After(completedTimes[j].Time)
+		return completedTimes[i].After(completedTimes[j].Time)
 	})
 
 	currentMinusOneTime := completedTimes[1]

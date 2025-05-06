@@ -51,7 +51,7 @@ func (c *clusterUpgrader) IsUpgradeable(ctx context.Context, logger logr.Logger)
 	for _, condition := range clusterVersion.Status.Conditions {
 		if condition.Type == configv1.OperatorUpgradeable && condition.Status == configv1.ConditionFalse && parsedDesiredVersion.Major >= parsedCurrentVersion.Major && parsedDesiredVersion.Minor > parsedCurrentVersion.Minor {
 			return false, fmt.Errorf(
-				"Cluster upgrade to version %s on %s has been cancelled: %s: %s.",
+				"cluster upgrade to version %s on %s has been cancelled: %s: %s",
 				desiredVersion,
 				upgradeTimeText,
 				condition.Reason,

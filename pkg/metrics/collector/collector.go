@@ -86,7 +86,7 @@ func (uc *UpgradeCollector) collectUpgradeMetrics(ch chan<- prometheus.Metric) {
 				ch <- prometheus.MustNewConstMetric(
 					uc.upgradeMetrics.upgradeState,
 					prometheus.GaugeValue,
-					float64(history.StartTime.Time.Unix()),
+					float64(history.StartTime.Unix()),
 					upgradeConfig.Spec.Desired.Version,
 					metrics.StartedStateValue,
 				)
@@ -96,7 +96,7 @@ func (uc *UpgradeCollector) collectUpgradeMetrics(ch chan<- prometheus.Metric) {
 				ch <- prometheus.MustNewConstMetric(
 					uc.upgradeMetrics.upgradeState,
 					prometheus.GaugeValue,
-					float64(history.WorkerStartTime.Time.Unix()),
+					float64(history.WorkerStartTime.Unix()),
 					upgradeConfig.Spec.Desired.Version,
 					metrics.WorkersStartedStateValue,
 				)
@@ -106,7 +106,7 @@ func (uc *UpgradeCollector) collectUpgradeMetrics(ch chan<- prometheus.Metric) {
 				ch <- prometheus.MustNewConstMetric(
 					uc.upgradeMetrics.upgradeState,
 					prometheus.GaugeValue,
-					float64(history.WorkerCompleteTime.Time.Unix()),
+					float64(history.WorkerCompleteTime.Unix()),
 					upgradeConfig.Spec.Desired.Version,
 					metrics.WorkersCompletedStateValue,
 				)
@@ -116,7 +116,7 @@ func (uc *UpgradeCollector) collectUpgradeMetrics(ch chan<- prometheus.Metric) {
 				ch <- prometheus.MustNewConstMetric(
 					uc.upgradeMetrics.upgradeState,
 					prometheus.GaugeValue,
-					float64(history.CompleteTime.Time.Unix()),
+					float64(history.CompleteTime.Unix()),
 					upgradeConfig.Spec.Desired.Version,
 					metrics.FinishedStateValue,
 				)
@@ -133,7 +133,7 @@ func (uc *UpgradeCollector) collectUpgradeMetrics(ch chan<- prometheus.Metric) {
 				ch <- prometheus.MustNewConstMetric(
 					uc.upgradeMetrics.upgradeState,
 					prometheus.GaugeValue,
-					float64(cvHistory.StartedTime.Time.Unix()),
+					float64(cvHistory.StartedTime.Unix()),
 					upgradeConfig.Spec.Desired.Version,
 					metrics.ControlPlaneStartedStateValue,
 				)
@@ -143,7 +143,7 @@ func (uc *UpgradeCollector) collectUpgradeMetrics(ch chan<- prometheus.Metric) {
 					ch <- prometheus.MustNewConstMetric(
 						uc.upgradeMetrics.upgradeState,
 						prometheus.GaugeValue,
-						float64(cvHistory.CompletionTime.Time.Unix()),
+						float64(cvHistory.CompletionTime.Unix()),
 						upgradeConfig.Spec.Desired.Version,
 						metrics.ControlPlaneCompletedStateValue,
 					)
