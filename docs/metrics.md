@@ -25,6 +25,14 @@ The following metrics are forwarded to Observatorium-MST for fleetwide monitorin
 - `upgradeoperator_upgrade_result`: Contains results from the previous upgrade. If upgrade fired a paging alert `value == 0` and the `alerts` field contains the name of alerts fired
 - `upgradeoperator_healthcheck_failed`: Contains preflight health check results from the previous upgrade. If upgrade preflight health check success `value == 0` otherwise `value == 1`. The `state` field contains in which upgrade state the PHC is performed. The `reason` field indicates which type of health check is performed.
 
+The following metrics are forwarded to Observatorium-MST on the management clusters for fleetwide monitoring via telemetry
+- `upgradeoperator_upgrade_started_timestamp`: Set a timestamp as the value of the metric when the upgrade commenced
+- `upgradeoperator_upgrade_completed_timestamp`: Set a timestamp as the value of the metric when the upgrade finished
+- `upgradeoperator_controlplane_upgrade_started_timestamp`: Set a timestamp as the value of the metric when the controlplane upgrade commenced
+- `upgradeoperator_controlplane_upgrade_completed_timestamp`: Set a timestamp as the value of the metric when the the controlplane upgrade finished
+- `upgradeoperator_workernode_upgrade_started_timestamp`: Set a timestamp as the value of the metric when the workerpool upgrade commenced
+- `upgradeoperator_workernode_upgrade_completed_timestamp`: Set a timestamp as the value of the metric when the workerpool upgrade finished
+
 ### How to expose the metric to RHOBS for fleet-wide monitoring
 
 The metrics defined in MUO only live inside the container. Each metric that needs to be sent to RHOBS via remoteWrite should be combined with the `sre:telemetry:managed_labels`. Details could be found in [doc](https://github.com/openshift/managed-cluster-config/blob/master/deploy/sre-prometheus/centralized-observability/README.md). Follow the steps below to set up the rule to expose metric to RHOBS.

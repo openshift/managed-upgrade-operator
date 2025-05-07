@@ -3,7 +3,7 @@
 ## About
 The `managed-upgrade-operator` provides a mechanism for keeping track of upgrading worker nodes and seeks to ensure their timely and eventual upgrade.
 
-The `Nodekeeper` controller makes sure that if an upgrading worker node is facing difficulty draining due to conditions such as [Pod Disruption Budgets](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/#pod-disruption-budgets) or stuck finalizers, the `Nodekeeper` controller will perform strategies for draining the nodes properly and ensuring subsequent upgrade continuation.
+The `Nodekeeper` controller makes sure that if an upgrading worker node is facing difficulty draining due to conditions such as [Pod Disruption Budgets](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/#pod-disruption-budgets) or stuck finalizers, the `Nodekeeper` controller will perform strategies for draining the nodes properly and ensuring subsequent upgrade continuation if `disableDrainStrategies` is not set to true, otherwise, the `Nodekeeper` controller will only check if the node drain process takes too long.
 The `Nodekeeper` controller will set the `upgradeoperator_node_drain_timeout` metric in Prometheus in the event that any worker node continues to unsuccessfully drain in spite of `NodeDrain` strategies.
 
 ## Inside the Nodekeeper Controller
