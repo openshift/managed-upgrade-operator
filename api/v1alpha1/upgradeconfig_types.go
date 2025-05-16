@@ -53,6 +53,13 @@ type UpgradeConfigSpec struct {
 
 // UpgradeConfigStatus defines the observed state of UpgradeConfig
 type UpgradeConfigStatus struct {
+	// Represents the observations of a foo's current state.
+	// This is the kube standard conditions stanza.
+	// +patchMergeKey=type
+	// +patchStrategy=merge
+	// +listType=map
+	// +listMapKey=type
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
 
 	// This record history of every upgrade
 	// +kubebuilder:validation:Optional
