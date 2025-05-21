@@ -31,8 +31,29 @@ fi
 
 # Add dependabot configuration
 mkdir -p $REPO_ROOT/.github
-echo "Copying dependabot.yml to .github/dependabot.yml"
-cp ${HERE}/dependabot.yml ${REPO_ROOT}/.github/dependabot.yml
+TARGET_FILE="${REPO_ROOT}/.github/dependabot.yml"
+BOILERPLATE_FILE="${HERE}/dependabot.yml"
+
+if [[ -f "$TARGET_FILE" ]]; then
+  if grep -q '# BEGIN boilerplate-managed' "$TARGET_FILE"; then
+    echo "Boilerplate-managed section already present in dependabot.yml, skipping append."
+  elif diff -q "$TARGET_FILE" "$BOILERPLATE_FILE" >/dev/null; then
+    echo "Wrapping existing dependabot.yml (which matches boilerplate) with boilerplate-managed markers..."
+    mv "$TARGET_FILE" "${TARGET_FILE}.bak"
+    {
+      echo "# BEGIN boilerplate-managed"
+      cat "${TARGET_FILE}.bak"
+      echo "# END boilerplate-managed"
+    } > "$TARGET_FILE"
+    rm -f "${TARGET_FILE}.bak"
+  else
+    echo "[WARNING] dependabot.yml exists and differs from boilerplate template but has no boilerplate-managed markers."
+    echo "[WARNING] Please review manually to avoid config duplication."
+  fi
+else
+  echo "Copying boilerplate-managed dependabot.yml"
+  cp "$BOILERPLATE_FILE" "$TARGET_FILE"
+fi
 
 # Add olm-registry Dockerfile
 mkdir -p $REPO_ROOT/build
