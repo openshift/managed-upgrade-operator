@@ -14,7 +14,6 @@ var _ = Describe("Scheduler", func() {
 	var (
 		upgradeConfig *upgradev1alpha1.UpgradeConfig
 	)
-
 	It("should be ready to upgrade if upgradeAt is 10 mins before now", func() {
 		s := &scheduler{}
 		upgradeConfig = testUpgradeConfig(true, time.Now().Add(-10*time.Minute).Format(time.RFC3339))
@@ -33,6 +32,15 @@ var _ = Describe("Scheduler", func() {
 		result := s.IsReadyToUpgrade(upgradeConfig, 5*time.Minute)
 		Expect(result.IsReady).To(BeTrue())
 		Expect(result.IsBreached).To(BeTrue())
+	})
+	It("should return false if upgradeAt is in an invalid format", func() {
+		s := &scheduler{}
+		invalidFormat := "2025-02-25 15:00"
+		upgradeConfig := testUpgradeConfig(true, invalidFormat)
+		result := s.IsReadyToUpgrade(upgradeConfig, 60*time.Minute)
+		Expect(result.IsReady).To(BeFalse())
+		Expect(result.IsBreached).To(BeFalse())
+
 	})
 })
 
