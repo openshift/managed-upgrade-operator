@@ -24,7 +24,6 @@ require (
 	github.com/openshift/machine-config-operator v0.0.1-0.20230330142923-2832f049b3f4
 	github.com/openshift/operator-custom-metrics v0.5.1
 	github.com/openshift/osde2e-common v0.0.0-20240531074950-36a7055798ae
-	github.com/operator-framework/operator-lib v0.15.0
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.74.0
 	github.com/prometheus-operator/prometheus-operator/pkg/client v0.71.0
 	github.com/prometheus/alertmanager v0.26.0

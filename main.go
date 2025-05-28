@@ -76,8 +76,6 @@ import (
 
 	opmetrics "github.com/openshift/operator-custom-metrics/pkg/metrics"
 
-	"github.com/operator-framework/operator-lib/leader"
-
 	configv1 "github.com/openshift/api/config/v1"
 	machineapi "github.com/openshift/api/machine/v1beta1"
 
@@ -118,13 +116,10 @@ func printVersion() {
 
 func main() {
 	var metricsAddr string
-	var enableLeaderElection bool
 	var probeAddr string
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":"+fmt.Sprintf("%d", metricsPort), "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
-	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
-		"Enable leader election for controller manager. "+
-			"Enabling this will ensure there is only one active controller manager.")
+
 	opts := zap.Options{
 		Development: true,
 	}
@@ -164,8 +159,7 @@ func main() {
 			BindAddress: metricsAddr,
 		},
 		HealthProbeBindAddress: probeAddr,
-		LeaderElection:         enableLeaderElection,
-		LeaderElectionID:       "312e6264.managed.openshift.io",
+		LeaderElection:         false,
 		NewClient: func(config *rest.Config, options client.Options) (client.Client, error) {
 			options.Cache = nil
 			return client.New(config, options)
@@ -173,22 +167,6 @@ func main() {
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
-		os.Exit(1)
-	}
-
-	// Ensure lock for leader election
-	_, err = k8sutil.GetOperatorNamespace()
-	switch err {
-	case nil:
-		err = leader.Become(context.TODO(), "managed-upgrade-operator-lock")
-		if err != nil {
-			setupLog.Error(err, "failed to create leader lock")
-			os.Exit(1)
-		}
-	case k8sutil.ErrRunLocal, k8sutil.ErrNoNamespace:
-		setupLog.Info("Skipping leader election; not running in a cluster.")
-	default:
-		setupLog.Error(err, "Failed to get operator namespace")
 		os.Exit(1)
 	}
 
