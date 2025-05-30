@@ -28,7 +28,6 @@ import (
 const (
 	operatorName                           = "managed-upgrade-operator"
 	operatorNamespace                      = "openshift-managed-upgrade-operator"
-	operatorLockFile                       = "managed-upgrade-operator-lock"
 	upgradeConfigResourceName              = "managed-upgrade-config"
 	upgradeConfigForDedicatedAdminTestName = "osde2e-da-upgrade-config"
 	rolePrefix                             = "managed-upgrade-operator"
@@ -61,9 +60,6 @@ var _ = ginkgo.Describe("managed-upgrade-operator", ginkgo.Ordered, func() {
 		ginkgo.By("Checking the namespace exists")
 		err := k8s.Get(ctx, operatorNamespace, operatorNamespace, &corev1.Namespace{})
 		Expect(err).ShouldNot(HaveOccurred(), "namespace %s not found", operatorNamespace)
-
-		ginkgo.By("Checking the operator lock file config map exists")
-		assertions.EventuallyConfigMap(ctx, k8s, operatorLockFile, operatorNamespace).WithTimeout(300*time.Second).WithPolling(30*time.Second).Should(Not(BeNil()), "configmap %s should exist", operatorLockFile)
 
 		ginkgo.By("Checking the operator deployment exists and is available")
 		assertions.EventuallyDeployment(ctx, k8s, operatorName, operatorNamespace)
