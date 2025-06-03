@@ -147,13 +147,14 @@ func main() {
 		os.Exit(1)
 	}
 
+	// For local run of MUO via `make run`, it's expected that WATCH_NAMESPACE is "" so we set it up via OPERATOR_NAMESPACE
+	// environment variable that's passed to the make command to set the leader-election namespace when running outside a cluster.
+	if operatorNS == "" {
+		operatorNS = os.Getenv("OPERATOR_NAMESPACE")
+	}
+
 	// This set the sync period to 5m
 	syncPeriod := muocfg.SyncPeriodDefault
-
-	leaderElectionNS := operatorNS
-	if os.Getenv("ENABLE_LEADER_ELECTION_NAMESPACE") == "true" {
-		leaderElectionNS = "openshift-managed-upgrade-operator"
-	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Cache: cache.Options{
@@ -169,7 +170,7 @@ func main() {
 		HealthProbeBindAddress:  probeAddr,
 		LeaderElection:          enableLeaderElection,
 		LeaderElectionID:        "managed-upgrade-operator-lock",
-		LeaderElectionNamespace: leaderElectionNS,
+		LeaderElectionNamespace: operatorNS,
 		NewClient: func(config *rest.Config, options client.Options) (client.Client, error) {
 			options.Cache = nil
 			return client.New(config, options)
