@@ -12,7 +12,7 @@ do
     then
         echo "Setup port forwarding for local development using internal svc"
 		echo "usage ${0##} context (to execute oc commands as). This is useful if you are running the actual operator the MUO service account [OPTIONAL]"
-        echo "example: ${0##} default/dofinn-20210802/dofinn.openshift" 
+        echo "example: ${0##} \$CONTEXT"
 		echo
         exit 1
     fi 

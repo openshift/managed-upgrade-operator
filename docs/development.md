@@ -24,11 +24,11 @@ This document should entail all you need to develop this operator locally.
 
 ### golang
 
-A recent Go distribution (>=1.20) with enabled Go modules.
+A recent Go distribution (>=1.22) with enabled Go modules.
 
 ```shell
 $ go version
-go version go1.20.13 linux/amd64
+go version go1.22.12 linux/amd64
 ```
 
 ### operator-sdk
@@ -165,8 +165,8 @@ You can run this script to set this up for you (Requires `sudo` as it writes to 
 $ ./development/port-forwards -h
 Setup port forwarding for local development using internal svc
 usage ./development/port-forwards context (to execute oc commands as). This is useful if you are running the actual operator the MUO service account [OPTIONAL]
-example: ./development/port-forwards default/dofinn-20210802/dofinn.openshift
-$ ./development/port-forwards default/dofinn-20210802/dofinn.openshift
+example: ./development/port-forwards $CONTEXT
+$ ./development/port-forwards $CONTEXT
 ```
 
 The operator can then be ran as follows. 
@@ -174,7 +174,7 @@ The operator can then be ran as follows.
 ```
 $ oc login $(oc get infrastructures cluster -o json | jq -r '.status.apiServerURL') --token $(oc -n openshift-managed-upgrade-operator serviceaccounts get-token managed-upgrade-operator)
 
-Logged into "https://api.dofinn-20210802.8dqo.s1.devshift.org:6443" as "system:serviceaccount:openshift-managed-upgrade-operator:managed-upgrade-operator" using the token provided.
+Logged into "https://$API_URL:6443" as "system:serviceaccount:openshift-managed-upgrade-operator:managed-upgrade-operator" using the token provided.
 
 You don't have any projects. Contact your system administrator to request a project.
 ```
