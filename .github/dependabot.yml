@@ -1,4 +1,3 @@
-# BEGIN boilerplate-managed
 version: 2
 updates:
   - package-ecosystem: "docker"
@@ -13,4 +12,3 @@ updates:
         # don't upgrade boilerplate via these means
       - dependency-name: "openshift4/ose-operator-registry"
         # don't upgrade ose-operator-registry via these means
-# END boilerplate-managed
