@@ -114,7 +114,7 @@ To run lint, test and build in `app-sre/boilerplate` container, call `boilerplat
 $ boilerplate/_lib/container-make
 ```
 ### Note for macOS Developers:
-When building on macOS, the boilerplate container-based build approach `make container-build` is not supported due to limitations with running Podman-in-Podman in a cross-platform environment. Instead, macOS users should use `sh build/mac_binary_build.sh`
+When building on macOS, the boilerplate container-based build approach `make container-build` is not supported due to limitations with running Podman-in-Podman in a cross-platform environment. Instead, macOS users should use `make go-mac-build`
 to build arm64 image `podman build --platform=linux/amd64 -t quay.io/[$PERSONAL_REPO]/managed-upgrade-operator:[$IMAGE_VERSION] -f build/Dockerfile .`
 
 ## How to run
