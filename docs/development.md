@@ -115,7 +115,7 @@ $ boilerplate/_lib/container-make
 ```
 ### Note for macOS Developers:
 When building on macOS, the boilerplate container-based build approach `make container-build` is not supported due to limitations with running Podman-in-Podman in a cross-platform environment. Instead, macOS users should use `make go-build` with the architecture flag to build x86-compatible binaries example: `CC=x86_64-unknown-linux-gnu-gcc CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make go-build`
-to build arm64 image `make docker-build`
+to build arm64 image `podman build --platform=linux/amd64 -t quay.io/[$PERSONAL_REPO]/:[$IMAGE_VERSION] -f build/Dockerfile .`
 
 ## How to run
 
