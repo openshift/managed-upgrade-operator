@@ -17,6 +17,7 @@
     - [Remotely](#remotely)
     - [Trigger Reconcile](#trigger-reconcile)
   - [Monitoring ongoing upgrade](#monitoring-ongoing-upgrade)
+  - [Maintenance](#maintenance)
 
 This document should entail all you need to develop this operator locally.
 
@@ -24,11 +25,11 @@ This document should entail all you need to develop this operator locally.
 
 ### golang
 
-A recent Go distribution (>=1.22) with enabled Go modules.
+A recent Go distribution (>=1.23) with enabled Go modules.
 
 ```shell
 $ go version
-go version go1.22.12 linux/amd64
+go version go1.23.9 linux/amd64
 ```
 
 ### operator-sdk
@@ -338,4 +339,30 @@ oc get clusterversion -w
 - To follow upgrade messages, inspect `cluster-version-operator` pod logs in `openshift-cluster-version namespace`:
 ```shell
 oc logs cluster-version-operator-<POD-ID> -n  openshift-cluster-version -f
+```
+
+## Maintenance
+
+We can leverage the script for maintenance:
+```bash
+python hack/maintenance-update.py
+```
+
+Overall the script does the following:
+- By default, update the common dependencies like `github.com/openshift-online/ocm-sdk-go`, `github.com/openshift/osde2e-common`
+- If specified then update dependencies as per required OpenShift version (Eg. release-4.19)
+- Run go mod tidy on the changes
+- Validate the changes with boilerplate validations
+- Review and add/commit the changes if all seems good so far
+- Update boilerplate
+- Perform validations again
+- Review and add/commit the changes if all seems good so far
+
+For the periodic maintenance, can leverage the script as follows:
+```bash
+# To update existing deps to latest version
+python hack/maintenance-update.py
+
+# To update deps to a specific Openshift release
+python hack/maintenance-update.py --release release-4.19
 ```
