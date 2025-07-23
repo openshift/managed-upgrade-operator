@@ -18,14 +18,14 @@ require (
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/ginkgo/v2 v2.23.4
 	github.com/onsi/gomega v1.37.0
-	github.com/openshift-online/ocm-sdk-go v0.1.471
+	github.com/openshift-online/ocm-sdk-go v0.1.422
 	github.com/openshift/api v0.0.0-20241118225153-25d2eecae482
 	github.com/openshift/client-go v0.0.0-20241107164952-923091dd2b1a
 	github.com/openshift/cluster-version-operator v1.0.1-0.20230322131514-c659e6ccaca7
 	github.com/openshift/library-go v0.0.0-20241107160307-0064ad7bd060
 	github.com/openshift/machine-config-operator v0.0.1-0.20230330142923-2832f049b3f4
 	github.com/openshift/operator-custom-metrics v0.5.1
-	github.com/openshift/osde2e-common v0.0.0-20250711133948-ac734b5fa6c5
+	github.com/openshift/osde2e-common v0.0.0-20240531074950-36a7055798ae
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.74.0
 	github.com/prometheus-operator/prometheus-operator/pkg/client v0.71.0
 	github.com/prometheus/alertmanager v0.26.0
@@ -95,8 +95,6 @@ require (
 	github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f // indirect
 	github.com/nxadm/tail v1.4.11 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
-	github.com/openshift-online/ocm-api-model/clientapi v0.0.422 // indirect
-	github.com/openshift-online/ocm-api-model/model v0.0.422 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
