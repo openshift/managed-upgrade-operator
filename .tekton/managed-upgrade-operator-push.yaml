@@ -12,6 +12,8 @@ metadata:
       && target_branch == "master"
       && ("**/*.go".pathChanged() ||
           "**/go.*".pathChanged() ||
+          "**/*.yaml".pathChanged() ||
+          "**/*.yml".pathChanged() ||
           "build/Dockerfile".pathChanged() ||
           ".tekton/managed-upgrade-operator-push.yaml".pathChanged() )
   creationTimestamp: null
