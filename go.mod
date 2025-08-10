@@ -2,7 +2,7 @@ module github.com/openshift/managed-upgrade-operator
 
 go 1.23.0
 
-toolchain go1.23.9
+toolchain go1.24.6
 
 require (
 	github.com/blang/semver/v4 v4.0.0
