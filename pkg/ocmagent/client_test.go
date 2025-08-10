@@ -11,7 +11,7 @@ import (
 	"github.com/openshift/managed-upgrade-operator/pkg/ocm"
 
 	"github.com/golang/mock/gomock"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
@@ -128,9 +128,9 @@ var _ = Describe("OCM Client", func() {
 			result, err := oc.GetClusterUpgradePolicies(TEST_CLUSTER_ID)
 
 			Expect(result).To(Equal(&ocm.UpgradePolicyList{
-				Kind: "UpgradePolicyList",
-				Page: 1,
-				Size: int64(len(upgradePolicyListResponse)),
+				Kind:  "UpgradePolicyList",
+				Page:  1,
+				Size:  int64(len(upgradePolicyListResponse)),
 				Total: int64(len(upgradePolicyListResponse)),
 				Items: upgradePolicyListResponse,
 			}))
