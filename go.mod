@@ -32,7 +32,7 @@ require (
 	github.com/prometheus/client_golang v1.22.0
 	github.com/sykesm/zap-logfmt v0.0.4
 	go.uber.org/mock v0.4.0
-	go.uber.org/zap v1.26.0
+	go.uber.org/zap v1.27.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.31.3
 	k8s.io/apimachinery v0.31.3
