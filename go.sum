@@ -215,8 +215,6 @@ github.com/openshift/cluster-version-operator v1.0.1-0.20250807101400-f165654c6d
 github.com/openshift/cluster-version-operator v1.0.1-0.20250807101400-f165654c6db2/go.mod h1:eWdcPKoGeuekbjwzrwEZkOjYHjfudnWECdzbO5BvsJo=
 github.com/openshift/library-go v0.0.0-20250203131244-80620876b7c2 h1:LaJmI+EeFnpbxs5H4Y6KOiNXhtPjldqvNzVfPpNM+dI=
 github.com/openshift/library-go v0.0.0-20250203131244-80620876b7c2/go.mod h1:GHwvopE5KXXCz4ULHp871sTPLLW+FB+hu/RIzlNwxx8=
-github.com/openshift/machine-config-operator v0.0.1-0.20230330142923-2832f049b3f4 h1:OYgCOYj4ydVqrMO5wIFYOeXMwjScHOlvAMxi3IpbfyI=
-github.com/openshift/machine-config-operator v0.0.1-0.20230330142923-2832f049b3f4/go.mod h1:p8S2oRbRzYFB6y8vN1QBI9uExCUkXZGpZ/yW8s9ZO+Y=
 github.com/openshift/operator-custom-metrics v0.5.1 h1:1pk4YMUV+cmqfV0f2fyxY62cl7Gc76kwudJT+EdcfYM=
 github.com/openshift/operator-custom-metrics v0.5.1/go.mod h1:0dYDHi/ubKRWzsC9MmW6bRMdBgo1QSOuAh3GupTe0Sw=
 github.com/openshift/osde2e-common v0.0.0-20250812151315-081151385798 h1:3dlO64uGD5v3Kkjfjf91wOi5ATnLAYt4VMWJTXzQPVw=

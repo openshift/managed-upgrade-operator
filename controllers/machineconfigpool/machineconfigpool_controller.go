@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	machineconfigapi "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
+	machineconfigapi "github.com/openshift/api/machineconfiguration/v1"
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/api/v1alpha1"
 	ucm "github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager"
 	"k8s.io/apimachinery/pkg/api/errors"

@@ -84,7 +84,7 @@ import (
 
 	routev1 "github.com/openshift/api/route/v1"
 
-	machineconfigapi "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
+	machineconfigapi "github.com/openshift/api/machineconfiguration/v1"
 	//+kubebuilder:scaffold:imports
 )
 

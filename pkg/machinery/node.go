@@ -1,9 +1,15 @@
 package machinery
 
 import (
-	mcoconst "github.com/openshift/machine-config-operator/pkg/daemon/constants"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+const (
+	// MachineConfigDaemonStateAnnotationKey is used to fetch the state of the daemon on the machine.
+	MachineConfigDaemonStateAnnotationKey = "machineconfiguration.openshift.io/state"
+	// MachineConfigDaemonStateWorking is set by daemon when it is applying an update.
+	MachineConfigDaemonStateWorking = "Working"
 )
 
 // IsCordonedResult is a type that holds cordoned information
@@ -33,7 +39,7 @@ func (m *machinery) IsNodeCordoned(node *corev1.Node) *IsCordonedResult {
 
 // IsNodeUpgrading returns bool
 func (m *machinery) IsNodeUpgrading(node *corev1.Node) bool {
-	if node.Annotations[mcoconst.MachineConfigDaemonStateAnnotationKey] == mcoconst.MachineConfigDaemonStateWorking {
+	if node.Annotations[MachineConfigDaemonStateAnnotationKey] == MachineConfigDaemonStateWorking {
 		return true
 	} else {
 		return false
