@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"github.com/openshift/cluster-version-operator/pkg/cincinnati"
+	"github.com/openshift/cluster-version-operator/pkg/clusterconditions"
+	"github.com/openshift/managed-upgrade-operator/config"
 	"github.com/openshift/managed-upgrade-operator/pkg/configmanager"
 
 	"github.com/blang/semver/v4"
@@ -461,7 +463,7 @@ func fetchCVOUpdates(cV *configv1.ClusterVersion, uc *upgradev1alpha1.UpgradeCon
 	ctx := context.TODO()
 
 	// Fetch available updates by version in Cincinnati.
-	_, updates, conditionalUpdates, err := cincinnati.NewClient(clusterId, transport).GetUpdates(ctx, upstreamURI, runtime.GOARCH, uc.Spec.Desired.Channel, parsedCvVersion)
+	_, updates, conditionalUpdates, err := cincinnati.NewClient(clusterId, transport, config.SetUserAgent(), clusterconditions.NewConditionRegistry()).GetUpdates(ctx, upstreamURI, runtime.GOARCH, runtime.GOARCH, uc.Spec.Desired.Channel, parsedCvVersion)
 	if err != nil {
 		return nil, err
 	}

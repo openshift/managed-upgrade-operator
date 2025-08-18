@@ -1,11 +1,14 @@
 package config
 
 import (
+	"fmt"
 	"os"
+	"runtime"
 	"time"
 
 	"github.com/openshift/managed-upgrade-operator/pkg/configmanager"
 	"github.com/openshift/managed-upgrade-operator/util"
+	"github.com/openshift/managed-upgrade-operator/version"
 )
 
 const (
@@ -47,6 +50,12 @@ func (c *CMTarget) NewCMTarget() (configmanager.Target, error) {
 		Namespace: c.Namespace,
 		ConfigKey: c.ConfigKey,
 	}, err
+}
+
+// SetUserAgent is responsible to setup the userAgent required wherever MUO communicates as a client
+// with OCM and CVO. User-Agent: managed-upgrade-operator/v1.0.0 (linux/amd64)
+func SetUserAgent() string {
+	return fmt.Sprintf("%s/v%s (%s/%s)", OperatorName, version.Version, runtime.GOOS, runtime.GOARCH)
 }
 
 func UseRoutes() bool {
