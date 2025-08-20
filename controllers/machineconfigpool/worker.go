@@ -4,7 +4,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	machineconfigapi "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
+	machineconfigapi "github.com/openshift/api/machineconfiguration/v1"
 )
 
 func isWorkerPredicate() predicate.Predicate {

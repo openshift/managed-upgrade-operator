@@ -10,6 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	sdk "github.com/openshift-online/ocm-sdk-go"
+	"github.com/openshift/managed-upgrade-operator/config"
 	"github.com/openshift/managed-upgrade-operator/pkg/ocm"
 	"github.com/openshift/managed-upgrade-operator/util"
 )
@@ -44,6 +45,7 @@ func (oacb *ocmAgentClientBuilder) New(c client.Client, ocmBaseUrl *url.URL) (oc
 
 	// Set up the HTTP client using the token
 	httpClient := resty.New().SetTransport(&ocmRoundTripper{})
+	httpClient = httpClient.SetHeaders(map[string]string{"User-Agent": config.SetUserAgent()})
 
 	// Setup OCM SDK client using the token
 	authVal := fmt.Sprintf("%v:%v", accessToken.ClusterId, accessToken.PullSecret)

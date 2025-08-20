@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/go-resty/resty/v2"
+	"github.com/openshift/managed-upgrade-operator/config"
 	"github.com/openshift/managed-upgrade-operator/util"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -53,6 +54,7 @@ func (ocb *ocmClientBuilder) New(c client.Client, ocmBaseUrl *url.URL) (OcmClien
 
 	// Set up the HTTP client using the token
 	httpClient := resty.New().SetTransport(&ocmRoundTripper{authorization: *accessToken, proxy: proxyURL})
+	httpClient = httpClient.SetHeaders(map[string]string{"User-Agent": config.SetUserAgent()})
 
 	// Setup OCM SDK client using the token
 	authVal := fmt.Sprintf("%v:%v", accessToken.ClusterId, accessToken.PullSecret)
