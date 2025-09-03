@@ -101,6 +101,20 @@ var _ = Describe("OCM Provider", func() {
 			Expect(*channel).To(Equal("stable-4.9"))
 			Expect(err).To(BeNil())
 		})
+		It("Rounds up to next even number for EUS channel groups with odd minor version", func() {
+			version := "4.17.1"
+			channelGroup := "eus"
+			channel, err := inferUpgradeChannelFromChannelGroup(channelGroup, version)
+			Expect(*channel).To(Equal("eus-4.18"))
+			Expect(err).To(BeNil())
+		})
+		It("Keeps even minor version for EUS channel groups", func() {
+			version := "4.18.1"
+			channelGroup := "eus"
+			channel, err := inferUpgradeChannelFromChannelGroup(channelGroup, version)
+			Expect(*channel).To(Equal("eus-4.18"))
+			Expect(err).To(BeNil())
+		})
 
 	})
 
