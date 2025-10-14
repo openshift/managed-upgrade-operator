@@ -198,7 +198,7 @@ func (s *ocmClient) SetState(value string, description string, policyId string, 
 	}
 	operationId := response.Header().Get(OPERATION_ID_HEADER)
 	if response.IsError() {
-		return fmt.Errorf("request to '%v' received error code %v, operation id '%v'", reqUrl.String(), response.StatusCode(), operationId)
+		return fmt.Errorf("request to '%v' received error code %v, operation id '%v', response: '%v'", reqUrl.String(), response.StatusCode(), operationId, response.String())
 	}
 
 	return nil
