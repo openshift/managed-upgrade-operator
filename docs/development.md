@@ -10,12 +10,11 @@
   - [Testing](#testing)
   - [Building](#building)
   - [Build using boilerplate container](#build-using-boilerplate-container)
+    - [Note for macOS Developers:](#note-for-macos-developers)
   - [How to run](#how-to-run)
     - [Locally](#locally)
-    - [Run using internal cluster services](#run-using-internal-cluster-services)
-    - [Run using cluster routes](#run-using-cluster-routes)
     - [Remotely](#remotely)
-    - [Trigger Reconcile](#trigger-reconcile)
+  - [Trigger Reconcile](#trigger-reconcile)
   - [Monitoring ongoing upgrade](#monitoring-ongoing-upgrade)
   - [Maintenance](#maintenance)
 
@@ -120,43 +119,28 @@ to build arm64 image `podman build --platform=linux/amd64 -t quay.io/[$PERSONAL_
 
 ## How to run
 
-Regardless of how you choose to run the operator, before doing so ensure the `UpgradeConfig` CRD is present on your cluster:
-
-```shell
-$ oc create -f deploy/crds/upgrade.managed.openshift.io_upgradeconfigs_crd.yaml
-```
-
-MUO by defaults uses in the internal services to contact prometheus and alertmanager. This enables the use of a firewall to prevent egress calls however increases local development complexity slightly. 
-
-There are now three main modes that MUO can be ran in. 
-
-1. Run in a container in cluster. 
-2. Run locally using port-forwards and `/etc/hosts` entries to replicate production environment. 
-3. Run locally using Routes to access services. This is not true production however is the most simple for local development. 
-
-Modes 2 and 3 can be executed via the `Makefile` optionally setting the `$OPERATOR_NAMESPACE` as explored in the next section. 
-
-```
-run                              Wrapper around operator sdk run. Requires OPERATOR_NAMESPACE to be set. See run-standard for defaults.
-run-standard                     Run locally with openshift-managed-upgrade-operator as OPERATOR_NAMESPACE.
-run-routes                       Same as `run`, however will use ROUTE objects to contact prometheus and alertmanager. Use of routes is non-standard but convenient for local development. Requires OPERATOR_NAMESPACE to be set.
-run-standard-routes              Run locally with openshift-managed-upgrade-operator as OPERATOR_NAMESPACE and use of non-standard routes.
-```
-
-
 ### Locally
 
 - Make sure you have the [operator-sdk](#operator-sdk) `$PATH`.
-
-- You will need to be logged in with an account that meets the [RBAC requirements](https://github.com/openshift/managed-upgrade-operator/blob/master/deploy/cluster_role.yaml) for the MUO service account.
+- Install OSD cluster using staging environment by visiting [console](https://console.redhat.com/openshift/create?env=staging). Make sure to use CCS option.
+- Once the cluster installs, create a user with `cluster-admin` role and log in using `oc` client.
+- You will need to be logged in with an account that meets the [RBAC requirements](https://github.com/openshift/managed-upgrade-operator/blob/master/deploy/cluster_role.yaml) for the MUO service account. To do that run
+```
+oc login $(oc get infrastructures cluster -o json | jq -r '.status.apiServerURL') --token=$(oc create token managed-upgrade-operator -n openshift-managed-upgrade-operator)
+```
 
 - OPTIONAL: Create a project for the operator to run inside of.
 
 ```
 $ oc new-project test-managed-upgrade-operator
 ```
+- Scale down existing MUO deployment 
+```
+oc scale deployment managed-upgrade-operator -n managed-upgrade-operator --replicas=0
+```
 
-### Run using internal cluster services
+
+#### Run using internal cluster services
 
 The use of internal cluster services requires some changes locally to your environment:
 
@@ -173,20 +157,10 @@ example: ./development/port-forwards $CONTEXT
 $ ./development/port-forwards $CONTEXT
 ```
 
-The operator can then be ran as follows. 
-
-```
-$ oc login $(oc get infrastructures cluster -o json | jq -r '.status.apiServerURL') --token $(oc -n openshift-managed-upgrade-operator serviceaccounts get-token managed-upgrade-operator)
-
-Logged into "https://$API_URL:6443" as "system:serviceaccount:openshift-managed-upgrade-operator:managed-upgrade-operator" using the token provided.
-
-You don't have any projects. Contact your system administrator to request a project.
-```
-
 Then if you are using the standard namespace
 
 ```
-$ make run-standard
+$ make run
 ```
 
 Else you can provide your own. 
@@ -196,7 +170,7 @@ Else you can provide your own.
 $ OPERATOR_NAMESPACE=managed-upgrade-operator make run
 ```
 
-### Run using cluster routes
+#### Run using cluster routes
 
 Run locally using standard namespace and cluster routes. 
 
@@ -207,7 +181,7 @@ $ make run-standard-routes
 Run locally using custom namespace and cluster routes. 
 
 ```
-$ OPERATOR_NAMESPACE=managed-upgrade-operator make run-routes
+$ ROUTES=true OPERATOR_NAMESPACE=managed-upgrade-operator make run
 ```
 
 ### Remotely
@@ -270,33 +244,8 @@ oc create -f test/deploy/managed-upgrade-operator-config.yaml
 oc create -f test/deploy/operator.yaml
 ```
 
-- Trigger a reconcile loop by applying an [upgradeconfig](../test/deploy/upgrade.managed.openshift.io_v1alpha1_upgradeconfig_cr.yaml) CR with your desired specs:
 
-```shell
-oc create -f - <<EOF
-apiVersion: upgrade.managed.openshift.io/v1alpha1
-kind: UpgradeConfig
-metadata:
-  name: managed-upgrade-config
-spec:
-  type: "OSD"
-  upgradeAt: "2020-01-01T00:00:00Z"
-  PDBForceDrainTimeout: 60
-  desired:
-    channel: "fast-4.7"
-    version: "4.7.18"
-EOF
-```
-
----
-
-**NOTE**
-
-Refer to [fast-4.7](https://access.redhat.com/labs/ocpupgradegraph/update_channel?channel=fast-4.7&arch=x86_64&is_show_hot_fix=false) for currently available versions in `fast-4.7` channel.
-
----
-
-### Trigger Reconcile
+## Trigger Reconcile
 
 - Trigger a reconcile loop by applying an `upgradeconfig` CR with your desired specs.
 
