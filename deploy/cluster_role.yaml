@@ -9,8 +9,6 @@ rules:
   resources:
   - pods
   - pods/finalizers
-  - events
-  - upgradeconfigs
   verbs:
   - create
   - delete
@@ -108,12 +106,4 @@ rules:
   - fileintegrities
   verbs:
   - get
-  - update
-- apiGroups:
-  - "coordination.k8s.io"
-  resources:
-  - leases
-  verbs:
-  - get
-  - create
   - update

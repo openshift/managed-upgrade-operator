@@ -232,6 +232,29 @@ podman push quay.io/<QUAY_USERNAME>/managed-upgrade-operator:latest
 oc scale deployment managed-upgrade-operator -n <EXISTING_MUO_NAMESPACE> --replicas=0
 ```
 
+- Create a project for the operator to run inside of:
+
+```shell
+$ oc new-project test-managed-upgrade-operator
+```
+
+- Deploy the service account, clusterrole, clusterrolebinding and ConfigMap on your target cluster:
+
+```shell
+oc create -f deploy/cluster_role.yaml
+oc create -f test/deploy/managed_upgrade_role.yaml
+oc create -f deploy/prometheus_role.yaml
+oc create -f test/deploy/cluster_role_binding.yaml
+oc create -f test/deploy/managed_upgrade_rolebinding.yaml
+oc create -f test/deploy/prometheus_rolebinding.yaml
+oc create -f test/deploy/monitoring_reader_role.yaml
+oc create -f test/deploy/pullsecret_reader_role.yaml
+oc create -f test/deploy/monitoring_reader_rolebinding.yaml
+oc create -f test/deploy/pullsecret_reader_rolebinding.yaml
+oc create -f test/deploy/service_account.yaml
+oc create -f test/deploy/managed-upgrade-operator-config.yaml
+```
+
 - Set `test/deploy/operator.yaml` to use `quay.io/<QUAY_USERNAME>/managed-upgrade-operator:latest` container image and create deployment configuration by updating the `image` field:
 
 ```bash
@@ -247,9 +270,23 @@ oc scale deployment managed-upgrade-operator -n <EXISTING_MUO_NAMESPACE> --repli
 oc create -f test/deploy/operator.yaml
 ```
 
-- Trigger the upgrade using OCM console 
- - Staging: https://console.dev.redhat.com/openshift
- - Production: https://console.redhat.com/openshift
+- Trigger a reconcile loop by applying an [upgradeconfig](../test/deploy/upgrade.managed.openshift.io_v1alpha1_upgradeconfig_cr.yaml) CR with your desired specs:
+
+```shell
+oc create -f - <<EOF
+apiVersion: upgrade.managed.openshift.io/v1alpha1
+kind: UpgradeConfig
+metadata:
+  name: managed-upgrade-config
+spec:
+  type: "OSD"
+  upgradeAt: "2020-01-01T00:00:00Z"
+  PDBForceDrainTimeout: 60
+  desired:
+    channel: "fast-4.7"
+    version: "4.7.18"
+EOF
+```
 
 ---
 
