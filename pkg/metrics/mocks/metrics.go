@@ -21,6 +21,7 @@ import (
 type MockMetrics struct {
 	ctrl     *gomock.Controller
 	recorder *MockMetricsMockRecorder
+	isgomock struct{}
 }
 
 // MockMetricsMockRecorder is the mock recorder for MockMetrics.
@@ -56,63 +57,63 @@ func (mr *MockMetricsMockRecorder) AlertsFromUpgrade(arg0, arg1 any) *gomock.Cal
 }
 
 // IsAlertFiring mocks base method.
-func (m *MockMetrics) IsAlertFiring(arg0 string, arg1, arg2 []string) (bool, error) {
+func (m *MockMetrics) IsAlertFiring(alert string, checkedNS, ignoredNS []string) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsAlertFiring", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "IsAlertFiring", alert, checkedNS, ignoredNS)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // IsAlertFiring indicates an expected call of IsAlertFiring.
-func (mr *MockMetricsMockRecorder) IsAlertFiring(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockMetricsMockRecorder) IsAlertFiring(alert, checkedNS, ignoredNS any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsAlertFiring", reflect.TypeOf((*MockMetrics)(nil).IsAlertFiring), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsAlertFiring", reflect.TypeOf((*MockMetrics)(nil).IsAlertFiring), alert, checkedNS, ignoredNS)
 }
 
 // IsClusterVersionAtVersion mocks base method.
-func (m *MockMetrics) IsClusterVersionAtVersion(arg0 string) (bool, error) {
+func (m *MockMetrics) IsClusterVersionAtVersion(version string) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsClusterVersionAtVersion", arg0)
+	ret := m.ctrl.Call(m, "IsClusterVersionAtVersion", version)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // IsClusterVersionAtVersion indicates an expected call of IsClusterVersionAtVersion.
-func (mr *MockMetricsMockRecorder) IsClusterVersionAtVersion(arg0 any) *gomock.Call {
+func (mr *MockMetricsMockRecorder) IsClusterVersionAtVersion(version any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsClusterVersionAtVersion", reflect.TypeOf((*MockMetrics)(nil).IsClusterVersionAtVersion), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsClusterVersionAtVersion", reflect.TypeOf((*MockMetrics)(nil).IsClusterVersionAtVersion), version)
 }
 
 // IsMetricNotificationEventSentSet mocks base method.
-func (m *MockMetrics) IsMetricNotificationEventSentSet(arg0, arg1, arg2 string) (bool, error) {
+func (m *MockMetrics) IsMetricNotificationEventSentSet(upgradeConfigName, event, version string) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsMetricNotificationEventSentSet", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "IsMetricNotificationEventSentSet", upgradeConfigName, event, version)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // IsMetricNotificationEventSentSet indicates an expected call of IsMetricNotificationEventSentSet.
-func (mr *MockMetricsMockRecorder) IsMetricNotificationEventSentSet(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockMetricsMockRecorder) IsMetricNotificationEventSentSet(upgradeConfigName, event, version any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsMetricNotificationEventSentSet", reflect.TypeOf((*MockMetrics)(nil).IsMetricNotificationEventSentSet), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsMetricNotificationEventSentSet", reflect.TypeOf((*MockMetrics)(nil).IsMetricNotificationEventSentSet), upgradeConfigName, event, version)
 }
 
 // Query mocks base method.
-func (m *MockMetrics) Query(arg0 string) (*metrics.AlertResponse, error) {
+func (m *MockMetrics) Query(query string) (*metrics.AlertResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Query", arg0)
+	ret := m.ctrl.Call(m, "Query", query)
 	ret0, _ := ret[0].(*metrics.AlertResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Query indicates an expected call of Query.
-func (mr *MockMetricsMockRecorder) Query(arg0 any) *gomock.Call {
+func (mr *MockMetricsMockRecorder) Query(query any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Query", reflect.TypeOf((*MockMetrics)(nil).Query), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Query", reflect.TypeOf((*MockMetrics)(nil).Query), query)
 }
 
 // ResetAllMetricNodeDrainFailed mocks base method.
