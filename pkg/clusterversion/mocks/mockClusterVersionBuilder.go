@@ -21,6 +21,7 @@ import (
 type MockClusterVersionBuilder struct {
 	ctrl     *gomock.Controller
 	recorder *MockClusterVersionBuilderMockRecorder
+	isgomock struct{}
 }
 
 // MockClusterVersionBuilderMockRecorder is the mock recorder for MockClusterVersionBuilder.
