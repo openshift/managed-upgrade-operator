@@ -22,6 +22,7 @@ import (
 type MockMachinery struct {
 	ctrl     *gomock.Controller
 	recorder *MockMachineryMockRecorder
+	isgomock struct{}
 }
 
 // MockMachineryMockRecorder is the mock recorder for MockMachinery.
@@ -42,86 +43,86 @@ func (m *MockMachinery) EXPECT() *MockMachineryMockRecorder {
 }
 
 // HasDiskPressure mocks base method.
-func (m *MockMachinery) HasDiskPressure(arg0 *v1.Node) bool {
+func (m *MockMachinery) HasDiskPressure(node *v1.Node) bool {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HasDiskPressure", arg0)
+	ret := m.ctrl.Call(m, "HasDiskPressure", node)
 	ret0, _ := ret[0].(bool)
 	return ret0
 }
 
 // HasDiskPressure indicates an expected call of HasDiskPressure.
-func (mr *MockMachineryMockRecorder) HasDiskPressure(arg0 any) *gomock.Call {
+func (mr *MockMachineryMockRecorder) HasDiskPressure(node any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasDiskPressure", reflect.TypeOf((*MockMachinery)(nil).HasDiskPressure), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasDiskPressure", reflect.TypeOf((*MockMachinery)(nil).HasDiskPressure), node)
 }
 
 // HasMemoryPressure mocks base method.
-func (m *MockMachinery) HasMemoryPressure(arg0 *v1.Node) bool {
+func (m *MockMachinery) HasMemoryPressure(node *v1.Node) bool {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HasMemoryPressure", arg0)
+	ret := m.ctrl.Call(m, "HasMemoryPressure", node)
 	ret0, _ := ret[0].(bool)
 	return ret0
 }
 
 // HasMemoryPressure indicates an expected call of HasMemoryPressure.
-func (mr *MockMachineryMockRecorder) HasMemoryPressure(arg0 any) *gomock.Call {
+func (mr *MockMachineryMockRecorder) HasMemoryPressure(node any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasMemoryPressure", reflect.TypeOf((*MockMachinery)(nil).HasMemoryPressure), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasMemoryPressure", reflect.TypeOf((*MockMachinery)(nil).HasMemoryPressure), node)
 }
 
 // HasPidPressure mocks base method.
-func (m *MockMachinery) HasPidPressure(arg0 *v1.Node) bool {
+func (m *MockMachinery) HasPidPressure(node *v1.Node) bool {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HasPidPressure", arg0)
+	ret := m.ctrl.Call(m, "HasPidPressure", node)
 	ret0, _ := ret[0].(bool)
 	return ret0
 }
 
 // HasPidPressure indicates an expected call of HasPidPressure.
-func (mr *MockMachineryMockRecorder) HasPidPressure(arg0 any) *gomock.Call {
+func (mr *MockMachineryMockRecorder) HasPidPressure(node any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasPidPressure", reflect.TypeOf((*MockMachinery)(nil).HasPidPressure), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasPidPressure", reflect.TypeOf((*MockMachinery)(nil).HasPidPressure), node)
 }
 
 // IsNodeCordoned mocks base method.
-func (m *MockMachinery) IsNodeCordoned(arg0 *v1.Node) *machinery.IsCordonedResult {
+func (m *MockMachinery) IsNodeCordoned(node *v1.Node) *machinery.IsCordonedResult {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsNodeCordoned", arg0)
+	ret := m.ctrl.Call(m, "IsNodeCordoned", node)
 	ret0, _ := ret[0].(*machinery.IsCordonedResult)
 	return ret0
 }
 
 // IsNodeCordoned indicates an expected call of IsNodeCordoned.
-func (mr *MockMachineryMockRecorder) IsNodeCordoned(arg0 any) *gomock.Call {
+func (mr *MockMachineryMockRecorder) IsNodeCordoned(node any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsNodeCordoned", reflect.TypeOf((*MockMachinery)(nil).IsNodeCordoned), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsNodeCordoned", reflect.TypeOf((*MockMachinery)(nil).IsNodeCordoned), node)
 }
 
 // IsNodeUpgrading mocks base method.
-func (m *MockMachinery) IsNodeUpgrading(arg0 *v1.Node) bool {
+func (m *MockMachinery) IsNodeUpgrading(node *v1.Node) bool {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsNodeUpgrading", arg0)
+	ret := m.ctrl.Call(m, "IsNodeUpgrading", node)
 	ret0, _ := ret[0].(bool)
 	return ret0
 }
 
 // IsNodeUpgrading indicates an expected call of IsNodeUpgrading.
-func (mr *MockMachineryMockRecorder) IsNodeUpgrading(arg0 any) *gomock.Call {
+func (mr *MockMachineryMockRecorder) IsNodeUpgrading(node any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsNodeUpgrading", reflect.TypeOf((*MockMachinery)(nil).IsNodeUpgrading), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsNodeUpgrading", reflect.TypeOf((*MockMachinery)(nil).IsNodeUpgrading), node)
 }
 
 // IsUpgrading mocks base method.
-func (m *MockMachinery) IsUpgrading(arg0 client.Client, arg1 string) (*machinery.UpgradingResult, error) {
+func (m *MockMachinery) IsUpgrading(c client.Client, nodeType string) (*machinery.UpgradingResult, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsUpgrading", arg0, arg1)
+	ret := m.ctrl.Call(m, "IsUpgrading", c, nodeType)
 	ret0, _ := ret[0].(*machinery.UpgradingResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // IsUpgrading indicates an expected call of IsUpgrading.
-func (mr *MockMachineryMockRecorder) IsUpgrading(arg0, arg1 any) *gomock.Call {
+func (mr *MockMachineryMockRecorder) IsUpgrading(c, nodeType any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsUpgrading", reflect.TypeOf((*MockMachinery)(nil).IsUpgrading), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsUpgrading", reflect.TypeOf((*MockMachinery)(nil).IsUpgrading), c, nodeType)
 }

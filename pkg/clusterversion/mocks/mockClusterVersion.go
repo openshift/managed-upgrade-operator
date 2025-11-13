@@ -22,6 +22,7 @@ import (
 type MockClusterVersion struct {
 	ctrl     *gomock.Controller
 	recorder *MockClusterVersionMockRecorder
+	isgomock struct{}
 }
 
 // MockClusterVersionMockRecorder is the mock recorder for MockClusterVersion.
@@ -42,18 +43,18 @@ func (m *MockClusterVersion) EXPECT() *MockClusterVersionMockRecorder {
 }
 
 // EnsureDesiredConfig mocks base method.
-func (m *MockClusterVersion) EnsureDesiredConfig(arg0 *v1alpha1.UpgradeConfig) (bool, error) {
+func (m *MockClusterVersion) EnsureDesiredConfig(uc *v1alpha1.UpgradeConfig) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnsureDesiredConfig", arg0)
+	ret := m.ctrl.Call(m, "EnsureDesiredConfig", uc)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // EnsureDesiredConfig indicates an expected call of EnsureDesiredConfig.
-func (mr *MockClusterVersionMockRecorder) EnsureDesiredConfig(arg0 any) *gomock.Call {
+func (mr *MockClusterVersionMockRecorder) EnsureDesiredConfig(uc any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureDesiredConfig", reflect.TypeOf((*MockClusterVersion)(nil).EnsureDesiredConfig), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureDesiredConfig", reflect.TypeOf((*MockClusterVersion)(nil).EnsureDesiredConfig), uc)
 }
 
 // GetClusterId mocks base method.
