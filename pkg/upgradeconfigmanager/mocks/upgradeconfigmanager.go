@@ -21,6 +21,7 @@ import (
 type MockUpgradeConfigManager struct {
 	ctrl     *gomock.Controller
 	recorder *MockUpgradeConfigManagerMockRecorder
+	isgomock struct{}
 }
 
 // MockUpgradeConfigManagerMockRecorder is the mock recorder for MockUpgradeConfigManager.
@@ -71,13 +72,13 @@ func (mr *MockUpgradeConfigManagerMockRecorder) Refresh() *gomock.Call {
 }
 
 // StartSync mocks base method.
-func (m *MockUpgradeConfigManager) StartSync(arg0 context.Context) {
+func (m *MockUpgradeConfigManager) StartSync(stopCh context.Context) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "StartSync", arg0)
+	m.ctrl.Call(m, "StartSync", stopCh)
 }
 
 // StartSync indicates an expected call of StartSync.
-func (mr *MockUpgradeConfigManagerMockRecorder) StartSync(arg0 any) *gomock.Call {
+func (mr *MockUpgradeConfigManagerMockRecorder) StartSync(stopCh any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartSync", reflect.TypeOf((*MockUpgradeConfigManager)(nil).StartSync), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartSync", reflect.TypeOf((*MockUpgradeConfigManager)(nil).StartSync), stopCh)
 }

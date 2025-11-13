@@ -20,6 +20,7 @@ import (
 type MockNotifier struct {
 	ctrl     *gomock.Controller
 	recorder *MockNotifierMockRecorder
+	isgomock struct{}
 }
 
 // MockNotifierMockRecorder is the mock recorder for MockNotifier.
@@ -40,15 +41,15 @@ func (m *MockNotifier) EXPECT() *MockNotifierMockRecorder {
 }
 
 // NotifyState mocks base method.
-func (m *MockNotifier) NotifyState(arg0 notifier.MuoState, arg1 string) error {
+func (m *MockNotifier) NotifyState(value notifier.MuoState, description string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "NotifyState", arg0, arg1)
+	ret := m.ctrl.Call(m, "NotifyState", value, description)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // NotifyState indicates an expected call of NotifyState.
-func (mr *MockNotifierMockRecorder) NotifyState(arg0, arg1 any) *gomock.Call {
+func (mr *MockNotifierMockRecorder) NotifyState(value, description any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NotifyState", reflect.TypeOf((*MockNotifier)(nil).NotifyState), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NotifyState", reflect.TypeOf((*MockNotifier)(nil).NotifyState), value, description)
 }

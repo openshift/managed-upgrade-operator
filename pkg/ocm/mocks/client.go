@@ -22,6 +22,7 @@ import (
 type MockOcmClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockOcmClientMockRecorder
+	isgomock struct{}
 }
 
 // MockOcmClientMockRecorder is the mock recorder for MockOcmClient.
@@ -66,9 +67,9 @@ func (m *MockOcmClient) GetClusterUpgradePolicies(arg0 string) (*v10.UpgradePoli
 }
 
 // GetClusterUpgradePolicies indicates an expected call of GetClusterUpgradePolicies.
-func (mr *MockOcmClientMockRecorder) GetClusterUpgradePolicies(arg0 any) *gomock.Call {
+func (mr *MockOcmClientMockRecorder) GetClusterUpgradePolicies(clusterId any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClusterUpgradePolicies", reflect.TypeOf((*MockOcmClient)(nil).GetClusterUpgradePolicies), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClusterUpgradePolicies", reflect.TypeOf((*MockOcmClient)(nil).GetClusterUpgradePolicies), clusterId)
 }
 
 // GetClusterUpgradePolicyState mocks base method.
@@ -81,35 +82,35 @@ func (m *MockOcmClient) GetClusterUpgradePolicyState(arg0, arg1 string) (*v1.Upg
 }
 
 // GetClusterUpgradePolicyState indicates an expected call of GetClusterUpgradePolicyState.
-func (mr *MockOcmClientMockRecorder) GetClusterUpgradePolicyState(arg0, arg1 any) *gomock.Call {
+func (mr *MockOcmClientMockRecorder) GetClusterUpgradePolicyState(policyId, clusterId any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClusterUpgradePolicyState", reflect.TypeOf((*MockOcmClient)(nil).GetClusterUpgradePolicyState), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClusterUpgradePolicyState", reflect.TypeOf((*MockOcmClient)(nil).GetClusterUpgradePolicyState), policyId, clusterId)
 }
 
 // PostServiceLog mocks base method.
-func (m *MockOcmClient) PostServiceLog(arg0 *ocm.ServiceLog, arg1 string) error {
+func (m *MockOcmClient) PostServiceLog(sl *ocm.ServiceLog, description string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PostServiceLog", arg0, arg1)
+	ret := m.ctrl.Call(m, "PostServiceLog", sl, description)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // PostServiceLog indicates an expected call of PostServiceLog.
-func (mr *MockOcmClientMockRecorder) PostServiceLog(arg0, arg1 any) *gomock.Call {
+func (mr *MockOcmClientMockRecorder) PostServiceLog(sl, description any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostServiceLog", reflect.TypeOf((*MockOcmClient)(nil).PostServiceLog), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostServiceLog", reflect.TypeOf((*MockOcmClient)(nil).PostServiceLog), sl, description)
 }
 
 // SetState mocks base method.
-func (m *MockOcmClient) SetState(arg0, arg1, arg2, arg3 string) error {
+func (m *MockOcmClient) SetState(value, description, policyId, clusterId string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SetState", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "SetState", value, description, policyId, clusterId)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // SetState indicates an expected call of SetState.
-func (mr *MockOcmClientMockRecorder) SetState(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockOcmClientMockRecorder) SetState(value, description, policyId, clusterId any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetState", reflect.TypeOf((*MockOcmClient)(nil).SetState), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetState", reflect.TypeOf((*MockOcmClient)(nil).SetState), value, description, policyId, clusterId)
 }

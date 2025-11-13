@@ -24,6 +24,7 @@ import (
 type MockValidator struct {
 	ctrl     *gomock.Controller
 	recorder *MockValidatorMockRecorder
+	isgomock struct{}
 }
 
 // MockValidatorMockRecorder is the mock recorder for MockValidator.
@@ -44,16 +45,16 @@ func (m *MockValidator) EXPECT() *MockValidatorMockRecorder {
 }
 
 // IsValidUpgradeConfig mocks base method.
-func (m *MockValidator) IsValidUpgradeConfig(arg0 client.Client, arg1 *v1alpha1.UpgradeConfig, arg2 *v1.ClusterVersion, arg3 logr.Logger) (validation.ValidatorResult, error) {
+func (m *MockValidator) IsValidUpgradeConfig(c client.Client, uC *v1alpha1.UpgradeConfig, cV *v1.ClusterVersion, logger logr.Logger) (validation.ValidatorResult, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsValidUpgradeConfig", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "IsValidUpgradeConfig", c, uC, cV, logger)
 	ret0, _ := ret[0].(validation.ValidatorResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // IsValidUpgradeConfig indicates an expected call of IsValidUpgradeConfig.
-func (mr *MockValidatorMockRecorder) IsValidUpgradeConfig(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockValidatorMockRecorder) IsValidUpgradeConfig(c, uC, cV, logger any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsValidUpgradeConfig", reflect.TypeOf((*MockValidator)(nil).IsValidUpgradeConfig), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsValidUpgradeConfig", reflect.TypeOf((*MockValidator)(nil).IsValidUpgradeConfig), c, uC, cV, logger)
 }

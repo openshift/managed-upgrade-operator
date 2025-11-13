@@ -21,6 +21,7 @@ import (
 type MockUpgradeConfigManagerBuilder struct {
 	ctrl     *gomock.Controller
 	recorder *MockUpgradeConfigManagerBuilderMockRecorder
+	isgomock struct{}
 }
 
 // MockUpgradeConfigManagerBuilderMockRecorder is the mock recorder for MockUpgradeConfigManagerBuilder.

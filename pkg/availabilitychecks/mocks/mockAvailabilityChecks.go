@@ -19,6 +19,7 @@ import (
 type MockAvailabilityChecker struct {
 	ctrl     *gomock.Controller
 	recorder *MockAvailabilityCheckerMockRecorder
+	isgomock struct{}
 }
 
 // MockAvailabilityCheckerMockRecorder is the mock recorder for MockAvailabilityChecker.

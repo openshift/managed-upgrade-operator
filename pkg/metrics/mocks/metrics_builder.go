@@ -21,6 +21,7 @@ import (
 type MockMetricsBuilder struct {
 	ctrl     *gomock.Controller
 	recorder *MockMetricsBuilderMockRecorder
+	isgomock struct{}
 }
 
 // MockMetricsBuilderMockRecorder is the mock recorder for MockMetricsBuilder.
@@ -41,16 +42,16 @@ func (m *MockMetricsBuilder) EXPECT() *MockMetricsBuilderMockRecorder {
 }
 
 // NewClient mocks base method.
-func (m *MockMetricsBuilder) NewClient(arg0 client.Client) (metrics.Metrics, error) {
+func (m *MockMetricsBuilder) NewClient(c client.Client) (metrics.Metrics, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "NewClient", arg0)
+	ret := m.ctrl.Call(m, "NewClient", c)
 	ret0, _ := ret[0].(metrics.Metrics)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // NewClient indicates an expected call of NewClient.
-func (mr *MockMetricsBuilderMockRecorder) NewClient(arg0 any) *gomock.Call {
+func (mr *MockMetricsBuilderMockRecorder) NewClient(c any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewClient", reflect.TypeOf((*MockMetricsBuilder)(nil).NewClient), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewClient", reflect.TypeOf((*MockMetricsBuilder)(nil).NewClient), c)
 }

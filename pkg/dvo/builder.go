@@ -10,6 +10,7 @@ import (
 )
 
 // DvoClientBuilder enables implementation of a DVO client.
+//
 //go:generate mockgen -destination=mocks/builder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/dvo DvoClientBuilder
 type DvoClientBuilder interface {
 	New(c client.Client) (DvoClient, error)

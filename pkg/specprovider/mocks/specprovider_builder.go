@@ -22,6 +22,7 @@ import (
 type MockSpecProviderBuilder struct {
 	ctrl     *gomock.Controller
 	recorder *MockSpecProviderBuilderMockRecorder
+	isgomock struct{}
 }
 
 // MockSpecProviderBuilderMockRecorder is the mock recorder for MockSpecProviderBuilder.

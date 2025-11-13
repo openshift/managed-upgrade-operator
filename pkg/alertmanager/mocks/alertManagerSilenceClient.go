@@ -23,6 +23,7 @@ import (
 type MockAlertManagerSilencer struct {
 	ctrl     *gomock.Controller
 	recorder *MockAlertManagerSilencerMockRecorder
+	isgomock struct{}
 }
 
 // MockAlertManagerSilencerMockRecorder is the mock recorder for MockAlertManagerSilencer.
@@ -43,38 +44,38 @@ func (m *MockAlertManagerSilencer) EXPECT() *MockAlertManagerSilencerMockRecorde
 }
 
 // Create mocks base method.
-func (m *MockAlertManagerSilencer) Create(arg0 models.Matchers, arg1, arg2 strfmt.DateTime, arg3, arg4 string) error {
+func (m *MockAlertManagerSilencer) Create(matchers models.Matchers, startsAt, endsAt strfmt.DateTime, creator, comment string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Create", arg0, arg1, arg2, arg3, arg4)
+	ret := m.ctrl.Call(m, "Create", matchers, startsAt, endsAt, creator, comment)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Create indicates an expected call of Create.
-func (mr *MockAlertManagerSilencerMockRecorder) Create(arg0, arg1, arg2, arg3, arg4 any) *gomock.Call {
+func (mr *MockAlertManagerSilencerMockRecorder) Create(matchers, startsAt, endsAt, creator, comment any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockAlertManagerSilencer)(nil).Create), arg0, arg1, arg2, arg3, arg4)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockAlertManagerSilencer)(nil).Create), matchers, startsAt, endsAt, creator, comment)
 }
 
 // Delete mocks base method.
-func (m *MockAlertManagerSilencer) Delete(arg0 string) error {
+func (m *MockAlertManagerSilencer) Delete(id string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", arg0)
+	ret := m.ctrl.Call(m, "Delete", id)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *MockAlertManagerSilencerMockRecorder) Delete(arg0 any) *gomock.Call {
+func (mr *MockAlertManagerSilencerMockRecorder) Delete(id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockAlertManagerSilencer)(nil).Delete), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockAlertManagerSilencer)(nil).Delete), id)
 }
 
 // Filter mocks base method.
-func (m *MockAlertManagerSilencer) Filter(arg0 ...alertmanager.SilencePredicate) (*[]models.GettableSilence, error) {
+func (m *MockAlertManagerSilencer) Filter(predicates ...alertmanager.SilencePredicate) (*[]models.GettableSilence, error) {
 	m.ctrl.T.Helper()
 	varargs := []any{}
-	for _, a := range arg0 {
+	for _, a := range predicates {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "Filter", varargs...)
@@ -84,36 +85,36 @@ func (m *MockAlertManagerSilencer) Filter(arg0 ...alertmanager.SilencePredicate)
 }
 
 // Filter indicates an expected call of Filter.
-func (mr *MockAlertManagerSilencerMockRecorder) Filter(arg0 ...any) *gomock.Call {
+func (mr *MockAlertManagerSilencerMockRecorder) Filter(predicates ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Filter", reflect.TypeOf((*MockAlertManagerSilencer)(nil).Filter), arg0...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Filter", reflect.TypeOf((*MockAlertManagerSilencer)(nil).Filter), predicates...)
 }
 
 // List mocks base method.
-func (m *MockAlertManagerSilencer) List(arg0 []string) (*silence.GetSilencesOK, error) {
+func (m *MockAlertManagerSilencer) List(filter []string) (*silence.GetSilencesOK, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", arg0)
+	ret := m.ctrl.Call(m, "List", filter)
 	ret0, _ := ret[0].(*silence.GetSilencesOK)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // List indicates an expected call of List.
-func (mr *MockAlertManagerSilencerMockRecorder) List(arg0 any) *gomock.Call {
+func (mr *MockAlertManagerSilencerMockRecorder) List(filter any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockAlertManagerSilencer)(nil).List), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockAlertManagerSilencer)(nil).List), filter)
 }
 
 // Update mocks base method.
-func (m *MockAlertManagerSilencer) Update(arg0 string, arg1 strfmt.DateTime) error {
+func (m *MockAlertManagerSilencer) Update(id string, endsAt strfmt.DateTime) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Update", arg0, arg1)
+	ret := m.ctrl.Call(m, "Update", id, endsAt)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Update indicates an expected call of Update.
-func (mr *MockAlertManagerSilencerMockRecorder) Update(arg0, arg1 any) *gomock.Call {
+func (mr *MockAlertManagerSilencerMockRecorder) Update(id, endsAt any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockAlertManagerSilencer)(nil).Update), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockAlertManagerSilencer)(nil).Update), id, endsAt)
 }
