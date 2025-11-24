@@ -124,20 +124,23 @@ to build arm64 image `podman build --platform=linux/amd64 -t quay.io/[$PERSONAL_
 - Make sure you have the [operator-sdk](#operator-sdk) `$PATH`.
 - Install OSD cluster using staging environment by visiting [console](https://console.redhat.com/openshift/create?env=staging). Make sure to use CCS option.
 - Once the cluster installs, create a user with `cluster-admin` role and log in using `oc` client.
-- You will need to be logged in with an account that meets the [RBAC requirements](https://github.com/openshift/managed-upgrade-operator/blob/master/deploy/cluster_role.yaml) for the MUO service account. To do that run
+- Scale down existing MUO deployment
 ```
-oc login $(oc get infrastructures cluster -o json | jq -r '.status.apiServerURL') --token=$(oc create token managed-upgrade-operator -n openshift-managed-upgrade-operator)
+oc scale deployment managed-upgrade-operator -n openshift-managed-upgrade-operator --replicas=0
 ```
-
 - OPTIONAL: Create a project for the operator to run inside of.
 
 ```
 $ oc new-project test-managed-upgrade-operator
 ```
-- Scale down existing MUO deployment 
+
+- You will need to be logged in with an account that meets the [RBAC requirements](https://github.com/openshift/managed-upgrade-operator/blob/master/deploy/cluster_role.yaml) for the MUO service account. To do that run
 ```
-oc scale deployment managed-upgrade-operator -n managed-upgrade-operator --replicas=0
+oc login $(oc get infrastructures cluster -o json | jq -r '.status.apiServerURL') --token=$(oc create token managed-upgrade-operator -n openshift-managed-upgrade-operator)
 ```
+- Now you can run the operator with [service](#Run using internal cluster services) or [routes](#Run using cluster routes)
+
+
 
 
 #### Run using internal cluster services
@@ -175,7 +178,7 @@ $ OPERATOR_NAMESPACE=managed-upgrade-operator make run
 Run locally using standard namespace and cluster routes. 
 
 ```
-$ make run-standard-routes
+$ ROUTES=true make run
 ```
 
 Run locally using custom namespace and cluster routes. 
