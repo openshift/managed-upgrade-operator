@@ -21,6 +21,7 @@ import (
 type MockDvoClientBuilder struct {
 	ctrl     *gomock.Controller
 	recorder *MockDvoClientBuilderMockRecorder
+	isgomock struct{}
 }
 
 // MockDvoClientBuilderMockRecorder is the mock recorder for MockDvoClientBuilder.
@@ -41,16 +42,16 @@ func (m *MockDvoClientBuilder) EXPECT() *MockDvoClientBuilderMockRecorder {
 }
 
 // New mocks base method.
-func (m *MockDvoClientBuilder) New(arg0 client.Client) (dvo.DvoClient, error) {
+func (m *MockDvoClientBuilder) New(c client.Client) (dvo.DvoClient, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "New", arg0)
+	ret := m.ctrl.Call(m, "New", c)
 	ret0, _ := ret[0].(dvo.DvoClient)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // New indicates an expected call of New.
-func (mr *MockDvoClientBuilderMockRecorder) New(arg0 any) *gomock.Call {
+func (mr *MockDvoClientBuilderMockRecorder) New(c any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "New", reflect.TypeOf((*MockDvoClientBuilder)(nil).New), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "New", reflect.TypeOf((*MockDvoClientBuilder)(nil).New), c)
 }

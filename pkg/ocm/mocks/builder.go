@@ -22,6 +22,7 @@ import (
 type MockOcmClientBuilder struct {
 	ctrl     *gomock.Controller
 	recorder *MockOcmClientBuilderMockRecorder
+	isgomock struct{}
 }
 
 // MockOcmClientBuilderMockRecorder is the mock recorder for MockOcmClientBuilder.
@@ -42,16 +43,16 @@ func (m *MockOcmClientBuilder) EXPECT() *MockOcmClientBuilderMockRecorder {
 }
 
 // New mocks base method.
-func (m *MockOcmClientBuilder) New(arg0 client.Client, arg1 *url.URL) (ocm.OcmClient, error) {
+func (m *MockOcmClientBuilder) New(c client.Client, ocmBaseUrl *url.URL) (ocm.OcmClient, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "New", arg0, arg1)
+	ret := m.ctrl.Call(m, "New", c, ocmBaseUrl)
 	ret0, _ := ret[0].(ocm.OcmClient)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // New indicates an expected call of New.
-func (mr *MockOcmClientBuilderMockRecorder) New(arg0, arg1 any) *gomock.Call {
+func (mr *MockOcmClientBuilderMockRecorder) New(c, ocmBaseUrl any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "New", reflect.TypeOf((*MockOcmClientBuilder)(nil).New), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "New", reflect.TypeOf((*MockOcmClientBuilder)(nil).New), c, ocmBaseUrl)
 }

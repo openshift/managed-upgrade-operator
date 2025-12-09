@@ -42,8 +42,8 @@ var _ = Describe("HealthCheckStep", func() {
 		}
 		upgradeConfig = testStructs.NewUpgradeConfigBuilder().WithNamespacedName(upgradeConfigName).GetUpgradeConfig()
 		upgradeConfig.Status.History.SetHistory(upgradev1alpha1.UpgradeHistory{
-			Version:            upgradeConfig.Spec.Desired.Version,
-			Phase:              upgradev1alpha1.UpgradePhaseNew,
+			Version: upgradeConfig.Spec.Desired.Version,
+			Phase:   upgradev1alpha1.UpgradePhaseNew,
 		})
 	})
 
