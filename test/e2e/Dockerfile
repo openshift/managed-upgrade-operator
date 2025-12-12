@@ -4,6 +4,6 @@ WORKDIR /go/src/github.com/openshift/managed-upgrade-operator/
 COPY . .
 RUN  CGO_ENABLED=0 GOFLAGS="-mod=mod" go test ./test/e2e -v -c --tags=osde2e -o /e2e.test
 
-FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
+FROM registry.access.redhat.com/ubi8/ubi-minimal:8.10-1765178706
 COPY --from=builder ./e2e.test e2e.test
 ENTRYPOINT [ "/e2e.test" ]
