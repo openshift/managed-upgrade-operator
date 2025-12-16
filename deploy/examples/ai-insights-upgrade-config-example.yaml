@@ -1,0 +1,13 @@
+apiVersion: upgrade.managed.openshift.io/v1alpha1
+kind: UpgradeConfig
+metadata:
+  name: managed-upgrade-config
+  namespace: openshift-managed-upgrade-operator
+spec:
+  type: "OSD"
+  upgradeAt: "2025-12-11T12:30:00Z"
+  PDBForceDrainTimeout: 60
+  desired:
+    channel: "stable-4.20"
+    version: "4.20.6"
+  capacityReservation: true

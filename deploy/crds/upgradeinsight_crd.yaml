@@ -1,0 +1,193 @@
+# CRD for UpgradeInsight custom resource. See example in deploy/examples/ai-insights-upgradeinsight-example.yaml
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: upgradeinsights.upgrade.managed.openshift.io
+spec:
+  group: upgrade.managed.openshift.io
+  names:
+    kind: UpgradeInsight
+    listKind: UpgradeInsightList
+    plural: upgradeinsights
+    shortNames:
+    - insight
+    singular: upgradeinsight
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.target.name
+      name: Target
+      type: string
+    - jsonPath: .status.modelName
+      name: Model
+      type: string
+    - jsonPath: .status.observedAt
+      name: ObservedAt
+      type: date
+    - jsonPath: .status.error
+      name: Error
+      type: string
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: UpgradeInsight is the Schema for the upgradeinsights API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object.'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents.'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: UpgradeInsightSpec defines the desired state of UpgradeInsight
+            properties:
+              disabled:
+                description: Disabled allows temporarily disabling insight generation
+                type: boolean
+              insightTypes:
+                description: InsightTypes specifies which types of insights to generate
+                items:
+                  description: InsightType defines the type of AI insight to generate
+                  type: string
+                minItems: 1
+                type: array
+              options:
+                description: Options for insight generation
+                properties:
+                  includeTimeWindowMinutes:
+                    default: 60
+                    description: IncludeTimeWindowMinutes limits event collection
+                      to this time window
+                    maximum: 1440
+                    minimum: 1
+                    type: integer
+                  maxEvents:
+                    default: 200
+                    description: MaxEvents limits the number of events to include
+                      in analysis
+                    maximum: 1000
+                    minimum: 1
+                    type: integer
+                  maxLogLines:
+                    default: 100
+                    description: MaxLogLines limits the number of log lines to analyze
+                      per pod
+                    maximum: 1000
+                    minimum: 10
+                    type: integer
+                  targetPods:
+                    description: TargetPods specifies which pods to collect logs from
+                      (label selector)
+                    properties:
+                      matchExpressions:
+                        description: matchExpressions is a list of label selector
+                          requirements.
+                        items:
+                          properties:
+                            key:
+                              description: key is the label key that the selector
+                                applies to.
+                              type: string
+                            operator:
+                              description: operator represents a key's relationship
+                                to a set of values.
+                              type: string
+                            values:
+                              description: values is an array of string values.
+                              items:
+                                type: string
+                              type: array
+                          required:
+                          - key
+                          - operator
+                          type: object
+                        type: array
+                      matchLabels:
+                        additionalProperties:
+                          type: string
+                        description: matchLabels is a map of {key,value} pairs.
+                        type: object
+                    type: object
+                type: object
+              target:
+                description: Target references the UpgradeConfig to analyze
+                properties:
+                  apiVersion:
+                    description: API version of the referent
+                    type: string
+                  kind:
+                    description: Kind of the referent
+                    type: string
+                  name:
+                    description: Name of the referent
+                    type: string
+                required:
+                - apiVersion
+                - kind
+                - name
+                type: object
+            required:
+            - insightTypes
+            - target
+            type: object
+          status:
+            description: UpgradeInsightStatus defines the observed state of UpgradeInsight
+            properties:
+              conditions:
+                description: Conditions represent the latest available observations
+                  of the insight's state
+                items:
+                  properties:
+                    lastTransitionTime:
+                      description: lastTransitionTime is the last time the condition
+                        transitioned
+                      format: date-time
+                      type: string
+                    message:
+                      description: message is a human readable message
+                      type: string
+                    observedGeneration:
+                      description: observedGeneration represents the .metadata.generation
+                      format: int64
+                      type: integer
+                    reason:
+                      description: reason contains a programmatic identifier
+                      type: string
+                    status:
+                      description: status of the condition
+                      type: string
+                    type:
+                      description: type of condition
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              error:
+                description: Error contains any error message from insight generation
+                type: string
+              insights:
+                description: Insights contains the AI-generated analysis
+                type: object
+                x-kubernetes-preserve-unknown-fields: true
+              modelName:
+                description: ModelName is the name of the LLM model used
+                type: string
+              observedAt:
+                description: ObservedAt is the timestamp when this insight was generated
+                format: date-time
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

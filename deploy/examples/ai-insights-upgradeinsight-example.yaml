@@ -1,0 +1,37 @@
+apiVersion: upgrade.managed.openshift.io/v1alpha1
+kind: UpgradeInsight
+metadata:
+  name: example-upgrade-insight
+  namespace: openshift-managed-upgrade-operator
+spec:
+  # Reference to the UpgradeConfig to analyze
+  target:
+    apiVersion: upgrade.managed.openshift.io/v1alpha1
+    kind: UpgradeConfig
+    name: managed-upgrade-config
+
+  # Types of insights to generate
+  insightTypes:
+    - readiness
+    - event-classification
+    - post-upgrade-debug
+    - log-tail-analysis
+
+  # Optional configuration
+  options:
+    # Maximum number of events to analyze
+    maxEvents: 200
+
+    # Time window for event collection (in minutes)
+    includeTimeWindowMinutes: 60
+
+    # Maximum log lines per pod
+    maxLogLines: 100
+
+    # Optional: Target specific pods for log analysis
+    # targetPods:
+    #   matchLabels:
+    #     app: managed-upgrade-operator
+
+  # Set to true to temporarily disable
+  disabled: false

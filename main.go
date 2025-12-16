@@ -58,6 +58,7 @@ import (
 	"github.com/openshift/managed-upgrade-operator/controllers/machineconfigpool"
 	"github.com/openshift/managed-upgrade-operator/controllers/nodekeeper"
 	"github.com/openshift/managed-upgrade-operator/controllers/upgradeconfig"
+	"github.com/openshift/managed-upgrade-operator/controllers/upgradeinsight"
 	cv "github.com/openshift/managed-upgrade-operator/pkg/clusterversion"
 	"github.com/openshift/managed-upgrade-operator/pkg/collector"
 	"github.com/openshift/managed-upgrade-operator/pkg/configmanager"
@@ -220,6 +221,15 @@ func main() {
 		UpgradeConfigManagerBuilder: upgradeconfigmanager.NewBuilder(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "MachineConfigPool")
+		os.Exit(1)
+	}
+
+	// Add UpgradeInsight controller to the manager (AI Insights POC)
+	if err = (&upgradeinsight.ReconcileUpgradeInsight{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "UpgradeInsight")
 		os.Exit(1)
 	}
 
