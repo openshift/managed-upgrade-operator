@@ -3,12 +3,14 @@ package eventmanager
 import (
 	"fmt"
 
+	"github.com/go-logr/logr"
 	"github.com/openshift/managed-upgrade-operator/api/v1alpha1"
 	"github.com/openshift/managed-upgrade-operator/pkg/configmanager"
 	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
 	"github.com/openshift/managed-upgrade-operator/pkg/notifier"
 	"github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 const (
@@ -80,6 +82,7 @@ type eventManager struct {
 	metrics              metrics.Metrics
 	upgradeConfigManager upgradeconfigmanager.UpgradeConfigManager
 	configManagerBuilder configmanager.ConfigManagerBuilder
+	logger               logr.Logger
 }
 
 func (emb *eventManagerBuilder) NewManager(client client.Client) (EventManager, error) {
@@ -104,6 +107,7 @@ func (emb *eventManagerBuilder) NewManager(client client.Client) (EventManager, 
 		metrics:              metricsClient,
 		notifier:             notifier,
 		configManagerBuilder: cmBuilder,
+		logger:               logf.Log.WithName("event-manager"),
 	}, nil
 }
 
@@ -154,9 +158,19 @@ func (s *eventManager) Notify(state notifier.MuoState) error {
 	// Send the notification
 	err = s.notifier.NotifyState(state, description)
 	if err != nil {
+		// [SREP-2636] Check if this is a ServiceLogError (SL failed but OCM state succeeded)
+		if notifier.IsServiceLogError(err) {
+			s.metrics.UpdatemetricUpgradeNotificationFailed(uc.Name, string(state))
+			s.logger.Info("Service log notification failed but upgrade will continue",
+				"upgradeconfig", uc.Name,
+				"state", state,
+				"error", err)
+			return nil
+		}
 		s.metrics.UpdatemetricUpgradeNotificationFailed(uc.Name, string(state))
 		return fmt.Errorf("can't send notification '%s': %v", state, err)
 	}
+	// For other errors (OCM state update failed, GetCluster failed, etc.), block the upgrade
 	s.metrics.UpdatemetricUpgradeNotificationSucceeded(uc.Name, string(state))
 	s.metrics.UpdateMetricNotificationEventSent(uc.Name, string(state), uc.Spec.Desired.Version)
 
@@ -196,6 +210,16 @@ func (s *eventManager) NotifyResult(state notifier.MuoState, result string) erro
 	// Send the notification
 	err = s.notifier.NotifyState(state, description)
 	if err != nil {
+		// [SREP-2636] Check if this is a ServiceLogError (SL failed but OCM state succeeded)
+		if notifier.IsServiceLogError(err) {
+			s.metrics.UpdatemetricUpgradeNotificationFailed(uc.Name, string(state))
+			s.logger.Info("Service log notification failed but upgrade will continue",
+				"upgradeconfig", uc.Name,
+				"state", state,
+				"error", err)
+			return nil
+		}
+		// For other errors (OCM state update failed, GetCluster failed, etc.), block the upgrade
 		return fmt.Errorf("can't send notification '%s': %v", state, err)
 	}
 	s.metrics.UpdateMetricNotificationEventSent(uc.Name, string(state), uc.Spec.Desired.Version)
