@@ -8,6 +8,7 @@ import (
 
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/api/v1alpha1"
 	configMock "github.com/openshift/managed-upgrade-operator/pkg/configmanager/mocks"
+	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
 	metricsMock "github.com/openshift/managed-upgrade-operator/pkg/metrics/mocks"
 	"github.com/openshift/managed-upgrade-operator/pkg/notifier"
 	notifierMock "github.com/openshift/managed-upgrade-operator/pkg/notifier/mocks"
@@ -109,7 +110,7 @@ var _ = Describe("OCM Notifier", func() {
 					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
 					mockMetricsClient.EXPECT().IsMetricNotificationEventSentSet(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION).Return(false, nil),
 					mockNotifier.EXPECT().NotifyState(testState, gomock.Any()).Return(fakeError),
-					mockMetricsClient.EXPECT().UpdatemetricUpgradeNotificationFailed(TEST_UPGRADECONFIG_CR, string(testState)),
+					mockMetricsClient.EXPECT().UpdatemetricUpgradeNotificationFailed(TEST_UPGRADECONFIG_CR, string(testState), metrics.FailureTypeDefault),
 				)
 				err := manager.Notify(testState)
 				Expect(err).NotTo(BeNil())
@@ -125,7 +126,7 @@ var _ = Describe("OCM Notifier", func() {
 					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
 					mockMetricsClient.EXPECT().IsMetricNotificationEventSentSet(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION).Return(false, nil),
 					mockNotifier.EXPECT().NotifyState(testState, gomock.Any()).Return(serviceLogError),
-					mockMetricsClient.EXPECT().UpdatemetricUpgradeNotificationFailed(TEST_UPGRADECONFIG_CR, string(testState)),
+					mockMetricsClient.EXPECT().UpdatemetricUpgradeNotificationFailed(TEST_UPGRADECONFIG_CR, string(testState), metrics.FailureTypeServiceLog),
 				)
 				err := manager.Notify(testState)
 				Expect(err).To(BeNil()) // Should return nil to allow upgrade to continue
@@ -386,7 +387,7 @@ var _ = Describe("OCM Notifier", func() {
 					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
 					mockMetricsClient.EXPECT().IsMetricNotificationEventSentSet(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION).Return(false, nil),
 					mockNotifier.EXPECT().NotifyState(testState, gomock.Any()).Return(serviceLogError),
-					mockMetricsClient.EXPECT().UpdatemetricUpgradeNotificationFailed(TEST_UPGRADECONFIG_CR, string(testState)),
+					mockMetricsClient.EXPECT().UpdatemetricUpgradeNotificationFailed(TEST_UPGRADECONFIG_CR, string(testState), metrics.FailureTypeServiceLog),
 				)
 				err := manager.NotifyResult(testState, "test result")
 				Expect(err).To(BeNil()) // Should return nil to allow upgrade to continue
