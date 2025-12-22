@@ -164,7 +164,8 @@ func (s *eventManager) Notify(state notifier.MuoState) error {
 			s.logger.Info("Service log notification failed but upgrade will continue",
 				"upgradeconfig", uc.Name,
 				"state", state,
-				"error", err)
+				"error", err,
+				"description", description)
 			return nil
 		}
 		s.metrics.UpdatemetricUpgradeNotificationFailed(uc.Name, string(state), metrics.FailureTypeDefault)
@@ -216,7 +217,8 @@ func (s *eventManager) NotifyResult(state notifier.MuoState, result string) erro
 			s.logger.Info("Service log notification failed but upgrade will continue",
 				"upgradeconfig", uc.Name,
 				"state", state,
-				"error", err)
+				"error", err,
+				"description", description)
 			return nil
 		}
 		// For other errors (OCM state update failed, GetCluster failed, etc.), block the upgrade
