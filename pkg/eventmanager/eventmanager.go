@@ -111,6 +111,8 @@ func (emb *eventManagerBuilder) NewManager(client client.Client) (EventManager, 
 	}, nil
 }
 
+// Notify sends a notification for the given state.
+// If SL failure occurs, the upgrade will still continue after logging the failure.
 func (s *eventManager) Notify(state notifier.MuoState) error {
 	// Get the current UpgradeConfig
 	uc, err := s.upgradeConfigManager.Get()
@@ -158,7 +160,6 @@ func (s *eventManager) Notify(state notifier.MuoState) error {
 	// Send the notification
 	err = s.notifier.NotifyState(state, description)
 	if err != nil {
-		// [SREP-2636] Check if this is a ServiceLogError (SL failed but OCM state succeeded)
 		if notifier.IsServiceLogError(err) {
 			s.metrics.UpdatemetricUpgradeNotificationFailed(uc.Name, string(state))
 			s.logger.Info("Service log notification failed but upgrade will continue",
@@ -178,6 +179,8 @@ func (s *eventManager) Notify(state notifier.MuoState) error {
 	return nil
 }
 
+// NotifyResult sends a notification for the given state with a result string.
+// If SL failure occurs, the upgrade will still continue, the upgrade will still continue after logging the failure.
 func (s *eventManager) NotifyResult(state notifier.MuoState, result string) error {
 	// Get the current UpgradeConfig
 	uc, err := s.upgradeConfigManager.Get()
@@ -211,7 +214,6 @@ func (s *eventManager) NotifyResult(state notifier.MuoState, result string) erro
 	// Send the notification
 	err = s.notifier.NotifyState(state, description)
 	if err != nil {
-		// [SREP-2636] Check if this is a ServiceLogError (SL failed but OCM state succeeded)
 		if notifier.IsServiceLogError(err) {
 			s.metrics.UpdatemetricUpgradeNotificationFailed(uc.Name, string(state))
 			s.logger.Info("Service log notification failed but upgrade will continue",

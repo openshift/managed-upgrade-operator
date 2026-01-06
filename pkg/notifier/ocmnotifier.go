@@ -115,6 +115,8 @@ type ocmNotifier struct {
 	notifications bool
 }
 
+// NotifyState sends a notification to OCM for the given state.
+// If SL failure occurs, the upgrade will still continue after logging the failure.
 func (s *ocmNotifier) NotifyState(state MuoState, description string) error {
 
 	cluster, err := s.ocmClient.GetCluster()
@@ -135,7 +137,6 @@ func (s *ocmNotifier) NotifyState(state MuoState, description string) error {
 			}
 			err = s.ocmClient.PostServiceLog((*ocm.ServiceLog)(&slState), description)
 			if err != nil {
-				// [SREP-2636] Let's continue, Service log failed - will be logged in eventmanager.go
 				serviceLogErr = fmt.Errorf("failed to send servicelog notification: %v", err)
 			}
 		}
@@ -171,7 +172,6 @@ func (s *ocmNotifier) NotifyState(state MuoState, description string) error {
 	// Only notify if it's a valid transition
 	shouldNotify := validateStateTransition(muoCurrent, state)
 	if !shouldNotify {
-		// [SREP-2636] Return serviceLogErr to allow the upgrade to continue while still signaling the failure
 		if serviceLogErr != nil {
 			return &ServiceLogError{
 				Err:   serviceLogErr,
@@ -186,7 +186,6 @@ func (s *ocmNotifier) NotifyState(state MuoState, description string) error {
 		return fmt.Errorf("can't send notification: %v", err)
 	}
 
-	// [SREP-2636] Return serviceLogErr to allow the upgrade to continue while still signaling the failure
 	if serviceLogErr != nil {
 		return &ServiceLogError{
 			Err:   serviceLogErr,
