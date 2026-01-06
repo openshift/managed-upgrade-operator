@@ -160,7 +160,7 @@ func (s *eventManager) Notify(state notifier.MuoState) error {
 	if err != nil {
 		// [SREP-2636] Check if this is a ServiceLogError (SL failed but OCM state succeeded)
 		if notifier.IsServiceLogError(err) {
-			s.metrics.UpdatemetricUpgradeNotificationFailed(uc.Name, string(state), metrics.FailureTypeServiceLog)
+			s.metrics.UpdatemetricUpgradeNotificationFailed(uc.Name, string(state))
 			s.logger.Info("Service log notification failed but upgrade will continue",
 				"upgradeconfig", uc.Name,
 				"state", state,
@@ -168,7 +168,7 @@ func (s *eventManager) Notify(state notifier.MuoState) error {
 				"description", description)
 			return nil
 		}
-		s.metrics.UpdatemetricUpgradeNotificationFailed(uc.Name, string(state), metrics.FailureTypeDefault)
+		s.metrics.UpdatemetricUpgradeNotificationFailed(uc.Name, string(state))
 		return fmt.Errorf("can't send notification '%s': %v", state, err)
 	}
 	// For other errors (OCM state update failed, GetCluster failed, etc.), block the upgrade
@@ -213,7 +213,7 @@ func (s *eventManager) NotifyResult(state notifier.MuoState, result string) erro
 	if err != nil {
 		// [SREP-2636] Check if this is a ServiceLogError (SL failed but OCM state succeeded)
 		if notifier.IsServiceLogError(err) {
-			s.metrics.UpdatemetricUpgradeNotificationFailed(uc.Name, string(state), metrics.FailureTypeServiceLog)
+			s.metrics.UpdatemetricUpgradeNotificationFailed(uc.Name, string(state))
 			s.logger.Info("Service log notification failed but upgrade will continue",
 				"upgradeconfig", uc.Name,
 				"state", state,
@@ -222,7 +222,6 @@ func (s *eventManager) NotifyResult(state notifier.MuoState, result string) erro
 			return nil
 		}
 		// For other errors (OCM state update failed, GetCluster failed, etc.), block the upgrade
-		s.metrics.UpdatemetricUpgradeNotificationFailed(uc.Name, string(state), metrics.FailureTypeDefault)
 		return fmt.Errorf("can't send notification '%s': %v", state, err)
 	}
 	s.metrics.UpdateMetricNotificationEventSent(uc.Name, string(state), uc.Spec.Desired.Version)

@@ -26,13 +26,12 @@ import (
 )
 
 const (
-	eventLabel       = "event"
-	metricsTag       = "upgradeoperator"
-	nameLabel        = "upgradeconfig_name"
-	nodeLabel        = "node_name"
-	alertsLabel      = "alerts"
-	failedReason     = "reason"
-	failureTypeLabel = "failure_type"
+	eventLabel   = "event"
+	metricsTag   = "upgradeoperator"
+	nameLabel    = "upgradeconfig_name"
+	nodeLabel    = "node_name"
+	alertsLabel  = "alerts"
+	failedReason = "reason"
 
 	Namespace = "upgradeoperator"
 	Subsystem = "upgrade"
@@ -69,8 +68,6 @@ const (
 	PDBQueryFailed                   = "pdb_query_failed"
 	DvoClientCreationFailed          = "dvo_client_creation_failed"
 	DvoMetricsQueryFailed            = "dvo_metrics_query_failed"
-	FailureTypeServiceLog            = "servicelog"
-	FailureTypeDefault               = "default"
 )
 
 // Alerts sourced from https://github.com/openshift/managed-cluster-config/blob/master/deploy/sre-prometheus/100-managed-upgrade-operator.PrometheusRule.yaml
@@ -91,7 +88,7 @@ type Metrics interface {
 	UpdateMetricScalingFailed(string)
 	UpdateMetricScalingSucceeded(string)
 	UpdateMetricUpgradeWindowNotBreached(string)
-	UpdatemetricUpgradeNotificationFailed(string, string, string)
+	UpdatemetricUpgradeNotificationFailed(string, string)
 	UpdatemetricUpgradeNotificationSucceeded(string, string)
 	UpdateMetricUpgradeConfigSyncTimestamp(string, time.Time)
 	UpdateMetricUpgradeWindowBreached(string)
@@ -264,7 +261,7 @@ var (
 	metricUpgradeNotificationFailed = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "upgrade_notification_failed",
 		Help: "Failed to send notification",
-	}, []string{nameLabel, eventLabel, failureTypeLabel})
+	}, []string{nameLabel, eventLabel})
 	metricUpgradeConfigSyncTimestamp = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Subsystem: metricsTag,
 		Name:      "upgradeconfig_sync_timestamp",
@@ -444,24 +441,17 @@ func (c *Counter) UpdateMetricNotificationEventSent(upgradeConfigName string, ev
 		float64(1))
 }
 
-func (c *Counter) UpdatemetricUpgradeNotificationFailed(upgradeConfigName string, event string, failureType string) {
+func (c *Counter) UpdatemetricUpgradeNotificationFailed(upgradeConfigName string, event string) {
 	metricUpgradeNotificationFailed.With(prometheus.Labels{
-		eventLabel:       event,
-		nameLabel:        upgradeConfigName,
-		failureTypeLabel: failureType}).Set(
+		eventLabel: event,
+		nameLabel:  upgradeConfigName}).Set(
 		float64(1))
 }
 
 func (c *Counter) UpdatemetricUpgradeNotificationSucceeded(upgradeConfigName string, event string) {
 	metricUpgradeNotificationFailed.With(prometheus.Labels{
-		eventLabel:       event,
-		nameLabel:        upgradeConfigName,
-		failureTypeLabel: FailureTypeServiceLog}).Set(
-		float64(0))
-	metricUpgradeNotificationFailed.With(prometheus.Labels{
-		eventLabel:       event,
-		nameLabel:        upgradeConfigName,
-		failureTypeLabel: FailureTypeDefault}).Set(
+		eventLabel: event,
+		nameLabel:  upgradeConfigName}).Set(
 		float64(0))
 }
 
