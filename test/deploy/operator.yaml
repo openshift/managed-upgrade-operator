@@ -1,8 +1,8 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: managed-upgrade-operator
-  namespace: test-managed-upgrade-operator
+  name: managed-upgrade-operator-test
+  namespace: managed-upgrade-operator
 spec:
   replicas: 1
   selector:
@@ -18,7 +18,7 @@ spec:
         - name: managed-upgrade-operator
           # Replace this with the built image name
           # This will get replaced on deploy by /hack/generate-operator-bundle.py
-          image: quay.io/app-sre/managed-upgrade-operator:REPLACE_TAG
+          image: quay.io/<QUAY_USERNAME>/managed-upgrade-operator:latest
           command:
           - managed-upgrade-operator
           imagePullPolicy: Always

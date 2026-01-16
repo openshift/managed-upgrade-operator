@@ -608,7 +608,7 @@ func GetService(c client.Client, namespace, svcName, portName string) (string, e
 		return "", err
 	}
 
-	host := fmt.Sprintf(svcName + "." + namespace + clusterSVCSuffix)
+	host := fmt.Sprint(svcName + "." + namespace + clusterSVCSuffix)
 	var port string
 	var networkTarget string
 	for _, p := range svc.Spec.Ports {
