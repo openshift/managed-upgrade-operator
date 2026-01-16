@@ -22,6 +22,7 @@ import (
 type MockClusterUpgrader struct {
 	ctrl     *gomock.Controller
 	recorder *MockClusterUpgraderMockRecorder
+	isgomock struct{}
 }
 
 // MockClusterUpgraderMockRecorder is the mock recorder for MockClusterUpgrader.
@@ -42,31 +43,31 @@ func (m *MockClusterUpgrader) EXPECT() *MockClusterUpgraderMockRecorder {
 }
 
 // HealthCheck mocks base method.
-func (m *MockClusterUpgrader) HealthCheck(arg0 context.Context, arg1 *v1alpha1.UpgradeConfig, arg2 logr.Logger) (bool, error) {
+func (m *MockClusterUpgrader) HealthCheck(ctx context.Context, upgradeConfig *v1alpha1.UpgradeConfig, logger logr.Logger) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HealthCheck", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "HealthCheck", ctx, upgradeConfig, logger)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // HealthCheck indicates an expected call of HealthCheck.
-func (mr *MockClusterUpgraderMockRecorder) HealthCheck(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockClusterUpgraderMockRecorder) HealthCheck(ctx, upgradeConfig, logger any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HealthCheck", reflect.TypeOf((*MockClusterUpgrader)(nil).HealthCheck), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HealthCheck", reflect.TypeOf((*MockClusterUpgrader)(nil).HealthCheck), ctx, upgradeConfig, logger)
 }
 
 // UpgradeCluster mocks base method.
-func (m *MockClusterUpgrader) UpgradeCluster(arg0 context.Context, arg1 *v1alpha1.UpgradeConfig, arg2 logr.Logger) (v1alpha1.UpgradePhase, error) {
+func (m *MockClusterUpgrader) UpgradeCluster(ctx context.Context, upgradeConfig *v1alpha1.UpgradeConfig, logger logr.Logger) (v1alpha1.UpgradePhase, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpgradeCluster", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "UpgradeCluster", ctx, upgradeConfig, logger)
 	ret0, _ := ret[0].(v1alpha1.UpgradePhase)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // UpgradeCluster indicates an expected call of UpgradeCluster.
-func (mr *MockClusterUpgraderMockRecorder) UpgradeCluster(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockClusterUpgraderMockRecorder) UpgradeCluster(ctx, upgradeConfig, logger any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpgradeCluster", reflect.TypeOf((*MockClusterUpgrader)(nil).UpgradeCluster), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpgradeCluster", reflect.TypeOf((*MockClusterUpgrader)(nil).UpgradeCluster), ctx, upgradeConfig, logger)
 }

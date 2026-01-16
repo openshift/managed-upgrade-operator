@@ -20,6 +20,7 @@ import (
 type MockEventManager struct {
 	ctrl     *gomock.Controller
 	recorder *MockEventManagerMockRecorder
+	isgomock struct{}
 }
 
 // MockEventManagerMockRecorder is the mock recorder for MockEventManager.
@@ -40,29 +41,29 @@ func (m *MockEventManager) EXPECT() *MockEventManagerMockRecorder {
 }
 
 // Notify mocks base method.
-func (m *MockEventManager) Notify(arg0 notifier.MuoState) error {
+func (m *MockEventManager) Notify(state notifier.MuoState) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Notify", arg0)
+	ret := m.ctrl.Call(m, "Notify", state)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Notify indicates an expected call of Notify.
-func (mr *MockEventManagerMockRecorder) Notify(arg0 any) *gomock.Call {
+func (mr *MockEventManagerMockRecorder) Notify(state any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Notify", reflect.TypeOf((*MockEventManager)(nil).Notify), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Notify", reflect.TypeOf((*MockEventManager)(nil).Notify), state)
 }
 
 // NotifyResult mocks base method.
-func (m *MockEventManager) NotifyResult(arg0 notifier.MuoState, arg1 string) error {
+func (m *MockEventManager) NotifyResult(state notifier.MuoState, result string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "NotifyResult", arg0, arg1)
+	ret := m.ctrl.Call(m, "NotifyResult", state, result)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // NotifyResult indicates an expected call of NotifyResult.
-func (mr *MockEventManagerMockRecorder) NotifyResult(arg0, arg1 any) *gomock.Call {
+func (mr *MockEventManagerMockRecorder) NotifyResult(state, result any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NotifyResult", reflect.TypeOf((*MockEventManager)(nil).NotifyResult), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NotifyResult", reflect.TypeOf((*MockEventManager)(nil).NotifyResult), state, result)
 }
