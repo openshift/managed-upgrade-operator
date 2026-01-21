@@ -88,6 +88,22 @@ var serviceLogMap = map[MuoState]ServiceLogState{
 	MuoStatePreHealthCheckSL:              ServiceLogStatePreHealthCheckSL,
 }
 
+// ServiceLogError is a special error type that indicates service log sending failed
+type ServiceLogError struct {
+	Err   error
+	State MuoState
+}
+
+func (e *ServiceLogError) Error() string {
+	return e.Err.Error()
+}
+
+// IsServiceLogError checks if an error is a ServiceLogError
+func IsServiceLogError(err error) bool {
+	_, ok := err.(*ServiceLogError)
+	return ok
+}
+
 type ocmNotifier struct {
 	// Cluster k8s client
 	client client.Client
@@ -99,6 +115,8 @@ type ocmNotifier struct {
 	notifications bool
 }
 
+// NotifyState sends a notification to OCM for the given state.
+// If SL failure occurs, the upgrade will still continue after logging the failure.
 func (s *ocmNotifier) NotifyState(state MuoState, description string) error {
 
 	cluster, err := s.ocmClient.GetCluster()
@@ -107,6 +125,7 @@ func (s *ocmNotifier) NotifyState(state MuoState, description string) error {
 	}
 
 	// Enable sending the servicelog notifications only if the featuregate is enabled
+	var serviceLogErr error
 	if s.notifications {
 		if strings.HasSuffix(toString(state), "SL") {
 			slState, ok := mapSLState(state, serviceLogMap)
@@ -118,7 +137,7 @@ func (s *ocmNotifier) NotifyState(state MuoState, description string) error {
 			}
 			err = s.ocmClient.PostServiceLog((*ocm.ServiceLog)(&slState), description)
 			if err != nil {
-				return fmt.Errorf("failed to send servicelog notification: %v", err)
+				serviceLogErr = fmt.Errorf("failed to send servicelog notification: %v", err)
 			}
 		}
 	}
@@ -153,6 +172,12 @@ func (s *ocmNotifier) NotifyState(state MuoState, description string) error {
 	// Only notify if it's a valid transition
 	shouldNotify := validateStateTransition(muoCurrent, state)
 	if !shouldNotify {
+		if serviceLogErr != nil {
+			return &ServiceLogError{
+				Err:   serviceLogErr,
+				State: state,
+			}
+		}
 		return nil
 	}
 
@@ -160,6 +185,14 @@ func (s *ocmNotifier) NotifyState(state MuoState, description string) error {
 	if err != nil {
 		return fmt.Errorf("can't send notification: %v", err)
 	}
+
+	if serviceLogErr != nil {
+		return &ServiceLogError{
+			Err:   serviceLogErr,
+			State: state,
+		}
+	}
+
 	return nil
 }
 
