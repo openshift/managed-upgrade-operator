@@ -146,17 +146,25 @@ run-standard-routes              Run locally with openshift-managed-upgrade-oper
 
 ### Locally
 
-- Make sure you have the [operator-sdk](#operator-sdk) `$PATH`.
-
-- You will need to be logged in with an account that meets the [RBAC requirements](https://github.com/openshift/managed-upgrade-operator/blob/master/deploy/cluster_role.yaml) for the MUO service account.
-
-- OPTIONAL: Create a project for the operator to run inside of.
-
+- Make sure you have the [operator-sdk](#operator-sdk) in your `$PATH`.
+- Install an OSD cluster using [staging](https://console.redhat.com/openshift/create?env=staging) or [integration](https://console.redhat.com/openshift/create?env=integration) environment. Make sure to use CCS option.
+- Once the cluster installs, create a user with `cluster-admin` role and log in using `oc` client.
+- Scale down existing MUO deployment and delete the leader lease:
 ```
-$ oc new-project test-managed-upgrade-operator
+oc scale deployment managed-upgrade-operator -n openshift-managed-upgrade-operator --replicas=0
+oc delete lease managed-upgrade-operator-lock -n openshift-managed-upgrade-operator
 ```
+- Apply the LOCAL mode ConfigMap. This prevents OCM from deleting manually-created UpgradeConfigs and ignores the `UpgradeConfigSyncFailureOver4HrSRE` alert that fires when the deployed MUO is scaled down:
+```
+oc apply -f test/deploy/managed-upgrade-operator-config.yaml -n openshift-managed-upgrade-operator
+```
+- Switch to the MUO service account. The operator must run as this account to bypass webhooks that block UpgradeConfig modifications:
+```
+oc login $(oc get infrastructures cluster -o json | jq -r '.status.apiServerURL') --token=$(oc create token managed-upgrade-operator -n openshift-managed-upgrade-operator)
+```
+- Now you can run the operator with [service](#Run using internal cluster services) or [routes](#Run using cluster routes)
 
-### Run using internal cluster services
+#### Run using internal cluster services
 
 The use of internal cluster services requires some changes locally to your environment:
 
@@ -196,15 +204,15 @@ Else you can provide your own.
 $ OPERATOR_NAMESPACE=managed-upgrade-operator make run
 ```
 
-### Run using cluster routes
+#### Run using cluster routes
 
-Run locally using standard namespace and cluster routes. 
+Run locally using standard namespace and cluster routes. Both `ROUTES=true` and `OSDK_FORCE_RUN_MODE=local` are required for the operator to use cluster routes instead of internal service addresses.
 
 ```
 $ make run-standard-routes
 ```
 
-Run locally using custom namespace and cluster routes. 
+Run locally using custom namespace and cluster routes.
 
 ```
 $ OPERATOR_NAMESPACE=managed-upgrade-operator make run-routes
