@@ -1,25 +1,20 @@
 # Development
 
-- [Development](#development)
-  - [Development Environment Setup](#development-environment-setup)
-    - [golang](#golang)
-    - [operator-sdk](#operator-sdk)
-  - [Makefile](#makefile)
-  - [Dependencies](#dependencies)
-  - [Linting](#linting)
-  - [Testing](#testing)
-  - [Building](#building)
-  - [Build using boilerplate container](#build-using-boilerplate-container)
-  - [How to run](#how-to-run)
-    - [Locally](#locally)
-    - [Run using internal cluster services](#run-using-internal-cluster-services)
-    - [Run using cluster routes](#run-using-cluster-routes)
-    - [Remotely](#remotely)
-    - [Trigger Reconcile](#trigger-reconcile)
-  - [Monitoring ongoing upgrade](#monitoring-ongoing-upgrade)
-  - [Maintenance](#maintenance)
+- [Development Environment Setup](#development-environment-setup)
+  - [golang](#golang)
+  - [operator-sdk](#operator-sdk)
+- [Makefile](#makefile)
+- [Dependencies](#dependencies)
+- [Linting](#linting)
+- [Testing](#testing)
+- [Building](#building)
+- [Build using boilerplate container](#build-using-boilerplate-container)
+- [Running Locally](#running-locally)
+- [Running Remotely](#running-remotely)
+- [Monitoring ongoing upgrade](#monitoring-ongoing-upgrade)
+- [Maintenance](#maintenance)
 
-This document should entail all you need to develop this operator locally.
+Everything you need to develop this operator locally.
 
 ## Development Environment Setup
 
@@ -28,7 +23,7 @@ This document should entail all you need to develop this operator locally.
 A recent Go distribution (>=1.23) with enabled Go modules.
 
 ```shell
-$ go version
+go version
 go version go1.23.9 linux/amd64
 ```
 
@@ -40,7 +35,7 @@ Ensure this is installed and available in your `$PATH`.
 [v1.21.0](https://github.com/operator-framework/operator-sdk/releases/tag/v1.21.0) is being used for `managed-upgrade-operator` development.
 
 ```shell
-$ operator-sdk version
+operator-sdk version
 operator-sdk version: "v1.21.0", commit: "89d21a133750aee994476736fa9523656c793588", kubernetes version: "1.23", go version: "go1.17.10", GOOS: "linux", GOARCH: "amd64"
 ```
 
@@ -49,7 +44,7 @@ operator-sdk version: "v1.21.0", commit: "89d21a133750aee994476736fa9523656c7935
 All available standardized commands for the `Makefile` are available via:
 
 ```shell
-$ make
+make
 Usage: make <OPTIONS> ... <TARGETS>
 
 Available targets are:
@@ -70,7 +65,7 @@ The tool dependencies that are required locally to be present are all part of [t
 In order to install the tool dependencies locally, run `make tools` at the root of the cloned repository, which will fetch the tools for you and install the binaries at location `$GOPATH/bin` by default:
 
 ```shell
-$ make tools
+make tools
 ```
 
 This will make sure that the installed binaries are always as per the required version mentioned in `go.mod` file. If the version of the module is changed, need to run the command again locally to have new version of tools.
@@ -88,15 +83,15 @@ If any of the dependencies are failing to install due to checksum mismatch, try 
 To run lint locally, call `make lint`
 
 ```shell
-$ make lint
+make lint
 ```
 
 ## Testing
 
-To run unit tests locally, call `make test`
+To run unit tests locally, call `make go-test`
 
 ```shell
-$ make go-test
+make go-test
 ```
 
 ## Building
@@ -104,7 +99,7 @@ $ make go-test
 To run go build locally, call `make go-build`
 
 ```shell
-$ make go-build
+make go-build
 ```
 
 ## Build using boilerplate container
@@ -112,110 +107,48 @@ $ make go-build
 To run lint, test and build in `app-sre/boilerplate` container, call `boilerplate/_lib/container-make`. This will call `make` inside the `app-sre/boilerplate` container.
 
 ```shell
-$ boilerplate/_lib/container-make
+boilerplate/_lib/container-make
 ```
 ### Note for macOS Developers:
 When building on macOS, the boilerplate container-based build approach `make container-build` is not supported due to limitations with running Podman-in-Podman in a cross-platform environment. Instead, macOS users should use `make go-mac-build`
 to build arm64 image `podman build --platform=linux/amd64 -t quay.io/[$PERSONAL_REPO]/managed-upgrade-operator:[$IMAGE_VERSION] -f build/Dockerfile .`
 
-## How to run
+## Running Locally
 
-Regardless of how you choose to run the operator, before doing so ensure the `UpgradeConfig` CRD is present on your cluster:
-
+- Make sure you have the [operator-sdk](#operator-sdk) in your `$PATH`.
+- Install an OSD cluster using [staging](https://console.redhat.com/openshift/create?env=staging) or [integration](https://console.redhat.com/openshift/create?env=integration) environment. Make sure to use CCS option.
+- Once the cluster installs, create a user with `cluster-admin` role and log in using `oc` client.
+- Scale down existing MUO deployment and delete the leader lease:
 ```shell
-$ oc create -f deploy/crds/upgrade.managed.openshift.io_upgradeconfigs_crd.yaml
+oc scale deployment managed-upgrade-operator -n openshift-managed-upgrade-operator --replicas=0
+oc delete lease managed-upgrade-operator-lock -n openshift-managed-upgrade-operator
+```
+- Apply the LOCAL mode ConfigMap. This prevents OCM from deleting manually-created UpgradeConfigs and ignores the `UpgradeConfigSyncFailureOver4HrSRE` alert that fires when the deployed MUO is scaled down:
+```shell
+oc apply -f test/deploy/managed-upgrade-operator-config.yaml -n openshift-managed-upgrade-operator
+```
+- Switch to the MUO service account. The operator must run as this account to bypass webhooks that block UpgradeConfig modifications:
+```shell
+oc login $(oc get infrastructures cluster -o json | jq -r '.status.apiServerURL') \
+  --token=$(oc create token managed-upgrade-operator -n openshift-managed-upgrade-operator)
+```
+- Apply an UpgradeConfig CR. Edit `test/deploy/upgrade.managed.openshift.io_v1alpha1_upgradeconfig_cr.yaml` with your desired version and channel, then apply it:
+```shell
+oc apply -f test/deploy/upgrade.managed.openshift.io_v1alpha1_upgradeconfig_cr.yaml
+```
+- Run the operator. `ROUTES=true` tells MUO to use OpenShift Routes to reach Prometheus and Alertmanager, which is the simplest option for local development:
+```shell
+ROUTES=true OSDK_FORCE_RUN_MODE=local make run
 ```
 
-MUO by defaults uses in the internal services to contact prometheus and alertmanager. This enables the use of a firewall to prevent egress calls however increases local development complexity slightly. 
+> **Note:** If you prefer using internal cluster services instead of routes, see the [`development/port-forwards`](../development/port-forwards) script. This approach requires `/etc/hosts` entries and port-forwards but replicates the production network path.
 
-There are now three main modes that MUO can be ran in. 
-
-1. Run in a container in cluster. 
-2. Run locally using port-forwards and `/etc/hosts` entries to replicate production environment. 
-3. Run locally using Routes to access services. This is not true production however is the most simple for local development. 
-
-Modes 2 and 3 can be executed via the `Makefile` optionally setting the `$OPERATOR_NAMESPACE` as explored in the next section. 
-
-```
-run                              Wrapper around operator sdk run. Requires OPERATOR_NAMESPACE to be set. See run-standard for defaults.
-run-standard                     Run locally with openshift-managed-upgrade-operator as OPERATOR_NAMESPACE.
-run-routes                       Same as `run`, however will use ROUTE objects to contact prometheus and alertmanager. Use of routes is non-standard but convenient for local development. Requires OPERATOR_NAMESPACE to be set.
-run-standard-routes              Run locally with openshift-managed-upgrade-operator as OPERATOR_NAMESPACE and use of non-standard routes.
-```
-
-
-### Locally
-
-- Make sure you have the [operator-sdk](#operator-sdk) `$PATH`.
-
-- You will need to be logged in with an account that meets the [RBAC requirements](https://github.com/openshift/managed-upgrade-operator/blob/master/deploy/cluster_role.yaml) for the MUO service account.
-
-- OPTIONAL: Create a project for the operator to run inside of.
-
-```
-$ oc new-project test-managed-upgrade-operator
-```
-
-### Run using internal cluster services
-
-The use of internal cluster services requires some changes locally to your environment:
-
-1. Add entries for prometheus and alertmanager to `/etc/hosts` that resolve to `127.0.0.1`
-2. Create port-forwards for each service
-
-You can run this script to set this up for you (Requires `sudo` as it writes to `/etc/hosts`). The script accepts an optional `--context`. This enables setting up of the port-forwards with your personal user in the OpenShift cluster while running the operator locally using the available MUO service account for production like replication.
-
-```
-$ ./development/port-forwards -h
-Setup port forwarding for local development using internal svc
-usage ./development/port-forwards context (to execute oc commands as). This is useful if you are running the actual operator the MUO service account [OPTIONAL]
-example: ./development/port-forwards $CONTEXT
-$ ./development/port-forwards $CONTEXT
-```
-
-The operator can then be ran as follows. 
-
-```
-$ oc login $(oc get infrastructures cluster -o json | jq -r '.status.apiServerURL') --token $(oc -n openshift-managed-upgrade-operator serviceaccounts get-token managed-upgrade-operator)
-
-Logged into "https://$API_URL:6443" as "system:serviceaccount:openshift-managed-upgrade-operator:managed-upgrade-operator" using the token provided.
-
-You don't have any projects. Contact your system administrator to request a project.
-```
-
-Then if you are using the standard namespace
-
-```
-$ make run-standard
-```
-
-Else you can provide your own. 
-
-
-```
-$ OPERATOR_NAMESPACE=managed-upgrade-operator make run
-```
-
-### Run using cluster routes
-
-Run locally using standard namespace and cluster routes. 
-
-```
-$ make run-standard-routes
-```
-
-Run locally using custom namespace and cluster routes. 
-
-```
-$ OPERATOR_NAMESPACE=managed-upgrade-operator make run-routes
-```
-
-### Remotely
+## Running Remotely
 
 - Build the image. In this example, we will use [Quay](http://quay.io/) as the container registry for our image:
 
 ```shell
-$ make docker-build IMG=quay.io/<QUAY_USERNAME>/managed-upgrade-operator:latest
+make docker-build IMG=quay.io/<QUAY_USERNAME>/managed-upgrade-operator:latest
 ```
 
 - Setup [quay](./quay.md) registry and push the image:
@@ -235,7 +168,7 @@ oc scale deployment managed-upgrade-operator -n <EXISTING_MUO_NAMESPACE> --repli
 - Create a project for the operator to run inside of:
 
 ```shell
-$ oc new-project test-managed-upgrade-operator
+oc new-project test-managed-upgrade-operator
 ```
 
 - Deploy the service account, clusterrole, clusterrolebinding and ConfigMap on your target cluster:
@@ -295,14 +228,6 @@ EOF
 Refer to [fast-4.7](https://access.redhat.com/labs/ocpupgradegraph/update_channel?channel=fast-4.7&arch=x86_64&is_show_hot_fix=false) for currently available versions in `fast-4.7` channel.
 
 ---
-
-### Trigger Reconcile
-
-- Trigger a reconcile loop by applying an `upgradeconfig` CR with your desired specs.
-
-```shell
-$ oc apply -f test/deploy/upgrade.managed.openshift.io_v1alpha1_upgradeconfig_cr.yaml
-```
 
 ## Monitoring ongoing upgrade
 
