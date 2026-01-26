@@ -17,6 +17,7 @@
     - [Remotely](#remotely)
     - [Trigger Reconcile](#trigger-reconcile)
   - [Monitoring ongoing upgrade](#monitoring-ongoing-upgrade)
+  - [Viewing Metrics Locally](#viewing-metrics-locally)
   - [Maintenance](#maintenance)
 
 This document should entail all you need to develop this operator locally.
@@ -340,6 +341,25 @@ oc get clusterversion -w
 ```shell
 oc logs cluster-version-operator-<POD-ID> -n  openshift-cluster-version -f
 ```
+
+## Viewing Metrics Locally
+
+When running the operator locally, Prometheus metrics are exposed at `http://localhost:8383/metrics`.
+
+```shell
+# In one terminal, run the operator
+make run-standard-routes
+
+# In another terminal, view metrics
+curl http://localhost:8383/metrics
+
+# Filter to operator-specific metrics
+curl -s http://localhost:8383/metrics | grep upgradeoperator
+```
+
+For details on what each metric means and when it fires, see:
+- [metrics.md](metrics.md) - Metric reference and alert mappings
+- [metrics-tracing.md](metrics-tracing.md) - Where metrics are triggered in code
 
 ## Maintenance
 
