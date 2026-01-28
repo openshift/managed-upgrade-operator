@@ -1,4 +1,4 @@
-FROM quay.io/redhat-services-prod/openshift/boilerplate:image-v8.2.0 AS builder
+FROM quay.io/redhat-services-prod/openshift/boilerplate:image-v8.3.2 AS builder
 
 RUN mkdir -p /workdir
 WORKDIR /workdir
@@ -8,7 +8,7 @@ COPY . .
 RUN make go-build
 
 ####
-FROM registry.access.redhat.com/ubi9/ubi-minimal:9.7-1768783948
+FROM registry.access.redhat.com/ubi9/ubi-minimal:9.7-1769056855
 
 ENV USER_UID=1001 \
     USER_NAME=managed-upgrade-operator
