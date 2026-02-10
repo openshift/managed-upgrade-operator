@@ -1,14 +1,13 @@
 package ocmagent
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
-	"strings"
 
-	"github.com/go-resty/resty/v2"
-	"github.com/jarcoal/httpmock"
-
-	"github.com/openshift/managed-upgrade-operator/pkg/ocm"
+	sdk "github.com/openshift-online/ocm-sdk-go"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
@@ -16,140 +15,156 @@ import (
 )
 
 const (
-	TEST_CLUSTER_ID       = "111111-2222222-3333333-4444444"
-	TEST_POLICY_ID_MANUAL = "aaaaaa-bbbbbb-cccccc-dddddd"
-
-	// Upgrade policy constants
-	TEST_OPERATOR_NAMESPACE         = "test-managed-upgrade-operator"
+	TEST_CLUSTER_ID                 = "111111-2222222-3333333-4444444"
+	TEST_POLICY_ID_MANUAL           = "aaaaaa-bbbbbb-cccccc-dddddd"
 	TEST_UPGRADEPOLICY_UPGRADETYPE  = "OSD"
-	TEST_UPGRADEPOLICY_ADDON        = "ADDON"
-	TEST_UPGRADEPOLICY_TIME         = "2020-06-20T00:00:00Z"
 	TEST_UPGRADEPOLICY_VERSION      = "4.4.5"
 	TEST_UPGRADEPOLICY_CHANNELGROUP = "fast"
 	TEST_UPGRADEPOLICY_PDB_TIME     = 60
-
-	// OCM test constants
-	TEST_OCM_SERVER_URL = "https://ocm-agent.svc.cluster.info"
+	TEST_VALUE                      = "scheduled"
+	TEST_DESCRIPTION                = "Upgrade scheduled"
 )
 
-var _ = Describe("OCM Client", func() {
-
+var _ = Describe("OCM Agent Client with SDK", func() {
 	var (
-		mockCtrl                   *gomock.Controller
-		httpClient                 *resty.Client
-		clusterInfoResponse        ocm.ClusterInfo
-		upgradePolicyListResponse  []ocm.UpgradePolicy
-		upgradePolicyStateResponse ocm.UpgradePolicyState
-		oc                         ocmClient
+		mockCtrl   *gomock.Controller
+		testServer *httptest.Server
+		conn       *sdk.Connection
+		oc         ocmClient
 	)
-
-	BeforeSuite(func() {
-		httpClient = resty.New()
-		httpmock.ActivateNonDefault(httpClient.GetClient())
-	})
 
 	BeforeEach(func() {
 		mockCtrl = gomock.NewController(GinkgoT())
-		ocmServerUrl, _ := url.Parse(TEST_OCM_SERVER_URL)
 
+		// Create test HTTP server that mimics ocm-agent responses
+		testServer = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set(OPERATION_ID_HEADER, "test-operation-id")
+
+			switch {
+			case r.URL.Path == "/" && r.Method == http.MethodGet:
+				// Return cluster info (ocm-agent root endpoint)
+				response := map[string]interface{}{
+					"id": TEST_CLUSTER_ID,
+					"version": map[string]interface{}{
+						"id":            "4.4.4",
+						"channel_group": TEST_UPGRADEPOLICY_CHANNELGROUP,
+					},
+					"node_drain_grace_period": map[string]interface{}{
+						"value": TEST_UPGRADEPOLICY_PDB_TIME,
+						"unit":  "minutes",
+					},
+				}
+				json.NewEncoder(w).Encode(response)
+
+			case r.URL.Path == fmt.Sprintf("/api/clusters_mgmt/v1/clusters/%s/upgrade_policies", TEST_CLUSTER_ID) && r.Method == http.MethodGet:
+				// Return upgrade policies list
+				response := map[string]interface{}{
+					"kind":  "UpgradePolicyList",
+					"page":  1,
+					"size":  1,
+					"total": 1,
+					"items": []map[string]interface{}{
+						{
+							"id":            TEST_POLICY_ID_MANUAL,
+							"schedule_type": "manual",
+							"upgrade_type":  TEST_UPGRADEPOLICY_UPGRADETYPE,
+							"version":       TEST_UPGRADEPOLICY_VERSION,
+							"cluster_id":    TEST_CLUSTER_ID,
+						},
+					},
+				}
+				json.NewEncoder(w).Encode(response)
+
+			case r.URL.Path == fmt.Sprintf("/%s/%s/%s", UPGRADEPOLICIES_PATH, TEST_POLICY_ID_MANUAL, STATE_V1_PATH) && r.Method == http.MethodGet:
+				// Return upgrade policy state
+				response := map[string]interface{}{
+					"kind":        "UpgradePolicyState",
+					"value":       "scheduled",
+					"description": "Upgrade is scheduled",
+				}
+				json.NewEncoder(w).Encode(response)
+
+			case r.URL.Path == fmt.Sprintf("/%s/%s/%s", UPGRADEPOLICIES_PATH, TEST_POLICY_ID_MANUAL, STATE_V1_PATH) && r.Method == http.MethodPatch:
+				// Update state
+				w.WriteHeader(http.StatusOK)
+				response := map[string]interface{}{
+					"kind":        "UpgradePolicyState",
+					"value":       TEST_VALUE,
+					"description": TEST_DESCRIPTION,
+				}
+				json.NewEncoder(w).Encode(response)
+
+			default:
+				w.WriteHeader(http.StatusNotFound)
+			}
+		}))
+
+		// Create SDK connection pointing to test server
+		var err error
+		conn, err = sdk.NewConnectionBuilder().
+			URL(testServer.URL).
+			Tokens("test-token").  // Add test token for authentication
+			Insecure(true).        // Skip TLS verification for test server
+			Build()
+		Expect(err).To(BeNil())
+
+		ocmServerUrl, _ := url.Parse(testServer.URL)
 		oc = ocmClient{
 			ocmBaseUrl: ocmServerUrl,
-			httpClient: httpClient,
-		}
-
-		clusterInfoResponse = ocm.ClusterInfo{
-			Id: TEST_CLUSTER_ID,
-			Version: ocm.ClusterVersion{
-				Id:           "4.4.4",
-				ChannelGroup: TEST_UPGRADEPOLICY_CHANNELGROUP,
-			},
-			NodeDrainGracePeriod: ocm.NodeDrainGracePeriod{
-				Value: TEST_UPGRADEPOLICY_PDB_TIME,
-				Unit:  "minutes",
-			},
-		}
-
-		upgradePolicyListResponse = []ocm.UpgradePolicy{
-			{
-				Id:           TEST_POLICY_ID_MANUAL,
-				Kind:         "UpgradePolicy",
-				Href:         "test",
-				Schedule:     "test",
-				ScheduleType: "manual",
-				UpgradeType:  TEST_UPGRADEPOLICY_UPGRADETYPE,
-				Version:      TEST_UPGRADEPOLICY_VERSION,
-				NextRun:      TEST_UPGRADEPOLICY_TIME,
-				ClusterId:    TEST_CLUSTER_ID,
-			},
-			{
-				Id:           TEST_POLICY_ID_MANUAL,
-				Kind:         "UpgradePolicy",
-				Href:         "test",
-				Schedule:     "test",
-				ScheduleType: "manual",
-				UpgradeType:  TEST_UPGRADEPOLICY_ADDON,
-				Version:      TEST_UPGRADEPOLICY_VERSION,
-				NextRun:      TEST_UPGRADEPOLICY_TIME,
-				ClusterId:    TEST_CLUSTER_ID,
-			},
-		}
-
-		upgradePolicyStateResponse = ocm.UpgradePolicyState{
-			Kind:        "UpgradePolicyState",
-			Href:        "test",
-			Value:       "pending",
-			Description: "Upgrade is pending",
+			conn:       conn,
 		}
 	})
 
 	AfterEach(func() {
 		mockCtrl.Finish()
-		httpmock.Reset()
+		if testServer != nil {
+			testServer.Close()
+		}
+		if conn != nil {
+			conn.Close()
+		}
 	})
 
-	Context("When getting cluster info", func() {
-		It("returns the correct info", func() {
-			clResponder, _ := httpmock.NewJsonResponder(http.StatusOK, clusterInfoResponse)
-			httpmock.RegisterResponder(http.MethodGet, TEST_OCM_SERVER_URL, clResponder)
-
+	Context("When getting cluster info from ocm-agent", func() {
+		It("returns the correct SDK cluster type", func() {
 			result, err := oc.GetCluster()
-
-			Expect(*result).To(Equal(clusterInfoResponse))
 			Expect(err).To(BeNil())
+			Expect(result).ToNot(BeNil())
+			Expect(result.ID()).To(Equal(TEST_CLUSTER_ID))
+			Expect(result.Version().ChannelGroup()).To(Equal(TEST_UPGRADEPOLICY_CHANNELGROUP))
+			Expect(result.NodeDrainGracePeriod().Value()).To(Equal(float64(TEST_UPGRADEPOLICY_PDB_TIME)))
 		})
 	})
 
-	Context("When getting upgrade policies", func() {
-		It("retrieves OSD type only", func() {
-			upResponder, _ := httpmock.NewJsonResponder(http.StatusOK, upgradePolicyListResponse)
-			upUrl := strings.Join([]string{TEST_OCM_SERVER_URL, UPGRADEPOLICIES_PATH}, "/")
-			httpmock.RegisterResponder(http.MethodGet, upUrl, upResponder)
-
+	Context("When getting upgrade policies via ocm-agent", func() {
+		It("returns SDK upgrade policies list response", func() {
 			result, err := oc.GetClusterUpgradePolicies(TEST_CLUSTER_ID)
-
-			Expect(result).To(Equal(&ocm.UpgradePolicyList{
-				Kind: "UpgradePolicyList",
-				Page: 1,
-				Size: int64(len(upgradePolicyListResponse)),
-				Total: int64(len(upgradePolicyListResponse)),
-				Items: upgradePolicyListResponse,
-			}))
 			Expect(err).To(BeNil())
+			Expect(result).ToNot(BeNil())
+			Expect(result.Total()).To(Equal(1))
+			Expect(result.Items().Len()).To(Equal(1))
+
+			policy := result.Items().Get(0)
+			Expect(policy.ID()).To(Equal(TEST_POLICY_ID_MANUAL))
+			Expect(policy.Version()).To(Equal(TEST_UPGRADEPOLICY_VERSION))
 		})
 	})
 
-	Context("When getting upgrade policy state", func() {
-		It("returns the correct info", func() {
-
-			upsResponder, _ := httpmock.NewJsonResponder(http.StatusOK, upgradePolicyStateResponse)
-			upsUrl := strings.Join([]string{TEST_OCM_SERVER_URL, UPGRADEPOLICIES_PATH, TEST_POLICY_ID_MANUAL, STATE_V1_PATH}, "/")
-			httpmock.RegisterResponder(http.MethodGet, upsUrl, upsResponder)
-
+	Context("When getting upgrade policy state via ocm-agent", func() {
+		It("returns SDK upgrade policy state", func() {
 			result, err := oc.GetClusterUpgradePolicyState(TEST_POLICY_ID_MANUAL, TEST_CLUSTER_ID)
-
-			Expect(*result).To(Equal(upgradePolicyStateResponse))
 			Expect(err).To(BeNil())
+			Expect(result).ToNot(BeNil())
+			Expect(string(result.Value())).To(Equal("scheduled"))
+			Expect(result.Description()).To(Equal("Upgrade is scheduled"))
 		})
 	})
 
+	Context("When setting policy state via ocm-agent", func() {
+		It("updates the state successfully", func() {
+			err := oc.SetState(TEST_VALUE, TEST_DESCRIPTION, TEST_POLICY_ID_MANUAL, TEST_CLUSTER_ID)
+			Expect(err).To(BeNil())
+		})
+	})
 })

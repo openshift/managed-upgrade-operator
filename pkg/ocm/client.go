@@ -3,20 +3,17 @@ package ocm
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"net/url"
 	"path"
 	"time"
 
-	"github.com/go-resty/resty/v2"
 	configv1 "github.com/openshift/api/config/v1"
+	sdk "github.com/openshift-online/ocm-sdk-go"
+	cmv1 "github.com/openshift-online/ocm-sdk-go/clustersmgmt/v1"
+	servicelogsv1 "github.com/openshift-online/ocm-sdk-go/servicelogs/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-
-	servicelogsv1 "github.com/openshift-online/ocm-sdk-go/servicelogs/v1"
-
-	"github.com/openshift/managed-upgrade-operator/util"
 )
 
 const (
@@ -35,6 +32,10 @@ const (
 	SERVICELOG_SERVICE_NAME = "RedHat Managed Upgrade Notifications"
 	// SERVICELOG_INTERNAL_ONLY defines if the log is internal or not
 	SERVICELOG_INTERNAL_ONLY = false
+
+	// TLS_HANDSHAKE_TIMEOUT is the timeout for TLS handshake
+	// Increased from default 10s to 30s to handle high-latency networks and proxy environments
+	TLS_HANDSHAKE_TIMEOUT = 30 * time.Second
 )
 
 var log = logf.Log.WithName("ocm-client")
@@ -48,9 +49,9 @@ var (
 //
 //go:generate mockgen -destination=mocks/client.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/ocm OcmClient
 type OcmClient interface {
-	GetCluster() (*ClusterInfo, error)
-	GetClusterUpgradePolicies(clusterId string) (*UpgradePolicyList, error)
-	GetClusterUpgradePolicyState(policyId string, clusterId string) (*UpgradePolicyState, error)
+	GetCluster() (*cmv1.Cluster, error)
+	GetClusterUpgradePolicies(clusterId string) (*cmv1.UpgradePoliciesListResponse, error)
+	GetClusterUpgradePolicyState(policyId string, clusterId string) (*cmv1.UpgradePolicyState, error)
 	PostServiceLog(sl *ServiceLog, description string) error
 	SetState(value string, description string, policyId string, clusterId string) error
 }
@@ -60,10 +61,8 @@ type ocmClient struct {
 	client client.Client
 	// Base OCM API Url
 	ocmBaseUrl *url.URL
-	// HTTP client used for API queries (TODO: remove in favour of OCM SDK)
-	httpClient *resty.Client
-	// OCM SDK Client
-	sdkClient *SdkClient
+	// OCM SDK connection for all HTTP operations
+	conn *sdk.Connection
 }
 
 // ServiceLog is the internal representation of a service log
@@ -76,27 +75,10 @@ type ServiceLog struct {
 	DocReferences string
 }
 
-type ocmRoundTripper struct {
-	authorization util.AccessToken
-	proxy         *url.URL
-}
+// Read cluster info from OCM using SDK typed API
+func (s *ocmClient) GetCluster() (*cmv1.Cluster, error) {
 
-func (ort *ocmRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
-	authVal := fmt.Sprintf("AccessToken %s:%s", ort.authorization.ClusterId, ort.authorization.PullSecret)
-	req.Header.Add("Authorization", authVal)
-	transport := http.Transport{
-		TLSHandshakeTimeout: time.Second * 5,
-	}
-	if ort.proxy != nil {
-		transport.Proxy = http.ProxyURL(ort.proxy)
-	}
-	return transport.RoundTrip(req)
-}
-
-// Read cluster info from OCM
-func (s *ocmClient) GetCluster() (*ClusterInfo, error) {
-
-	// fetch the clusterversion, which contains the internal ID
+	// fetch the clusterversion, which contains the external ID
 	cv := &configv1.ClusterVersion{}
 	err := s.client.Get(context.TODO(), types.NamespacedName{Name: "version"}, cv)
 	if err != nil {
@@ -104,130 +86,153 @@ func (s *ocmClient) GetCluster() (*ClusterInfo, error) {
 	}
 	externalID := cv.Spec.ClusterID
 
+	// Use SDK typed API to search for cluster by external_id
+	clustersSearch := fmt.Sprintf("external_id = '%s'", externalID)
+	clustersListResponse, err := s.conn.ClustersMgmt().V1().Clusters().
+		List().
+		Search(clustersSearch).
+		Size(1).
+		Send()
+
+	if err != nil {
+		return nil, fmt.Errorf("can't query OCM cluster service for external_id '%s': %w", externalID, err)
+	}
+
+	operationId := clustersListResponse.Header().Get(OPERATION_ID_HEADER)
+	statusCode := clustersListResponse.Status()
+
+	// Construct full URL for logging
 	csUrl, err := url.Parse(s.ocmBaseUrl.String())
 	if err != nil {
 		return nil, fmt.Errorf("can't parse OCM API url: %v", err)
 	}
 	csUrl.Path = path.Join(csUrl.Path, CLUSTERS_V1_PATH)
+	csUrl.RawQuery = fmt.Sprintf("search=%s&size=1", url.QueryEscape(clustersSearch))
 
-	response, err := s.httpClient.R().
-		SetQueryParams(map[string]string{
-			"page":   "1",
-			"size":   "1",
-			"search": fmt.Sprintf("external_id = '%s'", externalID),
-		}).
-		SetResult(&ClusterList{}).
-		ExpectContentType("application/json").
-		Get(csUrl.String())
-
-	if err != nil {
-		return nil, fmt.Errorf("can't query OCM cluster service: request to '%v' returned error '%v'", csUrl.String(), err)
+	if statusCode >= 400 {
+		return nil, fmt.Errorf("request to '%v' received error code %v, operation id '%v'", csUrl.String(), statusCode, operationId)
 	}
 
-	operationId := response.Header().Get(OPERATION_ID_HEADER)
-	if response.IsError() {
-		return nil, fmt.Errorf("request to '%v' received error code %v, operation id '%v'", csUrl.String(), response.StatusCode(), operationId)
-	}
+	log.Info(fmt.Sprintf("request to '%v' received response code %v, operation id: '%v'", csUrl.String(), statusCode, operationId))
 
-	log.Info(fmt.Sprintf("request to '%v' received response code %v, operation id: '%v'", csUrl.String(), response.StatusCode(), operationId))
-
-	listResponse := response.Result().(*ClusterList)
-	if listResponse.Size != 1 || len(listResponse.Items) != 1 {
+	// Check if exactly one cluster was found
+	clustersTotal := clustersListResponse.Total()
+	if clustersTotal != 1 {
 		return nil, ErrClusterIdNotFound
 	}
 
-	return &listResponse.Items[0], nil
+	// Return the SDK cluster object
+	cluster := clustersListResponse.Items().Get(0)
+	return cluster, nil
 }
 
-// Queries and returns the Upgrade Policy from Cluster Services
-func (s *ocmClient) GetClusterUpgradePolicies(clusterId string) (*UpgradePolicyList, error) {
+// Queries and returns the Upgrade Policy from Cluster Services using SDK typed API
+func (s *ocmClient) GetClusterUpgradePolicies(clusterId string) (*cmv1.UpgradePoliciesListResponse, error) {
 
+	// Use SDK typed API to get upgrade policies
+	response, err := s.conn.ClustersMgmt().V1().
+		Clusters().
+		Cluster(clusterId).
+		UpgradePolicies().
+		List().
+		Page(1).
+		Size(1).
+		Send()
+
+	if err != nil {
+		return nil, fmt.Errorf("can't pull upgrade policies for cluster %s: %w", clusterId, err)
+	}
+
+	operationId := response.Header().Get(OPERATION_ID_HEADER)
+	statusCode := response.Status()
+
+	// Construct full URL for logging
 	upUrl, err := url.Parse(s.ocmBaseUrl.String())
 	if err != nil {
 		return nil, fmt.Errorf("can't read OCM API url: %v", err)
 	}
 	upUrl.Path = path.Join(upUrl.Path, CLUSTERS_V1_PATH, clusterId, UPGRADEPOLICIES_V1_PATH)
+	upUrl.RawQuery = "page=1&size=1"
 
-	response, err := s.httpClient.R().
-		SetQueryParams(map[string]string{
-			"page": "1",
-			"size": "1",
-		}).
-		SetResult(&UpgradePolicyList{}).
-		ExpectContentType("application/json").
-		Get(upUrl.String())
-
-	if err != nil {
-		return nil, fmt.Errorf("can't pull upgrade policies: request to '%v' returned error '%v'", upUrl.String(), err)
-	}
-	operationId := response.Header().Get(OPERATION_ID_HEADER)
-	if response.IsError() {
-		return nil, fmt.Errorf("request to '%v' received error code '%v' from OCM upgrade policy service, operation id '%v'", upUrl.String(), response.StatusCode(), operationId)
+	if statusCode >= 400 {
+		return nil, fmt.Errorf("request to '%v' received error code %v from OCM upgrade policy service, operation id '%v'", upUrl.String(), statusCode, operationId)
 	}
 
-	log.Info(fmt.Sprintf("request to '%v' received response code '%v' from OCM upgrade policy service, operation id: '%v'", upUrl.String(), response.StatusCode(), operationId))
+	log.Info(fmt.Sprintf("request to '%v' received response code %v from OCM upgrade policy service, operation id: '%v'", upUrl.String(), statusCode, operationId))
 
-	upgradeResponse := response.Result().(*UpgradePolicyList)
-
-	return upgradeResponse, nil
+	return response, nil
 }
 
-// Send a notification of state
+// Send a notification of state using SDK typed API with builder pattern
 func (s *ocmClient) SetState(value string, description string, policyId string, clusterId string) error {
 
-	policyState := UpgradePolicyStateRequest{
-		Value:       string(value),
-		Description: description,
+	// Build the state update using SDK builder
+	stateUpdate, err := cmv1.NewUpgradePolicyState().
+		Value(cmv1.UpgradePolicyStateValue(value)).
+		Description(description).
+		Build()
+
+	if err != nil {
+		return fmt.Errorf("failed to build policy state: %v", err)
 	}
 
-	// Create the URL path to send to
+	// Construct full URL for logging
 	reqUrl, err := url.Parse(s.ocmBaseUrl.String())
 	if err != nil {
 		return fmt.Errorf("can't read OCM API url: %v", err)
 	}
 	reqUrl.Path = path.Join(reqUrl.Path, CLUSTERS_V1_PATH, clusterId, UPGRADEPOLICIES_V1_PATH, policyId, STATE_V1_PATH)
 
-	response, err := s.httpClient.R().
-		SetHeader("Content-Type", "application/json").
-		SetBody(policyState).
-		ExpectContentType("application/json").
-		Patch(reqUrl.String())
+	// Use SDK typed API to update state
+	response, err := s.conn.ClustersMgmt().V1().
+		Clusters().
+		Cluster(clusterId).
+		UpgradePolicies().
+		UpgradePolicy(policyId).
+		State().
+		Update().
+		Body(stateUpdate).
+		Send()
 
 	if err != nil {
 		return fmt.Errorf("can't set upgrade policy state: request to '%v' returned error '%v'", reqUrl.String(), err)
 	}
+
 	operationId := response.Header().Get(OPERATION_ID_HEADER)
-	if response.IsError() {
-		return fmt.Errorf("request to '%v' received error code %v, operation id '%v', response: '%v'", reqUrl.String(), response.StatusCode(), operationId, response.String())
+	statusCode := response.Status()
+
+	if statusCode >= 400 {
+		return fmt.Errorf("request to '%v' received error code %v, operation id '%v'", reqUrl.String(), statusCode, operationId)
 	}
 
 	return nil
 }
 
-// Queries and returns the Upgrade Policy state from Cluster Services
-func (s *ocmClient) GetClusterUpgradePolicyState(policyId string, clusterId string) (*UpgradePolicyState, error) {
+// Queries and returns the Upgrade Policy state from Cluster Services using SDK typed API
+func (s *ocmClient) GetClusterUpgradePolicyState(policyId string, clusterId string) (*cmv1.UpgradePolicyState, error) {
 
-	upUrl, err := url.Parse(s.ocmBaseUrl.String())
+	// Use SDK typed API to get policy state
+	response, err := s.conn.ClustersMgmt().V1().
+		Clusters().
+		Cluster(clusterId).
+		UpgradePolicies().
+		UpgradePolicy(policyId).
+		State().
+		Get().
+		Send()
+
 	if err != nil {
-		return nil, fmt.Errorf("can't read OCM API url: %v", err)
+		return nil, fmt.Errorf("can't pull upgrade policy state: %w", err)
 	}
-	upUrl.Path = path.Join(upUrl.Path, CLUSTERS_V1_PATH, clusterId, UPGRADEPOLICIES_V1_PATH, policyId, STATE_V1_PATH)
 
-	response, err := s.httpClient.R().
-		SetResult(&UpgradePolicyState{}).
-		ExpectContentType("application/json").
-		Get(upUrl.String())
-
-	if err != nil {
-		return nil, fmt.Errorf("can't pull upgrade policy state: request to '%v' returned error '%v'", upUrl.String(), err)
-	}
 	operationId := response.Header().Get(OPERATION_ID_HEADER)
-	if response.IsError() {
-		return nil, fmt.Errorf("received error code '%v' from OCM upgrade policy service, operation id '%v'", response.StatusCode(), operationId)
+	statusCode := response.Status()
+
+	if statusCode >= 400 {
+		return nil, fmt.Errorf("received error code %v from OCM upgrade policy service, operation id '%v'", statusCode, operationId)
 	}
 
-	stateResponse := response.Result().(*UpgradePolicyState)
-	return stateResponse, nil
+	return response.Body(), nil
 }
 
 // PostServiceLog allows to send a generic servicelog to a cluster.
@@ -249,7 +254,7 @@ func (s *ocmClient) PostServiceLog(sl *ServiceLog, description string) error {
 	builder.ServiceName(SERVICELOG_SERVICE_NAME)
 	builder.LogType(SERVICELOG_LOG_TYPE)
 	builder.Description(description)
-	builder.ClusterID(cluster.Id)
+	builder.ClusterID(cluster.ID())
 
 	// Else refer to the values in 'sl'
 	builder.Summary(sl.Summary)
@@ -262,7 +267,7 @@ func (s *ocmClient) PostServiceLog(sl *ServiceLog, description string) error {
 		return fmt.Errorf("could not create post request (SL): %w", err)
 	}
 
-	request := s.sdkClient.conn.ServiceLogs().V1().ClusterLogs().Add()
+	request := s.conn.ServiceLogs().V1().ClusterLogs().Add()
 	request = request.Body(le)
 
 	response, err := request.Send()

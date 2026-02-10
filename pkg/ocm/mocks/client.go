@@ -12,6 +12,7 @@ package mocks
 import (
 	reflect "reflect"
 
+	cmv1 "github.com/openshift-online/ocm-sdk-go/clustersmgmt/v1"
 	ocm "github.com/openshift/managed-upgrade-operator/pkg/ocm"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -40,10 +41,10 @@ func (m *MockOcmClient) EXPECT() *MockOcmClientMockRecorder {
 }
 
 // GetCluster mocks base method.
-func (m *MockOcmClient) GetCluster() (*ocm.ClusterInfo, error) {
+func (m *MockOcmClient) GetCluster() (*cmv1.Cluster, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetCluster")
-	ret0, _ := ret[0].(*ocm.ClusterInfo)
+	ret0, _ := ret[0].(*cmv1.Cluster)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -55,10 +56,10 @@ func (mr *MockOcmClientMockRecorder) GetCluster() *gomock.Call {
 }
 
 // GetClusterUpgradePolicies mocks base method.
-func (m *MockOcmClient) GetClusterUpgradePolicies(arg0 string) (*ocm.UpgradePolicyList, error) {
+func (m *MockOcmClient) GetClusterUpgradePolicies(arg0 string) (*cmv1.UpgradePoliciesListResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetClusterUpgradePolicies", arg0)
-	ret0, _ := ret[0].(*ocm.UpgradePolicyList)
+	ret0, _ := ret[0].(*cmv1.UpgradePoliciesListResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -70,10 +71,10 @@ func (mr *MockOcmClientMockRecorder) GetClusterUpgradePolicies(arg0 any) *gomock
 }
 
 // GetClusterUpgradePolicyState mocks base method.
-func (m *MockOcmClient) GetClusterUpgradePolicyState(arg0, arg1 string) (*ocm.UpgradePolicyState, error) {
+func (m *MockOcmClient) GetClusterUpgradePolicyState(arg0, arg1 string) (*cmv1.UpgradePolicyState, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetClusterUpgradePolicyState", arg0, arg1)
-	ret0, _ := ret[0].(*ocm.UpgradePolicyState)
+	ret0, _ := ret[0].(*cmv1.UpgradePolicyState)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

@@ -3,10 +3,11 @@ package ocmagent
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"net/url"
 	"os"
+	"time"
 
-	"github.com/go-resty/resty/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	sdk "github.com/openshift-online/ocm-sdk-go"
@@ -43,26 +44,46 @@ func (oacb *ocmAgentClientBuilder) New(c client.Client, ocmBaseUrl *url.URL) (oc
 		return nil, fmt.Errorf("failed to retrieve cluster access token")
 	}
 
-	// Set up the HTTP client using the token
-	httpClient := resty.New().SetTransport(&ocmRoundTripper{})
-	httpClient = httpClient.SetHeaders(map[string]string{"User-Agent": config.SetUserAgent()})
-
-	// Setup OCM SDK client using the token
-	authVal := fmt.Sprintf("%v:%v", accessToken.ClusterId, accessToken.PullSecret)
-	sdkConnection, err := sdk.NewConnectionBuilder().Tokens(authVal).URL(ocmBaseUrl.String()).BuildContext(context.Background())
+	// Setup OCM SDK client with custom auth and TLS timeout (no proxy for local service)
+	sdkConnection, err := sdk.NewConnectionBuilder().
+		URL(ocmBaseUrl.String()).
+		Agent(config.SetUserAgent()).
+		TransportWrapper(func(base http.RoundTripper) http.RoundTripper {
+			return &ocmAgentAuthTransport{
+				wrapped:       base,
+				authorization: *accessToken,
+			}
+		}).
+		BuildContext(context.Background())
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Can't build connection: %v\n", err)
 		return nil, err
 	}
 
-	client := SdkClient{}
-	client.conn = sdkConnection
-
 	return &ocmClient{
 		client:     c,
 		ocmBaseUrl: ocmBaseUrl,
-		httpClient: httpClient,
-		sdkClient:  &client,
+		conn:       sdkConnection,
 	}, nil
 
+}
+
+// ocmAgentAuthTransport is a custom HTTP transport for OCM Agent service
+// that adds authentication and configures TLS timeout (no proxy needed for local service)
+type ocmAgentAuthTransport struct {
+	wrapped       http.RoundTripper
+	authorization util.AccessToken
+}
+
+func (t *ocmAgentAuthTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	// Add custom authorization header
+	authVal := fmt.Sprintf("AccessToken %s:%s", t.authorization.ClusterId, t.authorization.PullSecret)
+	req.Header.Set("Authorization", authVal)
+
+	// Configure TLS timeout if the base transport is *http.Transport
+	if transport, ok := t.wrapped.(*http.Transport); ok {
+		transport.TLSHandshakeTimeout = 5 * time.Second
+	}
+
+	return t.wrapped.RoundTrip(req)
 }

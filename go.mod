@@ -9,16 +9,14 @@ require (
 	github.com/go-logr/logr v1.4.3
 	github.com/go-openapi/runtime v0.26.2
 	github.com/go-openapi/strfmt v0.22.0
-	github.com/go-resty/resty/v2 v2.11.0
 	github.com/golang/mock v1.6.0
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/go-multierror v1.1.1
-	github.com/jarcoal/httpmock v1.3.0
 	github.com/jpillora/backoff v1.0.0
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/ginkgo/v2 v2.26.0
 	github.com/onsi/gomega v1.38.2
-	github.com/openshift-online/ocm-sdk-go v0.1.480
+	github.com/openshift-online/ocm-sdk-go v0.1.494
 	github.com/openshift/api v0.0.0-20250929151534-41627d81e9c1
 	github.com/openshift/client-go v0.0.0-20250131180035-f7ec47e2d87a
 	github.com/openshift/cluster-version-operator v1.0.1-0.20251024155448-77782f1a4b96
@@ -92,8 +90,8 @@ require (
 	github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f // indirect
 	github.com/nxadm/tail v1.4.11 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
-	github.com/openshift-online/ocm-api-model/clientapi v0.0.435 // indirect
-	github.com/openshift-online/ocm-api-model/model v0.0.435 // indirect
+	github.com/openshift-online/ocm-api-model/clientapi v0.0.449 // indirect
+	github.com/openshift-online/ocm-api-model/model v0.0.449 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
@@ -118,7 +116,7 @@ require (
 	golang.org/x/sys v0.35.0 // indirect
 	golang.org/x/term v0.34.0 // indirect
 	golang.org/x/text v0.28.0 // indirect
-	golang.org/x/time v0.9.0 // indirect
+	golang.org/x/time v0.12.0 // indirect
 	golang.org/x/tools v0.36.0 // indirect
 	golang.org/x/tools/go/packages/packagestest v0.1.1-deprecated // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
