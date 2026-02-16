@@ -9,8 +9,8 @@ import (
 	"os"
 	"time"
 
-	configv1 "github.com/openshift/api/config/v1"
 	sdk "github.com/openshift-online/ocm-sdk-go"
+	configv1 "github.com/openshift/api/config/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/openshift/managed-upgrade-operator/util/mocks"
@@ -21,10 +21,10 @@ import (
 )
 
 const (
-	TEST_CLUSTER_ID         = "111111-2222222-3333333-4444444"
-	TEST_EXTERNAL_ID        = "external-" + TEST_CLUSTER_ID
-	TEST_POLICY_ID_MANUAL   = "aaaaaa-bbbbbb-cccccc-dddddd"
-	TEST_OPERATOR_NAMESPACE = "test-managed-upgrade-operator"
+	TEST_CLUSTER_ID                 = "111111-2222222-3333333-4444444"
+	TEST_EXTERNAL_ID                = "external-" + TEST_CLUSTER_ID
+	TEST_POLICY_ID_MANUAL           = "aaaaaa-bbbbbb-cccccc-dddddd"
+	TEST_OPERATOR_NAMESPACE         = "test-managed-upgrade-operator"
 	TEST_UPGRADEPOLICY_UPGRADETYPE  = "OSD"
 	TEST_UPGRADEPOLICY_VERSION      = "4.4.5"
 	TEST_UPGRADEPOLICY_CHANNELGROUP = "fast"
@@ -61,7 +61,7 @@ var _ = Describe("OCM Client with SDK", func() {
 					"total": 1,
 					"items": []map[string]interface{}{
 						{
-							"id": TEST_CLUSTER_ID,
+							"id":          TEST_CLUSTER_ID,
 							"external_id": TEST_EXTERNAL_ID,
 							"version": map[string]interface{}{
 								"id":            "4.4.4",
@@ -74,7 +74,9 @@ var _ = Describe("OCM Client with SDK", func() {
 						},
 					},
 				}
-				json.NewEncoder(w).Encode(response)
+				if err := json.NewEncoder(w).Encode(response); err != nil {
+					GinkgoT().Errorf("Failed to encode mock response: %v", err)
+				}
 
 			case r.URL.Path == fmt.Sprintf("/api/clusters_mgmt/v1/clusters/%s/upgrade_policies", TEST_CLUSTER_ID) && r.Method == http.MethodGet:
 				// Return upgrade policies list
@@ -95,7 +97,9 @@ var _ = Describe("OCM Client with SDK", func() {
 						},
 					},
 				}
-				json.NewEncoder(w).Encode(response)
+				if err := json.NewEncoder(w).Encode(response); err != nil {
+					GinkgoT().Errorf("Failed to encode mock response: %v", err)
+				}
 
 			case r.URL.Path == fmt.Sprintf("/api/clusters_mgmt/v1/clusters/%s/upgrade_policies/%s/state", TEST_CLUSTER_ID, TEST_POLICY_ID_MANUAL) && r.Method == http.MethodGet:
 				// Return upgrade policy state
@@ -104,7 +108,9 @@ var _ = Describe("OCM Client with SDK", func() {
 					"value":       "scheduled",
 					"description": "Upgrade is scheduled",
 				}
-				json.NewEncoder(w).Encode(response)
+				if err := json.NewEncoder(w).Encode(response); err != nil {
+					GinkgoT().Errorf("Failed to encode mock response: %v", err)
+				}
 
 			case r.URL.Path == fmt.Sprintf("/api/clusters_mgmt/v1/clusters/%s/upgrade_policies/%s/state", TEST_CLUSTER_ID, TEST_POLICY_ID_MANUAL) && r.Method == http.MethodPatch:
 				// Update state
@@ -114,7 +120,21 @@ var _ = Describe("OCM Client with SDK", func() {
 					"value":       TEST_VALUE,
 					"description": TEST_DESCRIPTION,
 				}
-				json.NewEncoder(w).Encode(response)
+				if err := json.NewEncoder(w).Encode(response); err != nil {
+					GinkgoT().Errorf("Failed to encode mock response: %v", err)
+				}
+
+			case r.URL.Path == "/token" && r.Method == http.MethodPost:
+				// Mock OAuth2 token endpoint - return a properly formatted JWT
+				w.WriteHeader(http.StatusOK)
+				response := map[string]interface{}{
+					"access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IlRlc3QgVXNlciIsImlhdCI6MTUxNjIzOTAyMn0.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
+					"token_type":   "Bearer",
+					"expires_in":   3600,
+				}
+				if err := json.NewEncoder(w).Encode(response); err != nil {
+					GinkgoT().Errorf("Failed to encode mock response: %v", err)
+				}
 
 			default:
 				w.WriteHeader(http.StatusNotFound)
@@ -125,8 +145,9 @@ var _ = Describe("OCM Client with SDK", func() {
 		var err error
 		conn, err = sdk.NewConnectionBuilder().
 			URL(testServer.URL).
-			Tokens("test-token").  // Add test token for authentication
-			Insecure(true).        // Skip TLS verification for test server
+			TokenURL(testServer.URL + "/token"). // Point to test server for token refresh
+			Tokens("test-token").                 // Add test token for authentication
+			Insecure(true).                       // Skip TLS verification for test server
 			Build()
 		Expect(err).To(BeNil())
 

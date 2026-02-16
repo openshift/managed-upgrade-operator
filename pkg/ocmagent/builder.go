@@ -30,12 +30,6 @@ func NewBuilder() OcmAgentClientBuilder {
 
 type ocmAgentClientBuilder struct{}
 
-// SdkClient is the ocm client with which we can run the commands
-// currently we do not need to export the connection or the config, as we create the SdkClient using the New func
-type SdkClient struct {
-	conn *sdk.Connection
-}
-
 func (oacb *ocmAgentClientBuilder) New(c client.Client, ocmBaseUrl *url.URL) (ocm.OcmClient, error) {
 
 	// Fetch the cluster AccessToken

@@ -459,7 +459,13 @@ func fetchCVOUpdates(cV *configv1.ClusterVersion, uc *upgradev1alpha1.UpgradeCon
 	cvVersion, _ := cv.GetCurrentVersion(cV)
 	parsedCvVersion, _ := semver.Parse(cvVersion)
 
-	transport := &http.Transport{}
+	// Configure HTTP transport for Cincinnati (external Red Hat service)
+	// with proxy support for environments requiring proxy for external connectivity
+	transport := &http.Transport{
+		// Respect HTTP_PROXY, HTTPS_PROXY, and NO_PROXY environment variables
+		// Required for accessing api.openshift.com through corporate proxies
+		Proxy: http.ProxyFromEnvironment,
+	}
 	ctx := context.TODO()
 
 	// Fetch available updates by version in Cincinnati.
