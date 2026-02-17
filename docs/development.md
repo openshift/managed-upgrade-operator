@@ -67,6 +67,8 @@ tools                            Install local go tools for MUO
 
 The tool dependencies that are required locally to be present are all part of [tools.go](https://github.com/openshift/managed-upgrade-operator/blob/master/tools.go) file. This file will refer the version of the required module from [go.mod](https://github.com/openshift/managed-upgrade-operator/blob/master/go.mod) file.
 
+The operator uses the official OpenShift Cluster Manager SDK (`github.com/openshift-online/ocm-sdk-go`) for all OCM API interactions. Custom OCM model structs have been replaced with typed SDK models from the `clustersmgmt/v1` and `servicelogs/v1` packages.
+
 In order to install the tool dependencies locally, run `make tools` at the root of the cloned repository, which will fetch the tools for you and install the binaries at location `$GOPATH/bin` by default:
 
 ```shell
@@ -82,6 +84,35 @@ This will make sure that the installed binaries are always as per the required v
 If any of the dependencies are failing to install due to checksum mismatch, try setting `GOPROXY` env variable using `export GOPROXY="https://proxy.golang.org"` and run `make tools` again
 
 ---
+
+## Proxy Configuration
+
+The operator supports proxy environments through standard Go HTTP proxy environment variables:
+
+| Variable | Description | Example |
+| --- | --- | --- |
+| `HTTP_PROXY` | Proxy URL for HTTP requests | `http://proxy.example.com:8080` |
+| `HTTPS_PROXY` | Proxy URL for HTTPS requests | `https://proxy.example.com:8080` |
+| `NO_PROXY` | Comma-separated list of hosts to bypass proxy | `localhost,127.0.0.1,.cluster.local` |
+
+The proxy configuration is automatically applied to:
+- OCM API client (for external OpenShift Cluster Manager communication)
+- DVO client (for Deployment Validation Operator communication in Routes mode)
+- AlertManager client (for alert management)
+- Metrics client (for Prometheus metrics)
+
+**Note**: The OCM Agent client (local cluster service) does not use proxy configuration as it communicates with local services only.
+
+### HTTP Client Configuration
+
+The operator uses the OCM SDK with enhanced timeout and retry configuration:
+
+- **Connection timeout**: 30 seconds (TCP connection establishment)
+- **TLS handshake timeout**: 10-30 seconds (depending on service)
+- **Keep-alive interval**: 30 seconds (TCP keep-alive probes)
+- **Retry configuration**: 5 maximum retries with 2-second initial delay and 30% jitter
+
+These settings ensure reliable communication in high-latency and proxy environments.
 
 ## Linting
 

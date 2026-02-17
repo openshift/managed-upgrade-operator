@@ -17,7 +17,9 @@ The **Managed Upgrade Operator** is a Kubernetes operator written in Go that man
 ### Key Dependencies
 - **OpenShift APIs**: `github.com/openshift/api`, `github.com/openshift/client-go`
 - **Cluster Version Operator**: `github.com/openshift/cluster-version-operator`
-- **OCM SDK**: `github.com/openshift-online/ocm-sdk-go` (for managed cluster integration)
+- **OCM SDK**: `github.com/openshift-online/ocm-sdk-go v0.1.494+` (official SDK for managed cluster integration)
+  - Uses typed models from `clustersmgmt/v1` and `servicelogs/v1` packages
+  - Replaces legacy custom OCM model structs
 - **Prometheus**: Metrics collection and alerting management
 - **Kubernetes APIs**: `k8s.io/api`, `k8s.io/client-go`, `k8s.io/apimachinery`
 
@@ -65,6 +67,21 @@ The operator is driven by `UpgradeConfig` CRs that define:
 - Drain timeout (`spec.PDBForceDrainTimeout`)
 - Capacity reservation needs (`spec.capacityReservation`)
 - Upgrade type: OSD or ARO (`spec.type`)
+
+### External Service Integration
+
+**OCM API Integration**:
+- Uses official `ocm-sdk-go` with typed models
+- Supports proxy environments (`HTTP_PROXY`, `HTTPS_PROXY`, `NO_PROXY`)
+- Automatic retry with exponential backoff (5 retries, 2s initial delay, 30% jitter)
+- Enhanced timeouts for high-latency environments (30s connection, 10s TLS handshake)
+
+**Client Implementations**:
+- `pkg/ocm`: External OCM API client (api.openshift.com) with proxy support
+- `pkg/ocmagent`: Local OCM Agent client (cluster service) without proxy
+- `pkg/dvo`: Deployment Validation Operator client with proxy support
+- `pkg/maintenance`: AlertManager client with proxy support
+- `pkg/metrics`: Prometheus metrics client with proxy support
 
 ### Controllers Architecture
 1. **UpgradeConfig Controller**: Main orchestrator that processes UpgradeConfig CRs
