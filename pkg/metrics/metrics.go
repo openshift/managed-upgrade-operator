@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"strconv"
@@ -201,7 +202,17 @@ func MonitoringTLSConfig(c client.Client) (*tls.Config, error) {
 func (prt *prometheusRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	req.Header.Add("Authorization", "Bearer "+prt.token)
 	transport := http.Transport{
-		TLSHandshakeTimeout: time.Second * 5,
+		// Configure proxy using Go's standard environment variable handling
+		// Respects HTTP_PROXY, HTTPS_PROXY, and NO_PROXY environment variables
+		// See: https://pkg.go.dev/net/http#ProxyFromEnvironment
+		Proxy: http.ProxyFromEnvironment,
+
+		// Configure timeouts for reliable Prometheus communication
+		DialContext: (&net.Dialer{
+			Timeout:   30 * time.Second, // Maximum time to establish TCP connection
+			KeepAlive: 30 * time.Second, // TCP keep-alive probe interval
+		}).DialContext,
+		TLSHandshakeTimeout: 30 * time.Second, // Maximum time for TLS handshake (increased from 5s for proxy environments)
 		TLSClientConfig:     prt.tls,
 	}
 	return transport.RoundTrip(req)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -55,7 +56,17 @@ func (ammb *alertManagerMaintenanceBuilder) NewClient(client client.Client) (Mai
 	}
 
 	transport.Transport = &http.Transport{
-		TLSClientConfig: tlsConfig,
+		// Configure proxy support for Routes mode (when AlertManager is accessed externally)
+		// Respects HTTP_PROXY, HTTPS_PROXY, and NO_PROXY environment variables
+		Proxy: http.ProxyFromEnvironment,
+
+		// Configure timeouts for reliable AlertManager communication
+		DialContext: (&net.Dialer{
+			Timeout:   30 * time.Second, // Maximum time to establish TCP connection
+			KeepAlive: 30 * time.Second, // TCP keep-alive probe interval
+		}).DialContext,
+		TLSHandshakeTimeout: 30 * time.Second, // Maximum time for TLS handshake
+		TLSClientConfig:     tlsConfig,
 	}
 
 	return &alertManagerMaintenance{

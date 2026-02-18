@@ -3,10 +3,11 @@ package ocmagent
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"net/url"
 	"os"
+	"time"
 
-	"github.com/go-resty/resty/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	sdk "github.com/openshift-online/ocm-sdk-go"
@@ -29,12 +30,6 @@ func NewBuilder() OcmAgentClientBuilder {
 
 type ocmAgentClientBuilder struct{}
 
-// SdkClient is the ocm client with which we can run the commands
-// currently we do not need to export the connection or the config, as we create the SdkClient using the New func
-type SdkClient struct {
-	conn *sdk.Connection
-}
-
 func (oacb *ocmAgentClientBuilder) New(c client.Client, ocmBaseUrl *url.URL) (ocm.OcmClient, error) {
 
 	// Fetch the cluster AccessToken
@@ -43,26 +38,45 @@ func (oacb *ocmAgentClientBuilder) New(c client.Client, ocmBaseUrl *url.URL) (oc
 		return nil, fmt.Errorf("failed to retrieve cluster access token")
 	}
 
-	// Set up the HTTP client using the token
-	httpClient := resty.New().SetTransport(&ocmRoundTripper{})
-	httpClient = httpClient.SetHeaders(map[string]string{"User-Agent": config.SetUserAgent()})
-
-	// Setup OCM SDK client using the token
-	authVal := fmt.Sprintf("%v:%v", accessToken.ClusterId, accessToken.PullSecret)
-	sdkConnection, err := sdk.NewConnectionBuilder().Tokens(authVal).URL(ocmBaseUrl.String()).BuildContext(context.Background())
+	// Setup OCM SDK client with custom auth and TLS timeout (no proxy for local service)
+	sdkConnection, err := sdk.NewConnectionBuilder().
+		URL(ocmBaseUrl.String()).
+		Agent(config.SetUserAgent()).
+		TransportWrapper(func(base http.RoundTripper) http.RoundTripper {
+			// Configure TLS timeout on the base transport (once, at setup time)
+			if transport, ok := base.(*http.Transport); ok {
+				transport.TLSHandshakeTimeout = 30 * time.Second
+			}
+			return &ocmAgentAuthTransport{
+				wrapped:       base,
+				authorization: *accessToken,
+			}
+		}).
+		BuildContext(context.Background())
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Can't build connection: %v\n", err)
 		return nil, err
 	}
 
-	client := SdkClient{}
-	client.conn = sdkConnection
-
 	return &ocmClient{
 		client:     c,
 		ocmBaseUrl: ocmBaseUrl,
-		httpClient: httpClient,
-		sdkClient:  &client,
+		conn:       sdkConnection,
 	}, nil
 
+}
+
+// ocmAgentAuthTransport is a custom HTTP transport for OCM Agent service
+// that adds authentication and configures TLS timeout (no proxy needed for local service)
+type ocmAgentAuthTransport struct {
+	wrapped       http.RoundTripper
+	authorization util.AccessToken
+}
+
+func (t *ocmAgentAuthTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	// Add custom authorization header
+	authVal := fmt.Sprintf("AccessToken %s:%s", t.authorization.ClusterId, t.authorization.PullSecret)
+	req.Header.Set("Authorization", authVal)
+
+	return t.wrapped.RoundTrip(req)
 }

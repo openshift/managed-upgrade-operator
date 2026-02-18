@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"time"
 
+	cmv1 "github.com/openshift-online/ocm-sdk-go/clustersmgmt/v1"
 	servicelogsv1 "github.com/openshift-online/ocm-sdk-go/servicelogs/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -123,26 +125,26 @@ func (s *ocmNotifier) NotifyState(state MuoState, description string) error {
 		}
 	}
 
-	policyId, err := s.getPolicyIdForUpgradeConfig(cluster.Id)
+	policyId, err := s.getPolicyIdForUpgradeConfig(cluster.ID())
 	if err != nil {
 		return fmt.Errorf("can't determine policy ID to notify for: %v", err)
 	}
 
-	currentState, err := s.ocmClient.GetClusterUpgradePolicyState(*policyId, cluster.Id)
+	currentState, err := s.ocmClient.GetClusterUpgradePolicyState(*policyId, cluster.ID())
 	if err != nil {
 		return fmt.Errorf("can't determine policy state: %v", err)
 	}
 
 	var muoCurrent MuoState
 	// Return the MuoState from the current OcmState, determine if MUO is "skipped" or "delayed" it is OCM "deleyed"
-	if OcmState(currentState.Value) == OcmStateDelayed {
-		if strings.Contains(currentState.Description, "retry") {
+	if OcmState(currentState.Value()) == OcmStateDelayed {
+		if strings.Contains(currentState.Description(), "retry") {
 			muoCurrent = MuoStateDelayed
 		} else {
 			muoCurrent = MuoStateSkipped
 		}
 	} else {
-		mstate, ok := mapState(OcmState(currentState.Value), stateMap)
+		mstate, ok := mapState(OcmState(currentState.Value()), stateMap)
 		if !ok {
 			return fmt.Errorf("failed to convert OCM state")
 		}
@@ -156,7 +158,7 @@ func (s *ocmNotifier) NotifyState(state MuoState, description string) error {
 		return nil
 	}
 
-	err = s.ocmClient.SetState(string(stateMap[state]), description, *policyId, cluster.Id)
+	err = s.ocmClient.SetState(string(stateMap[state]), description, *policyId, cluster.ID())
 	if err != nil {
 		return fmt.Errorf("can't send notification: %v", err)
 	}
@@ -180,12 +182,16 @@ func (s *ocmNotifier) getPolicyIdForUpgradeConfig(clusterId string) (*string, er
 	// Find the policy that matches our UC
 	foundPolicy := false
 	policyId := ""
-	for _, policy := range policies.Items {
-		if policy.Version == uc.Spec.Desired.Version && policy.NextRun == uc.Spec.UpgradeAt {
+	policies.Items().Each(func(policy *cmv1.UpgradePolicy) bool {
+		// NextRun() returns time.Time, format it for comparison with UpgradeAt string
+		nextRunStr := policy.NextRun().Format(time.RFC3339)
+		if policy.Version() == uc.Spec.Desired.Version && nextRunStr == uc.Spec.UpgradeAt {
 			foundPolicy = true
-			policyId = policy.Id
+			policyId = policy.ID()
+			return false // Stop iteration
 		}
-	}
+		return true
+	})
 
 	if !foundPolicy {
 		return nil, fmt.Errorf("no policy matches the current UpgradeConfig")

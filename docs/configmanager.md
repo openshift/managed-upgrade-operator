@@ -22,6 +22,8 @@ For source-specific configuration, see the correpsonding section below.
 
 ### OCM UpgradeConfig Manager
 
+The OCM UpgradeConfig Manager uses the official OpenShift Cluster Manager SDK (`ocm-sdk-go`) to communicate with the OCM API. The SDK provides typed interfaces for clusters, upgrade policies, and service logs.
+
 The following configuration fields must be set:
 
 | Field | Description | Example |
@@ -32,6 +34,12 @@ The following configuration fields must be set:
 
 The OCM UpgradeConfig Manager will intentionally apply a jitter factor of 10% to the watch interval, so the precise frequency may not always be the value specified.
 
+**OCM SDK Features:**
+- **Typed API**: Uses SDK types (`cmv1.Cluster`, `cmv1.UpgradePolicy`, `cmv1.UpgradePolicyState`) instead of custom structs
+- **Automatic Retry**: Configured with 5 retry attempts for 503, 429, and network errors
+- **Proxy Support**: Automatically respects `HTTP_PROXY`, `HTTPS_PROXY`, and `NO_PROXY` environment variables
+- **Enhanced Timeouts**: 30-second connection timeout and 10-second TLS handshake timeout for reliable communication
+
 Complete example:
 ```yaml
 configManager:
@@ -40,7 +48,7 @@ configManager:
   watchInterval: 60
 ```
 
-If we set the OCM base URL to the URL of the local OCM agent service (`http://ocm-agent.openshift-ocm-agent-operator.svc.cluster.local:8081`) we will activate the `ocmAgent` client handler, which will use the OCM agent endpoints set out in the [OCM Agent router](https://github.com/openshift/ocm-agent/blob/master/pkg/cli/serve/serve.go)
+If we set the OCM base URL to the URL of the local OCM agent service (`http://ocm-agent.openshift-ocm-agent-operator.svc.cluster.local:8081`) we will activate the `ocmAgent` client handler, which will use the OCM agent endpoints set out in the [OCM Agent router](https://github.com/openshift/ocm-agent/blob/master/pkg/cli/serve/serve.go). The OCM Agent client does not use proxy configuration as it communicates with local cluster services only.
 
 ### LOCAL UpgradeConfig Manager
 

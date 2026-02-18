@@ -117,6 +117,43 @@ Custom Resource that can be reconciled against by the `UpgradeConfig` controller
 
 For more information, see the dedicated section on this topic: [UpgradeConfig Managers](configmanager.md)
 
+## External Service Clients
+
+The operator communicates with several external services using HTTP clients with standardized configuration:
+
+### OCM Client
+
+The OCM client uses the official OpenShift Cluster Manager SDK (`github.com/openshift-online/ocm-sdk-go`) to interact with:
+- Cluster information API (`/api/clusters_mgmt/v1/clusters/{cluster_id}`)
+- Upgrade policies API (`/api/clusters_mgmt/v1/clusters/{cluster_id}/upgrade_policies`)
+- Service logs API (`/api/service_logs/v1/clusters/{cluster_id}/service_logs`)
+
+**Features:**
+- Typed SDK models (`cmv1.Cluster`, `cmv1.UpgradePolicy`, `cmv1.UpgradePolicyState`, `servicelogsv1.LogEntry`)
+- Automatic retry with exponential backoff (5 retries, 2-second initial delay, 30% jitter)
+- Proxy support via environment variables (`HTTP_PROXY`, `HTTPS_PROXY`, `NO_PROXY`)
+- Configurable timeouts (30s connection, 10s TLS handshake, 30s keep-alive)
+
+**Implementation**: See `pkg/ocm/client.go` and `pkg/ocm/builder.go`
+
+### OCM Agent Client
+
+For clusters with the OCM Agent operator deployed, the operator can communicate with a local OCM Agent service instead of the external OCM API. The OCM Agent client:
+- Uses the same OCM SDK interfaces as the OCM client
+- Communicates with local service URL: `http://ocm-agent.openshift-ocm-agent-operator.svc.cluster.local:8081`
+- Does not use proxy configuration (local cluster communication only)
+- Uses custom authentication transport with cluster access token
+
+**Implementation**: See `pkg/ocmagent/client.go` and `pkg/ocmagent/builder.go`
+
+### Other External Clients
+
+- **DVO Client** (`pkg/dvo/client.go`): Deployment Validation Operator client with proxy support
+- **AlertManager Client** (`pkg/maintenance/alertmanagerMaintenance.go`): Alert silencing with proxy support
+- **Metrics Client** (`pkg/metrics/metrics.go`): Prometheus metrics with proxy support
+
+All external clients support proxy configuration and use enhanced timeout settings for reliable communication in various network environments.
+
 ## Controllers
 
 The `managed upgrade operator` provided upgrade process revolves around multiple Controllers. Alongside the above mentioned `UpgradeConfig` controller, the `NodeKeeper` controller works simultaneously in an upgrade process towards the state of nodes in the cluster.
