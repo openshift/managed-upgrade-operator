@@ -43,6 +43,10 @@ func (oacb *ocmAgentClientBuilder) New(c client.Client, ocmBaseUrl *url.URL) (oc
 		URL(ocmBaseUrl.String()).
 		Agent(config.SetUserAgent()).
 		TransportWrapper(func(base http.RoundTripper) http.RoundTripper {
+			// Configure TLS timeout on the base transport (once, at setup time)
+			if transport, ok := base.(*http.Transport); ok {
+				transport.TLSHandshakeTimeout = 30 * time.Second
+			}
 			return &ocmAgentAuthTransport{
 				wrapped:       base,
 				authorization: *accessToken,
@@ -73,11 +77,6 @@ func (t *ocmAgentAuthTransport) RoundTrip(req *http.Request) (*http.Response, er
 	// Add custom authorization header
 	authVal := fmt.Sprintf("AccessToken %s:%s", t.authorization.ClusterId, t.authorization.PullSecret)
 	req.Header.Set("Authorization", authVal)
-
-	// Configure TLS timeout if the base transport is *http.Transport
-	if transport, ok := t.wrapped.(*http.Transport); ok {
-		transport.TLSHandshakeTimeout = 5 * time.Second
-	}
 
 	return t.wrapped.RoundTrip(req)
 }
