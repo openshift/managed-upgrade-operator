@@ -195,6 +195,7 @@ objects:
         spec:
           serviceName: ${OCM_VPCE_SERVICE_NAME_EAST}
           securityGroup:
+            useVpcCidr: true
             ingressRules:
               - fromPort: 443
                 toPort: 443
@@ -244,6 +245,7 @@ objects:
         spec:
           serviceName: ${OCM_VPCE_SERVICE_NAME_WEST}
           securityGroup:
+            useVpcCidr: true
             ingressRules:
               - fromPort: 443
                 toPort: 443
