@@ -67,8 +67,6 @@ spec:
                   fieldPath: metadata.namespace
             - name: OPERATOR_NAME
               value: "managed-upgrade-operator"
-            - name: GODEBUG
-              value: tlsmlkem=0
           volumeMounts:
           - mountPath: /etc/pki/ca-trust/extracted/pem
             name: trusted-ca-bundle
