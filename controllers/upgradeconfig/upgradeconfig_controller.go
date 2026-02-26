@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-multierror"
+	configv1 "github.com/openshift/api/config/v1"
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/api/v1alpha1"
 	muocfg "github.com/openshift/managed-upgrade-operator/config"
 	"github.com/openshift/managed-upgrade-operator/pkg/clusterversion"
@@ -31,9 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-var (
-	log = logf.Log.WithName("controller_upgradeconfig")
-)
+var log = logf.Log.WithName("controller_upgradeconfig")
 
 // blank assignment to verify that ReconcileUpgradeConfig implements reconcile.Reconciler
 var _ reconcile.Reconciler = &ReconcileUpgradeConfig{}
@@ -101,23 +100,50 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 	if history == nil {
 		precedingVersion := clusterversion.GetPrecedingVersion(clusterVersion, instance)
 
-		upgraded, err := cvClient.HasUpgradeCommenced(instance)
-		if err != nil {
-			return reconcile.Result{}, fmt.Errorf("could not tell if cluster was upgrading: %v", err)
-		}
-		if upgraded {
-			// If CVO is currently set to the version of the UC, then we need to be in an Upgrading phase, at minimum.
-			// We also won't know the actual start time, so picking now will just have to do
+		// Check if the upgrade has already completed in CVO. This handles the case where
+		// the UpgradeConfig was recreated (e.g., by UpgradeConfigManager due to spec changes)
+		// after an upgrade finished, causing the status/history to be lost.
+		if cvClient.HasUpgradeCompleted(clusterVersion, instance) {
+			reqLogger.Info("Upgrade already completed for this version, setting phase to Upgraded")
+			// Find the completion and start times from CVO's history
+			var startTime, completeTime *metav1.Time
+			for _, h := range clusterVersion.Status.History {
+				if h.Version == instance.Spec.Desired.Version && h.State == configv1.CompletedUpdate {
+					startTime = &metav1.Time{Time: h.StartedTime.Time}
+					if h.CompletionTime != nil {
+						completeTime = &metav1.Time{Time: h.CompletionTime.Time}
+					}
+					break
+				}
+			}
 			history = &upgradev1alpha1.UpgradeHistory{
 				PrecedingVersion: precedingVersion,
 				Version:          instance.Spec.Desired.Version,
-				Phase:            upgradev1alpha1.UpgradePhaseUpgrading,
-				StartTime:        &metav1.Time{Time: time.Now()}}
+				Phase:            upgradev1alpha1.UpgradePhaseUpgraded,
+				StartTime:        startTime,
+				CompleteTime:     completeTime,
+			}
 		} else {
-			history = &upgradev1alpha1.UpgradeHistory{
-				PrecedingVersion: precedingVersion,
-				Version:          instance.Spec.Desired.Version,
-				Phase:            upgradev1alpha1.UpgradePhaseNew}
+			upgraded, err := cvClient.HasUpgradeCommenced(instance)
+			if err != nil {
+				return reconcile.Result{}, fmt.Errorf("could not tell if cluster was upgrading: %v", err)
+			}
+			if upgraded {
+				// If CVO is currently set to the version of the UC, then we need to be in an Upgrading phase, at minimum.
+				// We also won't know the actual start time, so picking now will just have to do
+				history = &upgradev1alpha1.UpgradeHistory{
+					PrecedingVersion: precedingVersion,
+					Version:          instance.Spec.Desired.Version,
+					Phase:            upgradev1alpha1.UpgradePhaseUpgrading,
+					StartTime:        &metav1.Time{Time: time.Now()},
+				}
+			} else {
+				history = &upgradev1alpha1.UpgradeHistory{
+					PrecedingVersion: precedingVersion,
+					Version:          instance.Spec.Desired.Version,
+					Phase:            upgradev1alpha1.UpgradePhaseNew,
+				}
+			}
 		}
 		history.Conditions = upgradev1alpha1.NewConditions()
 		instance.Status.History = append([]upgradev1alpha1.UpgradeHistory{*history}, instance.Status.History...)
@@ -370,7 +396,6 @@ func isManagedUpgrade(name string) bool {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ReconcileUpgradeConfig) SetupWithManager(mgr ctrl.Manager) error {
-
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&upgradev1alpha1.UpgradeConfig{}).
 		WithEventFilter(StatusChangedPredicate()).
