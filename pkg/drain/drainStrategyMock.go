@@ -21,6 +21,7 @@ import (
 type MockDrainStrategy struct {
 	ctrl     *gomock.Controller
 	recorder *MockDrainStrategyMockRecorder
+	isgomock struct{}
 }
 
 // MockDrainStrategyMockRecorder is the mock recorder for MockDrainStrategy.

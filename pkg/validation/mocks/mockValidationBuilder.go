@@ -21,6 +21,7 @@ import (
 type MockValidationBuilder struct {
 	ctrl     *gomock.Controller
 	recorder *MockValidationBuilderMockRecorder
+	isgomock struct{}
 }
 
 // MockValidationBuilderMockRecorder is the mock recorder for MockValidationBuilder.
