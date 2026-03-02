@@ -81,7 +81,7 @@ var pagingAlerts = []string{
 	//"UpgradeNotificationFailedSRE", TODO: OSD-26790 - Create an Alert in mcc repo
 }
 
-//go:generate mockgen -destination=mocks/metrics.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/metrics Metrics
+//go:generate go run go.uber.org/mock/mockgen -destination=mocks/metrics.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/metrics Metrics
 type Metrics interface {
 	UpdateMetricValidationFailed(string)
 	UpdateMetricValidationSucceeded(string)
@@ -118,7 +118,7 @@ type Metrics interface {
 	Query(query string) (*AlertResponse, error)
 }
 
-//go:generate mockgen -destination=mocks/metrics_builder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/metrics MetricsBuilder
+//go:generate go run go.uber.org/mock/mockgen -destination=mocks/metrics_builder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/metrics MetricsBuilder
 type MetricsBuilder interface {
 	NewClient(c client.Client) (Metrics, error)
 }

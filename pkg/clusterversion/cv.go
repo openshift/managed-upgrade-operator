@@ -28,7 +28,7 @@ const (
 
 // ClusterVersion interface enables implementations of the ClusterVersion
 
-//go:generate mockgen -destination=mocks/mockClusterVersion.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/clusterversion ClusterVersion
+//go:generate go run go.uber.org/mock/mockgen -destination=mocks/mockClusterVersion.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/clusterversion ClusterVersion
 type ClusterVersion interface {
 	GetClusterVersion() (*configv1.ClusterVersion, error)
 	HasUpgradeCommenced(*upgradev1alpha1.UpgradeConfig) (bool, error)
@@ -40,7 +40,7 @@ type ClusterVersion interface {
 
 // ClusterVersionBuilder returns a ClusterVersion interface
 
-//go:generate mockgen -destination=mocks/mockClusterVersionBuilder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/clusterversion ClusterVersionBuilder
+//go:generate go run go.uber.org/mock/mockgen -destination=mocks/mockClusterVersionBuilder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/clusterversion ClusterVersionBuilder
 type ClusterVersionBuilder interface {
 	New(client.Client) ClusterVersion
 }

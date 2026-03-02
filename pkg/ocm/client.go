@@ -47,7 +47,7 @@ var (
 
 // OcmClient enables an implementation of an ocm client
 //
-//go:generate mockgen -destination=mocks/client.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/ocm OcmClient
+//go:generate go run go.uber.org/mock/mockgen -destination=mocks/client.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/ocm OcmClient
 type OcmClient interface {
 	GetCluster() (*cmv1.Cluster, error)
 	GetClusterUpgradePolicies(clusterId string) (*cmv1.UpgradePoliciesListResponse, error)

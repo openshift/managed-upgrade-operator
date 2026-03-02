@@ -16,7 +16,7 @@ var (
 
 // Scheduler is an interface that enables implementations of type Scheduler
 //
-//go:generate mockgen -destination=mocks/mockScheduler.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/scheduler Scheduler
+//go:generate go run go.uber.org/mock/mockgen -destination=mocks/mockScheduler.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/scheduler Scheduler
 type Scheduler interface {
 	IsReadyToUpgrade(*upgradev1alpha1.UpgradeConfig, time.Duration) SchedulerResult
 }

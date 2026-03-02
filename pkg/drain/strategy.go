@@ -21,7 +21,7 @@ import (
 
 // NodeDrainStrategyBuilder enables implementation for a NodeDrainStrategyBuilder
 //
-//go:generate mockgen -destination=mocks/nodeDrainStrategyBuilder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/drain NodeDrainStrategyBuilder
+//go:generate go run go.uber.org/mock/mockgen -destination=mocks/nodeDrainStrategyBuilder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/drain NodeDrainStrategyBuilder
 type NodeDrainStrategyBuilder interface {
 	NewNodeDrainStrategy(c client.Client, logger logr.Logger, uc *upgradev1alpha1.UpgradeConfig, cfg *NodeDrain) (NodeDrainStrategy, error)
 	NewDefaultNodeDrainStrategy(c client.Client, logger logr.Logger, uc *upgradev1alpha1.UpgradeConfig, cfg *NodeDrain) (NodeDrainStrategy, error)
@@ -29,7 +29,7 @@ type NodeDrainStrategyBuilder interface {
 
 // NodeDrainStrategy enables implementation for a NodeDrainStrategy
 //
-//go:generate mockgen -destination=mocks/nodeDrainStrategy.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/drain NodeDrainStrategy
+//go:generate go run go.uber.org/mock/mockgen -destination=mocks/nodeDrainStrategy.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/drain NodeDrainStrategy
 type NodeDrainStrategy interface {
 	Execute(*corev1.Node, logr.Logger) ([]*DrainStrategyResult, error)
 	HasFailed(*corev1.Node, logr.Logger) (bool, error)
@@ -37,7 +37,7 @@ type NodeDrainStrategy interface {
 
 // DrainStrategy enables implementation for a DrainStrategy
 //
-//go:generate mockgen -destination=./drainStrategyMock.go -package=drain -self_package=github.com/openshift/managed-upgrade-operator/pkg/drain github.com/openshift/managed-upgrade-operator/pkg/drain DrainStrategy
+//go:generate go run go.uber.org/mock/mockgen -destination=./drainStrategyMock.go -package=drain -self_package=github.com/openshift/managed-upgrade-operator/pkg/drain github.com/openshift/managed-upgrade-operator/pkg/drain DrainStrategy
 type DrainStrategy interface {
 	Execute(*corev1.Node, logr.Logger) (*DrainStrategyResult, error)
 	IsValid(*corev1.Node, logr.Logger) (bool, error)
@@ -45,7 +45,7 @@ type DrainStrategy interface {
 
 // TimedDrainStrategy enables implementation for a TimedDrainStrategy
 //
-//go:generate mockgen -destination=./timedDrainStrategyMock.go -package=drain -self_package=github.com/openshift/managed-upgrade-operator/pkg/drain github.com/openshift/managed-upgrade-operator/pkg/drain TimedDrainStrategy
+//go:generate go run go.uber.org/mock/mockgen -destination=./timedDrainStrategyMock.go -package=drain -self_package=github.com/openshift/managed-upgrade-operator/pkg/drain github.com/openshift/managed-upgrade-operator/pkg/drain TimedDrainStrategy
 type TimedDrainStrategy interface {
 	GetWaitDuration() time.Duration
 	GetName() string

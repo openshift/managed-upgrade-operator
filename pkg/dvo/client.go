@@ -24,7 +24,7 @@ var (
 
 // DvoClient enables an implementation of a DVO client
 
-//go:generate mockgen -destination=mocks/client.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/dvo DvoClient
+//go:generate go run go.uber.org/mock/mockgen -destination=mocks/client.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/dvo DvoClient
 type DvoClient interface {
 	GetMetrics() ([]byte, error)
 }

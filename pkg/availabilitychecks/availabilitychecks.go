@@ -5,7 +5,7 @@ type Config interface{}
 
 // AvailabilityChecker is an interface that enables implementations of AvailabilityChecker
 //
-//go:generate mockgen -destination=mocks/mockAvailabilityChecks.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/availabilitychecks AvailabilityChecker
+//go:generate go run go.uber.org/mock/mockgen -destination=mocks/mockAvailabilityChecks.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/availabilitychecks AvailabilityChecker
 type AvailabilityChecker interface {
 	AvailabilityCheck() error
 }

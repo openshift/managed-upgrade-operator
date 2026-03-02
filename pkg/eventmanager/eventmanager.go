@@ -54,7 +54,7 @@ const (
 
 // EventManager enables implementation of an EventManager
 //
-//go:generate mockgen -destination=mocks/eventmanager.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/eventmanager EventManager
+//go:generate go run go.uber.org/mock/mockgen -destination=mocks/eventmanager.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/eventmanager EventManager
 type EventManager interface {
 	Notify(state notifier.MuoState) error
 	NotifyResult(state notifier.MuoState, result string) error
@@ -62,7 +62,7 @@ type EventManager interface {
 
 // EventManagerBuilder enables implementation of an EventManagerBuilder
 //
-//go:generate mockgen -destination=mocks/eventmanager_builder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/eventmanager EventManagerBuilder
+//go:generate go run go.uber.org/mock/mockgen -destination=mocks/eventmanager_builder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/eventmanager EventManagerBuilder
 type EventManagerBuilder interface {
 	NewManager(client.Client) (EventManager, error)
 }

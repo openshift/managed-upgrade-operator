@@ -40,7 +40,7 @@ func NewBuilder() ValidationBuilder {
 
 // Validator knows how to validate UpgradeConfig CRs.
 //
-//go:generate mockgen -destination=mocks/mockValidation.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/validation Validator
+//go:generate go run go.uber.org/mock/mockgen -destination=mocks/mockValidation.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/validation Validator
 type Validator interface {
 	IsValidUpgradeConfig(c client.Client, uC *upgradev1alpha1.UpgradeConfig, cV *configv1.ClusterVersion, logger logr.Logger) (ValidatorResult, error)
 }
@@ -231,7 +231,7 @@ func getUpstreamURL(cV *configv1.ClusterVersion) string {
 
 // ValidationBuilder is a interface that enables ValidationBuiler implementations
 //
-//go:generate mockgen -destination=mocks/mockValidationBuilder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/validation ValidationBuilder
+//go:generate go run go.uber.org/mock/mockgen -destination=mocks/mockValidationBuilder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/validation ValidationBuilder
 type ValidationBuilder interface {
 	NewClient(configmanager.ConfigManager) (Validator, error)
 }

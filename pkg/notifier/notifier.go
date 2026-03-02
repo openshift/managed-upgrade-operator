@@ -15,14 +15,14 @@ import (
 
 // Notifier is an interface that enables implementation of a Notifier
 //
-//go:generate mockgen -destination=mocks/notifier.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/notifier Notifier
+//go:generate go run go.uber.org/mock/mockgen -destination=mocks/notifier.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/notifier Notifier
 type Notifier interface {
 	NotifyState(value MuoState, description string) error
 }
 
 // NotifierBuilder is an interface that enables implementation of a NotifierBuilder
 //
-//go:generate mockgen -destination=mocks/notifier_builder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/notifier NotifierBuilder
+//go:generate go run go.uber.org/mock/mockgen -destination=mocks/notifier_builder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/notifier NotifierBuilder
 type NotifierBuilder interface {
 	New(client.Client, configmanager.ConfigManagerBuilder, upgradeconfigmanager.UpgradeConfigManagerBuilder) (Notifier, error)
 }

@@ -11,7 +11,7 @@ import (
 
 // ConfigManagerBuilder is an interface describing the functions of a cluster upgrader.
 //
-//go:generate mockgen -destination=mocks/configmanagerbuilder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/configmanager ConfigManagerBuilder
+//go:generate go run go.uber.org/mock/mockgen -destination=mocks/configmanagerbuilder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/configmanager ConfigManagerBuilder
 type ConfigManagerBuilder interface {
 	New(client.Client, Target) ConfigManager
 }
@@ -32,7 +32,7 @@ func NewBuilder() ConfigManagerBuilder {
 
 // ConfigManager is an interface describing the functions of a cluster upgrader.
 //
-//go:generate mockgen -destination=mocks/configmanager.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/configmanager ConfigManager
+//go:generate go run go.uber.org/mock/mockgen -destination=mocks/configmanager.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/configmanager ConfigManager
 type ConfigManager interface {
 	Into(ConfigValidator) error
 }

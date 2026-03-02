@@ -57,7 +57,7 @@ var (
 
 // UpgradeConfigManager enables an implementation of an UpgradeConfigManager
 //
-//go:generate mockgen -destination=mocks/upgradeconfigmanager.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager UpgradeConfigManager
+//go:generate go run go.uber.org/mock/mockgen -destination=mocks/upgradeconfigmanager.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager UpgradeConfigManager
 type UpgradeConfigManager interface {
 	Get() (*upgradev1alpha1.UpgradeConfig, error)
 	StartSync(stopCh context.Context)
@@ -66,7 +66,7 @@ type UpgradeConfigManager interface {
 
 // UpgradeConfigManagerBuilder enables an implementation of an UpgradeConfigManagerBuilder
 //
-//go:generate mockgen -destination=mocks/upgradeconfigmanager_builder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager UpgradeConfigManagerBuilder
+//go:generate go run go.uber.org/mock/mockgen -destination=mocks/upgradeconfigmanager_builder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager UpgradeConfigManagerBuilder
 type UpgradeConfigManagerBuilder interface {
 	NewManager(client.Client) (UpgradeConfigManager, error)
 }

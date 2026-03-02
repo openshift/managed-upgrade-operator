@@ -18,7 +18,7 @@ import (
 
 // OcmClientBuilder enables implementation of an ocm client.
 //
-//go:generate mockgen -destination=mocks/builder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/ocm OcmClientBuilder
+//go:generate go run go.uber.org/mock/mockgen -destination=mocks/builder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/ocm OcmClientBuilder
 type OcmClientBuilder interface {
 	New(c client.Client, ocmBaseUrl *url.URL) (OcmClient, error)
 }

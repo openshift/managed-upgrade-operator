@@ -13,7 +13,7 @@ import (
 
 // AlertManagerSilencer interface enables implementations of an AlertManagerSilencer
 //
-//go:generate mockgen -destination=mocks/alertManagerSilenceClient.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/alertmanager AlertManagerSilencer
+//go:generate go run go.uber.org/mock/mockgen -destination=mocks/alertManagerSilenceClient.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/alertmanager AlertManagerSilencer
 type AlertManagerSilencer interface {
 	Create(matchers amv2Models.Matchers, startsAt strfmt.DateTime, endsAt strfmt.DateTime, creator string, comment string) error
 	List(filter []string) (*amSilence.GetSilencesOK, error)
