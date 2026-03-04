@@ -8,11 +8,7 @@ metadata:
     build.appstudio.redhat.com/target_branch: '{{target_branch}}'
     pipelinesascode.tekton.dev/cancel-in-progress: 'true'
     pipelinesascode.tekton.dev/max-keep-runs: '3'
-    pipelinesascode.tekton.dev/on-cel-expression: "event == \"pull_request\"\n&& target_branch\
-      \ == \"master\"\n&& (\"**/*.go\".pathChanged() ||\n    \"**/go.*\".pathChanged()\
-      \ ||\n    \"**/*.yaml\".pathChanged() ||\n    \"**/*.yml\".pathChanged() ||\n\
-      \    \"build/Dockerfile\".pathChanged() ||\n    \".tekton/managed-upgrade-operator-pull-request.yaml\"\
-      .pathChanged() )\n"
+    pipelinesascode.tekton.dev/on-cel-expression: event == "pull_request" && target_branch == "master"
   creationTimestamp: null
   labels:
     appstudio.openshift.io/application: managed-upgrade-operator
@@ -34,6 +30,11 @@ spec:
     value: build/Dockerfile
   - name: path-context
     value: .
+    workspaces:
+    - name: git-auth
+      optional: true
+    - name: netrc
+      optional: true
   taskRunTemplate:
     serviceAccountName: build-pipeline-managed-upgrade-operator
   workspaces:
