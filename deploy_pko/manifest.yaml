@@ -33,4 +33,4 @@ spec:
           description: Operator image to deploy
           type: string
           default: None
-        type: object
+      type: object
