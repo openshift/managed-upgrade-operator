@@ -1,0 +1,17 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-from-openshift-managed-upgrade-operator
+  namespace: openshift-deployment-validation-operator
+  annotations:
+    package-operator.run/phase: network
+    package-operator.run/collision-protection: IfNoController
+spec:
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: openshift-managed-upgrade-operator
+  podSelector: {}
+  policyTypes:
+  - Ingress
