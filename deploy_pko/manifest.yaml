@@ -10,7 +10,7 @@ spec:
   phases:
   - name: crds
   - name: namespace
-  - name: network
+  - name: policies
   - name: rbac
   - name: deploy
   - name: cleanup-rbac
