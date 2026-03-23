@@ -1,8 +1,8 @@
 module github.com/openshift/managed-upgrade-operator
 
-go 1.24.0
+go 1.25.0
 
-toolchain go1.24.9
+toolchain go1.25.7
 
 require (
 	github.com/blang/semver/v4 v4.0.0
@@ -16,6 +16,7 @@ require (
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/ginkgo/v2 v2.26.0
 	github.com/onsi/gomega v1.38.2
+	github.com/openshift-online/ocm-api-model/clientapi v0.0.449
 	github.com/openshift-online/ocm-sdk-go v0.1.494
 	github.com/openshift/api v0.0.0-20250929151534-41627d81e9c1
 	github.com/openshift/client-go v0.0.0-20250131180035-f7ec47e2d87a
@@ -90,7 +91,6 @@ require (
 	github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f // indirect
 	github.com/nxadm/tail v1.4.11 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
-	github.com/openshift-online/ocm-api-model/clientapi v0.0.449 // indirect
 	github.com/openshift-online/ocm-api-model/model v0.0.449 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
