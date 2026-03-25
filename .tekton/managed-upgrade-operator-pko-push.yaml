@@ -7,13 +7,13 @@ metadata:
     build.appstudio.redhat.com/target_branch: '{{target_branch}}'
     pipelinesascode.tekton.dev/cancel-in-progress: 'false'
     pipelinesascode.tekton.dev/max-keep-runs: '3'
-    pipelinesascode.tekton.dev/on-cel-expression: event == "push" && target_branch == "master"
-  creationTimestamp: null
+    pipelinesascode.tekton.dev/on-cel-expression: event == "push" && target_branch
+      == "master"
   labels:
     appstudio.openshift.io/application: managed-upgrade-operator
-    appstudio.openshift.io/component: managed-upgrade-operator
+    appstudio.openshift.io/component: managed-upgrade-operator-pko
     pipelines.appstudio.openshift.io/type: build
-  name: managed-upgrade-operator-on-push
+  name: managed-upgrade-operator-pko-on-push
   namespace: managed-upgrade-operator-tenant
 spec:
   params:
@@ -22,18 +22,15 @@ spec:
   - name: revision
     value: '{{revision}}'
   - name: output-image
-    value: quay.io/redhat-user-workloads/managed-upgrade-operator-tenant/openshift/managed-upgrade-operator:{{revision}}
+    value: quay.io/redhat-user-workloads/managed-upgrade-operator-tenant/openshift/managed-upgrade-operator-pko:{{revision}}
   - name: dockerfile
-    value: build/Dockerfile
+    value: build/Dockerfile.pko
   - name: path-context
-    value: .
-    workspaces:
-    - name: git-auth
-      optional: true
-    - name: netrc
-      optional: true
+    value: deploy_pko
+  - name: skip-preflight-cert-check
+    value: true
   taskRunTemplate:
-    serviceAccountName: build-pipeline-managed-upgrade-operator
+    serviceAccountName: build-pipeline-managed-upgrade-operator-pko
   workspaces:
   - name: git-auth
     secret:
