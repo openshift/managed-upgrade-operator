@@ -446,8 +446,8 @@ def get_pko_manifest(operator_name: str) -> dict[str, Any]:
                             "type": "string",
                             "default": "None",
                         },
+                    },
                     "type": "object",
-                    }
                 }
             },
         },
