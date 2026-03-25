@@ -1,7 +1,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: muo-monitoring-interactor
+  name: muo-monitoring-interactor-pko
   namespace: openshift-monitoring
   annotations:
     package-operator.run/phase: rbac
@@ -9,7 +9,7 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: muo-monitoring-interactor
+  name: muo-monitoring-interactor-pko
 subjects:
 - kind: ServiceAccount
   name: managed-upgrade-operator
@@ -18,7 +18,7 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: muo-pullsecret-reader
+  name: muo-pullsecret-reader-pko
   namespace: openshift-config
   annotations:
     package-operator.run/phase: rbac
@@ -26,7 +26,7 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: muo-pullsecret-reader
+  name: muo-pullsecret-reader-pko
 subjects:
 - kind: ServiceAccount
   name: managed-upgrade-operator
@@ -35,7 +35,7 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: muo-dvo-reader
+  name: muo-dvo-reader-pko
   namespace: openshift-deployment-validation-operator
   annotations:
     package-operator.run/phase: rbac
@@ -43,7 +43,7 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: muo-dvo-reader
+  name: muo-dvo-reader-pko
 subjects:
 - kind: ServiceAccount
   name: managed-upgrade-operator
