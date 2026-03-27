@@ -64,8 +64,11 @@ At the top level, the following fields are defined in a list, each list element 
 | Item | Definition | Example |
 | ---- | ---------- | ------- |
 | `version` | The cluster version that the operator events related to | `4.4.6` |
+| `precedingVersion` | The cluster version that the cluster is upgrading from. Determined from the ClusterVersion resource's version history. | `4.4.5` |
 | `startTime` | The ISO-8601 timestamp at which the upgrade commenced. | `2020-07-05T01:35:36Z` |
 | `completeTime` | The ISO-8601 timestamp at which the upgrade completed. | `2020-07-05T01:35:36Z` |
+| `workerStartTime` | The ISO-8601 timestamp at which worker node upgrades began, set by the MachineConfigPool controller when it detects worker pool updating. | `2020-07-05T02:10:00Z` |
+| `workerCompleteTime` | The ISO-8601 timestamp at which all worker node upgrades finished, set by the MachineConfigPool controller when the worker pool reports updated. | `2020-07-05T03:05:00Z` |
 | `phase` | The current phase of the upgrade's application | `New`, `Pending`, `Upgrading`, `Upgraded`, `Failed`, `Unknown` |
 | `conditions` | Data pertaining to a particular upgrade step that the operator performs | - |
 
@@ -73,12 +76,12 @@ Within `conditions`, each upgrade step can record its own individual status. The
 
 | Item | Definition | Example |
 | ---- | ---------- | ------- |
-| `type` | The type of upgrade step being performed | `PreHealthCheck` |
+| `type` | The type of upgrade step being performed | `ClusterHealthyBeforeUpgrade` |
 | `startTime` | The ISO-8601 timestamp at which the step commenced. | `2020-07-05T01:35:36Z` |
 | `completeTime` | The ISO-8601 timestamp at which the step completed. | `2020-07-05T01:35:36Z` |
 | `lastProbeTime` | The last time this step's condition was last probed | `2020-07-05T01:35:36Z` |
 | `lastTransitionTime` | The last time this step transitioend from one status to another | `2020-07-05T01:35:36Z` |
-| `message` | Human-readable details indicating details about the transition | `PreHealthCheck succeed` |
+| `message` | Human-readable details indicating details about the transition | `ClusterHealthyBeforeUpgrade is completed` |
 | `reason` | Human-readable details about why the transition has occurred | `Cluster has critical alerts` |
 | `status` | Status of the condition | `True`, `False`, `Unknown` |
 
@@ -88,26 +91,29 @@ A fully-populated example of an `UpgradeConfig` status is included below:
   status:
     history:
     - phase: Upgraded
-      version: 4.3.26              
-      startTime: "2020-07-05T01:35:36Z"      
-      completeTime: "2020-07-05T03:15:37Z"                                                     
+      version: 4.3.26
+      precedingVersion: 4.3.25
+      startTime: "2020-07-05T01:35:36Z"
+      completeTime: "2020-07-05T03:15:37Z"
+      workerStartTime: "2020-07-05T02:10:00Z"
+      workerCompleteTime: "2020-07-05T03:05:00Z"                                                     
       conditions:            
       - completeTime: "2020-07-05T03:15:36Z"
         lastProbeTime: "2020-07-05T03:15:36Z"
         lastTransitionTime: "2020-07-05T03:15:36Z"                                             
-        message: ScaleUpExtraNodes succeed                                                     
-        reason: ScaleUpExtraNodes succeed  
+        message: ComputeCapacityReserved is completed
+        reason: ComputeCapacityReserved done
         startTime: "2020-07-05T03:15:36Z"
-        status: "True"                   
-        type: ScaleUpExtraNodes
+        status: "True"
+        type: ComputeCapacityReserved
       - completeTime: "2020-07-05T03:15:36Z"
         lastProbeTime: "2020-07-05T03:15:36Z"
         lastTransitionTime: "2020-07-05T03:15:36Z"                                             
-        message: PreHealthCheck succeed                                                        
-        reason: PreHealthCheck succeed                                                         
-        startTime: "2020-07-05T03:15:36Z"                                                      
-        status: "True"                   
-        type: PreHealthCheck
+        message: ClusterHealthyBeforeUpgrade is completed
+        reason: ClusterHealthyBeforeUpgrade done
+        startTime: "2020-07-05T03:15:36Z"
+        status: "True"
+        type: ClusterHealthyBeforeUpgrade
 ```
 
 ## Config Managers
@@ -164,7 +170,7 @@ If an upgrading worker node is experiencing difficulty draining due to condition
 The `NodeKeeper` controller will flag through metrics any worker node that continue to unsuccessfully drain in spite of the remediation strategies.
 
 ## Upgrade Process
-
+ 
 ### Cluster Upgrader
 
 The steps performed by the Managed Upgrade Operator are carried out by implementations of the [clusterUpgrader](../pkg/upgraders/upgrader.go) interface.
@@ -188,7 +194,62 @@ This overall process of executing Upgrade Steps is illustrated below.
 
 To define a new custom procedure for performing a cluster upgrade, a developer should:
 - Create a new implementation of the `clusterUpgrader` that defines a unique order of `UpgradeStep`s.
-- Implement any missing or new `UpgradeStep`s that need to be performed.  
+- Implement any missing or new `UpgradeStep`s that need to be performed.
+
+#### OSD Upgrader Steps
+
+The [osdUpgrader](../pkg/upgraders/osdupgrader.go) defines the following ordered steps (17 total):
+
+| # | Condition Type | Function | Description |
+| --- | --- | --- | --- |
+| 1 | `StartedNotificationSent` | `SendStartedNotification` | Notify external systems that upgrade has started |
+| 2 | `StartedNotificationSent` | `UpgradeDelayedCheck` | Check if upgrade is delayed past the configured `delayTrigger` window |
+| 3 | `IsClusterUpgradable` | `IsUpgradeable` | Verify the ClusterVersion `Upgradeable` condition permits the upgrade |
+| 4 | `ClusterHealthyBeforeUpgrade` | `PreUpgradeHealthCheck` | Pre-upgrade health checks (alerts, operators, nodes, PDBs) |
+| 5 | `ExternalDependenciesAvailable` | `ExternalDependencyAvailabilityCheck` | Validate external HTTP dependencies are reachable |
+| 6 | `ComputeCapacityReserved` | `EnsureExtraUpgradeWorkers` | Scale up extra worker node(s) if `capacityReservation` is enabled |
+| 7 | `ControlPlaneMaintenanceWindowCreated` | `CreateControlPlaneMaintWindow` | Create AlertManager silence for control plane upgrade |
+| 8 | `UpgradeCommenced` | `CommenceUpgrade` | Update ClusterVersion to trigger CVO upgrade |
+| 9 | `ControlPlaneUpgraded` | `ControlPlaneUpgraded` | Wait for control plane upgrade to complete |
+| 10 | `ControlPlaneMaintenanceWindowRemoved` | `RemoveControlPlaneMaintWindow` | Remove control plane AlertManager silence |
+| 11 | `WorkersMaintenanceWindowCreated` | `CreateWorkerMaintWindow` | Create AlertManager silence for worker node upgrades |
+| 12 | `WorkerNodesUpgraded` | `AllWorkersUpgraded` | Wait for all worker nodes to finish upgrading |
+| 13 | `ComputeCapacityRemoved` | `RemoveExtraScaledNodes` | Scale down extra worker node(s) added in step 6 |
+| 14 | `WorkersMaintenanceWindowRemoved` | `RemoveMaintWindow` | Remove worker AlertManager silence |
+| 15 | `ClusterHealthyAfterUpgrade` | `PostUpgradeHealthCheck` | Post-upgrade health checks (alerts, operators) |
+| 16 | `PostUpgradeTasksCompleted` | `PostUpgradeProcedures` | FedRAMP-specific post-upgrade tasks (File Integrity Operator re-init) |
+| 17 | `CompletedNotificationSent` | `SendCompletedNotification` | Notify external systems that upgrade has completed |
+
+Note: Step 2 (`UpgradeDelayedCheck`) reuses the `StartedNotificationSent` condition type rather than tracking under its own condition.
+
+The OSD upgrader also enforces an upgrade failure policy: if the control plane upgrade has not commenced within the configured `upgradeWindow.timeOut` duration, the upgrade is marked as `Failed`, extra scaled nodes are removed, and a failure notification is sent.
+
+#### ARO Upgrader Steps
+
+The [aroUpgrader](../pkg/upgraders/aroupgrader.go) defines a subset of the OSD steps (14 total):
+
+| # | Condition Type | Function |
+| --- | --- | --- |
+| 1 | `StartedNotificationSent` | `SendStartedNotification` |
+| 2 | `ClusterHealthyBeforeUpgrade` | `PreUpgradeHealthCheck` |
+| 3 | `ExternalDependenciesAvailable` | `ExternalDependencyAvailabilityCheck` |
+| 4 | `ComputeCapacityReserved` | `EnsureExtraUpgradeWorkers` |
+| 5 | `ControlPlaneMaintenanceWindowCreated` | `CreateControlPlaneMaintWindow` |
+| 6 | `UpgradeCommenced` | `CommenceUpgrade` |
+| 7 | `ControlPlaneUpgraded` | `ControlPlaneUpgraded` |
+| 8 | `ControlPlaneMaintenanceWindowRemoved` | `RemoveControlPlaneMaintWindow` |
+| 9 | `WorkersMaintenanceWindowCreated` | `CreateWorkerMaintWindow` |
+| 10 | `WorkerNodesUpgraded` | `AllWorkersUpgraded` |
+| 11 | `ComputeCapacityRemoved` | `RemoveExtraScaledNodes` |
+| 12 | `WorkersMaintenanceWindowRemoved` | `RemoveMaintWindow` |
+| 13 | `ClusterHealthyAfterUpgrade` | `PostUpgradeHealthCheck` |
+| 14 | `CompletedNotificationSent` | `SendCompletedNotification` |
+
+Compared to the OSD upgrader, the ARO upgrader omits:
+- `UpgradeDelayedCheck` — no upgrade window delay monitoring
+- `IsClusterUpgradable` — no explicit upgradeable condition check
+- `PostUpgradeProcedures` — no FedRAMP post-upgrade tasks
+- Upgrade failure timeout policy — upgrades are not failed if they don't commence within a time window
 
 ### Ready to upgrade criteria
 
@@ -201,7 +262,23 @@ For example:
 | `2020-05-01 12:00:00` | `2020-05-01 11:50:00` | No, it is not yet 12:00 |
 | `2020-05-01 12:00:00` | `2020-05-01 12:15:00` | Yes, an upgrade can commence |
 
-Specific `clusterUpgrader`s can incorporate additional ready-to-upgrade criteria in their `UpgradeCluster()` implementation. For example, the `osdClusterUpgrader` incorporates the ability to fail an upgrade if it has not commenced a control plane upgrade within a configurable time window.
+Specific `clusterUpgrader`s can incorporate additional ready-to-upgrade criteria in their `UpgradeCluster()` implementation.
+
+#### OSD Upgrade Failure Policy
+
+The `osdUpgrader` enforces an upgrade window timeout. Before executing any upgrade steps, it checks whether the control plane upgrade has commenced (via the ClusterVersion resource). If the upgrade has **not** commenced and the current time exceeds `startTime + upgradeWindow.timeOut`, the upgrade is treated as failed.
+
+The failure procedure ([`performUpgradeFailure`](../pkg/upgraders/osdupgrader.go)) carries out the following actions:
+
+1. **Scale down** any extra machinesets created for capacity reservation
+2. **Send failure notification** to external systems via the event manager
+3. **Flag the `UpgradeWindowBreached` metric** in Prometheus
+4. **Reset failure metrics** from any prior upgrade attempts
+5. **Set the upgrade phase to `Failed`** with a `FailedUpgrade` condition
+
+Once the control plane upgrade has commenced, the failure policy no longer applies — the upgrade cannot be rolled back.
+
+The timeout duration is configured via `upgradeWindow.timeOut` in the operator [ConfigMap](configmap.md#upgradewindow) (default: 120 minutes). The ARO upgrader does not implement this policy.
 
 ### Validating upgrade versions
 
@@ -209,3 +286,21 @@ The following checks are made against the desired version in the `UpgradeConfig`
 
 * The version to upgrade to is greater than the currently-installed version (rollbacks are not supported)
 * The [Cluster Version Operator](https://github.com/openshift/cluster-version-operator) reports it as an available version to upgrade to.
+
+### Feature Gates
+
+The operator supports feature gates that can be enabled via the [ConfigMap](configmap.md#featuregate) to selectively activate optional behavior. Feature gates are defined in [`upgradeconfig_types.go`](../api/v1alpha1/upgradeconfig_types.go) and are disabled by default.
+
+| Feature Gate | Description |
+| --- | --- |
+| `PreHealthCheck` | When enabled, runs extended pre-upgrade health checks (critical alerts, cluster operators, capacity reservation, cordoned nodes, node taints, PDB validation) during the `New` phase if the upgrade is scheduled more than two hours away. Health checks during the `Upgrading` phase always run regardless of this gate. |
+| `ServiceLogNotification` | When enabled, sends additional service log notifications to OCM during upgrade stages (control plane start/finish, worker plane finish, health check failures). |
+
+Feature gates are configured in the operator ConfigMap:
+
+```yaml
+featureGate:
+  enabled:
+  - PreHealthCheck
+  - ServiceLogNotification
+```
