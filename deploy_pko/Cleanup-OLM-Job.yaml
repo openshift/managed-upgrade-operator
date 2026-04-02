@@ -32,6 +32,8 @@ rules:
     resources:
       - clusterserviceversions
       - subscriptions
+      - catalogsources
+      - operatorgroups
     verbs:
       - list
       - get
@@ -86,11 +88,14 @@ spec:
               # Example pattern: operators.coreos.com/OPERATOR_NAME.NAMESPACE
               oc -n openshift-managed-upgrade-operator delete csv -l "operators.coreos.com/managed-upgrade-operator.openshift-managed-upgrade-operator" || true
               
-              # CUSTOMIZE: Add any additional cleanup logic here
-              # Examples:
-              # - Delete subscriptions
-              # - Delete operator groups
-              # - Clean up custom resources
+              # Delete subscriptions
+              oc -n openshift-managed-upgrade-operator delete subscriptions.operators.coreos.com managed-upgrade-operator --ignore-not-found=true
+              
+              # Delete operatorgroups
+              oc -n openshift-managed-upgrade-operator delete operatorgroups managed-upgrade-operator-og --ignore-not-found=true
+
+              # Delete catalogsources
+              oc -n openshift-managed-upgrade-operator delete catalogsources managed-upgrade-operator-catalog --ignore-not-found=true
           resources:
             requests:
               cpu: 100m
