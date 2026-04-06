@@ -1,0 +1,168 @@
+apiVersion: v1
+kind: Template
+metadata:
+  name: selectorsyncset-template
+
+parameters:
+  - name: CHANNEL
+    required: false
+  - name: IMAGE_TAG
+    required: true
+  - name: REPO_NAME
+    value: managed-upgrade-operator
+    required: true
+  - name: DISPLAY_NAME
+    value: Managed Upgrade Operator
+    required: true
+  - name: OCM_VPCE_SERVICE_NAME_EAST
+    required: true
+  - name: OCM_VPCE_SERVICE_NAME_WEST
+    required: true
+  - name: OCM_DOMAIN
+    required: true
+  - name: OCM_HOSTNAME
+    required: true   
+  - name: PKO_IMAGE
+    required: true
+  - name: OPERATOR_IMAGE
+    required: true
+
+objects:
+  - apiVersion: hive.openshift.io/v1
+    kind: SelectorSyncSet
+    metadata:
+      annotations:
+        component-display-name: ${DISPLAY_NAME}
+        component-name: ${REPO_NAME}
+        telemeter-query: csv_succeeded{_id="$CLUSTER_ID",name=~"${REPO_NAME}.*",exported_namespace=~"openshift-.*",namespace="openshift-operator-lifecycle-manager"} == 1
+      labels:
+        managed.openshift.io/gitHash: ${IMAGE_TAG}
+        managed.openshift.io/gitRepoName: ${REPO_NAME}
+        managed.openshift.io/osd: "true"
+      name: managed-upgrade-operator
+    spec:
+      clusterDeploymentSelector:
+        matchLabels:
+          api.openshift.com/managed: "true"
+      resourceApplyMode: Sync
+      resources:
+        - apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: openshift-managed-upgrade-operator
+            labels:
+              openshift.io/cluster-monitoring: "true"
+              pod-security.kubernetes.io/audit: 'baseline'
+              pod-security.kubernetes.io/warn: 'baseline'
+        - apiVersion: package-operator.run/v1alpha1
+          kind: ClusterPackage
+          metadata:
+            name: "${REPO_NAME}"
+            annotations:
+              package-operator.run/collision-protection: IfNoController
+          spec:
+            image: ${PKO_IMAGE}:${IMAGE_TAG}
+            config:
+              image: ${OPERATOR_IMAGE}:${IMAGE_TAG}
+
+  - apiVersion: hive.openshift.io/v1
+    kind: SelectorSyncSet
+    metadata:
+      name: sss-muo-vpce-east
+    spec:
+      clusterDeploymentSelector:
+        matchExpressions:
+        - key: api.openshift.com/fedramp
+          operator: In
+          values:
+          - "true"
+        - key: hive.openshift.io/cluster-region
+          operator: In
+          values:
+          - us-gov-east-1
+        - key: api.openshift.com/private-link
+          operator: In
+          values:
+          - "true"
+        - key: appsre-prod
+          operator: NotIn
+          values:
+          - "true"            
+        matchLabels:
+          api.openshift.com/managed: "true"
+      resourceApplyMode: Sync
+      resources:
+      - apiVersion: avo.openshift.io/v1alpha2
+        kind: VpcEndpoint
+        metadata:
+          name: managed-upgrade-operator
+          namespace: openshift-managed-upgrade-operator
+        spec:
+          serviceName: ${OCM_VPCE_SERVICE_NAME_EAST}
+          securityGroup:
+            useVpcCidr: true
+            ingressRules:
+              - fromPort: 443
+                toPort: 443
+                protocol: tcp
+          vpc:
+            autoDiscoverSubnets: true
+          customDns:
+            route53PrivateHostedZone:
+              autoDiscoverPrivateHostedZone: false
+              domainName: ${OCM_DOMAIN}
+              record:
+                hostname: ${OCM_HOSTNAME}
+                externalNameService:
+                  name: muo-vpce-svc
+
+  - apiVersion: hive.openshift.io/v1
+    kind: SelectorSyncSet
+    metadata:
+      name: sss-muo-vpce-west
+    spec:
+      clusterDeploymentSelector:
+        matchExpressions:
+        - key: api.openshift.com/fedramp
+          operator: In
+          values:
+          - "true"
+        - key: hive.openshift.io/cluster-region
+          operator: In
+          values:
+          - us-gov-west-1
+        - key: api.openshift.com/private-link
+          operator: In
+          values:
+          - "true"
+        - key: appsre-prod
+          operator: NotIn
+          values:
+          - "true"        
+        matchLabels:
+          api.openshift.com/managed: "true"
+      resourceApplyMode: Sync
+      resources:
+      - apiVersion: avo.openshift.io/v1alpha2
+        kind: VpcEndpoint
+        metadata:
+          name: managed-upgrade-operator
+          namespace: openshift-managed-upgrade-operator
+        spec:
+          serviceName: ${OCM_VPCE_SERVICE_NAME_WEST}
+          securityGroup:
+            useVpcCidr: true
+            ingressRules:
+              - fromPort: 443
+                toPort: 443
+                protocol: tcp
+          vpc:
+            autoDiscoverSubnets: true
+          customDns:
+            route53PrivateHostedZone:
+              autoDiscoverPrivateHostedZone: false
+              domainName: ${OCM_DOMAIN}
+              record:
+                hostname: ${OCM_HOSTNAME}
+                externalNameService:
+                  name: muo-vpce-svc
