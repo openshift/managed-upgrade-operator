@@ -1,10 +1,8 @@
 reviewers:
 - bmeng
-- a7vicky
 - srep-functional-team-hulk
 
 approvers:
-- a7vicky
 - tkong-redhat
 - srep-functional-leads
 - srep-team-leads
