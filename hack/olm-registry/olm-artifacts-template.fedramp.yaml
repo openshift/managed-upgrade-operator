@@ -45,7 +45,7 @@ objects:
       clusterDeploymentSelector:
         matchLabels:
           api.openshift.com/managed: "true"
-      resourceApplyMode: Sync
+      resourceApplyMode: Upsert
       resources:
         - apiVersion: v1
           kind: Namespace
@@ -185,7 +185,7 @@ objects:
           - "true"           
         matchLabels:
           api.openshift.com/managed: "true"
-      resourceApplyMode: Sync
+      resourceApplyMode: Upsert
       resources:
       - apiVersion: avo.openshift.io/v1alpha2
         kind: VpcEndpoint
@@ -235,7 +235,7 @@ objects:
           - "true"        
         matchLabels:
           api.openshift.com/managed: "true"
-      resourceApplyMode: Sync
+      resourceApplyMode: Upsert
       resources:
       - apiVersion: avo.openshift.io/v1alpha2
         kind: VpcEndpoint
