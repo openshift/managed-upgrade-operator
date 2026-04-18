@@ -43,7 +43,7 @@ spec:
         name: trusted-ca-bundle
       containers:
       - name: managed-upgrade-operator
-        image: '{{ .config.image }}'
+        image: 'quay.io/repository/redhat-user-prod/openshift/managed-upgrade-operator:latest'
         command:
         - managed-upgrade-operator
         imagePullPolicy: Always
@@ -70,22 +70,12 @@ spec:
               fieldPath: metadata.namespace
         - name: OPERATOR_NAME
           value: managed-upgrade-operator
-{{- if hasKey . "environment" }}
-{{- if hasKey .environment "proxy" }}
-{{- if hasKey .environment.proxy "httpProxy" }}
         - name: HTTP_PROXY
-          value: {{ .environment.proxy.httpProxy | quote }}
-{{- end}}
-{{- if hasKey .environment.proxy "httpsProxy" }}
+          value: "http"
         - name: HTTPS_PROXY
-          value: {{ .environment.proxy.httpsProxy | quote }}
-{{- end}}
-{{- if hasKey .environment.proxy "noProxy" }}
+          value: "https"
         - name: NO_PROXY
-          value: {{ .environment.proxy.noProxy | quote }}
-{{- end}}
-{{- end}}
-{{- end}}
+          value: "no..."
         volumeMounts:
         - mountPath: /etc/pki/ca-trust/extracted/pem
           name: trusted-ca-bundle

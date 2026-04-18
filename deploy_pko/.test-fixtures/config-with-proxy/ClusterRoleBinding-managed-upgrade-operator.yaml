@@ -1,0 +1,15 @@
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: managed-upgrade-operator
+  annotations:
+    package-operator.run/phase: rbac
+    package-operator.run/collision-protection: IfNoController
+subjects:
+- kind: ServiceAccount
+  name: managed-upgrade-operator
+  namespace: openshift-managed-upgrade-operator
+roleRef:
+  kind: ClusterRole
+  name: managed-upgrade-operator
+  apiGroup: rbac.authorization.k8s.io
