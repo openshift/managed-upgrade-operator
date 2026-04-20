@@ -35,3 +35,16 @@ spec:
           type: string
           default: None
       type: object
+test:
+  template:
+  - name: config-with-proxy
+    context:
+      config:
+        image: quay.io/repository/redhat-user-prod/openshift/managed-upgrade-operator:latest
+      environment:
+        openShift:
+          version: "4.21.8"
+        proxy:
+          httpProxy: http
+          httpsProxy: https
+          noProxy: no...
