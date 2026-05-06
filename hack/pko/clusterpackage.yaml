@@ -51,3 +51,66 @@ objects:
             image: ${PKO_IMAGE}:${IMAGE_TAG}
             config:
               image: ${OPERATOR_IMAGE}:${IMAGE_TAG}
+  - apiVersion: hive.openshift.io/v1
+    kind: SelectorSyncSet
+    metadata:
+      labels:
+        managed.openshift.io/gitHash: ${IMAGE_TAG}
+        managed.openshift.io/gitRepoName: ${REPO_NAME}
+        managed.openshift.io/osd: "true"
+      name: managed-upgrade-operator-dvo-resources
+    spec:
+      clusterDeploymentSelector:
+        matchExpressions:
+          - key: api.openshift.com/managed
+            operator: In
+            values:
+              - "true"
+          - key: ext-hypershift.openshift.io/cluster-type
+            operator: NotIn
+            values:
+              - management-cluster
+              - service-cluster
+      resourceApplyMode: Sync
+      resources:
+        - apiVersion: networking.k8s.io/v1
+          kind: NetworkPolicy
+          metadata:
+            name: allow-from-openshift-managed-upgrade-operator
+            namespace: openshift-deployment-validation-operator
+          spec:
+            ingress:
+              - from:
+                  - namespaceSelector:
+                      matchLabels:
+                        kubernetes.io/metadata.name: openshift-managed-upgrade-operator
+            podSelector: {}
+            policyTypes:
+              - Ingress
+        - apiVersion: rbac.authorization.k8s.io/v1
+          kind: Role
+          metadata:
+            name: muo-dvo-reader
+            namespace: openshift-deployment-validation-operator
+          rules:
+            - apiGroups:
+                - ""
+              resources:
+                - services
+              verbs:
+                - get
+                - list
+                - watch
+        - apiVersion: rbac.authorization.k8s.io/v1
+          kind: RoleBinding
+          metadata:
+            name: muo-dvo-reader
+            namespace: openshift-deployment-validation-operator
+          roleRef:
+            apiGroup: rbac.authorization.k8s.io
+            kind: Role
+            name: muo-dvo-reader
+          subjects:
+            - kind: ServiceAccount
+              name: managed-upgrade-operator
+              namespace: openshift-managed-upgrade-operator
