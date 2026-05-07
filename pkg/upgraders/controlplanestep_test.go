@@ -117,7 +117,7 @@ var _ = Describe("ControlPlaneStep", func() {
 					Status: configv1.ClusterVersionStatus{
 						History: []configv1.UpdateHistory{
 							{State: configv1.CompletedUpdate, Version: "something"},
-							{State: configv1.CompletedUpdate, Version: upgradeConfig.Spec.Desired.Version, StartedTime: metav1.Time{Time: time.Now().Add(-time.Duration(-10 * time.Minute))}, CompletionTime: &metav1.Time{Time: time.Now()}},
+							{State: configv1.CompletedUpdate, Version: upgradeConfig.Spec.Desired.Version, StartedTime: metav1.Time{Time: time.Now().Add(-10 * time.Minute)}, CompletionTime: &metav1.Time{Time: time.Now()}},
 							{State: configv1.CompletedUpdate, Version: "something else"},
 						},
 					},

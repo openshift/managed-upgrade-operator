@@ -1,6 +1,8 @@
 package collector
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -298,13 +300,15 @@ func (uc *UpgradeCollector) Collect(ch chan<- prometheus.Metric) {
 
 // collectUpgradeMetrics reviews the Status of the current UpgradeConfig and
 // writes metrics based on whats available within the status.
+//
+//nolint:gocyclo
 func (uc *UpgradeCollector) collectUpgradeConditions(ch chan<- prometheus.Metric) error {
-	upgradeConfig, err := uc.upgradeConfigManager.Get()
+	upgradeConfig, err := uc.upgradeConfigManager.Get(context.Background())
 	if err != nil {
-		if err == upgradeconfigmanager.ErrUpgradeConfigNotFound {
+		if errors.Is(err, upgradeconfigmanager.ErrUpgradeConfigNotFound) {
 			return nil
 		}
-		return fmt.Errorf("unable to find UpgradeConfig: %v", err)
+		return fmt.Errorf("unable to find UpgradeConfig: %w", err)
 	}
 
 	clusterVersion, err := uc.cvClient.GetClusterVersion()
@@ -372,6 +376,10 @@ func (uc *UpgradeCollector) collectUpgradeConditions(ch chan<- prometheus.Metric
 			collectCondition(&c, uc.managedMetrics.postClusterHealthCheck, upgradeConfig, cvVersion, ch)
 		case upgradev1alpha1.SendCompletedNotification:
 			collectCondition(&c, uc.managedMetrics.sendCompletedNotification, upgradeConfig, cvVersion, ch)
+		case upgradev1alpha1.PostUpgradeProcedures:
+			// No metrics collected for PostUpgradeProcedures
+		case upgradev1alpha1.IsClusterUpgradable:
+			// No metrics collected for IsClusterUpgradable
 		}
 	}
 	return nil

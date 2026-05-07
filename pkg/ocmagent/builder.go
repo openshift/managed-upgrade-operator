@@ -54,7 +54,7 @@ func (oacb *ocmAgentClientBuilder) New(c client.Client, ocmBaseUrl *url.URL) (oc
 		}).
 		BuildContext(context.Background())
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Can't build connection: %v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "Can't build connection: %v\n", err)
 		return nil, err
 	}
 

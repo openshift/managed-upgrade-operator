@@ -2,6 +2,7 @@ package nodekeeper
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -15,7 +16,7 @@ import (
 	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
 	"github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -42,6 +43,8 @@ type ReconcileNodeKeeper struct {
 // Reconcile Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
+//
+//nolint:gocyclo
 func (r *ReconcileNodeKeeper) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Name", request.Name)
 
@@ -49,9 +52,9 @@ func (r *ReconcileNodeKeeper) Reconcile(ctx context.Context, request reconcile.R
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-	uc, err := upgradeConfigManagerClient.Get()
+	uc, err := upgradeConfigManagerClient.Get(ctx)
 	if err != nil {
-		if err == upgradeconfigmanager.ErrUpgradeConfigNotFound {
+		if errors.Is(err, upgradeconfigmanager.ErrUpgradeConfigNotFound) {
 			return reconcile.Result{}, nil
 		}
 		return reconcile.Result{}, err
@@ -69,9 +72,9 @@ func (r *ReconcileNodeKeeper) Reconcile(ctx context.Context, request reconcile.R
 
 	// Fetch the Node instance
 	node := &corev1.Node{}
-	err = r.Client.Get(context.TODO(), request.NamespacedName, node)
+	err = r.Client.Get(ctx, request.NamespacedName, node)
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if k8serrors.IsNotFound(err) {
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.

@@ -94,7 +94,7 @@ var _ = Describe("NodeKeeperController", func() {
 				uc := *testStructs.NewUpgradeConfigBuilder().WithNamespacedName(upgradeConfigName).WithPhase(upgradev1alpha1.UpgradePhasePending).GetUpgradeConfig()
 				gomock.InOrder(
 					mockUpgradeConfigManagerBuilder.EXPECT().NewManager(gomock.Any()).Return(mockUpgradeConfigManager, nil),
-					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
+					mockUpgradeConfigManager.EXPECT().Get(gomock.Any()).Return(&uc, nil),
 					mockMachineryClient.EXPECT().IsUpgrading(gomock.Any(), "worker").Return(&machinery.UpgradingResult{IsUpgrading: true}, nil),
 					mockKubeClient.EXPECT().Get(gomock.Any(), testNodeName, gomock.Any()).Times(0),
 				)
@@ -105,7 +105,7 @@ var _ = Describe("NodeKeeperController", func() {
 				uc := *testStructs.NewUpgradeConfigBuilder().WithNamespacedName(upgradeConfigName).WithPhase(upgradev1alpha1.UpgradePhaseUpgrading).GetUpgradeConfig()
 				gomock.InOrder(
 					mockUpgradeConfigManagerBuilder.EXPECT().NewManager(gomock.Any()).Return(mockUpgradeConfigManager, nil),
-					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
+					mockUpgradeConfigManager.EXPECT().Get(gomock.Any()).Return(&uc, nil),
 					mockMachineryClient.EXPECT().IsUpgrading(gomock.Any(), "worker").Return(&machinery.UpgradingResult{IsUpgrading: false}, nil),
 					mockKubeClient.EXPECT().Get(gomock.Any(), testNodeName, gomock.Any()).Times(0),
 				)
@@ -129,7 +129,7 @@ var _ = Describe("NodeKeeperController", func() {
 			It("Alerting if nodedrain takes long time when strategies if disabled", func() {
 				gomock.InOrder(
 					mockUpgradeConfigManagerBuilder.EXPECT().NewManager(gomock.Any()).Return(mockUpgradeConfigManager, nil),
-					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
+					mockUpgradeConfigManager.EXPECT().Get(gomock.Any()).Return(&uc, nil),
 					mockMachineryClient.EXPECT().IsUpgrading(gomock.Any(), "worker").Return(&machinery.UpgradingResult{IsUpgrading: true}, nil),
 					mockKubeClient.EXPECT().Get(gomock.Any(), testNodeName, gomock.Any()).Times(1),
 					mockMachineryClient.EXPECT().IsNodeCordoned(gomock.Any()).Return(&machinery.IsCordonedResult{IsCordoned: true, AddedAt: &metav1.Time{Time: time.Now().Add(-10 * time.Minute)}}),
@@ -162,7 +162,7 @@ var _ = Describe("NodeKeeperController", func() {
 			It("should alert when a node drain takes too long", func() {
 				gomock.InOrder(
 					mockUpgradeConfigManagerBuilder.EXPECT().NewManager(gomock.Any()).Return(mockUpgradeConfigManager, nil),
-					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
+					mockUpgradeConfigManager.EXPECT().Get(gomock.Any()).Return(&uc, nil),
 					mockMachineryClient.EXPECT().IsUpgrading(gomock.Any(), "worker").Return(&machinery.UpgradingResult{IsUpgrading: true}, nil),
 					mockKubeClient.EXPECT().Get(gomock.Any(), testNodeName, gomock.Any()).Times(1),
 					mockMachineryClient.EXPECT().IsNodeCordoned(gomock.Any()).Return(&machinery.IsCordonedResult{IsCordoned: true, AddedAt: &metav1.Time{Time: time.Now().Add(-10 * time.Minute)}}),
@@ -183,7 +183,7 @@ var _ = Describe("NodeKeeperController", func() {
 			It("should reset any alerts once node is not cordoned", func() {
 				gomock.InOrder(
 					mockUpgradeConfigManagerBuilder.EXPECT().NewManager(gomock.Any()).Return(mockUpgradeConfigManager, nil),
-					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
+					mockUpgradeConfigManager.EXPECT().Get(gomock.Any()).Return(&uc, nil),
 					mockMachineryClient.EXPECT().IsUpgrading(gomock.Any(), "worker").Return(&machinery.UpgradingResult{IsUpgrading: true}, nil),
 					mockKubeClient.EXPECT().Get(gomock.Any(), testNodeName, gomock.Any()).Times(1),
 					mockMachineryClient.EXPECT().IsNodeCordoned(gomock.Any()).Return(&machinery.IsCordonedResult{IsCordoned: false}),
@@ -216,7 +216,7 @@ var _ = Describe("NodeKeeperController", func() {
 			It("should reset NodeDraingFailed metric when node DeletionTimestamp set", func() {
 				gomock.InOrder(
 					mockUpgradeConfigManagerBuilder.EXPECT().NewManager(gomock.Any()).Return(mockUpgradeConfigManager, nil),
-					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
+					mockUpgradeConfigManager.EXPECT().Get(gomock.Any()).Return(&uc, nil),
 					mockMachineryClient.EXPECT().IsUpgrading(mockKubeClient, "worker").Return(&machinery.UpgradingResult{IsUpgrading: true}, nil),
 					mockKubeClient.EXPECT().Get(context.TODO(), testNodeName, gomock.Any()).SetArg(2, node),
 					mockMachineryClient.EXPECT().IsNodeCordoned(gomock.Any()).Return(&machinery.IsCordonedResult{IsCordoned: true, AddedAt: &metav1.Time{Time: time.Now().Add(-10 * time.Minute)}}),

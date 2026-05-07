@@ -235,7 +235,7 @@ SLKh9n6qnPj0Lef3Nw==
 			}
 
 			// Append GettableSilence to GettableSilences
-			var activeSilences []amv2Models.GettableSilence
+			activeSilences := make([]amv2Models.GettableSilence, 0, 1)
 			activeSilences = append(activeSilences, gettableSilence)
 
 			gomock.InOrder(

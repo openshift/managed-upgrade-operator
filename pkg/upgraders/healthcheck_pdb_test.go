@@ -1,6 +1,7 @@
 package upgraders
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/go-logr/logr"
@@ -83,7 +84,7 @@ var _ = Describe("checkPodDisruptionBudgets", func() {
 				mockClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *pdbList),
 				mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, reason, version, "New"),
 			)
-			pdbDetails, result, err := HealthCheckPDB(mockMetricsClient, mockClient, mockdvoclientbulder, upgradeConfig, logger, version)
+			pdbDetails, result, err := HealthCheckPDB(context.TODO(), mockMetricsClient, mockClient, mockdvoclientbulder, upgradeConfig, logger, version)
 			Expect(err).To(HaveOccurred())
 			Expect(result).To(Equal(false))
 			Expect(pdbDetails).ShouldNot(BeEmpty())
@@ -125,7 +126,7 @@ var _ = Describe("checkPodDisruptionBudgets", func() {
 				mockClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *pdbList),
 				mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, reason, version, metrics.ClusterInvalidPDB),
 			)
-			pdbDetails, result, err := checkPodDisruptionBudgets(mockClient, logger)
+			pdbDetails, result, err := checkPodDisruptionBudgets(context.TODO(), mockClient, logger)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(BeEmpty())
 			Expect(pdbDetails).To(BeEmpty())
@@ -155,7 +156,7 @@ var _ = Describe("checkPodDisruptionBudgets", func() {
 				mockClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *pdbList),
 				mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, reason, version, "New"),
 			)
-			pdbDetails, result, err := checkPodDisruptionBudgets(mockClient, logger)
+			pdbDetails, result, err := checkPodDisruptionBudgets(context.TODO(), mockClient, logger)
 			Expect(err).To(HaveOccurred())
 			Expect(result).To(Equal(metrics.ClusterInvalidPDBConf))
 			Expect(pdbDetails).ShouldNot(BeEmpty())
@@ -183,7 +184,7 @@ var _ = Describe("checkPodDisruptionBudgets", func() {
 				mockClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *pdbList),
 				mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, reason, version, "New"),
 			)
-			pdbDetails, result, err := checkPodDisruptionBudgets(mockClient, logger)
+			pdbDetails, result, err := checkPodDisruptionBudgets(context.TODO(), mockClient, logger)
 			Expect(err).To(HaveOccurred())
 			Expect(result).To(Equal(metrics.ClusterInvalidPDBConf))
 			Expect(pdbDetails).ShouldNot(BeEmpty())
@@ -213,7 +214,7 @@ var _ = Describe("checkPodDisruptionBudgets", func() {
 				mockClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).SetArg(1, *pdbList),
 				mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, reason, version, "New"),
 			)
-			pdbDetails, result, err := checkPodDisruptionBudgets(mockClient, logger)
+			pdbDetails, result, err := checkPodDisruptionBudgets(context.TODO(), mockClient, logger)
 			Expect(err).To(HaveOccurred())
 			Expect(result).To(Equal(metrics.ClusterInvalidPDBConf))
 			Expect(pdbDetails).ShouldNot(BeEmpty())
@@ -227,7 +228,7 @@ var _ = Describe("checkPodDisruptionBudgets", func() {
 				mockClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("Fake cannot fetch all pdb ")),
 				mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, reason, version, "New"),
 			)
-			pdbDetails, result, err := checkPodDisruptionBudgets(mockClient, logger)
+			pdbDetails, result, err := checkPodDisruptionBudgets(context.TODO(), mockClient, logger)
 			Expect(err).To(HaveOccurred())
 			Expect(result).To(Equal(metrics.PDBQueryFailed))
 			Expect(pdbDetails).To(BeEmpty())

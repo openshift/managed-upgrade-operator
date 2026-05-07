@@ -114,6 +114,7 @@ func printVersion() {
 	log.Info(fmt.Sprintf("Version of operator-sdk: v%v", version.SDKVersion))
 }
 
+//nolint:gocyclo
 func main() {
 	var metricsAddr string
 	var enableLeaderElection bool

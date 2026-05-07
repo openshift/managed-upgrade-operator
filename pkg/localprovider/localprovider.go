@@ -49,6 +49,8 @@ func (l *localProvider) Get() ([]upgradev1alpha1.UpgradeConfigSpec, error) {
 }
 
 // Helper function to extract the spec from the upgradeConfig CR
+//
+//nolint:unparam
 func readSpecFromConfig(ucl upgradev1alpha1.UpgradeConfigList) ([]upgradev1alpha1.UpgradeConfigSpec, error) {
 	upgradeConfigSpecs := make([]upgradev1alpha1.UpgradeConfigSpec, 0)
 

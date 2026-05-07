@@ -127,7 +127,7 @@ var _ = Describe("OCM Client with SDK", func() {
 			case r.URL.Path == "/token" && r.Method == http.MethodPost:
 				// Mock OAuth2 token endpoint - return a properly formatted JWT
 				w.WriteHeader(http.StatusOK)
-				response := map[string]interface{}{
+				response := map[string]interface{}{ //#nosec G101 -- This is a mock JWT token for testing
 					"access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IlRlc3QgVXNlciIsImlhdCI6MTUxNjIzOTAyMn0.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
 					"token_type":   "Bearer",
 					"expires_in":   3600,
@@ -146,8 +146,8 @@ var _ = Describe("OCM Client with SDK", func() {
 		conn, err = sdk.NewConnectionBuilder().
 			URL(testServer.URL).
 			TokenURL(testServer.URL + "/token"). // Point to test server for token refresh
-			Tokens("test-token").                 // Add test token for authentication
-			Insecure(true).                       // Skip TLS verification for test server
+			Tokens("test-token").                // Add test token for authentication
+			Insecure(true).                      // Skip TLS verification for test server
 			Build()
 		Expect(err).To(BeNil())
 
@@ -167,7 +167,7 @@ var _ = Describe("OCM Client with SDK", func() {
 			testServer.Close()
 		}
 		if conn != nil {
-			conn.Close()
+			_ = conn.Close()
 		}
 	})
 

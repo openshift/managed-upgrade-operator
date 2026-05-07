@@ -167,26 +167,26 @@ var _ = Describe("OCM Client Builder", func() {
 		AfterEach(func() {
 			// Restore original environment
 			if originalHTTPProxy == "" {
-				os.Unsetenv("HTTP_PROXY")
+				_ = os.Unsetenv("HTTP_PROXY")
 			} else {
-				os.Setenv("HTTP_PROXY", originalHTTPProxy)
+				_ = os.Setenv("HTTP_PROXY", originalHTTPProxy)
 			}
 			if originalHTTPSProxy == "" {
-				os.Unsetenv("HTTPS_PROXY")
+				_ = os.Unsetenv("HTTPS_PROXY")
 			} else {
-				os.Setenv("HTTPS_PROXY", originalHTTPSProxy)
+				_ = os.Setenv("HTTPS_PROXY", originalHTTPSProxy)
 			}
 			if originalNoProxy == "" {
-				os.Unsetenv("NO_PROXY")
+				_ = os.Unsetenv("NO_PROXY")
 			} else {
-				os.Setenv("NO_PROXY", originalNoProxy)
+				_ = os.Setenv("NO_PROXY", originalNoProxy)
 			}
 		})
 
 		It("creates client that respects proxy environment variables", func() {
 			// Set proxy environment variables
-			os.Setenv("HTTPS_PROXY", "http://proxy.example.com:8080")
-			os.Setenv("NO_PROXY", "localhost,127.0.0.1")
+			_ = os.Setenv("HTTPS_PROXY", "http://proxy.example.com:8080")
+			_ = os.Setenv("NO_PROXY", "localhost,127.0.0.1")
 
 			// Mock access token retrieval
 			cv := &configv1.ClusterVersion{

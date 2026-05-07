@@ -75,6 +75,8 @@ const (
 )
 
 // IsValidUpgradeConfig checks the validity of UpgradeConfig CRs
+//
+//nolint:gocyclo
 func (v *validator) IsValidUpgradeConfig(c client.Client, uC *upgradev1alpha1.UpgradeConfig, cV *configv1.ClusterVersion, logger logr.Logger) (ValidatorResult, error) {
 	validationPassed := ValidatorResult{
 		IsValid:           true,
@@ -297,7 +299,7 @@ func fetchImageVersion(image string) (string, error) {
 
 func runHTTP(url string) ([]byte, error) {
 
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -317,7 +319,9 @@ func runHTTP(url string) ([]byte, error) {
 	}
 
 	if res.Body != nil {
-		defer res.Body.Close()
+		defer func() {
+			_ = res.Body.Close()
+		}()
 	}
 
 	body, readErr := io.ReadAll(res.Body)
@@ -364,7 +368,7 @@ func updateImageVersion(c client.Client, v string, upgradeConfig *upgradev1alpha
 func imageValidation(image string) error {
 	ref, err := imagereference.Parse(image)
 	if err != nil {
-		return fmt.Errorf("failed to parse image %s: must be a valid image pull spec:%v", image, err)
+		return fmt.Errorf("failed to parse image %s: must be a valid image pull spec:%w", image, err)
 	}
 
 	if ref.Registry == "" {

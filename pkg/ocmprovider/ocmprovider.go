@@ -1,6 +1,7 @@
 package ocmprovider
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -67,7 +68,7 @@ func (s *ocmProvider) Get() ([]upgradev1alpha1.UpgradeConfigSpec, error) {
 	if err != nil {
 		log.Error(err, "cannot obtain internal cluster ID")
 		// Pass the error up the chain if the cluster ID couldn't be found
-		if err == ocm.ErrClusterIdNotFound {
+		if errors.Is(err, ocm.ErrClusterIdNotFound) {
 			return nil, err
 		}
 		return nil, ErrProviderUnavailable
@@ -118,6 +119,8 @@ func (s *ocmProvider) Get() ([]upgradev1alpha1.UpgradeConfigSpec, error) {
 
 // getNextOccurringUpgradePolicy returns the next occurring upgradepolicy from a list of upgrade
 // policies, regardless of the schedule_type.
+//
+//nolint:unparam
 func getNextOccurringUpgradePolicy(uPs *cmv1.UpgradePoliciesListResponse) (*cmv1.UpgradePolicy, error) {
 	var nextOccurringUpgradePolicy *cmv1.UpgradePolicy
 
@@ -167,7 +170,7 @@ func isActionableUpgradePolicy(up *cmv1.UpgradePolicy, state *cmv1.UpgradePolicy
 // and indication of error if one occurs.
 func buildUpgradeConfigSpecs(upgradePolicy *cmv1.UpgradePolicy, cluster *cmv1.Cluster, upgradeType upgradev1alpha1.UpgradeType) ([]upgradev1alpha1.UpgradeConfigSpec, error) {
 
-	upgradeConfigSpecs := make([]upgradev1alpha1.UpgradeConfigSpec, 0)
+	upgradeConfigSpecs := make([]upgradev1alpha1.UpgradeConfigSpec, 0, 1)
 
 	// Capacity Reservation Handling:
 	// The OCM SDK's UpgradePolicy type (ocm-sdk-go v0.1.494 / ocm-api-model v0.0.449)

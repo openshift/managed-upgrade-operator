@@ -1,6 +1,7 @@
 package scaler
 
 import (
+	"errors"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -32,8 +33,8 @@ func (stoErr *scaleTimeOutError) Error() string {
 
 // IsScaleTimeOutError returns a bool if the error arg is that of a scaleTimeOutError
 func IsScaleTimeOutError(err error) bool {
-	_, ok := err.(*scaleTimeOutError)
-	return ok
+	var ste *scaleTimeOutError
+	return errors.As(err, &ste)
 }
 
 // NewScaleTimeOutError returns a scaleTimeOutError
@@ -56,7 +57,8 @@ func (dtoErr *drainTimeOutError) GetNodeName() string {
 // IsDrainTimeOutError returns a drainTimeOutError and bool that is true if the error arg is
 // that of a drainTimeOutError
 func IsDrainTimeOutError(err error) (*drainTimeOutError, bool) {
-	dte, ok := err.(*drainTimeOutError)
+	var dte *drainTimeOutError
+	ok := errors.As(err, &dte)
 	return dte, ok
 }
 

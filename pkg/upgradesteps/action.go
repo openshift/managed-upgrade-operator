@@ -2,6 +2,7 @@ package upgradesteps
 
 import (
 	"context"
+
 	"github.com/go-logr/logr"
 )
 
@@ -20,7 +21,7 @@ func Action(n string, f actionFunction) actionStep {
 // performed.
 type actionStep struct {
 	name string
-	f actionFunction
+	f    actionFunction
 }
 
 // run executes the actionStep's actionFunction in the supplied context
@@ -32,4 +33,3 @@ func (s actionStep) run(ctx context.Context, logger logr.Logger) (bool, error) {
 func (s actionStep) String() string {
 	return s.name
 }
-

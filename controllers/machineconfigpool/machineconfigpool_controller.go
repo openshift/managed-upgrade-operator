@@ -2,12 +2,13 @@ package machineconfigpool
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	machineconfigapi "github.com/openshift/api/machineconfiguration/v1"
 	upgradev1alpha1 "github.com/openshift/managed-upgrade-operator/api/v1alpha1"
 	ucm "github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager"
-	"k8s.io/apimachinery/pkg/api/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -34,9 +35,9 @@ func (r *ReconcileMachineConfigPool) Reconcile(ctx context.Context, request reco
 
 	// Fetch the MachineConfigPool instance
 	instance := &machineconfigapi.MachineConfigPool{}
-	err := r.Client.Get(context.TODO(), request.NamespacedName, instance)
+	err := r.Client.Get(ctx, request.NamespacedName, instance)
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if k8serrors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
@@ -51,9 +52,9 @@ func (r *ReconcileMachineConfigPool) Reconcile(ctx context.Context, request reco
 		return reconcile.Result{}, err
 	}
 
-	uc, err := ucManager.Get()
+	uc, err := ucManager.Get(ctx)
 	if err != nil {
-		if err == ucm.ErrUpgradeConfigNotFound {
+		if errors.Is(err, ucm.ErrUpgradeConfigNotFound) {
 			return reconcile.Result{}, nil
 		}
 
@@ -75,7 +76,7 @@ func (r *ReconcileMachineConfigPool) Reconcile(ctx context.Context, request reco
 				}
 			}
 			uc.Status.History.SetHistory(*history)
-			err = r.Client.Status().Update(context.TODO(), uc)
+			err = r.Client.Status().Update(ctx, uc)
 			if err != nil {
 				return reconcile.Result{}, err
 			}

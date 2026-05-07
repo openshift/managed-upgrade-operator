@@ -20,6 +20,8 @@ type PDBDetails struct {
 }
 
 // PreUpgradeHealthCheck performs cluster healthy check
+//
+//nolint:gocyclo
 func (c *clusterUpgrader) PreUpgradeHealthCheck(ctx context.Context, logger logr.Logger) (bool, error) {
 	upgradeCommenced, err := c.cvClient.HasUpgradeCommenced(c.upgradeConfig)
 	if err != nil {
@@ -77,14 +79,14 @@ func (c *clusterUpgrader) PreUpgradeHealthCheck(ctx context.Context, logger logr
 			}
 		}
 		var nodes []string
-		nodes, err = ManuallyCordonedNodes(c.metrics, c.machinery, c.client, c.upgradeConfig, logger, version)
+		nodes, err = ManuallyCordonedNodes(ctx, c.metrics, c.machinery, c.client, c.upgradeConfig, logger, version)
 		if err != nil || nodes != nil {
 			logger.Info(fmt.Sprintf("upgrade may delay due to there are manually cordoned nodes: %s", err))
 			nodeNames := strings.Join(nodes, ",")
 			healthCheckFailed = append(healthCheckFailed, fmt.Sprintf("NodeUnschedulableHealthcheckFailed:(%s)", nodeNames))
 		}
 
-		nodes, err = NodeUnschedulableTaints(c.metrics, c.machinery, c.client, c.upgradeConfig, logger, version)
+		nodes, err = NodeUnschedulableTaints(ctx, c.metrics, c.machinery, c.client, c.upgradeConfig, logger, version)
 		if err != nil || nodes != nil {
 			logger.Info(fmt.Sprintf("upgrade delayed due to there are unschedulable taints on nodes: %s", err))
 			nodeNames := strings.Join(nodes, ",")
@@ -92,7 +94,7 @@ func (c *clusterUpgrader) PreUpgradeHealthCheck(ctx context.Context, logger logr
 		}
 
 		// HealthCheckPDB
-		pdbDetails, ok, err = HealthCheckPDB(c.metrics, c.client, c.dvo, c.upgradeConfig, logger, version)
+		pdbDetails, ok, err = HealthCheckPDB(ctx, c.metrics, c.client, c.dvo, c.upgradeConfig, logger, version)
 		if err != nil || !ok {
 			logger.Info(fmt.Sprintf("upgrade delayed due PDB %s", err))
 			pdbList, err := json.Marshal(&pdbDetails)
@@ -125,6 +127,14 @@ func (c *clusterUpgrader) PreUpgradeHealthCheck(ctx context.Context, logger logr
 					}
 				}
 				return true, nil
+			case upgradev1alpha1.UpgradePhasePending:
+				// No notification needed for pending phase
+			case upgradev1alpha1.UpgradePhaseUpgraded:
+				// No notification needed for upgraded phase
+			case upgradev1alpha1.UpgradePhaseFailed:
+				// No notification needed for failed phase
+			case upgradev1alpha1.UpgradePhaseUnknown:
+				// No notification needed for unknown phase
 			case " ":
 				logger.Info(fmt.Sprintf("upgradeconfig history doesn't exist for version: %s", c.upgradeConfig.Spec.Desired.Version))
 			}

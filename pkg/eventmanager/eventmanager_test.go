@@ -80,7 +80,7 @@ var _ = Describe("OCM Notifier", func() {
 		Context("when a notification has already been sent", func() {
 			It("does no action", func() {
 				gomock.InOrder(
-					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
+					mockUpgradeConfigManager.EXPECT().Get(gomock.Any()).Return(&uc, nil),
 					mockMetricsClient.EXPECT().IsMetricNotificationEventSentSet(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION).Return(true, nil),
 				)
 				err := manager.Notify(testState)
@@ -90,7 +90,7 @@ var _ = Describe("OCM Notifier", func() {
 		Context("when a notification has not been sent", func() {
 			It("sends a correct notification", func() {
 				gomock.InOrder(
-					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
+					mockUpgradeConfigManager.EXPECT().Get(gomock.Any()).Return(&uc, nil),
 					mockMetricsClient.EXPECT().IsMetricNotificationEventSentSet(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION).Return(false, nil),
 					mockNotifier.EXPECT().NotifyState(testState, gomock.Any()),
 					mockMetricsClient.EXPECT().UpdatemetricUpgradeNotificationSucceeded(TEST_UPGRADECONFIG_CR, string(testState)),
@@ -104,7 +104,7 @@ var _ = Describe("OCM Notifier", func() {
 			var fakeError = fmt.Errorf("fake error")
 			It("returns an error", func() {
 				gomock.InOrder(
-					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
+					mockUpgradeConfigManager.EXPECT().Get(gomock.Any()).Return(&uc, nil),
 					mockMetricsClient.EXPECT().IsMetricNotificationEventSentSet(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION).Return(false, nil),
 					mockNotifier.EXPECT().NotifyState(testState, gomock.Any()).Return(fakeError),
 					mockMetricsClient.EXPECT().UpdatemetricUpgradeNotificationFailed(TEST_UPGRADECONFIG_CR, string(testState)),
@@ -142,7 +142,7 @@ var _ = Describe("OCM Notifier", func() {
 				}
 				expectedDescription := fmt.Sprintf(UPGRADE_PREHEALTHCHECK_FAILED_DESC, uc.Spec.Desired.Version)
 				gomock.InOrder(
-					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
+					mockUpgradeConfigManager.EXPECT().Get(gomock.Any()).Return(&uc, nil),
 					mockMetricsClient.EXPECT().IsMetricNotificationEventSentSet(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION).Return(false, nil),
 					mockNotifier.EXPECT().NotifyState(testState, expectedDescription),
 					mockMetricsClient.EXPECT().UpdatemetricUpgradeNotificationSucceeded(TEST_UPGRADECONFIG_CR, string(testState)),
@@ -165,7 +165,7 @@ var _ = Describe("OCM Notifier", func() {
 				}
 				expectedDescription := fmt.Sprintf(UPGRADE_EXTDEPCHECK_FAILED_DESC, uc.Spec.Desired.Version)
 				gomock.InOrder(
-					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
+					mockUpgradeConfigManager.EXPECT().Get(gomock.Any()).Return(&uc, nil),
 					mockMetricsClient.EXPECT().IsMetricNotificationEventSentSet(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION).Return(false, nil),
 					mockNotifier.EXPECT().NotifyState(testState, expectedDescription),
 					mockMetricsClient.EXPECT().UpdatemetricUpgradeNotificationSucceeded(TEST_UPGRADECONFIG_CR, string(testState)),
@@ -188,7 +188,7 @@ var _ = Describe("OCM Notifier", func() {
 				}
 				expectedDescription := fmt.Sprintf(UPGRADE_SCALE_FAILED_DESC, uc.Spec.Desired.Version)
 				gomock.InOrder(
-					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
+					mockUpgradeConfigManager.EXPECT().Get(gomock.Any()).Return(&uc, nil),
 					mockMetricsClient.EXPECT().IsMetricNotificationEventSentSet(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION).Return(false, nil),
 					mockNotifier.EXPECT().NotifyState(testState, expectedDescription),
 					mockMetricsClient.EXPECT().UpdatemetricUpgradeNotificationSucceeded(TEST_UPGRADECONFIG_CR, string(testState)),
@@ -211,7 +211,7 @@ var _ = Describe("OCM Notifier", func() {
 				}
 				expectedDescription := fmt.Sprintf(UPGRADE_PRECHECK_FAILED_DESC, uc.Spec.Desired.Version)
 				gomock.InOrder(
-					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
+					mockUpgradeConfigManager.EXPECT().Get(gomock.Any()).Return(&uc, nil),
 					mockMetricsClient.EXPECT().IsMetricNotificationEventSentSet(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION).Return(false, nil),
 					mockNotifier.EXPECT().NotifyState(testState, expectedDescription),
 					mockMetricsClient.EXPECT().UpdatemetricUpgradeNotificationSucceeded(TEST_UPGRADECONFIG_CR, string(testState)),
@@ -250,7 +250,7 @@ var _ = Describe("OCM Notifier", func() {
 				}
 				expectedDescription := fmt.Sprintf(UPGRADE_PREHEALTHCHECK_DELAY_DESC, uc.Spec.Desired.Version)
 				gomock.InOrder(
-					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
+					mockUpgradeConfigManager.EXPECT().Get(gomock.Any()).Return(&uc, nil),
 					mockMetricsClient.EXPECT().IsMetricNotificationEventSentSet(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION).Return(false, nil),
 					mockNotifier.EXPECT().NotifyState(testState, expectedDescription),
 					mockMetricsClient.EXPECT().UpdatemetricUpgradeNotificationSucceeded(TEST_UPGRADECONFIG_CR, string(testState)),
@@ -273,7 +273,7 @@ var _ = Describe("OCM Notifier", func() {
 				}
 				expectedDescription := fmt.Sprintf(UPGRADE_EXTDEPCHECK_DELAY_DESC, uc.Spec.Desired.Version)
 				gomock.InOrder(
-					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
+					mockUpgradeConfigManager.EXPECT().Get(gomock.Any()).Return(&uc, nil),
 					mockMetricsClient.EXPECT().IsMetricNotificationEventSentSet(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION).Return(false, nil),
 					mockNotifier.EXPECT().NotifyState(testState, expectedDescription),
 					mockMetricsClient.EXPECT().UpdatemetricUpgradeNotificationSucceeded(TEST_UPGRADECONFIG_CR, string(testState)),
@@ -296,7 +296,7 @@ var _ = Describe("OCM Notifier", func() {
 				}
 				expectedDescription := fmt.Sprintf(UPGRADE_SCALE_DELAY_DESC, uc.Spec.Desired.Version)
 				gomock.InOrder(
-					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
+					mockUpgradeConfigManager.EXPECT().Get(gomock.Any()).Return(&uc, nil),
 					mockMetricsClient.EXPECT().IsMetricNotificationEventSentSet(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION).Return(false, nil),
 					mockNotifier.EXPECT().NotifyState(testState, expectedDescription),
 					mockMetricsClient.EXPECT().UpdatemetricUpgradeNotificationSucceeded(TEST_UPGRADECONFIG_CR, string(testState)),
@@ -319,7 +319,7 @@ var _ = Describe("OCM Notifier", func() {
 				}
 				expectedDescription := fmt.Sprintf(UPGRADE_DEFAULT_DELAY_DESC, uc.Spec.Desired.Version)
 				gomock.InOrder(
-					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
+					mockUpgradeConfigManager.EXPECT().Get(gomock.Any()).Return(&uc, nil),
 					mockMetricsClient.EXPECT().IsMetricNotificationEventSentSet(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION).Return(false, nil),
 					mockNotifier.EXPECT().NotifyState(testState, expectedDescription),
 					mockMetricsClient.EXPECT().UpdatemetricUpgradeNotificationSucceeded(TEST_UPGRADECONFIG_CR, string(testState)),
@@ -349,7 +349,7 @@ var _ = Describe("OCM Notifier", func() {
 			It("sends a correct notification and description", func() {
 				expectedDescription := fmt.Sprintf(UPGRADE_HEALTHCHECK_DELAY_DESC, uc.Spec.Desired.Version, gomock.Any().String())
 				gomock.InOrder(
-					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
+					mockUpgradeConfigManager.EXPECT().Get(gomock.Any()).Return(&uc, nil),
 					mockMetricsClient.EXPECT().IsMetricNotificationEventSentSet(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION).Return(false, nil),
 					mockNotifier.EXPECT().NotifyState(testState, expectedDescription),
 					mockMetricsClient.EXPECT().UpdateMetricNotificationEventSent(TEST_UPGRADECONFIG_CR, string(testState), TEST_UPGRADE_VERSION),

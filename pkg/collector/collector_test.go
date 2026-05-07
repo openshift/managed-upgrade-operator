@@ -116,7 +116,7 @@ var _ = Describe("Upgrade Conditions Collector", func() {
 		Context("When UpgradeConfig is not found", func() {
 			It("no metrics will be collected", func() {
 				gomock.InOrder(
-					mockUpgradeConfigManager.EXPECT().Get().Return(nil, upgradeconfigmanager.ErrUpgradeConfigNotFound),
+					mockUpgradeConfigManager.EXPECT().Get(gomock.Any()).Return(nil, upgradeconfigmanager.ErrUpgradeConfigNotFound),
 				)
 				metricCount := promtestutil.CollectAndCount(upgradeCollector)
 				Expect(metricCount).To(BeZero())
@@ -124,7 +124,7 @@ var _ = Describe("Upgrade Conditions Collector", func() {
 			Context("When UpgradeConfig is found", func() {
 				It("collects metrics based on availability of conditions", func() {
 					gomock.InOrder(
-						mockUpgradeConfigManager.EXPECT().Get().Return(&upgradeConfig, nil),
+						mockUpgradeConfigManager.EXPECT().Get(gomock.Any()).Return(&upgradeConfig, nil),
 						mockCVClient.EXPECT().GetClusterVersion().Return(&cv, nil),
 					)
 					source_version, err := clusterversion.GetCurrentVersionMinusOne(&cv)

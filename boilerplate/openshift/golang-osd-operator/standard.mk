@@ -380,6 +380,23 @@ validate: boilerplate-freeze-check generate-check validate-pko-fixtures
 .PHONY: lint
 lint: olm-deploy-yaml-validate go-check
 
+# rbac-wildcard-check: Detect wildcard RBAC permissions in deploy/ manifests.
+# Checks both inline (verbs: ["*"]) and multi-line (- '*' under verbs/resources:)
+# formats. Called by the pre-commit rbac-wildcard-check hook.
+# Currently warn-only (exits 0) to avoid breaking repos with pre-existing wildcards.
+# Will become blocking once existing violations are resolved across the fleet.
+.PHONY: rbac-wildcard-check
+rbac-wildcard-check:
+	@python3 -c "\
+import sys,glob;\
+violations=[(f,n,l.rstrip()) for f in glob.glob('deploy/*.yaml')+glob.glob('deploy/*.yml') \
+for lines in [list(enumerate(open(f),1))] \
+for i,(n,l) in enumerate(lines) \
+if l.strip().lstrip('- ').strip(chr(39)+chr(34))=='*' \
+and any(lines[j][1].strip() in ('verbs:','resources:') for j in range(max(0,i-5),i))];\
+[print('WARNING: wildcard RBAC found: '+v[0]+'|'+str(v[1])+'|'+v[2]) for v in violations];\
+sys.exit(0)"
+
 # test: "Local" unit and functional testing.
 .PHONY: test
 test: go-test

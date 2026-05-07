@@ -15,6 +15,8 @@ func TestUpgraders(t *testing.T) {
 }
 
 // constructs and returns an upgradeConfig suitable for testing
+//
+//nolint:unparam
 func buildTestUpgraderConfig(controlPlaneTimeout int, scaleTimeOut int, nodeDrainTime int, upgradeWindowTimeout int, delayTimeout int) *upgraderConfig {
 	return &upgraderConfig{
 		Maintenance: maintenanceConfig{

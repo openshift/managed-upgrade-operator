@@ -1,6 +1,7 @@
 package availabilitychecks
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"sync"
@@ -53,14 +54,20 @@ func (h HTTPAvailabilityChecker) AvailabilityCheck() error {
 
 		go func(url string) {
 			err := retry(3, time.Second, func() error {
-				resp, err := client.Get(url)
+				req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
+				if err != nil {
+					return fmt.Errorf("failed to create request for %v: %w", url, err)
+				}
+				resp, err := client.Do(req)
 
 				if err != nil {
-					return fmt.Errorf("client request error for %v: %v", url, err)
+					return fmt.Errorf("client request error for %v: %w", url, err)
 				}
 
 				if resp != nil && resp.Body != nil {
-					defer resp.Body.Close()
+					defer func() {
+						_ = resp.Body.Close()
+					}()
 				}
 
 				s := resp.StatusCode

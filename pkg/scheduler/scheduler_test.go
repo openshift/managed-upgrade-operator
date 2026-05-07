@@ -44,6 +44,7 @@ var _ = Describe("Scheduler", func() {
 	})
 })
 
+//nolint:unparam
 func testUpgradeConfig(proceed bool, upgradeAt string) *upgradev1alpha1.UpgradeConfig {
 	return &upgradev1alpha1.UpgradeConfig{
 		ObjectMeta: metav1.ObjectMeta{

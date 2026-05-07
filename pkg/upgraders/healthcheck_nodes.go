@@ -15,7 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func ManuallyCordonedNodes(metricsClient metrics.Metrics, machinery machinery.Machinery, c client.Client, ug *upgradev1alpha1.UpgradeConfig, logger logr.Logger, version string) ([]string, error) {
+func ManuallyCordonedNodes(ctx context.Context, metricsClient metrics.Metrics, machinery machinery.Machinery, c client.Client, ug *upgradev1alpha1.UpgradeConfig, logger logr.Logger, version string) ([]string, error) {
 	nodes := &corev1.NodeList{}
 	cops := &client.ListOptions{
 		Raw: &metav1.ListOptions{
@@ -28,7 +28,7 @@ func ManuallyCordonedNodes(metricsClient metrics.Metrics, machinery machinery.Ma
 	state := string(history.Phase)
 
 	// Get the list of worker nodes
-	err := c.List(context.TODO(), nodes, cops)
+	err := c.List(ctx, nodes, cops)
 	if err != nil {
 		logger.Info("Unable to fetch node list")
 		// Use PrecedingVersion as the versionLabel here because preflight check is performed before the upgrade
@@ -61,7 +61,7 @@ func ManuallyCordonedNodes(metricsClient metrics.Metrics, machinery machinery.Ma
 	return nil, nil
 }
 
-func NodeUnschedulableTaints(metricsClient metrics.Metrics, machinery machinery.Machinery, c client.Client, ug *upgradev1alpha1.UpgradeConfig, logger logr.Logger, version string) ([]string, error) {
+func NodeUnschedulableTaints(ctx context.Context, metricsClient metrics.Metrics, machinery machinery.Machinery, c client.Client, ug *upgradev1alpha1.UpgradeConfig, logger logr.Logger, version string) ([]string, error) {
 	nodes := &corev1.NodeList{}
 	cops := &client.ListOptions{}
 
@@ -70,7 +70,7 @@ func NodeUnschedulableTaints(metricsClient metrics.Metrics, machinery machinery.
 	state := string(history.Phase)
 
 	// Get the list of worker nodes
-	err := c.List(context.TODO(), nodes, cops)
+	err := c.List(ctx, nodes, cops)
 	if err != nil {
 		logger.Info("Unable to fetch node list")
 		// Use PrecedingVersion as the versionLabel here because preflight check is performed before the upgrade

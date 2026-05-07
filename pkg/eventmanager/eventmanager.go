@@ -1,6 +1,8 @@
 package eventmanager
 
 import (
+	"context"
+	"errors"
 	"fmt"
 
 	"github.com/openshift/managed-upgrade-operator/api/v1alpha1"
@@ -107,20 +109,21 @@ func (emb *eventManagerBuilder) NewManager(client client.Client) (EventManager, 
 	}, nil
 }
 
+//nolint:gocyclo
 func (s *eventManager) Notify(state notifier.MuoState) error {
 	// Get the current UpgradeConfig
-	uc, err := s.upgradeConfigManager.Get()
+	uc, err := s.upgradeConfigManager.Get(context.Background())
 	if err != nil {
-		if err == upgradeconfigmanager.ErrUpgradeConfigNotFound {
+		if errors.Is(err, upgradeconfigmanager.ErrUpgradeConfigNotFound) {
 			return nil
 		}
-		return fmt.Errorf("unable to find UpgradeConfig: %v", err)
+		return fmt.Errorf("unable to find UpgradeConfig: %w", err)
 	}
 
 	// Check if a notification for it has been sent successfully - if so, nothing to do
 	isNotified, err := s.metrics.IsMetricNotificationEventSentSet(uc.Name, string(state), uc.Spec.Desired.Version)
 	if err != nil {
-		return fmt.Errorf("can't check cluster metric NotificationSent: %v", err)
+		return fmt.Errorf("can't check cluster metric NotificationSent: %w", err)
 	}
 	if isNotified {
 		return nil
@@ -147,6 +150,16 @@ func (s *eventManager) Notify(state notifier.MuoState) error {
 		description = fmt.Sprintf(UPGRADE_CONTROL_PLANE_FINISHED_DESC, uc.Spec.Desired.Version)
 	case notifier.MuoStateWorkerPlaneUpgradeFinishedSL:
 		description = fmt.Sprintf(UPGRADE_WORKER_PLANE_FINISHED_DESC, uc.Spec.Desired.Version)
+	case notifier.MuoStatePending:
+		description = fmt.Sprintf("Cluster upgrade to version %s is pending", uc.Spec.Desired.Version)
+	case notifier.MuoStateCancelled:
+		description = fmt.Sprintf("Cluster upgrade to version %s has been cancelled", uc.Spec.Desired.Version)
+	case notifier.MuoStateScheduled:
+		description = fmt.Sprintf("Cluster upgrade to version %s is scheduled", uc.Spec.Desired.Version)
+	case notifier.MuoStateHealthCheckSL:
+		description = fmt.Sprintf("Cluster health check servicelog for version %s upgrade", uc.Spec.Desired.Version)
+	case notifier.MuoStatePreHealthCheckSL:
+		description = fmt.Sprintf("Cluster pre-health check servicelog for version %s upgrade", uc.Spec.Desired.Version)
 	default:
 		return fmt.Errorf("state %v not yet implemented", state)
 	}
@@ -155,7 +168,7 @@ func (s *eventManager) Notify(state notifier.MuoState) error {
 	err = s.notifier.NotifyState(state, description)
 	if err != nil {
 		s.metrics.UpdatemetricUpgradeNotificationFailed(uc.Name, string(state))
-		return fmt.Errorf("can't send notification '%s': %v", state, err)
+		return fmt.Errorf("can't send notification '%s': %w", state, err)
 	}
 	s.metrics.UpdatemetricUpgradeNotificationSucceeded(uc.Name, string(state))
 	s.metrics.UpdateMetricNotificationEventSent(uc.Name, string(state), uc.Spec.Desired.Version)
@@ -165,18 +178,18 @@ func (s *eventManager) Notify(state notifier.MuoState) error {
 
 func (s *eventManager) NotifyResult(state notifier.MuoState, result string) error {
 	// Get the current UpgradeConfig
-	uc, err := s.upgradeConfigManager.Get()
+	uc, err := s.upgradeConfigManager.Get(context.Background())
 	if err != nil {
-		if err == upgradeconfigmanager.ErrUpgradeConfigNotFound {
+		if errors.Is(err, upgradeconfigmanager.ErrUpgradeConfigNotFound) {
 			return nil
 		}
-		return fmt.Errorf("unable to find UpgradeConfig: %v", err)
+		return fmt.Errorf("unable to find UpgradeConfig: %w", err)
 	}
 
 	// Check if a notification for it has been sent successfully - if so, nothing to do
 	isNotified, err := s.metrics.IsMetricNotificationEventSentSet(uc.Name, string(state), uc.Spec.Desired.Version)
 	if err != nil {
-		return fmt.Errorf("can't check cluster metric NotificationSent: %v", err)
+		return fmt.Errorf("can't check cluster metric NotificationSent: %w", err)
 	}
 	if isNotified {
 		return nil
@@ -189,6 +202,20 @@ func (s *eventManager) NotifyResult(state notifier.MuoState, result string) erro
 		description = fmt.Sprintf(UPGRADE_HEALTHCHECK_DELAY_DESC, uc.Spec.Desired.Version, result)
 	case notifier.MuoStatePreHealthCheckSL:
 		description = fmt.Sprintf(UPGRADE_PREHEALTHCHECK_WARNING_DESC, uc.Spec.Desired.Version, result)
+	case notifier.MuoStatePending,
+		notifier.MuoStateStarted,
+		notifier.MuoStateCompleted,
+		notifier.MuoStateDelayed,
+		notifier.MuoStateFailed,
+		notifier.MuoStateCancelled,
+		notifier.MuoStateScheduled,
+		notifier.MuoStateScaleSkipped,
+		notifier.MuoStateSkipped,
+		notifier.MuoStateControlPlaneUpgradeStartedSL,
+		notifier.MuoStateControlPlaneUpgradeFinishedSL,
+		notifier.MuoStateWorkerPlaneUpgradeFinishedSL:
+		// These states don't use NotifyResult
+		return fmt.Errorf("state %v should use Notify instead of NotifyResult", state)
 	default:
 		return fmt.Errorf("state %v not yet implemented", state)
 	}
@@ -196,7 +223,7 @@ func (s *eventManager) NotifyResult(state notifier.MuoState, result string) erro
 	// Send the notification
 	err = s.notifier.NotifyState(state, description)
 	if err != nil {
-		return fmt.Errorf("can't send notification '%s': %v", state, err)
+		return fmt.Errorf("can't send notification '%s': %w", state, err)
 	}
 	s.metrics.UpdateMetricNotificationEventSent(uc.Name, string(state), uc.Spec.Desired.Version)
 
@@ -244,6 +271,19 @@ func createFailureDescription(uc *v1alpha1.UpgradeConfig) string {
 		description = fmt.Sprintf(UPGRADE_EXTDEPCHECK_FAILED_DESC, uc.Spec.Desired.Version)
 	case v1alpha1.UpgradeScaleUpExtraNodes:
 		description = fmt.Sprintf(UPGRADE_SCALE_FAILED_DESC, uc.Spec.Desired.Version)
+	case v1alpha1.SendStartedNotification,
+		v1alpha1.ControlPlaneMaintWindow,
+		v1alpha1.CommenceUpgrade,
+		v1alpha1.ControlPlaneUpgraded,
+		v1alpha1.RemoveControlPlaneMaintWindow,
+		v1alpha1.WorkersMaintWindow,
+		v1alpha1.AllWorkerNodesUpgraded,
+		v1alpha1.RemoveExtraScaledNodes,
+		v1alpha1.RemoveMaintWindow,
+		v1alpha1.PostClusterHealthCheck,
+		v1alpha1.PostUpgradeProcedures,
+		v1alpha1.SendCompletedNotification:
+		// Use default description for these conditions
 	}
 
 	return description
@@ -288,6 +328,20 @@ func createDelayedDescription(uc *v1alpha1.UpgradeConfig) string {
 		description = fmt.Sprintf(UPGRADE_EXTDEPCHECK_DELAY_DESC, uc.Spec.Desired.Version)
 	case v1alpha1.UpgradeScaleUpExtraNodes:
 		description = fmt.Sprintf(UPGRADE_SCALE_DELAY_DESC, uc.Spec.Desired.Version)
+	case v1alpha1.SendStartedNotification,
+		v1alpha1.ControlPlaneMaintWindow,
+		v1alpha1.CommenceUpgrade,
+		v1alpha1.ControlPlaneUpgraded,
+		v1alpha1.RemoveControlPlaneMaintWindow,
+		v1alpha1.WorkersMaintWindow,
+		v1alpha1.AllWorkerNodesUpgraded,
+		v1alpha1.RemoveExtraScaledNodes,
+		v1alpha1.RemoveMaintWindow,
+		v1alpha1.PostClusterHealthCheck,
+		v1alpha1.PostUpgradeProcedures,
+		v1alpha1.SendCompletedNotification,
+		v1alpha1.IsClusterUpgradable:
+		// Use default description for these conditions
 	}
 
 	return description

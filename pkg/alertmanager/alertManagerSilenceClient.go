@@ -12,6 +12,7 @@ import (
 )
 
 // AlertManagerSilencer interface enables implementations of an AlertManagerSilencer
+//
 //go:generate mockgen -destination=mocks/alertManagerSilenceClient.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/alertmanager AlertManagerSilencer
 type AlertManagerSilencer interface {
 	Create(matchers amv2Models.Matchers, startsAt strfmt.DateTime, endsAt strfmt.DateTime, creator string, comment string) error
@@ -109,14 +110,14 @@ func (ams *AlertManagerSilenceClient) Update(id string, endsAt strfmt.DateTime) 
 	// Create a new silence first
 	err = ams.Create(result.Payload.Matchers, *result.Payload.StartsAt, endsAt, *result.Payload.CreatedBy, *result.Payload.Comment)
 	if err != nil {
-		return fmt.Errorf("unable to create replacement silence: %v", err)
+		return fmt.Errorf("unable to create replacement silence: %w", err)
 	}
 
 	// Remove the old silence if it's still active
 	if *result.Payload.Status.State == amv2Models.SilenceStatusStateActive {
 		err = ams.Delete(*result.Payload.ID)
 		if err != nil {
-			return fmt.Errorf("unable to remove replaced silence: %v", err)
+			return fmt.Errorf("unable to remove replaced silence: %w", err)
 		}
 	}
 

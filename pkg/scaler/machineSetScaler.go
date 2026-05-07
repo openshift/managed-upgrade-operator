@@ -304,6 +304,7 @@ func nodesAreReady(c client.Client, timeOut time.Duration, upgradeMachinesets ma
 	return true, nil
 }
 
+//nolint:unparam
 func handleDrainStrategy(c client.Client, nds drain.NodeDrainStrategy, nodes corev1.NodeList, logger logr.Logger) (bool, error) {
 	for _, n := range nodes.Items {
 		n := n

@@ -1,6 +1,7 @@
 package notifier
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"strings"
@@ -105,7 +106,7 @@ func (s *ocmNotifier) NotifyState(state MuoState, description string) error {
 
 	cluster, err := s.ocmClient.GetCluster()
 	if err != nil {
-		return fmt.Errorf("failed to retrieve internal ocm cluster ID: %v", err)
+		return fmt.Errorf("failed to retrieve internal ocm cluster ID: %w", err)
 	}
 
 	// Enable sending the servicelog notifications only if the featuregate is enabled
@@ -120,19 +121,19 @@ func (s *ocmNotifier) NotifyState(state MuoState, description string) error {
 			}
 			err = s.ocmClient.PostServiceLog((*ocm.ServiceLog)(&slState), description)
 			if err != nil {
-				return fmt.Errorf("failed to send servicelog notification: %v", err)
+				return fmt.Errorf("failed to send servicelog notification: %w", err)
 			}
 		}
 	}
 
 	policyId, err := s.getPolicyIdForUpgradeConfig(cluster.ID())
 	if err != nil {
-		return fmt.Errorf("can't determine policy ID to notify for: %v", err)
+		return fmt.Errorf("can't determine policy ID to notify for: %w", err)
 	}
 
 	currentState, err := s.ocmClient.GetClusterUpgradePolicyState(*policyId, cluster.ID())
 	if err != nil {
-		return fmt.Errorf("can't determine policy state: %v", err)
+		return fmt.Errorf("can't determine policy state: %w", err)
 	}
 
 	var muoCurrent MuoState
@@ -160,7 +161,7 @@ func (s *ocmNotifier) NotifyState(state MuoState, description string) error {
 
 	err = s.ocmClient.SetState(string(stateMap[state]), description, *policyId, cluster.ID())
 	if err != nil {
-		return fmt.Errorf("can't send notification: %v", err)
+		return fmt.Errorf("can't send notification: %w", err)
 	}
 	return nil
 }
@@ -168,7 +169,7 @@ func (s *ocmNotifier) NotifyState(state MuoState, description string) error {
 // Determines the Cluster Services Upgrade Policy ID corresponding to the UpgradeConfig
 func (s *ocmNotifier) getPolicyIdForUpgradeConfig(clusterId string) (*string, error) {
 	// Get current UC
-	uc, err := s.upgradeConfigManager.Get()
+	uc, err := s.upgradeConfigManager.Get(context.Background())
 	if err != nil {
 		return nil, err
 	}
@@ -201,6 +202,8 @@ func (s *ocmNotifier) getPolicyIdForUpgradeConfig(clusterId string) (*string, er
 }
 
 // Validates that a state transition can be made from the supplied from/to states
+//
+//nolint:gocyclo
 func validateStateTransition(from MuoState, to MuoState) bool {
 
 	switch from {
@@ -212,6 +215,8 @@ func validateStateTransition(from MuoState, to MuoState) bool {
 		switch to {
 		case MuoStateStarted:
 			return true
+		case MuoStatePending, MuoStateCompleted, MuoStateDelayed, MuoStateFailed, MuoStateCancelled, MuoStateScheduled, MuoStateScaleSkipped, MuoStateSkipped, MuoStateHealthCheckSL, MuoStatePreHealthCheckSL, MuoStateControlPlaneUpgradeStartedSL, MuoStateControlPlaneUpgradeFinishedSL, MuoStateWorkerPlaneUpgradeFinishedSL:
+			return false
 		default:
 			return false
 		}
@@ -227,6 +232,8 @@ func validateStateTransition(from MuoState, to MuoState) bool {
 			return true
 		case MuoStateFailed:
 			return true
+		case MuoStatePending, MuoStateStarted, MuoStateCancelled, MuoStateScheduled, MuoStateSkipped, MuoStateHealthCheckSL, MuoStatePreHealthCheckSL, MuoStateControlPlaneUpgradeStartedSL, MuoStateControlPlaneUpgradeFinishedSL, MuoStateWorkerPlaneUpgradeFinishedSL:
+			return false
 		default:
 			return false
 		}
@@ -242,6 +249,8 @@ func validateStateTransition(from MuoState, to MuoState) bool {
 			return true
 		case MuoStateCompleted:
 			return true
+		case MuoStatePending, MuoStateStarted, MuoStateCancelled, MuoStateScheduled, MuoStateScaleSkipped, MuoStateHealthCheckSL, MuoStatePreHealthCheckSL, MuoStateControlPlaneUpgradeStartedSL, MuoStateControlPlaneUpgradeFinishedSL, MuoStateWorkerPlaneUpgradeFinishedSL:
+			return false
 		default:
 			return false
 		}
@@ -255,6 +264,8 @@ func validateStateTransition(from MuoState, to MuoState) bool {
 			return true
 		case MuoStateSkipped:
 			return true
+		case MuoStatePending, MuoStateStarted, MuoStateDelayed, MuoStateCancelled, MuoStateScheduled, MuoStateScaleSkipped, MuoStateHealthCheckSL, MuoStatePreHealthCheckSL, MuoStateControlPlaneUpgradeStartedSL, MuoStateControlPlaneUpgradeFinishedSL, MuoStateWorkerPlaneUpgradeFinishedSL:
+			return false
 		default:
 			return false
 		}
@@ -266,15 +277,35 @@ func validateStateTransition(from MuoState, to MuoState) bool {
 			return true
 		case MuoStateFailed:
 			return true
+		case MuoStatePending, MuoStateStarted, MuoStateDelayed, MuoStateCancelled, MuoStateScheduled, MuoStateScaleSkipped, MuoStateSkipped, MuoStateHealthCheckSL, MuoStatePreHealthCheckSL, MuoStateControlPlaneUpgradeStartedSL, MuoStateControlPlaneUpgradeFinishedSL, MuoStateWorkerPlaneUpgradeFinishedSL:
+			return false
 		default:
 			return false
 		}
 
+	case MuoStateCancelled:
+		// can't go anywhere
+		return false
 	case MuoStateCompleted:
 		// can't go anywhere
 		return false
 	case MuoStateFailed:
 		// can't go anywhere
+		return false
+	case MuoStateHealthCheckSL:
+		// Service log states can't transition
+		return false
+	case MuoStatePreHealthCheckSL:
+		// Service log states can't transition
+		return false
+	case MuoStateControlPlaneUpgradeStartedSL:
+		// Service log states can't transition
+		return false
+	case MuoStateControlPlaneUpgradeFinishedSL:
+		// Service log states can't transition
+		return false
+	case MuoStateWorkerPlaneUpgradeFinishedSL:
+		// Service log states can't transition
 		return false
 	default:
 		return false

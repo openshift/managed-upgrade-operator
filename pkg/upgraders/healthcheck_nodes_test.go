@@ -1,6 +1,7 @@
 package upgraders
 
 import (
+	"context"
 	"fmt"
 
 	. "github.com/onsi/ginkgo"
@@ -81,7 +82,7 @@ var _ = Describe("HealthCheck Manually Cordoned node", func() {
 				mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterNodeQueryFailed, gomock.Any(), gomock.Any()),
 				mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterNodesManuallyCordoned, gomock.Any(), gomock.Any()),
 			)
-			result, err := ManuallyCordonedNodes(mockMetricsClient, mockMachineryClient, mockKubeClient, upgradeConfig, logger, version)
+			result, err := ManuallyCordonedNodes(context.TODO(), mockMetricsClient, mockMachineryClient, mockKubeClient, upgradeConfig, logger, version)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(result).Should(BeNil())
 		})
@@ -106,7 +107,7 @@ var _ = Describe("HealthCheck Manually Cordoned node", func() {
 				mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterNodeQueryFailed, gomock.Any(), gomock.Any()),
 				mockMetricsClient.EXPECT().UpdateMetricHealthcheckSucceeded(upgradeConfig.Name, metrics.ClusterNodesManuallyCordoned, gomock.Any(), gomock.Any()),
 			)
-			result, err := ManuallyCordonedNodes(mockMetricsClient, mockMachineryClient, mockKubeClient, upgradeConfig, logger, version)
+			result, err := ManuallyCordonedNodes(context.TODO(), mockMetricsClient, mockMachineryClient, mockKubeClient, upgradeConfig, logger, version)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(result).Should(BeNil())
 		})
@@ -116,7 +117,7 @@ var _ = Describe("HealthCheck Manually Cordoned node", func() {
 		It("Prehealth check will fail", func() {
 			mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("Fake cannot fetch all worker nodes"))
 			mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, gomock.Any(), gomock.Any(), gomock.Any())
-			result, err := ManuallyCordonedNodes(mockMetricsClient, mockMachineryClient, mockKubeClient, upgradeConfig, logger, version)
+			result, err := ManuallyCordonedNodes(context.TODO(), mockMetricsClient, mockMachineryClient, mockKubeClient, upgradeConfig, logger, version)
 			Expect(err).Should(HaveOccurred())
 			Expect(result).Should(BeNil())
 		})
@@ -140,7 +141,7 @@ var _ = Describe("HealthCheck Manually Cordoned node", func() {
 				mockMachineryClient.EXPECT().IsNodeUpgrading(gomock.Any()).Return(false),
 				mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, gomock.Any(), gomock.Any(), gomock.Any()),
 			)
-			result, err := ManuallyCordonedNodes(mockMetricsClient, mockMachineryClient, mockKubeClient, upgradeConfig, logger, version)
+			result, err := ManuallyCordonedNodes(context.TODO(), mockMetricsClient, mockMachineryClient, mockKubeClient, upgradeConfig, logger, version)
 			Expect(err).Should(HaveOccurred())
 			Expect(result).Should(Not(BeNil()))
 		})
@@ -152,7 +153,7 @@ var _ = Describe("HealthCheck Manually Cordoned node", func() {
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("Fake cannot fetch all worker nodes")),
 				mockMetricsClient.EXPECT().UpdateMetricHealthcheckFailed(upgradeConfig.Name, gomock.Any(), gomock.Any(), gomock.Any()),
 			)
-			result, err := NodeUnschedulableTaints(mockMetricsClient, mockMachineryClient, mockKubeClient, upgradeConfig, logger, version)
+			result, err := NodeUnschedulableTaints(context.TODO(), mockMetricsClient, mockMachineryClient, mockKubeClient, upgradeConfig, logger, version)
 			Expect(err).Should(HaveOccurred())
 			Expect(result).Should(BeNil())
 		})

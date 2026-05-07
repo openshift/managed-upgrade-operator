@@ -7,10 +7,10 @@ import (
 	"path"
 	"time"
 
-	configv1 "github.com/openshift/api/config/v1"
 	sdk "github.com/openshift-online/ocm-sdk-go"
 	cmv1 "github.com/openshift-online/ocm-sdk-go/clustersmgmt/v1"
 	servicelogsv1 "github.com/openshift-online/ocm-sdk-go/servicelogs/v1"
+	configv1 "github.com/openshift/api/config/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -82,7 +82,7 @@ func (s *ocmClient) GetCluster() (*cmv1.Cluster, error) {
 	cv := &configv1.ClusterVersion{}
 	err := s.client.Get(context.TODO(), types.NamespacedName{Name: "version"}, cv)
 	if err != nil {
-		return nil, fmt.Errorf("can't get clusterversion: %v", err)
+		return nil, fmt.Errorf("can't get clusterversion: %w", err)
 	}
 	externalID := cv.Spec.ClusterID
 
@@ -104,7 +104,7 @@ func (s *ocmClient) GetCluster() (*cmv1.Cluster, error) {
 	// Construct full URL for logging
 	csUrl, err := url.Parse(s.ocmBaseUrl.String())
 	if err != nil {
-		return nil, fmt.Errorf("can't parse OCM API url: %v", err)
+		return nil, fmt.Errorf("can't parse OCM API url: %w", err)
 	}
 	csUrl.Path = path.Join(csUrl.Path, CLUSTERS_V1_PATH)
 	csUrl.RawQuery = fmt.Sprintf("search=%s&size=1", url.QueryEscape(clustersSearch))
@@ -149,7 +149,7 @@ func (s *ocmClient) GetClusterUpgradePolicies(clusterId string) (*cmv1.UpgradePo
 	// Construct full URL for logging
 	upUrl, err := url.Parse(s.ocmBaseUrl.String())
 	if err != nil {
-		return nil, fmt.Errorf("can't read OCM API url: %v", err)
+		return nil, fmt.Errorf("can't read OCM API url: %w", err)
 	}
 	upUrl.Path = path.Join(upUrl.Path, CLUSTERS_V1_PATH, clusterId, UPGRADEPOLICIES_V1_PATH)
 	upUrl.RawQuery = "page=1&size=1"
@@ -173,13 +173,13 @@ func (s *ocmClient) SetState(value string, description string, policyId string, 
 		Build()
 
 	if err != nil {
-		return fmt.Errorf("failed to build policy state: %v", err)
+		return fmt.Errorf("failed to build policy state: %w", err)
 	}
 
 	// Construct full URL for logging
 	reqUrl, err := url.Parse(s.ocmBaseUrl.String())
 	if err != nil {
-		return fmt.Errorf("can't read OCM API url: %v", err)
+		return fmt.Errorf("can't read OCM API url: %w", err)
 	}
 	reqUrl.Path = path.Join(reqUrl.Path, CLUSTERS_V1_PATH, clusterId, UPGRADEPOLICIES_V1_PATH, policyId, STATE_V1_PATH)
 
@@ -195,7 +195,7 @@ func (s *ocmClient) SetState(value string, description string, policyId string, 
 		Send()
 
 	if err != nil {
-		return fmt.Errorf("can't set upgrade policy state: request to '%v' returned error '%v'", reqUrl.String(), err)
+		return fmt.Errorf("can't set upgrade policy state: request to '%v' returned error '%w'", reqUrl.String(), err)
 	}
 
 	operationId := response.Header().Get(OPERATION_ID_HEADER)
@@ -239,7 +239,7 @@ func (s *ocmClient) GetClusterUpgradePolicyState(policyId string, clusterId stri
 func (s *ocmClient) PostServiceLog(sl *ServiceLog, description string) error {
 	cluster, err := s.GetCluster()
 	if err != nil {
-		return fmt.Errorf("failed to retrieve internal cluster ID from OCM: %v", err)
+		return fmt.Errorf("failed to retrieve internal cluster ID from OCM: %w", err)
 	}
 	builder := &servicelogsv1.LogEntryBuilder{}
 
@@ -272,10 +272,10 @@ func (s *ocmClient) PostServiceLog(sl *ServiceLog, description string) error {
 
 	response, err := request.Send()
 	if err != nil || response.Error() != nil {
-		return fmt.Errorf("could not post service log %s: %v", sl.Summary, err)
+		return fmt.Errorf("could not post service log %s: %w", sl.Summary, err)
 	}
 
-	fmt.Printf("Successfully sent servicelog: %s", sl.Summary)
+	_, _ = fmt.Printf("Successfully sent servicelog: %s", sl.Summary)
 
 	return nil
 }

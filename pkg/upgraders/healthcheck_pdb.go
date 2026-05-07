@@ -19,13 +19,13 @@ var namespaceException = []string{"openshift-logging", "openshift-redhat-marketp
 // HealthCheckPDB performs a health check on the PodDisruptionBudget (PDB) metrics.
 // It returns true if the health check passes, false otherwise.
 // It also returns an error if there was an issue performing the health check.
-func HealthCheckPDB(metricsClient metrics.Metrics, c client.Client, dvo dvo.DvoClientBuilder, ug *upgradev1alpha1.UpgradeConfig, logger logr.Logger, version string) ([]PDBDetails, bool, error) {
+func HealthCheckPDB(ctx context.Context, metricsClient metrics.Metrics, c client.Client, dvo dvo.DvoClientBuilder, ug *upgradev1alpha1.UpgradeConfig, logger logr.Logger, version string) ([]PDBDetails, bool, error) {
 
 	// Get current cluster version and upgrade state info
 	history := ug.Status.History.GetHistory(ug.Spec.Desired.Version)
 	state := string(history.Phase)
 
-	pdbDetails, reason, err := checkPodDisruptionBudgets(c, logger)
+	pdbDetails, reason, err := checkPodDisruptionBudgets(ctx, c, logger)
 	if err != nil {
 		metricsClient.UpdateMetricHealthcheckFailed(ug.Name, reason, version, state)
 		return pdbDetails, false, err
@@ -43,11 +43,11 @@ func HealthCheckPDB(metricsClient metrics.Metrics, c client.Client, dvo dvo.DvoC
 	return pdbDetails, true, nil
 }
 
-func checkPodDisruptionBudgets(c client.Client, logger logr.Logger) ([]PDBDetails, string, error) {
+func checkPodDisruptionBudgets(ctx context.Context, c client.Client, logger logr.Logger) ([]PDBDetails, string, error) {
 	// List all PodDisruptionBudgets
 	pdbList := &policyv1.PodDisruptionBudgetList{}
 	pdbDetails := []PDBDetails{}
-	err := c.List(context.TODO(), pdbList)
+	err := c.List(ctx, pdbList)
 	if err != nil {
 		logger.Info("unable to list PodDisruptionBudgets/v1")
 		return pdbDetails, metrics.PDBQueryFailed, err
@@ -143,6 +143,8 @@ func validateMinAvailable(p policyv1.PodDisruptionBudget, l logr.Logger) (bool, 
 				l.Info(fmt.Sprintf("MinAvailable 100%% found in PodDisruptionBudget: %s/%s\n", p.Namespace, p.Name))
 				return false, fmt.Errorf("found a PodDisruptionBudget with MinUnavailable set to 100%%")
 			}
+		case intstr.Int:
+			// Integer type MinAvailable is acceptable, no validation needed
 		}
 	}
 	return true, nil

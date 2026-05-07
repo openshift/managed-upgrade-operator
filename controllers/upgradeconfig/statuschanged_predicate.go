@@ -28,8 +28,16 @@ func StatusChangedPredicate() predicate.Predicate {
 				log.Error(nil, "Update event has no new metadata", "event", e)
 				return false
 			}
-			newUp := e.ObjectNew.(*upgradev1alpha1.UpgradeConfig)
-			oldUp := e.ObjectOld.(*upgradev1alpha1.UpgradeConfig)
+			newUp, ok := e.ObjectNew.(*upgradev1alpha1.UpgradeConfig)
+			if !ok {
+				log.Error(nil, "Update event new object is not an UpgradeConfig", "event", e)
+				return false
+			}
+			oldUp, ok := e.ObjectOld.(*upgradev1alpha1.UpgradeConfig)
+			if !ok {
+				log.Error(nil, "Update event old object is not an UpgradeConfig", "event", e)
+				return false
+			}
 			return (reflect.DeepEqual(newUp.Status, oldUp.Status))
 		},
 	}

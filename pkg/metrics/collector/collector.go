@@ -1,6 +1,7 @@
 package collector
 
 import (
+	"context"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -59,7 +60,7 @@ func (uc *UpgradeCollector) Collect(ch chan<- prometheus.Metric) {
 }
 
 func (uc *UpgradeCollector) collectUpgradeMetrics(ch chan<- prometheus.Metric) {
-	upgradeConfig, err := uc.upgradeConfigManager.Get()
+	upgradeConfig, err := uc.upgradeConfigManager.Get(context.Background())
 	if err != nil {
 		return
 	}

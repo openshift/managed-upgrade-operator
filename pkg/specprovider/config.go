@@ -20,7 +20,7 @@ type ConfigManagerSource string
 // SpecProviderConfig holds fields that describe a spec providers config
 type SpecProviderConfig struct {
 	// UpgradeType is used to select which upgrader to use when upgrading
-	UpgradeType   string        `yaml:"upgradeType"`
+	UpgradeType string `yaml:"upgradeType"`
 	// ConfigManager configures the source that the operator uses to read UpgradeConfig specs
 	ConfigManager ConfigManager `yaml:"configManager"`
 }

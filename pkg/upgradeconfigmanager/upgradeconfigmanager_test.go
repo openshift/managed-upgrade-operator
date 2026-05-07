@@ -89,7 +89,7 @@ var _ = Describe("UpgradeConfigManager", func() {
 			gomock.InOrder(
 				mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, upgradeConfig).Return(nil),
 			)
-			uc, err := manager.Get()
+			uc, err := manager.Get(context.TODO())
 			Expect(err).To(BeNil())
 			Expect(uc.Spec).To(Equal(upgradeConfig.Spec))
 		})
@@ -98,7 +98,7 @@ var _ = Describe("UpgradeConfigManager", func() {
 			gomock.InOrder(
 				mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("Some error")),
 			)
-			ucs, err := manager.Get()
+			ucs, err := manager.Get(context.TODO())
 			Expect(err).To(Equal(ErrRetrievingUpgradeConfigs))
 			Expect(ucs).To(BeNil())
 		})
@@ -263,7 +263,7 @@ var _ = Describe("UpgradeConfigManager", func() {
 			gomock.InOrder(
 				mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(ErrRetrievingUpgradeConfigs),
 			)
-			_, err := manager.Refresh()
+			_, err := manager.Refresh(context.TODO())
 			Expect(err).To(Equal(ErrRetrievingUpgradeConfigs))
 		})
 
@@ -273,7 +273,7 @@ var _ = Describe("UpgradeConfigManager", func() {
 				mockSPClientBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockSPClient, nil),
 				mockSPClient.EXPECT().Get().Return(nil, fmt.Errorf("some error")),
 			)
-			changed, err := manager.Refresh()
+			changed, err := manager.Refresh(context.TODO())
 			Expect(err).To(Equal(ErrProviderSpecPull))
 			Expect(changed).To(BeFalse())
 		})
@@ -293,7 +293,7 @@ var _ = Describe("UpgradeConfigManager", func() {
 						return nil
 					}),
 			)
-			changed, err := manager.Refresh()
+			changed, err := manager.Refresh(context.TODO())
 			Expect(err).To(BeNil())
 			Expect(changed).To(BeTrue())
 		})
@@ -308,7 +308,7 @@ var _ = Describe("UpgradeConfigManager", func() {
 				mockSPClientBuilder.EXPECT().New(gomock.Any(), gomock.Any()).Return(mockSPClient, nil),
 				mockSPClient.EXPECT().Get().Return([]upgradev1alpha1.UpgradeConfigSpec{}, nil),
 			)
-			changed, err := manager.Refresh()
+			changed, err := manager.Refresh(context.TODO())
 			Expect(err).To(BeNil())
 			Expect(changed).To(BeFalse())
 		})
@@ -335,7 +335,7 @@ var _ = Describe("UpgradeConfigManager", func() {
 						return nil
 					}),
 			)
-			changed, err := manager.Refresh()
+			changed, err := manager.Refresh(context.TODO())
 			Expect(err).To(BeNil())
 			Expect(changed).To(BeTrue())
 		})
@@ -382,7 +382,7 @@ var _ = Describe("UpgradeConfigManager", func() {
 						return nil
 					}),
 			)
-			changed, err := manager.Refresh()
+			changed, err := manager.Refresh(context.TODO())
 			Expect(err).To(BeNil())
 			Expect(changed).To(BeTrue())
 		})

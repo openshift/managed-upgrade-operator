@@ -29,13 +29,13 @@ func GetAccessToken(c client.Client) (*AccessToken, error) {
 	cv := &configv1.ClusterVersion{}
 	err := c.Get(context.TODO(), types.NamespacedName{Name: "version"}, cv)
 	if err != nil {
-		return nil, fmt.Errorf("can't get clusterversion: %v", err)
+		return nil, fmt.Errorf("can't get clusterversion: %w", err)
 	}
 
 	secret := &corev1.Secret{}
 	err = c.Get(context.TODO(), types.NamespacedName{Namespace: "openshift-config", Name: "pull-secret"}, secret)
 	if err != nil {
-		return nil, fmt.Errorf("cannot fetch pull secret: %v", err)
+		return nil, fmt.Errorf("cannot fetch pull secret: %w", err)
 	}
 
 	pullSecret, ok := secret.Data[pullSecretKey]
@@ -46,17 +46,25 @@ func GetAccessToken(c client.Client) (*AccessToken, error) {
 	var dockerConfig map[string]interface{}
 	err = json.Unmarshal(pullSecret, &dockerConfig)
 	if err != nil {
-		return nil, fmt.Errorf("unable to interpret decoded pull secret as json: %v", err)
+		return nil, fmt.Errorf("unable to interpret decoded pull secret as json: %w", err)
 	}
 	authConfig, ok := dockerConfig["auths"]
 	if !ok {
 		return nil, fmt.Errorf("unable to find auths section in pull secret")
 	}
-	apiConfig, ok := authConfig.(map[string]interface{})[pullSecretAuthKey]
+	authMap, ok := authConfig.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("auths section is not a map")
+	}
+	apiConfig, ok := authMap[pullSecretAuthKey]
 	if !ok {
 		return nil, fmt.Errorf("unable to find pull secret auth key '%s' in pull secret", pullSecretAuthKey)
 	}
-	accessToken, ok := apiConfig.(map[string]interface{})["auth"]
+	apiMap, ok := apiConfig.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("api config is not a map")
+	}
+	accessToken, ok := apiMap["auth"]
 	if !ok {
 		return nil, fmt.Errorf("unable to find access auth token in pull secret")
 	}

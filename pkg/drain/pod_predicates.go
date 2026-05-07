@@ -1,10 +1,11 @@
 package drain
 
 import (
+	"regexp"
+
 	"github.com/openshift/managed-upgrade-operator/pkg/pod"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
-	"regexp"
 )
 
 func isPdbPod(pdbList *policyv1.PodDisruptionBudgetList) pod.PodPredicate {

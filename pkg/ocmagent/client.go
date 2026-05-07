@@ -60,7 +60,7 @@ type clusterInfoJSON struct {
 func (s *ocmClient) GetCluster() (*cmv1.Cluster, error) {
 	apiUrl, err := parseOcmBaseUrl(s.ocmBaseUrl)
 	if err != nil {
-		return nil, fmt.Errorf("can't parse OCM API url: %v", err)
+		return nil, fmt.Errorf("can't parse OCM API url: %w", err)
 	}
 
 	// GET ocm-agent.svc.local/ (root path)
@@ -69,7 +69,7 @@ func (s *ocmClient) GetCluster() (*cmv1.Cluster, error) {
 		Send()
 
 	if err != nil {
-		return nil, fmt.Errorf("can't query OCM cluster service: request to '%v' returned error '%v'", apiUrl.String(), err)
+		return nil, fmt.Errorf("can't query OCM cluster service: request to '%v' returned error '%w'", apiUrl.String(), err)
 	}
 
 	operationId := response.Header(OPERATION_ID_HEADER)
@@ -84,7 +84,7 @@ func (s *ocmClient) GetCluster() (*cmv1.Cluster, error) {
 	// Unmarshal simplified JSON from ocm-agent
 	var clusterInfo clusterInfoJSON
 	if err := json.Unmarshal(response.Bytes(), &clusterInfo); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal cluster info response: %v", err)
+		return nil, fmt.Errorf("failed to unmarshal cluster info response: %w", err)
 	}
 
 	// Build SDK cluster type from JSON
@@ -99,7 +99,7 @@ func (s *ocmClient) GetCluster() (*cmv1.Cluster, error) {
 		Build()
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to build cluster SDK type: %v", err)
+		return nil, fmt.Errorf("failed to build cluster SDK type: %w", err)
 	}
 
 	return cluster, nil
@@ -155,13 +155,13 @@ func (s *ocmClient) SetState(value string, description string, policyId string, 
 		Build()
 
 	if err != nil {
-		return fmt.Errorf("failed to build policy state: %v", err)
+		return fmt.Errorf("failed to build policy state: %w", err)
 	}
 
 	// Construct full URL for logging
 	apiUrl, err := parseOcmBaseUrl(s.ocmBaseUrl)
 	if err != nil {
-		return fmt.Errorf("can't read OCM API url: %v", err)
+		return fmt.Errorf("can't read OCM API url: %w", err)
 	}
 	apiUrl.Path = path.Join(UPGRADEPOLICIES_PATH, policyId, STATE_V1_PATH)
 
@@ -177,7 +177,7 @@ func (s *ocmClient) SetState(value string, description string, policyId string, 
 		Send()
 
 	if err != nil {
-		return fmt.Errorf("can't set upgrade policy state: request to '%v' returned error '%v'", apiUrl.String(), err)
+		return fmt.Errorf("can't set upgrade policy state: request to '%v' returned error '%w'", apiUrl.String(), err)
 	}
 
 	operationId := response.Header().Get(OPERATION_ID_HEADER)
@@ -196,7 +196,7 @@ func (s *ocmClient) GetClusterUpgradePolicyState(policyId string, clusterId stri
 	// Construct full URL for logging
 	apiUrl, err := parseOcmBaseUrl(s.ocmBaseUrl)
 	if err != nil {
-		return nil, fmt.Errorf("can't read OCM API url: %v", err)
+		return nil, fmt.Errorf("can't read OCM API url: %w", err)
 	}
 	apiUrl.Path = path.Join(UPGRADEPOLICIES_PATH, policyId, STATE_V1_PATH)
 
@@ -211,7 +211,7 @@ func (s *ocmClient) GetClusterUpgradePolicyState(policyId string, clusterId stri
 		Send()
 
 	if err != nil {
-		return nil, fmt.Errorf("can't pull upgrade policy state: request to '%v' returned error '%v'", apiUrl.String(), err)
+		return nil, fmt.Errorf("can't pull upgrade policy state: request to '%v' returned error '%w'", apiUrl.String(), err)
 	}
 
 	operationId := response.Header().Get(OPERATION_ID_HEADER)
@@ -231,7 +231,7 @@ func (s *ocmClient) GetClusterUpgradePolicyState(policyId string, clusterId stri
 func (s *ocmClient) PostServiceLog(sl *ocm.ServiceLog, description string) error {
 	cluster, err := s.GetCluster()
 	if err != nil {
-		return fmt.Errorf("failed to retrieve internal cluster ID from OCM: %v", err)
+		return fmt.Errorf("failed to retrieve internal cluster ID from OCM: %w", err)
 	}
 	builder := &servicelogsv1.LogEntryBuilder{}
 
@@ -261,10 +261,10 @@ func (s *ocmClient) PostServiceLog(sl *ocm.ServiceLog, description string) error
 
 	response, err := request.Send()
 	if err != nil || response.Error() != nil {
-		return fmt.Errorf("could not post service log %s: %v", sl.Summary, err)
+		return fmt.Errorf("could not post service log %s: %w", sl.Summary, err)
 	}
 
-	fmt.Printf("Successfully sent servicelog: %s", sl.Summary)
+	_, _ = fmt.Printf("Successfully sent servicelog: %s", sl.Summary)
 
 	return nil
 }

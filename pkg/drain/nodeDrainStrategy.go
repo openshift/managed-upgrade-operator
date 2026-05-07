@@ -77,7 +77,7 @@ func (ds *osdDrainStrategy) Execute(node *corev1.Node, logger logr.Logger) ([]*D
 							string(notifier.MuoStateDelayed), ds.uc.Spec.Desired.Version)
 						if err != nil {
 							logger.Error(err, "Failed to send the service log about upgrade delay due to node drain grace period")
-							return nil, fmt.Errorf("can't check cluster metric NotificationSent: %v", err)
+							return nil, fmt.Errorf("can't check cluster metric NotificationSent: %w", err)
 						}
 						if !isNotified {
 							logger.Info("Sending upgrade delay message about node drain grace period")
@@ -178,7 +178,7 @@ func isAfter(t *metav1.Time, d time.Duration) bool {
 }
 
 func sortDuration(ts []TimedDrainStrategy) []TimedDrainStrategy {
-	sortedSlice := []TimedDrainStrategy{}
+	sortedSlice := make([]TimedDrainStrategy, 0, len(ts))
 	sortedSlice = append(sortedSlice, ts...)
 	sort.Slice(sortedSlice, func(i, j int) bool {
 		iWait := ts[i].GetWaitDuration()

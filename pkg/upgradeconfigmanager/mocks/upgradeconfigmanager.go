@@ -41,33 +41,33 @@ func (m *MockUpgradeConfigManager) EXPECT() *MockUpgradeConfigManagerMockRecorde
 }
 
 // Get mocks base method.
-func (m *MockUpgradeConfigManager) Get() (*v1alpha1.UpgradeConfig, error) {
+func (m *MockUpgradeConfigManager) Get(arg0 context.Context) (*v1alpha1.UpgradeConfig, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get")
+	ret := m.ctrl.Call(m, "Get", arg0)
 	ret0, _ := ret[0].(*v1alpha1.UpgradeConfig)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockUpgradeConfigManagerMockRecorder) Get() *gomock.Call {
+func (mr *MockUpgradeConfigManagerMockRecorder) Get(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockUpgradeConfigManager)(nil).Get))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockUpgradeConfigManager)(nil).Get), arg0)
 }
 
 // Refresh mocks base method.
-func (m *MockUpgradeConfigManager) Refresh() (bool, error) {
+func (m *MockUpgradeConfigManager) Refresh(arg0 context.Context) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Refresh")
+	ret := m.ctrl.Call(m, "Refresh", arg0)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Refresh indicates an expected call of Refresh.
-func (mr *MockUpgradeConfigManagerMockRecorder) Refresh() *gomock.Call {
+func (mr *MockUpgradeConfigManagerMockRecorder) Refresh(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Refresh", reflect.TypeOf((*MockUpgradeConfigManager)(nil).Refresh))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Refresh", reflect.TypeOf((*MockUpgradeConfigManager)(nil).Refresh), arg0)
 }
 
 // StartSync mocks base method.

@@ -1,6 +1,7 @@
 package availabilitychecks
 
 import (
+	"errors"
 	"math/rand"
 	"time"
 )
@@ -15,7 +16,8 @@ type stop struct {
 
 func retry(attempts int, sleep time.Duration, f func() error) error {
 	if err := f(); err != nil {
-		if s, ok := err.(stop); ok {
+		var s stop
+		if errors.As(err, &s) {
 			return s.error
 		}
 

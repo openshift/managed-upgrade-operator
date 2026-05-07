@@ -34,7 +34,7 @@ func CriticalAlerts(metricsClient metrics.Metrics, cfg *upgraderConfig, ug *upgr
 	if err != nil {
 		logger.Info("Unable to query metrics to check for open alerts")
 		metricsClient.UpdateMetricHealthcheckFailed(ug.Name, metrics.MetricsQueryFailed, version, state)
-		return false, fmt.Errorf("unable to query critical alerts: %s", err)
+		return false, fmt.Errorf("unable to query critical alerts: %w", err)
 	}
 
 	alertCount := len(alerts.Data.Result)

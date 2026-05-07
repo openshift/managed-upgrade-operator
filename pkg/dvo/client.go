@@ -1,6 +1,7 @@
 package dvo
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net"
@@ -64,19 +65,21 @@ func (c *dvoClient) GetMetrics() ([]byte, error) {
 	// Construct the URL for the metrics API
 	metricsURL := "http://" + c.dvoBaseUrl + METRICS_API_PATH
 
-	req, err := http.NewRequest("GET", metricsURL, nil)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, metricsURL, nil)
 	if err != nil {
-		return nil, fmt.Errorf("could not query DVO metrics endpoint: %v", err)
+		return nil, fmt.Errorf("could not query DVO metrics endpoint: %w", err)
 	}
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
 
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("error when querying dvo endpoint: %v", err)
+		return nil, fmt.Errorf("error when querying dvo endpoint: %w", err)
 	}
 	return body, nil
 

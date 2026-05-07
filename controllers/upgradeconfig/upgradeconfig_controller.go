@@ -2,6 +2,7 @@ package upgradeconfig
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"regexp"
 	"time"
@@ -22,7 +23,7 @@ import (
 	ucmgr "github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager"
 	cub "github.com/openshift/managed-upgrade-operator/pkg/upgraders"
 	"github.com/openshift/managed-upgrade-operator/pkg/validation"
-	"k8s.io/apimachinery/pkg/api/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -58,6 +59,8 @@ type ReconcileUpgradeConfig struct {
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
+//
+//nolint:gocyclo
 func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling UpgradeConfig")
@@ -76,9 +79,9 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 
 	// Fetch the UpgradeConfig instance
 	instance := &upgradev1alpha1.UpgradeConfig{}
-	err = r.Client.Get(context.TODO(), request.NamespacedName, instance)
+	err = r.Client.Get(ctx, request.NamespacedName, instance)
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if k8serrors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
@@ -103,7 +106,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 
 		upgraded, err := cvClient.HasUpgradeCommenced(instance)
 		if err != nil {
-			return reconcile.Result{}, fmt.Errorf("could not tell if cluster was upgrading: %v", err)
+			return reconcile.Result{}, fmt.Errorf("could not tell if cluster was upgrading: %w", err)
 		}
 		if upgraded {
 			// If CVO is currently set to the version of the UC, then we need to be in an Upgrading phase, at minimum.
@@ -121,7 +124,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 		}
 		history.Conditions = upgradev1alpha1.NewConditions()
 		instance.Status.History = append([]upgradev1alpha1.UpgradeHistory{*history}, instance.Status.History...)
-		err = r.Client.Status().Update(context.TODO(), instance)
+		err = r.Client.Status().Update(ctx, instance)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -181,7 +184,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 
 		history.Phase = upgradev1alpha1.UpgradePhasePending
 		instance.Status.History.SetHistory(*history)
-		err = r.Client.Status().Update(context.TODO(), instance)
+		err = r.Client.Status().Update(ctx, instance)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -225,10 +228,10 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 				return reconcile.Result{}, err
 			}
 
-			remoteChanged, err := ucMgr.Refresh()
+			remoteChanged, err := ucMgr.Refresh(ctx)
 			if err != nil {
 				// If no config manager is configured, we don't need to enforce a kill switch
-				if err != ucmgr.ErrNotConfigured {
+				if !errors.Is(err, ucmgr.ErrNotConfigured) {
 					return reconcile.Result{}, err
 				}
 				reqLogger.Info("No UpgradeConfig manager configured, kill-switch ignored")
@@ -238,7 +241,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 				reqLogger.Info("The cluster's upgrade policy has changed, so the operator will re-reconcile.")
 				history.Phase = upgradev1alpha1.UpgradePhaseNew
 				instance.Status.History.SetHistory(*history)
-				err = r.Client.Status().Update(context.TODO(), instance)
+				err = r.Client.Status().Update(ctx, instance)
 				if err != nil {
 					return reconcile.Result{}, err
 				}
@@ -251,18 +254,18 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 			history.Version = instance.Spec.Desired.Version
 
 			instance.Status.History.SetHistory(*history)
-			err = r.Client.Status().Update(context.TODO(), instance)
+			err = r.Client.Status().Update(ctx, instance)
 			if err != nil {
 				return reconcile.Result{}, err
 			}
 
 			reqLogger.Info(fmt.Sprintf("Cluster is commencing %s upgrade.", instance.Spec.Type), "time", now)
-			return r.upgradeCluster(upgrader, instance, reqLogger)
+			return r.upgradeCluster(ctx, upgrader, instance, reqLogger)
 		}
 
 		history.Phase = upgradev1alpha1.UpgradePhasePending
 		instance.Status.History.SetHistory(*history)
-		err = r.Client.Status().Update(context.TODO(), instance)
+		err = r.Client.Status().Update(ctx, instance)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -270,7 +273,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 		// If we approach the time of the upgrade before the next reconcile,
 		// reconcile closer to that point
 		if schedulerResult.TimeUntilUpgrade.Seconds() > 0 &&
-			schedulerResult.TimeUntilUpgrade < time.Duration(muocfg.SyncPeriodDefault) {
+			schedulerResult.TimeUntilUpgrade < muocfg.SyncPeriodDefault {
 			return reconcile.Result{RequeueAfter: schedulerResult.TimeUntilUpgrade}, nil
 		}
 
@@ -278,13 +281,16 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 
 	case upgradev1alpha1.UpgradePhaseUpgrading:
 		reqLogger.Info("Cluster detected as already upgrading.")
-		return r.upgradeCluster(upgrader, instance, reqLogger)
+		return r.upgradeCluster(ctx, upgrader, instance, reqLogger)
 	case upgradev1alpha1.UpgradePhaseUpgraded:
 		reqLogger.Info("Cluster is already upgraded")
 		err = reportUpgradeMetrics(metricsClient, instance.Name, history.PrecedingVersion, instance.Spec.Desired.Version, history.StartTime.Time, history.CompleteTime.Time)
 		return reconcile.Result{}, err
 	case upgradev1alpha1.UpgradePhaseFailed:
 		reqLogger.Info("Cluster has failed to upgrade")
+		return reconcile.Result{}, nil
+	case upgradev1alpha1.UpgradePhaseUnknown:
+		reqLogger.Info("Cluster is in unknown upgrade phase")
 		return reconcile.Result{}, nil
 	default:
 		reqLogger.Info("Unknown status")
@@ -293,10 +299,10 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 	return reconcile.Result{}, nil
 }
 
-func (r *ReconcileUpgradeConfig) upgradeCluster(upgrader cub.ClusterUpgrader, uc *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (reconcile.Result, error) {
+func (r *ReconcileUpgradeConfig) upgradeCluster(ctx context.Context, upgrader cub.ClusterUpgrader, uc *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (reconcile.Result, error) {
 	me := &multierror.Error{}
 
-	phase, err := upgrader.UpgradeCluster(context.TODO(), uc, logger)
+	phase, err := upgrader.UpgradeCluster(ctx, uc, logger)
 	me = multierror.Append(err, me)
 
 	history := uc.Status.History.GetHistory(uc.Spec.Desired.Version)
@@ -305,7 +311,7 @@ func (r *ReconcileUpgradeConfig) upgradeCluster(upgrader cub.ClusterUpgrader, uc
 		history.CompleteTime = &metav1.Time{Time: time.Now()}
 	}
 	uc.Status.History.SetHistory(*history)
-	err = r.Client.Status().Update(context.TODO(), uc)
+	err = r.Client.Status().Update(ctx, uc)
 	me = multierror.Append(err, me)
 
 	return reconcile.Result{RequeueAfter: 1 * time.Minute}, me.ErrorOrNil()
@@ -320,7 +326,7 @@ func reportUpgradeMetrics(metricsClient metrics.Metrics, name string, precedingV
 
 	minorUpgrade, err := getMinorUpgrade(precedingVersion, version)
 	if err != nil {
-		return fmt.Errorf("failed to figure out if it is a minor upgrade: %v", err)
+		return fmt.Errorf("failed to figure out if it is a minor upgrade: %w", err)
 	}
 
 	metricsClient.UpdateMetricUpgradeResult(name, precedingVersion, version, minorUpgrade, upgradeAlerts)
@@ -330,7 +336,7 @@ func reportUpgradeMetrics(metricsClient metrics.Metrics, name string, precedingV
 func getMinorUpgrade(precedingVersion, version string) (string, error) {
 	minorRegex, err := regexp.Compile(`[0-9]+\.([0-9]+)\..*`)
 	if err != nil {
-		return "unknown", fmt.Errorf("failed to compile regex: %v", err)
+		return "unknown", fmt.Errorf("failed to compile regex: %w", err)
 	}
 	versionMinorRes := minorRegex.FindStringSubmatch(version)
 	precedingVersionMinorRes := minorRegex.FindStringSubmatch(precedingVersion)

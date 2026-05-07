@@ -674,9 +674,9 @@ func getRouteHost(c client.Client, appName string) (string, error) {
 }
 
 func (c *Counter) Query(query string) (*AlertResponse, error) {
-	req, err := http.NewRequest("GET", "https://"+c.promTarget+"/api/v1/query", nil)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "https://"+c.promTarget+"/api/v1/query", nil)
 	if err != nil {
-		return nil, fmt.Errorf("could not query prometheus: %s", err)
+		return nil, fmt.Errorf("could not query prometheus: %w", err)
 	}
 
 	q := req.URL.Query()
@@ -687,10 +687,12 @@ func (c *Counter) Query(query string) (*AlertResponse, error) {
 		return nil, err
 	}
 
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("error when querying prometheus: %s", err)
+		return nil, fmt.Errorf("error when querying prometheus: %w", err)
 	}
 
 	result := &AlertResponse{}
@@ -722,7 +724,7 @@ func prometheusToken(c client.Client) (*string, error) {
 		// If serviceaccount token doesn't exist, try to use token request to get a token
 		token, err = RequestPrometheusServiceAccountAPIToken(c)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get token for prometheus-k8s SA due to %v", err)
+			return nil, fmt.Errorf("failed to get token for prometheus-k8s SA due to %w", err)
 		}
 	}
 

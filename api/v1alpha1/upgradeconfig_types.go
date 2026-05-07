@@ -195,7 +195,7 @@ func (uc *UpgradeConfig) GetPDBDrainTimeoutDuration() time.Duration {
 
 // GetHealthCheckDuration returns the duration to perform HealthCheck in hours
 func (uc *UpgradeConfig) GetHealthCheckDuration() time.Duration {
-	return time.Duration(time.Hour * 2)
+	return time.Hour * 2
 }
 
 // +kubebuilder:object:root=true

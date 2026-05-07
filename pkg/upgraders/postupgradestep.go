@@ -42,14 +42,14 @@ func (c *clusterUpgrader) postUpgradeFIOReInit(ctx context.Context, logger logr.
 	})
 
 	logger.Info("FedRAMP Environment...Fetching File Integrity for re-initialization")
-	err := c.client.Get(context.TODO(), client.ObjectKey{Namespace: fioNamespace, Name: fioObject}, u)
+	err := c.client.Get(ctx, client.ObjectKey{Namespace: fioNamespace, Name: fioObject}, u)
 	if err != nil {
-		return fmt.Errorf("failed to fetch file integrity %s in %s namespace: %v", fioObject, fioNamespace, err)
+		return fmt.Errorf("failed to fetch file integrity %s in %s namespace: %w", fioObject, fioNamespace, err)
 	}
 
 	logger.Info("Setting re-init annotation")
 	u.SetAnnotations(reinitAnnotation)
-	err = c.client.Update(context.TODO(), u)
+	err = c.client.Update(ctx, u)
 	if err != nil {
 		logger.Error(err, "Failed to annotate File Integrity object")
 		return err

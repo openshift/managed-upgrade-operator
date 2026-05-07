@@ -2,6 +2,7 @@ package upgradeconfigmanager
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"math/rand"
@@ -12,7 +13,7 @@ import (
 
 	v1 "github.com/openshift/api/config/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -59,9 +60,9 @@ var (
 //
 //go:generate mockgen -destination=mocks/upgradeconfigmanager.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/upgradeconfigmanager UpgradeConfigManager
 type UpgradeConfigManager interface {
-	Get() (*upgradev1alpha1.UpgradeConfig, error)
+	Get(ctx context.Context) (*upgradev1alpha1.UpgradeConfig, error)
 	StartSync(stopCh context.Context)
-	Refresh() (bool, error)
+	Refresh(ctx context.Context) (bool, error)
 }
 
 // UpgradeConfigManagerBuilder enables an implementation of an UpgradeConfigManagerBuilder
@@ -110,15 +111,15 @@ func (ucb *upgradeConfigManagerBuilder) NewManager(client client.Client) (Upgrad
 	}, nil
 }
 
-func (s *upgradeConfigManager) Get() (*upgradev1alpha1.UpgradeConfig, error) {
+func (s *upgradeConfigManager) Get(ctx context.Context) (*upgradev1alpha1.UpgradeConfig, error) {
 	instance := &upgradev1alpha1.UpgradeConfig{}
 	ns, err := util.GetOperatorNamespace()
 	if err != nil {
 		return nil, ErrMissingOperatorNamespace
 	}
-	err = s.client.Get(context.TODO(), client.ObjectKey{Name: UPGRADECONFIG_CR_NAME, Namespace: ns}, instance)
+	err = s.client.Get(ctx, client.ObjectKey{Name: UPGRADECONFIG_CR_NAME, Namespace: ns}, instance)
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if k8serrors.IsNotFound(err) {
 			return nil, ErrUpgradeConfigNotFound
 		}
 		log.Error(err, "error retrieving UpgradeConfig")
@@ -141,7 +142,7 @@ func (s *upgradeConfigManager) StartSync(stopCh context.Context) {
 	foundCM := false
 	for !foundCM {
 		cfg, err = readConfigManagerConfig(s.client, s.configManagerBuilder)
-		if err == ErrNoConfigManagerDefined {
+		if errors.Is(err, ErrNoConfigManagerDefined) {
 			log.Info("No UpgradeConfig manager configuration defined, will not sync")
 		}
 		if err != nil {
@@ -158,7 +159,8 @@ func (s *upgradeConfigManager) StartSync(stopCh context.Context) {
 	for {
 		select {
 		case <-timeout.C:
-			_, err := s.Refresh()
+			//nolint:contextcheck
+			_, err := s.Refresh(context.Background())
 			if err != nil {
 				waitDuration := s.backoffCounter.Duration()
 				log.Error(err, fmt.Sprintf("unable to refresh upgrade config, retrying in %v", waitDuration))
@@ -170,14 +172,14 @@ func (s *upgradeConfigManager) StartSync(stopCh context.Context) {
 			}
 		case <-stopCh.Done():
 			log.Info("Stopping the upgradeConfigManager")
-			break
+			return
 		}
 		timeout.Reset(duration)
 	}
 }
 
 // Refreshes UpgradeConfigs from the UpgradeConfig provider
-func (s *upgradeConfigManager) Refresh() (bool, error) {
+func (s *upgradeConfigManager) Refresh(ctx context.Context) (bool, error) {
 
 	// Get the running namespace
 	operatorNS, err := util.GetOperatorNamespace()
@@ -186,10 +188,10 @@ func (s *upgradeConfigManager) Refresh() (bool, error) {
 	}
 
 	// Get the current UpgradeConfigs on the cluster
-	currentUpgradeConfig, err := s.Get()
+	currentUpgradeConfig, err := s.Get(ctx)
 	foundUpgradeConfig := false
 	if err != nil {
-		if err == ErrUpgradeConfigNotFound {
+		if errors.Is(err, ErrUpgradeConfigNotFound) {
 			currentUpgradeConfig = &upgradev1alpha1.UpgradeConfig{}
 		} else {
 			return false, err
@@ -202,7 +204,7 @@ func (s *upgradeConfigManager) Refresh() (bool, error) {
 	pp, err := s.specProviderBuilder.New(s.client, s.configManagerBuilder)
 	if err != nil {
 		// If the spec provider config doesn't exist, return indicatively that no UC Mgr is configured
-		if err == specprovider.ErrNoSpecProviderConfig {
+		if errors.Is(err, specprovider.ErrNoSpecProviderConfig) {
 			return false, ErrNotConfigured
 		}
 		return false, err
@@ -218,7 +220,7 @@ func (s *upgradeConfigManager) Refresh() (bool, error) {
 		if foundUpgradeConfig {
 			log.Info(fmt.Sprintf("Removing expired UpgradeConfig %s", currentUpgradeConfig.Name))
 			// TODO: should this write a cancelled condition to the upgradeConfig CR prior to deletion?
-			err = s.client.Delete(context.TODO(), currentUpgradeConfig)
+			err = s.client.Delete(ctx, currentUpgradeConfig)
 			if err != nil {
 				log.Error(err, "can't remove UpgradeConfig after finding no upgrade_policy")
 				return false, ErrRemovingUpgradeConfig
@@ -250,7 +252,7 @@ func (s *upgradeConfigManager) Refresh() (bool, error) {
 	// is there a difference between the original and replacement?
 	changed := !reflect.DeepEqual(replacementUpgradeConfig.Spec, currentUpgradeConfig.Spec)
 	if changed {
-		err := recreateUpgradeConfigOnChange(s.client, foundUpgradeConfig, *currentUpgradeConfig, replacementUpgradeConfig, *s)
+		err := recreateUpgradeConfigOnChange(ctx, s.client, foundUpgradeConfig, *currentUpgradeConfig, replacementUpgradeConfig, *s)
 		if err != nil {
 			return false, err
 		}
@@ -333,7 +335,7 @@ func getCurrentUpgradeConfigPhase(uc *upgradev1alpha1.UpgradeConfig) upgradev1al
 	return history.Phase
 }
 
-func recreateUpgradeConfigOnChange(c client.Client, foundUpgradeConfig bool, existingUpgradeConfig, newUpgradeConfig upgradev1alpha1.UpgradeConfig, ucm upgradeConfigManager) error {
+func recreateUpgradeConfigOnChange(ctx context.Context, c client.Client, foundUpgradeConfig bool, existingUpgradeConfig, newUpgradeConfig upgradev1alpha1.UpgradeConfig, ucm upgradeConfigManager) error {
 	if foundUpgradeConfig {
 		// Delete and re-create the resource
 		log.Info("cluster upgrade spec has changed, will delete and re-create.")
@@ -342,9 +344,9 @@ func recreateUpgradeConfigOnChange(c client.Client, foundUpgradeConfig bool, exi
 		deleteOptions := &client.DeleteOptions{
 			GracePeriodSeconds: &gracePeriod,
 		}
-		err := c.Delete(context.TODO(), &existingUpgradeConfig, deleteOptions)
+		err := c.Delete(ctx, &existingUpgradeConfig, deleteOptions)
 		if err != nil {
-			if err == ErrUpgradeConfigNotFound {
+			if errors.Is(err, ErrUpgradeConfigNotFound) {
 				log.Info("UpgradeConfig already deleted")
 				confirmDeletedUpgrade = true
 			} else {
@@ -355,10 +357,11 @@ func recreateUpgradeConfigOnChange(c client.Client, foundUpgradeConfig bool, exi
 
 		// Confirm object is deleted prior to creating
 		if !confirmDeletedUpgrade {
-			err = wait.PollUntilContextTimeout(context.Background(), 5*time.Second, 60*time.Second, true, func(context.Context) (bool, error) {
-				_, err := ucm.Get()
+			//nolint:contextcheck
+			err = wait.PollUntilContextTimeout(context.Background(), 5*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
+				_, err := ucm.Get(ctx)
 				if err != nil {
-					if err == ErrUpgradeConfigNotFound {
+					if errors.Is(err, ErrUpgradeConfigNotFound) {
 						log.Info("UpgradeConfig deletion confirmed")
 						return true, nil
 					}
@@ -367,16 +370,16 @@ func recreateUpgradeConfigOnChange(c client.Client, foundUpgradeConfig bool, exi
 				return false, nil
 			})
 			if err != nil {
-				return fmt.Errorf("unable to confirm deletion of current UpgradeConfig: %v", err)
+				return fmt.Errorf("unable to confirm deletion of current UpgradeConfig: %w", err)
 			}
 		}
 	}
 
 	newUpgradeConfig.SetResourceVersion("")
 
-	err := c.Create(context.TODO(), &newUpgradeConfig)
+	err := c.Create(ctx, &newUpgradeConfig)
 	if err != nil {
-		return fmt.Errorf("unable to apply UpgradeConfig changes: %v", err)
+		return fmt.Errorf("unable to apply UpgradeConfig changes: %w", err)
 	}
 
 	return nil
