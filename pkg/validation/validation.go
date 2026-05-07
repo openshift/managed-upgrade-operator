@@ -477,7 +477,7 @@ func fetchCVOUpdates(cV *configv1.ClusterVersion, uc *upgradev1alpha1.UpgradeCon
 	if err != nil {
 		return nil, err
 	}
-	var cvoUpdates []configv1.Update
+	cvoUpdates := make([]configv1.Update, 0, len(updates)+len(conditionalUpdates))
 
 	for _, update := range updates {
 		cvoUpdates = append(cvoUpdates, configv1.Update{
