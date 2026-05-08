@@ -271,8 +271,12 @@ func (s *ocmClient) PostServiceLog(sl *ServiceLog, description string) error {
 	request = request.Body(le)
 
 	response, err := request.Send()
-	if err != nil || response.Error() != nil {
-		return fmt.Errorf("could not post service log %s: %w", sl.Summary, err)
+	respErr := err
+	if err == nil && response.Error() != nil {
+		respErr = response.Error()
+	}
+	if respErr != nil {
+		return fmt.Errorf("could not post service log %s: %w", sl.Summary, respErr)
 	}
 
 	_, _ = fmt.Printf("Successfully sent servicelog: %s", sl.Summary)

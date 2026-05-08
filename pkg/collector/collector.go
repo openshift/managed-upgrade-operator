@@ -303,7 +303,10 @@ func (uc *UpgradeCollector) Collect(ch chan<- prometheus.Metric) {
 //
 //nolint:gocyclo
 func (uc *UpgradeCollector) collectUpgradeConditions(ch chan<- prometheus.Metric) error {
-	upgradeConfig, err := uc.upgradeConfigManager.Get(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	upgradeConfig, err := uc.upgradeConfigManager.Get(ctx)
 	if err != nil {
 		if errors.Is(err, upgradeconfigmanager.ErrUpgradeConfigNotFound) {
 			return nil

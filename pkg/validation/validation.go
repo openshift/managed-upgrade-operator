@@ -314,14 +314,14 @@ func runHTTP(url string) ([]byte, error) {
 		return nil, getErr
 	}
 
-	if res.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("return code is not 200")
-	}
-
 	if res.Body != nil {
 		defer func() {
 			_ = res.Body.Close()
 		}()
+	}
+
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("return code is not 200")
 	}
 
 	body, readErr := io.ReadAll(res.Body)

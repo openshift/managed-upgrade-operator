@@ -50,6 +50,7 @@ func main() {
 		outfile, err = os.Create(*output)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "failed to open output file %q", *output)
+			os.Exit(1)
 		}
 		defer func() {
 			if err := outfile.Close(); err != nil {

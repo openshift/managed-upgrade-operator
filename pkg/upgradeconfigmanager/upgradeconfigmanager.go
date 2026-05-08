@@ -346,7 +346,7 @@ func recreateUpgradeConfigOnChange(ctx context.Context, c client.Client, foundUp
 		}
 		err := c.Delete(ctx, &existingUpgradeConfig, deleteOptions)
 		if err != nil {
-			if errors.Is(err, ErrUpgradeConfigNotFound) {
+			if k8serrors.IsNotFound(err) {
 				log.Info("UpgradeConfig already deleted")
 				confirmDeletedUpgrade = true
 			} else {
@@ -357,9 +357,8 @@ func recreateUpgradeConfigOnChange(ctx context.Context, c client.Client, foundUp
 
 		// Confirm object is deleted prior to creating
 		if !confirmDeletedUpgrade {
-			//nolint:contextcheck
-			err = wait.PollUntilContextTimeout(context.Background(), 5*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
-				_, err := ucm.Get(ctx)
+			err = wait.PollUntilContextTimeout(ctx, 5*time.Second, 60*time.Second, true, func(pollCtx context.Context) (bool, error) {
+				_, err := ucm.Get(pollCtx)
 				if err != nil {
 					if errors.Is(err, ErrUpgradeConfigNotFound) {
 						log.Info("UpgradeConfig deletion confirmed")
