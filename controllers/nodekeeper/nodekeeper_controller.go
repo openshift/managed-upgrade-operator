@@ -74,10 +74,12 @@ func (r *ReconcileNodeKeeper) Reconcile(ctx context.Context, request reconcile.R
 		if errors.IsNotFound(err) {
 			// Node was deleted - reset the metric for this node to prevent stale alerts
 			metricsClient, err := r.MetricsClientBuilder.NewClient(r.Client)
-			if err == nil {
-				reqLogger.Info(fmt.Sprintf("Node %s deleted, resetting NodeDrainFailed metric", request.Name))
-				metricsClient.ResetMetricNodeDrainFailed(request.Name)
+			if err != nil {
+				reqLogger.Error(err, "failed to create metrics client for resetting NodeDrainFailed", "node", request.Name)
+				return reconcile.Result{}, nil
 			}
+			reqLogger.Info(fmt.Sprintf("Node %s deleted, resetting NodeDrainFailed metric", request.Name))
+			metricsClient.ResetMetricNodeDrainFailed(request.Name)
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
