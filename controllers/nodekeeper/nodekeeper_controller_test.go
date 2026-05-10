@@ -237,3 +237,4 @@ var _ = Describe("NodeKeeperController", func() {
 		})
 	})
 })
+// Test added for node deletion metric reset
