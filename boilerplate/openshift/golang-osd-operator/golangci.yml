@@ -62,11 +62,9 @@ linters:
 
 run:
   timeout: 5m
-  # Only check new code, not existing issues
-  # This uses git to compare against the base branch (typically master/main)
-  new: true
-  # Alternatively, you can specify a specific revision:
-  # new-from-rev: origin/master
+  # Only check new code from this branch compared to master
+  # This prevents CI from failing on pre-existing issues
+  new-from-rev: origin/master
 
 formatters:
   enable:
