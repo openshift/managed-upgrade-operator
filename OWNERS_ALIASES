@@ -4,7 +4,6 @@
 # =============================================================================
 aliases:
   srep-functional-team-aurora:
-    - abyrne55
     - AlexSmithGH
     - dakotalongRH
     - eth1030
@@ -73,7 +72,6 @@ aliases:
     - yiqinzhang
     - varunraokadaparthi
   srep-functional-leads:
-    - abyrne55
     - clcollins
     - bergmannf
     - theautoroboto
