@@ -102,7 +102,7 @@ var _ = Describe("ScalerStep", func() {
 				gomock.InOrder(
 					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
 					mockScalerClient.EXPECT().CanScale(gomock.Any(), gomock.Any()).Return(true, nil),
-					mockScalerClient.EXPECT().EnsureScaleUpNodes(gomock.Any(), config.GetScaleDuration(), gomock.Any()).Return(true, nil),
+					mockScalerClient.EXPECT().EnsureScaleUpNodes(gomock.Any(), config.GetScaleDuration(), gomock.Any(), gomock.Any()).Return(true, nil),
 					mockMetricsClient.EXPECT().UpdateMetricScalingSucceeded(gomock.Any()),
 				)
 
@@ -114,7 +114,7 @@ var _ = Describe("ScalerStep", func() {
 				gomock.InOrder(
 					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
 					mockScalerClient.EXPECT().CanScale(gomock.Any(), gomock.Any()).Return(true, nil),
-					mockScalerClient.EXPECT().EnsureScaleUpNodes(gomock.Any(), config.GetScaleDuration(), gomock.Any()).Return(false, scaler.NewScaleTimeOutError("test scale timed out")),
+					mockScalerClient.EXPECT().EnsureScaleUpNodes(gomock.Any(), config.GetScaleDuration(), gomock.Any(), gomock.Any()).Return(false, scaler.NewScaleTimeOutError("test scale timed out")),
 					mockMetricsClient.EXPECT().UpdateMetricScalingFailed(gomock.Any()),
 					mockEMClient.EXPECT().Notify(notifier.MuoStateSkipped),
 				)
@@ -157,6 +157,36 @@ var _ = Describe("ScalerStep", func() {
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(ok).To(BeTrue())
 			})
+		})
+	})
+
+	Context("When scaling cannot proceed but extra machine pools are configured", func() {
+		BeforeEach(func() {
+			config.Scale.ExtraMachinePools = []string{"non-serving-*"}
+		})
+
+		It("should still attempt to scale up extra nodes when CanScale returns false", func() {
+			gomock.InOrder(
+				mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
+				mockScalerClient.EXPECT().CanScale(gomock.Any(), gomock.Any()).Return(false, nil),
+				mockScalerClient.EXPECT().EnsureScaleUpNodes(gomock.Any(), config.GetScaleDuration(), gomock.Any(), gomock.Any()).Return(true, nil),
+				mockMetricsClient.EXPECT().UpdateMetricScalingSucceeded(gomock.Any()),
+			)
+			ok, err := upgrader.EnsureExtraUpgradeWorkers(context.TODO(), logger)
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(ok).To(BeTrue())
+		})
+
+		It("should still attempt to scale down extra nodes when CanScale returns false", func() {
+			gomock.InOrder(
+				mockScalerClient.EXPECT().CanScale(gomock.Any(), gomock.Any()).Return(false, nil),
+				mockDrainStrategyBuilder.EXPECT().NewNodeDrainStrategy(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil),
+				mockScalerClient.EXPECT().EnsureScaleDownNodes(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil),
+				mockMetricsClient.EXPECT().ResetAllMetricNodeDrainFailed(),
+			)
+			ok, err := upgrader.RemoveExtraScaledNodes(context.TODO(), logger)
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(ok).To(BeTrue())
 		})
 	})
 

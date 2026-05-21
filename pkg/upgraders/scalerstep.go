@@ -37,15 +37,18 @@ func (c *clusterUpgrader) EnsureExtraUpgradeWorkers(ctx context.Context, logger 
 	if err != nil {
 		return false, err
 	}
-	if !canScale {
+	if !canScale && len(c.config.Scale.ExtraMachinePools) == 0 {
 		err := c.SendScaleSkippedNotification(ctx, logger)
 		if err != nil {
 			logger.Info(fmt.Sprintf("Failed to send ScaleSkipped notification:  %s", err))
 		}
 		return true, nil
 	}
+	if !canScale {
+		logger.Info("worker machinesets not found, but extra machine pools are configured; proceeding with extra pool scaling")
+	}
 
-	isScaled, err := c.scaler.EnsureScaleUpNodes(c.client, c.config.GetScaleDuration(), logger)
+	isScaled, err := c.scaler.EnsureScaleUpNodes(c.client, c.config.GetScaleDuration(), logger, c.config.Scale.ExtraMachinePools)
 	if err != nil {
 		if scaler.IsScaleTimeOutError(err) {
 			c.metrics.UpdateMetricScalingFailed(c.upgradeConfig.Name)
@@ -83,7 +86,7 @@ func (c *clusterUpgrader) RemoveExtraScaledNodes(ctx context.Context, logger log
 	if err != nil {
 		return false, err
 	}
-	if !canScale {
+	if !canScale && len(c.config.Scale.ExtraMachinePools) == 0 {
 		// We don't need to perform a scaling step
 		return true, nil
 	}

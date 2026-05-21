@@ -3,6 +3,7 @@ package scaler
 import (
 	"context"
 	"fmt"
+	"path"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -22,6 +23,8 @@ const (
 	LABEL_UPGRADE = "upgrade.managed.openshift.io"
 	// LABEL_MACHINESET is the label used for machinesets
 	LABEL_MACHINESET = "machine.openshift.io/cluster-api-machineset"
+	// LABEL_MACHINE_POOL is the Hive machine pool label
+	LABEL_MACHINE_POOL = "hive.openshift.io/machine-pool"
 	// MACHINE_API_NAMESPACE is the namespace of the machine api
 	MACHINE_API_NAMESPACE = "openshift-machine-api"
 )
@@ -35,7 +38,7 @@ func (s *machineSetScaler) CanScale(c client.Client, logger logr.Logger) (bool, 
 	// Do we have an original "worker" machineset that can be scaled?
 	err := c.List(context.TODO(), originalMachineSets, []client.ListOption{
 		client.InNamespace(MACHINE_API_NAMESPACE),
-		client.MatchingLabels{"hive.openshift.io/machine-pool": "worker"},
+		client.MatchingLabels{LABEL_MACHINE_POOL: "worker"},
 	}...)
 	if err != nil {
 		logger.Error(err, "failed to get original machinesets")
@@ -51,7 +54,9 @@ func (s *machineSetScaler) CanScale(c client.Client, logger logr.Logger) (bool, 
 }
 
 // EnsureScaleUpNodes will create a new MachineSet with 1 extra replicas for workers in every region and report when the nodes are ready.
-func (s *machineSetScaler) EnsureScaleUpNodes(c client.Client, timeOut time.Duration, logger logr.Logger) (bool, error) {
+// When extraMachinePools is non-empty, additional MachineSets matching those pool patterns are also scaled.
+// Worker and extra pool fetching are independent: if workers are absent but extra pools match, only extra pools are scaled and vice versa.
+func (s *machineSetScaler) EnsureScaleUpNodes(c client.Client, timeOut time.Duration, logger logr.Logger, extraMachinePools []string) (bool, error) {
 	upgradeMachinesets := &machineapi.MachineSetList{}
 
 	err := c.List(context.TODO(), upgradeMachinesets, []client.ListOption{
@@ -62,20 +67,39 @@ func (s *machineSetScaler) EnsureScaleUpNodes(c client.Client, timeOut time.Dura
 		logger.Error(err, "failed to get upgrade extra machinesets")
 		return false, err
 	}
-	originalMachineSets := &machineapi.MachineSetList{}
 
-	err = c.List(context.TODO(), originalMachineSets, []client.ListOption{
+	// Collect all MachineSets that need upgrade clones
+	var allOriginals []machineapi.MachineSet
+
+	// Fetch worker MachineSets
+	workerMachineSets := &machineapi.MachineSetList{}
+	err = c.List(context.TODO(), workerMachineSets, []client.ListOption{
 		client.InNamespace(MACHINE_API_NAMESPACE),
-		client.MatchingLabels{"hive.openshift.io/machine-pool": "worker"},
+		client.MatchingLabels{LABEL_MACHINE_POOL: "worker"},
 	}...)
 	if err != nil {
-		logger.Error(err, "failed to get original machinesets")
-		return false, err
+		logger.Error(err, "failed to get worker machinesets")
+	} else {
+		allOriginals = append(allOriginals, workerMachineSets.Items...)
 	}
-	if len(originalMachineSets.Items) == 0 {
-		logger.Info("failed to get machineset")
-		return false, fmt.Errorf("failed to get original machineset")
+
+	// Fetch extra machine pool MachineSets if configured
+	if len(extraMachinePools) > 0 {
+		extraSets, err := listMachineSetsByPoolPatterns(c, extraMachinePools, logger)
+		if err != nil {
+			logger.Error(err, "failed to list extra machine pool machinesets")
+		} else if len(extraSets) > 0 {
+			logger.Info(fmt.Sprintf("found %d extra machine pool machineset(s) to scale", len(extraSets)))
+			allOriginals = append(allOriginals, extraSets...)
+		}
 	}
+
+	if len(allOriginals) == 0 {
+		logger.Info("no machinesets found to scale")
+		return false, fmt.Errorf("failed to get any machinesets to scale")
+	}
+
+	originalMachineSets := &machineapi.MachineSetList{Items: allOriginals}
 
 	created, err := extraMachineSetCreated(c, *originalMachineSets, *upgradeMachinesets, logger)
 	if err != nil {
@@ -176,6 +200,41 @@ func NotSelectorFromSet(ls NotMatchingLabels) labels.Selector {
 	}
 
 	return selector
+}
+
+// listMachineSetsByPoolPatterns returns MachineSets whose hive.openshift.io/machine-pool label value
+// matches any of the given glob patterns. MachineSets with pool value "worker" are excluded because
+// they are already handled separately.
+func listMachineSetsByPoolPatterns(c client.Client, patterns []string, logger logr.Logger) ([]machineapi.MachineSet, error) {
+	allPooled := &machineapi.MachineSetList{}
+	err := c.List(context.TODO(), allPooled, []client.ListOption{
+		client.InNamespace(MACHINE_API_NAMESPACE),
+		client.HasLabels{LABEL_MACHINE_POOL},
+	}...)
+	if err != nil {
+		return nil, fmt.Errorf("listing machinesets by pool label: %w", err)
+	}
+
+	var matched []machineapi.MachineSet
+	for _, ms := range allPooled.Items {
+		poolValue := ms.Labels[LABEL_MACHINE_POOL]
+		if poolValue == "worker" {
+			continue
+		}
+		for _, pattern := range patterns {
+			ok, err := path.Match(pattern, poolValue)
+			if err != nil {
+				// Pattern was validated at config load time; this should not happen.
+				return nil, fmt.Errorf("matching pattern %q against pool %q: %w", pattern, poolValue, err)
+			}
+			if ok {
+				logger.Info(fmt.Sprintf("extra machine pool %q matched pattern %q (machineset %s)", poolValue, pattern, ms.Name))
+				matched = append(matched, ms)
+				break
+			}
+		}
+	}
+	return matched, nil
 }
 
 func getExtraUpgradeNodes(c client.Client) (*corev1.NodeList, error) {
