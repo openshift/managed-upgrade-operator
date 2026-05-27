@@ -17,7 +17,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.26.0
 	github.com/onsi/gomega v1.38.2
 	github.com/openshift-online/ocm-api-model/clientapi v0.0.456
-	github.com/openshift-online/ocm-sdk-go v0.1.494
+	github.com/openshift-online/ocm-sdk-go v0.1.501
 	github.com/openshift/api v0.0.0-20250929151534-41627d81e9c1
 	github.com/openshift/client-go v0.0.0-20250131180035-f7ec47e2d87a
 	github.com/openshift/cluster-version-operator v1.0.1-0.20251024155448-77782f1a4b96
