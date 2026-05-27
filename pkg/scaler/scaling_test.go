@@ -52,7 +52,7 @@ var _ = Describe("Node scaling tests", func() {
 			It("will flag that scaling is not possible", func() {
 				originalMachineSets = &machineapi.MachineSetList{}
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
-					client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{"hive.openshift.io/machine-pool": "worker"},
+					client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{LABEL_MACHINE_POOL: "worker"},
 				}).SetArg(1, *originalMachineSets)
 				result, err := scaler.CanScale(mockKubeClient, logger)
 				Expect(err).To(BeNil())
@@ -80,7 +80,7 @@ var _ = Describe("Node scaling tests", func() {
 					},
 				}
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
-					client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{"hive.openshift.io/machine-pool": "worker"},
+					client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{LABEL_MACHINE_POOL: "worker"},
 				}).SetArg(1, *originalMachineSets)
 				result, err := scaler.CanScale(mockKubeClient, logger)
 				Expect(err).To(BeNil())
@@ -98,43 +98,43 @@ var _ = Describe("Node scaling tests", func() {
 				mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
 					client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{LABEL_UPGRADE: "true"},
 				}).Return(fakeError)
-				result, err := scaler.EnsureScaleUpNodes(mockKubeClient, testDuration, logger)
+				result, err := scaler.EnsureScaleUpNodes(mockKubeClient, testDuration, logger, nil)
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(Equal(fakeError))
 				Expect(result).To(BeFalse())
 			})
 		})
 		Context("When looking for original machinesets fails", func() {
-			It("Indicates an error", func() {
+			It("Indicates an error when no extra pools configured", func() {
 				fakeError := fmt.Errorf("fake error")
 				gomock.InOrder(
 					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
 						client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{LABEL_UPGRADE: "true"},
 					}),
 					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
-						client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{"hive.openshift.io/machine-pool": "worker"},
+						client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{LABEL_MACHINE_POOL: "worker"},
 					}).Return(fakeError),
 				)
-				result, err := scaler.EnsureScaleUpNodes(mockKubeClient, testDuration, logger)
+				result, err := scaler.EnsureScaleUpNodes(mockKubeClient, testDuration, logger, nil)
 				Expect(err).To(HaveOccurred())
-				Expect(err).To(Equal(fakeError))
+				Expect(err.Error()).To(ContainSubstring("failed to get any machinesets to scale"))
 				Expect(result).To(BeFalse())
 			})
 		})
 		Context("When no original machineset appears to exist", func() {
-			It("Indicates an error", func() {
+			It("Indicates an error when no extra pools configured", func() {
 				originalMachineSets = &machineapi.MachineSetList{}
 				gomock.InOrder(
 					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
 						client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{LABEL_UPGRADE: "true"},
 					}),
 					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
-						client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{"hive.openshift.io/machine-pool": "worker"},
+						client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{LABEL_MACHINE_POOL: "worker"},
 					}).SetArg(1, *originalMachineSets),
 				)
-				result, err := scaler.EnsureScaleUpNodes(mockKubeClient, testDuration, logger)
+				result, err := scaler.EnsureScaleUpNodes(mockKubeClient, testDuration, logger, nil)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("failed to get original machineset"))
+				Expect(err.Error()).To(ContainSubstring("failed to get any machinesets to scale"))
 				Expect(result).To(BeFalse())
 			})
 		})
@@ -171,7 +171,7 @@ var _ = Describe("Node scaling tests", func() {
 						client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{LABEL_UPGRADE: "true"},
 					}).SetArg(1, *upgradeMachinesets),
 					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
-						client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{"hive.openshift.io/machine-pool": "worker"},
+						client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{LABEL_MACHINE_POOL: "worker"},
 					}).SetArg(1, *originalMachineSets),
 				)
 				mockKubeClient.EXPECT().Create(gomock.Any(), gomock.Any()).DoAndReturn(
@@ -184,7 +184,7 @@ var _ = Describe("Node scaling tests", func() {
 						Expect(ms.Spec.Selector.MatchLabels[LABEL_UPGRADE]).To(Equal("true"))
 						return nil
 					})
-				result, err := scaler.EnsureScaleUpNodes(mockKubeClient, testDuration, logger)
+				result, err := scaler.EnsureScaleUpNodes(mockKubeClient, testDuration, logger, nil)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(BeFalse())
 			})
@@ -195,11 +195,11 @@ var _ = Describe("Node scaling tests", func() {
 						client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{LABEL_UPGRADE: "true"},
 					}).SetArg(1, *upgradeMachinesets),
 					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
-						client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{"hive.openshift.io/machine-pool": "worker"},
+						client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{LABEL_MACHINE_POOL: "worker"},
 					}).SetArg(1, *originalMachineSets),
 				)
 				mockKubeClient.EXPECT().Create(gomock.Any(), gomock.Any()).Return(fakeError)
-				result, err := scaler.EnsureScaleUpNodes(mockKubeClient, testDuration, logger)
+				result, err := scaler.EnsureScaleUpNodes(mockKubeClient, testDuration, logger, nil)
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(Equal(fakeError))
 				Expect(result).To(BeFalse())
@@ -239,10 +239,10 @@ var _ = Describe("Node scaling tests", func() {
 						client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{LABEL_UPGRADE: "true"},
 					}).SetArg(1, *upgradeMachinesets),
 					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
-						client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{"hive.openshift.io/machine-pool": "worker"},
+						client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{LABEL_MACHINE_POOL: "worker"},
 					}).SetArg(1, *originalMachineSets),
 				)
-				result, err := scaler.EnsureScaleUpNodes(mockKubeClient, testDuration, logger)
+				result, err := scaler.EnsureScaleUpNodes(mockKubeClient, testDuration, logger, nil)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(BeFalse())
 			})
@@ -333,14 +333,14 @@ var _ = Describe("Node scaling tests", func() {
 							client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{LABEL_UPGRADE: "true"},
 						}).SetArg(1, *upgradeMachinesets),
 						mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
-							client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{"hive.openshift.io/machine-pool": "worker"},
+							client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{LABEL_MACHINE_POOL: "worker"},
 						}).SetArg(1, *originalMachineSets),
 						mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
 							client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{LABEL_UPGRADE: "true"}, client.MatchingLabels{LABEL_MACHINESET: upgradeMachinesets.Items[0].ObjectMeta.Name},
 						}).SetArg(1, *upgradeMachines),
 						mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, node),
 					)
-					result, err := scaler.EnsureScaleUpNodes(mockKubeClient, testDuration, logger)
+					result, err := scaler.EnsureScaleUpNodes(mockKubeClient, testDuration, logger, nil)
 					Expect(err).To(HaveOccurred())
 					Expect(IsScaleTimeOutError(err)).To(BeTrue())
 					Expect(result).To(BeFalse())
@@ -353,14 +353,14 @@ var _ = Describe("Node scaling tests", func() {
 							client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{LABEL_UPGRADE: "true"},
 						}).SetArg(1, *upgradeMachinesets),
 						mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
-							client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{"hive.openshift.io/machine-pool": "worker"},
+							client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{LABEL_MACHINE_POOL: "worker"},
 						}).SetArg(1, *originalMachineSets),
 						mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
 							client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{LABEL_UPGRADE: "true"}, client.MatchingLabels{LABEL_MACHINESET: upgradeMachinesets.Items[0].ObjectMeta.Name},
 						}).SetArg(1, *upgradeMachines),
 						mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, node),
 					)
-					result, err := scaler.EnsureScaleUpNodes(mockKubeClient, testDuration, logger)
+					result, err := scaler.EnsureScaleUpNodes(mockKubeClient, testDuration, logger, nil)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(result).To(BeFalse())
 				})
@@ -429,14 +429,14 @@ var _ = Describe("Node scaling tests", func() {
 						client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{LABEL_UPGRADE: "true"},
 					}).SetArg(1, *upgradeMachinesets),
 					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
-						client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{"hive.openshift.io/machine-pool": "worker"},
+						client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{LABEL_MACHINE_POOL: "worker"},
 					}).SetArg(1, *originalMachineSets),
 					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
 						client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{LABEL_UPGRADE: "true"}, client.MatchingLabels{LABEL_MACHINESET: upgradeMachinesets.Items[0].ObjectMeta.Name},
 					}).SetArg(1, *upgradeMachines),
 					mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, node),
 				)
-				result, err := scaler.EnsureScaleUpNodes(mockKubeClient, testDuration, logger)
+				result, err := scaler.EnsureScaleUpNodes(mockKubeClient, testDuration, logger, nil)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(BeTrue())
 			})
@@ -548,6 +548,334 @@ var _ = Describe("Node scaling tests", func() {
 			})
 		})
 
+	})
+
+	Context("When extra machine pools are configured", func() {
+		var upgradeMachinesets *machineapi.MachineSetList
+		var originalMachineSets *machineapi.MachineSetList
+		testDuration := 30 * time.Minute
+
+		BeforeEach(func() {
+			upgradeMachinesets = &machineapi.MachineSetList{}
+			originalMachineSets = &machineapi.MachineSetList{
+				Items: []machineapi.MachineSet{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "worker-us-east-1a",
+							Namespace: MACHINE_API_NAMESPACE,
+						},
+						Spec: machineapi.MachineSetSpec{
+							Selector: metav1.LabelSelector{
+								MatchLabels: make(map[string]string),
+							},
+							Template: machineapi.MachineTemplateSpec{
+								ObjectMeta: machineapi.ObjectMeta{
+									Labels: make(map[string]string),
+								},
+							},
+						},
+					},
+				},
+			}
+		})
+
+		Context("When extra pools match machinesets", func() {
+			It("creates upgrade machinesets for both workers and extra pools", func() {
+				extraPoolSets := &machineapi.MachineSetList{
+					Items: []machineapi.MachineSet{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "non-serving-9a-us-east-1a",
+								Namespace: MACHINE_API_NAMESPACE,
+								Labels:    map[string]string{LABEL_MACHINE_POOL: "non-serving-9a"},
+							},
+							Spec: machineapi.MachineSetSpec{
+								Selector: metav1.LabelSelector{
+									MatchLabels: make(map[string]string),
+								},
+								Template: machineapi.MachineTemplateSpec{
+									ObjectMeta: machineapi.ObjectMeta{
+										Labels: make(map[string]string),
+									},
+								},
+							},
+						},
+					},
+				}
+				gomock.InOrder(
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
+						client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{LABEL_UPGRADE: "true"},
+					}).SetArg(1, *upgradeMachinesets),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
+						client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{LABEL_MACHINE_POOL: "worker"},
+					}).SetArg(1, *originalMachineSets),
+					// List all pooled machinesets for extra pool matching
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
+						client.InNamespace(MACHINE_API_NAMESPACE), client.HasLabels{LABEL_MACHINE_POOL},
+					}).SetArg(1, *extraPoolSets),
+				)
+				// Expect Create to be called twice: once for worker, once for extra pool
+				createdNames := []string{}
+				mockKubeClient.EXPECT().Create(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(ctx context.Context, ms *machineapi.MachineSet, co ...client.CreateOption) error {
+						createdNames = append(createdNames, ms.Name)
+						Expect(ms.Labels[LABEL_UPGRADE]).To(Equal("true"))
+						Expect(*ms.Spec.Replicas).To(Equal(int32(1)))
+						return nil
+					}).Times(2)
+				result, err := scaler.EnsureScaleUpNodes(mockKubeClient, testDuration, logger, []string{"non-serving-*"})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(BeFalse()) // just created, not yet ready
+				Expect(createdNames).To(ContainElements("worker-us-east-1a-upgrade", "non-serving-9a-us-east-1a-upgrade"))
+			})
+		})
+
+		Context("When extra pool patterns match no machinesets", func() {
+			It("creates upgrade machinesets for workers only", func() {
+				// Return machinesets that do not match the pattern
+				allPooled := &machineapi.MachineSetList{
+					Items: []machineapi.MachineSet{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "infra-us-east-1a",
+								Namespace: MACHINE_API_NAMESPACE,
+								Labels:    map[string]string{LABEL_MACHINE_POOL: "infra"},
+							},
+						},
+					},
+				}
+				gomock.InOrder(
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
+						client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{LABEL_UPGRADE: "true"},
+					}).SetArg(1, *upgradeMachinesets),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
+						client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{LABEL_MACHINE_POOL: "worker"},
+					}).SetArg(1, *originalMachineSets),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
+						client.InNamespace(MACHINE_API_NAMESPACE), client.HasLabels{LABEL_MACHINE_POOL},
+					}).SetArg(1, *allPooled),
+				)
+				mockKubeClient.EXPECT().Create(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(ctx context.Context, ms *machineapi.MachineSet, co ...client.CreateOption) error {
+						Expect(ms.Name).To(Equal("worker-us-east-1a-upgrade"))
+						return nil
+					})
+				result, err := scaler.EnsureScaleUpNodes(mockKubeClient, testDuration, logger, []string{"non-serving-*"})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(BeFalse())
+			})
+		})
+
+		Context("When no worker machinesets exist but extra pools match", func() {
+			It("creates upgrade machinesets for extra pools only", func() {
+				emptyWorkers := &machineapi.MachineSetList{}
+				extraPoolSets := &machineapi.MachineSetList{
+					Items: []machineapi.MachineSet{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "non-serving-9a-us-east-1a",
+								Namespace: MACHINE_API_NAMESPACE,
+								Labels:    map[string]string{LABEL_MACHINE_POOL: "non-serving-9a"},
+							},
+							Spec: machineapi.MachineSetSpec{
+								Selector: metav1.LabelSelector{
+									MatchLabels: make(map[string]string),
+								},
+								Template: machineapi.MachineTemplateSpec{
+									ObjectMeta: machineapi.ObjectMeta{
+										Labels: make(map[string]string),
+									},
+								},
+							},
+						},
+					},
+				}
+				gomock.InOrder(
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
+						client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{LABEL_UPGRADE: "true"},
+					}).SetArg(1, *upgradeMachinesets),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
+						client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{LABEL_MACHINE_POOL: "worker"},
+					}).SetArg(1, *emptyWorkers),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
+						client.InNamespace(MACHINE_API_NAMESPACE), client.HasLabels{LABEL_MACHINE_POOL},
+					}).SetArg(1, *extraPoolSets),
+				)
+				mockKubeClient.EXPECT().Create(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(ctx context.Context, ms *machineapi.MachineSet, co ...client.CreateOption) error {
+						Expect(ms.Name).To(Equal("non-serving-9a-us-east-1a-upgrade"))
+						Expect(ms.Labels[LABEL_UPGRADE]).To(Equal("true"))
+						Expect(*ms.Spec.Replicas).To(Equal(int32(1)))
+						return nil
+					})
+				result, err := scaler.EnsureScaleUpNodes(mockKubeClient, testDuration, logger, []string{"non-serving-*"})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(BeFalse())
+			})
+		})
+
+		Context("When worker list fails but extra pools match", func() {
+			It("creates upgrade machinesets for extra pools only", func() {
+				extraPoolSets := &machineapi.MachineSetList{
+					Items: []machineapi.MachineSet{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "non-serving-9a-us-east-1a",
+								Namespace: MACHINE_API_NAMESPACE,
+								Labels:    map[string]string{LABEL_MACHINE_POOL: "non-serving-9a"},
+							},
+							Spec: machineapi.MachineSetSpec{
+								Selector: metav1.LabelSelector{
+									MatchLabels: make(map[string]string),
+								},
+								Template: machineapi.MachineTemplateSpec{
+									ObjectMeta: machineapi.ObjectMeta{
+										Labels: make(map[string]string),
+									},
+								},
+							},
+						},
+					},
+				}
+				gomock.InOrder(
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
+						client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{LABEL_UPGRADE: "true"},
+					}).SetArg(1, *upgradeMachinesets),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
+						client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{LABEL_MACHINE_POOL: "worker"},
+					}).Return(fmt.Errorf("worker list error")),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
+						client.InNamespace(MACHINE_API_NAMESPACE), client.HasLabels{LABEL_MACHINE_POOL},
+					}).SetArg(1, *extraPoolSets),
+				)
+				mockKubeClient.EXPECT().Create(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(ctx context.Context, ms *machineapi.MachineSet, co ...client.CreateOption) error {
+						Expect(ms.Name).To(Equal("non-serving-9a-us-east-1a-upgrade"))
+						return nil
+					})
+				result, err := scaler.EnsureScaleUpNodes(mockKubeClient, testDuration, logger, []string{"non-serving-*"})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(BeFalse())
+			})
+		})
+
+		Context("When both worker list fails and extra pool list fails", func() {
+			It("returns an error", func() {
+				gomock.InOrder(
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
+						client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{LABEL_UPGRADE: "true"},
+					}).SetArg(1, *upgradeMachinesets),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
+						client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{LABEL_MACHINE_POOL: "worker"},
+					}).Return(fmt.Errorf("worker list error")),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
+						client.InNamespace(MACHINE_API_NAMESPACE), client.HasLabels{LABEL_MACHINE_POOL},
+					}).Return(fmt.Errorf("extra pool list error")),
+				)
+				result, err := scaler.EnsureScaleUpNodes(mockKubeClient, testDuration, logger, []string{"non-serving-*"})
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("failed to get any machinesets to scale"))
+				Expect(result).To(BeFalse())
+			})
+		})
+
+		Context("When extra pool list fails", func() {
+			It("continues with workers only", func() {
+				gomock.InOrder(
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
+						client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{LABEL_UPGRADE: "true"},
+					}).SetArg(1, *upgradeMachinesets),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
+						client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{LABEL_MACHINE_POOL: "worker"},
+					}).SetArg(1, *originalMachineSets),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
+						client.InNamespace(MACHINE_API_NAMESPACE), client.HasLabels{LABEL_MACHINE_POOL},
+					}).Return(fmt.Errorf("api error")),
+				)
+				mockKubeClient.EXPECT().Create(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(ctx context.Context, ms *machineapi.MachineSet, co ...client.CreateOption) error {
+						Expect(ms.Name).To(Equal("worker-us-east-1a-upgrade"))
+						return nil
+					})
+				result, err := scaler.EnsureScaleUpNodes(mockKubeClient, testDuration, logger, []string{"non-serving-*"})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(BeFalse())
+			})
+		})
+
+		Context("When extra pools is nil", func() {
+			It("behaves identically to no extra pools", func() {
+				gomock.InOrder(
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
+						client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{LABEL_UPGRADE: "true"},
+					}).SetArg(1, *upgradeMachinesets),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
+						client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{LABEL_MACHINE_POOL: "worker"},
+					}).SetArg(1, *originalMachineSets),
+				)
+				mockKubeClient.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
+				result, err := scaler.EnsureScaleUpNodes(mockKubeClient, testDuration, logger, nil)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(BeFalse())
+			})
+		})
+
+		Context("When worker machinesets also appear in extra pool list", func() {
+			It("does not duplicate worker machinesets", func() {
+				// The allPooled list includes both worker and non-serving, but worker should be excluded
+				allPooled := &machineapi.MachineSetList{
+					Items: []machineapi.MachineSet{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "worker-us-east-1a",
+								Namespace: MACHINE_API_NAMESPACE,
+								Labels:    map[string]string{LABEL_MACHINE_POOL: "worker"},
+							},
+						},
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "non-serving-9a-us-east-1a",
+								Namespace: MACHINE_API_NAMESPACE,
+								Labels:    map[string]string{LABEL_MACHINE_POOL: "non-serving-9a"},
+							},
+							Spec: machineapi.MachineSetSpec{
+								Selector: metav1.LabelSelector{
+									MatchLabels: make(map[string]string),
+								},
+								Template: machineapi.MachineTemplateSpec{
+									ObjectMeta: machineapi.ObjectMeta{
+										Labels: make(map[string]string),
+									},
+								},
+							},
+						},
+					},
+				}
+				gomock.InOrder(
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
+						client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{LABEL_UPGRADE: "true"},
+					}).SetArg(1, *upgradeMachinesets),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
+						client.InNamespace(MACHINE_API_NAMESPACE), client.MatchingLabels{LABEL_MACHINE_POOL: "worker"},
+					}).SetArg(1, *originalMachineSets),
+					mockKubeClient.EXPECT().List(gomock.Any(), gomock.Any(), []client.ListOption{
+						client.InNamespace(MACHINE_API_NAMESPACE), client.HasLabels{LABEL_MACHINE_POOL},
+					}).SetArg(1, *allPooled),
+				)
+				// Only 2 creates: original worker + non-serving (worker not duplicated from extra pool list)
+				createdNames := []string{}
+				mockKubeClient.EXPECT().Create(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(ctx context.Context, ms *machineapi.MachineSet, co ...client.CreateOption) error {
+						createdNames = append(createdNames, ms.Name)
+						return nil
+					}).Times(2)
+				result, err := scaler.EnsureScaleUpNodes(mockKubeClient, testDuration, logger, []string{"*"})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(BeFalse())
+				Expect(createdNames).To(ContainElements("worker-us-east-1a-upgrade", "non-serving-9a-us-east-1a-upgrade"))
+				Expect(createdNames).To(HaveLen(2))
+			})
+		})
 	})
 
 	Context("When the upgrade is scaling in workers", func() {

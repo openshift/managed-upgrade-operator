@@ -73,16 +73,16 @@ func (mr *MockScalerMockRecorder) EnsureScaleDownNodes(arg0, arg1, arg2 any) *go
 }
 
 // EnsureScaleUpNodes mocks base method.
-func (m *MockScaler) EnsureScaleUpNodes(arg0 client.Client, arg1 time.Duration, arg2 logr.Logger) (bool, error) {
+func (m *MockScaler) EnsureScaleUpNodes(arg0 client.Client, arg1 time.Duration, arg2 logr.Logger, arg3 []string) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnsureScaleUpNodes", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "EnsureScaleUpNodes", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // EnsureScaleUpNodes indicates an expected call of EnsureScaleUpNodes.
-func (mr *MockScalerMockRecorder) EnsureScaleUpNodes(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockScalerMockRecorder) EnsureScaleUpNodes(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureScaleUpNodes", reflect.TypeOf((*MockScaler)(nil).EnsureScaleUpNodes), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureScaleUpNodes", reflect.TypeOf((*MockScaler)(nil).EnsureScaleUpNodes), arg0, arg1, arg2, arg3)
 }

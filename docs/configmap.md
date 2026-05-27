@@ -97,11 +97,14 @@ The `scale` section is used to control the `managed-upgrade-operator`'s behaviou
 | Key | Description                                                              |
 | --- |--------------------------------------------------------------------------|
 | `timeOut` | timeout window for the extra workload scale up in minutes, default is 30 |
+| `extraMachinePools` | optional list of glob patterns matching additional `hive.openshift.io/machine-pool` label values whose MachineSets should also be scaled up during capacity reservation (e.g. `non-serving-*`). Patterns use Go's `path.Match` syntax. When empty or absent, only the default `worker` pool is scaled. |
 
 Example:
 ```
     scale:
       timeOut: 30
+      extraMachinePools:
+        - "non-serving-*"
 ```
 
 #### upgradeWindow

@@ -2,6 +2,7 @@ package upgraders
 
 import (
 	"fmt"
+	"path"
 	"time"
 
 	ac "github.com/openshift/managed-upgrade-operator/pkg/availabilitychecks"
@@ -63,6 +64,12 @@ func (cfg *scaleConfig) IsValid() error {
 		return fmt.Errorf("config scale timeOut is invalid")
 	}
 
+	for _, pattern := range cfg.ExtraMachinePools {
+		if _, err := path.Match(pattern, ""); err != nil {
+			return fmt.Errorf("config scale extraMachinePools contains invalid pattern %q: %w", pattern, err)
+		}
+	}
+
 	return nil
 }
 
@@ -80,7 +87,8 @@ func (cfg *upgradeWindow) GetUpgradeDelayedTriggerDuration() time.Duration {
 }
 
 type scaleConfig struct {
-	TimeOut int `yaml:"timeOut" default:"30"`
+	TimeOut           int      `yaml:"timeOut" default:"30"`
+	ExtraMachinePools []string `yaml:"extraMachinePools"`
 }
 
 type healthCheck struct {
@@ -90,6 +98,9 @@ type healthCheck struct {
 
 func (cfg *upgraderConfig) IsValid() error {
 	if err := cfg.Maintenance.IsValid(); err != nil {
+		return err
+	}
+	if err := cfg.Scale.IsValid(); err != nil {
 		return err
 	}
 	if cfg.NodeDrain.Timeout <= 0 {
