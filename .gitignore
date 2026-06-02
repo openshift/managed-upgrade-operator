@@ -93,3 +93,4 @@ LocalRegistryDockerfile
 # app-sre pipeline testing
 .docker/
 saas-managed-upgrade-operator-bundle/
+.work/
