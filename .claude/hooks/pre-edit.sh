@@ -127,7 +127,7 @@ HIGH_RISK_PATTERNS=(
   "*/auth*.go"
   "*_rbac.yaml"
   "*/networkpolicy*.go"
-  "*ClusterRole*.yaml"
+  "*[Cc]luster[Rr]ole*.yaml"
   ".tekton/*.yaml"
   "build/Dockerfile"
 )

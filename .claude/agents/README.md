@@ -1,6 +1,6 @@
 # Claude Agents
 
-Specialized agents for this operator development workflows.
+Specialized agents for operator development workflows.
 
 ## Available Agents
 
@@ -67,7 +67,7 @@ Specialized agents for this operator development workflows.
 **Key capabilities**:
 - Update docs after code changes
 - Ensure command examples work
-- Validate markdown formatting
+- Validate Markdown formatting
 - Keep docs synchronized
 
 ---
@@ -96,7 +96,7 @@ Use a specific agent when the task is clear:
 ```text
 "Run lint-agent to check formatting"
 "Use security-agent to scan for secrets"
-"Invoke test-agent on controllers/upgradeconfig"
+"Invoke test-agent on controllers/machineconfigpool"
 ```
 
 ### Multi-Agent Workflow
