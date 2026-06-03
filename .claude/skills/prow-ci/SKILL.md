@@ -4,7 +4,7 @@ description: Fetch and analyze OpenShift Prow CI job failures with automated art
 trigger: prow, prow-ci, /prow-ci, ci results, check ci, analyze ci failure
 ---
 
-# Prow CI Analysis for 
+# Prow CI Analysis for Managed Upgrade Operator
 
 This skill fetches Prow CI job artifacts from Google Cloud Storage and provides automated failure analysis.
 
