@@ -34,6 +34,7 @@ Update docs when:
 - **Test framework changes**: Update `TESTING.md`
 - **New dependencies**: Update `docs/development.md`
 - **Pre-commit hooks changed**: Update `CONTRIBUTING.md`
+- **Claude Code hooks changed** (`.claude/settings.json`): Update `.claude/hooks/README.md`
 - **Build process changed**: Update `DEVELOPMENT.md` and `CLAUDE.md`
 
 ## Validation Checks
@@ -83,7 +84,7 @@ When `Makefile` changes, sync:
 - `README.md` if new primary targets added
 
 ### Pre-commit Hooks
-When `prek.toml` or `hack/prek.ci.toml` changes, sync:
+When `prek.toml`, `hack/prek.ci.toml`, or `.claude/settings.json` changes, sync:
 - `CONTRIBUTING.md` validation section
 - `CLAUDE.md` validation strategy
 - `.claude/hooks/README.md` hook configuration
