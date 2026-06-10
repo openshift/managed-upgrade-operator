@@ -147,6 +147,11 @@ func (c *clusterUpgrader) PostUpgradeHealthCheck(ctx context.Context, logger log
 		return false, err
 	}
 
+	// Reset all node drain metrics after successful upgrade to prevent stale alerts
+	// This ensures any metrics from deleted/replaced nodes during upgrade are cleared
+	logger.Info("PostUpgradeHealthCheck passed, resetting all node drain metrics")
+	c.metrics.ResetAllMetricNodeDrainFailed()
+
 	return true, nil
 }
 

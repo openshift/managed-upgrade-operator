@@ -7,6 +7,7 @@ import (
 
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -233,6 +234,20 @@ var _ = Describe("NodeKeeperController", func() {
 				result, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: testNodeName})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result.RequeueAfter).To(Not(BeNil()))
+			})
+			It("should reset NodeDrainFailed metric when node is deleted (NotFound)", func() {
+				notFoundErr := errors.NewNotFound(corev1.Resource("nodes"), testNodeName.Name)
+				gomock.InOrder(
+					mockUpgradeConfigManagerBuilder.EXPECT().NewManager(gomock.Any()).Return(mockUpgradeConfigManager, nil),
+					mockUpgradeConfigManager.EXPECT().Get().Return(&uc, nil),
+					mockMachineryClient.EXPECT().IsUpgrading(mockKubeClient, "worker").Return(&machinery.UpgradingResult{IsUpgrading: true}, nil),
+					mockKubeClient.EXPECT().Get(context.TODO(), testNodeName, gomock.Any()).Return(notFoundErr),
+					mockMetricsBuilder.EXPECT().NewClient(gomock.Any()).Return(mockMetricsClient, nil),
+					mockMetricsClient.EXPECT().ResetMetricNodeDrainFailed(testNodeName.Name).Times(1),
+				)
+				result, err := reconciler.Reconcile(context.TODO(), reconcile.Request{NamespacedName: testNodeName})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result.RequeueAfter).To(BeZero())
 			})
 		})
 	})
