@@ -18,8 +18,8 @@ require (
 	github.com/onsi/gomega v1.42.0
 	github.com/openshift-online/ocm-api-model/clientapi v0.0.457
 	github.com/openshift-online/ocm-sdk-go v0.1.503
-	github.com/openshift/api v0.0.0-20260617125622-05673ba6e650
-	github.com/openshift/client-go v0.0.0-20260603140539-6892dc3e1ffc
+	github.com/openshift/api v0.0.0-20260618181827-d22a47a846dc
+	github.com/openshift/client-go v0.0.0-20260618131434-17fd91ed6167
 	github.com/openshift/cluster-version-operator v1.0.1-0.20251024155448-77782f1a4b96
 	github.com/openshift/library-go v0.0.0-20260311094140-ac826d10cb40
 	github.com/openshift/operator-custom-metrics v0.5.1
@@ -59,7 +59,7 @@ require (
 	github.com/go-openapi/jsonpointer v0.23.1 // indirect
 	github.com/go-openapi/jsonreference v0.21.6 // indirect
 	github.com/go-openapi/loads v0.24.0 // indirect
-	github.com/go-openapi/runtime/server-middleware v0.30.0 // indirect
+	github.com/go-openapi/runtime/server-middleware v0.32.3 // indirect
 	github.com/go-openapi/spec v0.22.6 // indirect
 	github.com/go-openapi/swag v0.26.1 // indirect
 	github.com/go-openapi/swag/cmdutils v0.26.1 // indirect
@@ -130,7 +130,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/apiextensions-apiserver v0.36.2 // indirect
 	k8s.io/code-generator v0.36.2 // indirect
-	k8s.io/gengo/v2 v2.0.0-20250922181213-ec3ebc5fd46b // indirect
+	k8s.io/gengo/v2 v2.0.0-20260408192533-25e2208e0dc3 // indirect
 	k8s.io/klog/v2 v2.140.0 // indirect
 	k8s.io/streaming v0.36.2 // indirect
 	k8s.io/utils v0.0.0-20260319190234-28399d86e0b5 // indirect
