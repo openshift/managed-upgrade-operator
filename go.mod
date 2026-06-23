@@ -7,7 +7,7 @@ toolchain go1.26.4
 require (
 	github.com/blang/semver/v4 v4.0.0
 	github.com/go-logr/logr v1.4.3
-	github.com/go-openapi/runtime v0.32.3
+	github.com/go-openapi/runtime v0.32.4
 	github.com/go-openapi/strfmt v0.26.3
 	github.com/golang/mock v1.6.0
 	github.com/google/uuid v1.6.0
@@ -16,10 +16,10 @@ require (
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/ginkgo/v2 v2.31.0
 	github.com/onsi/gomega v1.42.0
-	github.com/openshift-online/ocm-api-model/clientapi v0.0.457
+	github.com/openshift-online/ocm-api-model/clientapi v0.0.458
 	github.com/openshift-online/ocm-sdk-go v0.1.503
 	github.com/openshift/api v0.0.0-20260619095050-5346161d1bf2
-	github.com/openshift/client-go v0.0.0-20260618131434-17fd91ed6167
+	github.com/openshift/client-go v0.0.0-20260622130833-df412d4d283e
 	github.com/openshift/cluster-version-operator v1.0.1-0.20251024155448-77782f1a4b96
 	github.com/openshift/library-go v0.0.0-20260618132022-b0f5231f2ed6
 	github.com/openshift/operator-custom-metrics v0.5.1
@@ -59,7 +59,7 @@ require (
 	github.com/go-openapi/jsonpointer v0.23.1 // indirect
 	github.com/go-openapi/jsonreference v0.21.6 // indirect
 	github.com/go-openapi/loads v0.24.0 // indirect
-	github.com/go-openapi/runtime/server-middleware v0.32.3 // indirect
+	github.com/go-openapi/runtime/server-middleware v0.32.4 // indirect
 	github.com/go-openapi/spec v0.22.6 // indirect
 	github.com/go-openapi/swag v0.26.1 // indirect
 	github.com/go-openapi/swag/cmdutils v0.26.1 // indirect
@@ -97,7 +97,7 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/nxadm/tail v1.4.11 // indirect
 	github.com/oklog/ulid/v2 v2.1.1 // indirect
-	github.com/openshift-online/ocm-api-model/model v0.0.457 // indirect
+	github.com/openshift-online/ocm-api-model/model v0.0.458 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.69.0 // indirect
