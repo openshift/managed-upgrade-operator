@@ -227,8 +227,8 @@ github.com/openshift-online/ocm-api-model/model v0.0.458 h1:slgdBbvdcrI9g7eILVSJ
 github.com/openshift-online/ocm-api-model/model v0.0.458/go.mod h1:PQIoq6P8Vlb7goOdRMLK8nJY+B7HH0RTqYAa4kyidTE=
 github.com/openshift-online/ocm-sdk-go v0.1.503 h1:QN0PUvucEGHLXwjiMEI7nuoa2H6N/SUiA4aRYh6sZ2M=
 github.com/openshift-online/ocm-sdk-go v0.1.503/go.mod h1:SM9x+/m+JAigXnGzb/dY+tMbbgx5f5Oq9Nj5Grg1LVk=
-github.com/openshift/api v0.0.0-20260619095050-5346161d1bf2 h1:oZkYkIvQHkQV8pN0oe8AfPfc7y9+svwmsQHwbOWyJBw=
-github.com/openshift/api v0.0.0-20260619095050-5346161d1bf2/go.mod h1:Jm45pE7O6/G0tYYhiLzNyZykTjmf9BfhsKYuGfLLwTE=
+github.com/openshift/api v0.0.0-20260623101811-c5eb460d04e3 h1:/IBS3zzQk3CfvBLF18oaoNVeqZCEjOrFNJSGjSybPsU=
+github.com/openshift/api v0.0.0-20260623101811-c5eb460d04e3/go.mod h1:Jm45pE7O6/G0tYYhiLzNyZykTjmf9BfhsKYuGfLLwTE=
 github.com/openshift/client-go v0.0.0-20260622130833-df412d4d283e h1:NrVmCwy3vBk6UTY+cNNFHbnB40FyusJmeUIInQod/v8=
 github.com/openshift/client-go v0.0.0-20260622130833-df412d4d283e/go.mod h1:lMQvYPtn6LrPO/YX2j5xdv2h6BRWgYVq1tMA3qA3N9k=
 github.com/openshift/cluster-version-operator v1.0.1-0.20251024155448-77782f1a4b96 h1:FD4XUoXBXxRkEsYjo5UVto4id2KqIDvtGi1/VcmzX2Y=
