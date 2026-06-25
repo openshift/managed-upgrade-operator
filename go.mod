@@ -18,7 +18,7 @@ require (
 	github.com/onsi/gomega v1.42.0
 	github.com/openshift-online/ocm-api-model/clientapi v0.0.458
 	github.com/openshift-online/ocm-sdk-go v0.1.503
-	github.com/openshift/api v0.0.0-20260623101811-c5eb460d04e3
+	github.com/openshift/api v0.0.0-20260624175654-50c3975e874f
 	github.com/openshift/client-go v0.0.0-20260622130833-df412d4d283e
 	github.com/openshift/cluster-version-operator v1.0.1-0.20251024155448-77782f1a4b96
 	github.com/openshift/library-go v0.0.0-20260618132022-b0f5231f2ed6
