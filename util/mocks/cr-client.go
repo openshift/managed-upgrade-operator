@@ -44,6 +44,25 @@ func (m *MockClient) EXPECT() *MockClientMockRecorder {
 	return m.recorder
 }
 
+// Apply mocks base method.
+func (m *MockClient) Apply(arg0 context.Context, arg1 runtime.ApplyConfiguration, arg2 ...client.ApplyOption) error {
+	m.ctrl.T.Helper()
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Apply", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Apply indicates an expected call of Apply.
+func (mr *MockClientMockRecorder) Apply(arg0, arg1 any, arg2 ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Apply", reflect.TypeOf((*MockClient)(nil).Apply), varargs...)
+}
+
 // Create mocks base method.
 func (m *MockClient) Create(arg0 context.Context, arg1 client.Object, arg2 ...client.CreateOption) error {
 	m.ctrl.T.Helper()
@@ -286,6 +305,25 @@ func (m *MockStatusWriter) EXPECT() *MockStatusWriterMockRecorder {
 	return m.recorder
 }
 
+// Apply mocks base method.
+func (m *MockStatusWriter) Apply(arg0 context.Context, arg1 runtime.ApplyConfiguration, arg2 ...client.SubResourceApplyOption) error {
+	m.ctrl.T.Helper()
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Apply", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Apply indicates an expected call of Apply.
+func (mr *MockStatusWriterMockRecorder) Apply(arg0, arg1 any, arg2 ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Apply", reflect.TypeOf((*MockStatusWriter)(nil).Apply), varargs...)
+}
+
 // Create mocks base method.
 func (m *MockStatusWriter) Create(arg0 context.Context, arg1, arg2 client.Object, arg3 ...client.SubResourceCreateOption) error {
 	m.ctrl.T.Helper()
@@ -427,6 +465,25 @@ func (m *MockWriter) EXPECT() *MockWriterMockRecorder {
 	return m.recorder
 }
 
+// Apply mocks base method.
+func (m *MockWriter) Apply(arg0 context.Context, arg1 runtime.ApplyConfiguration, arg2 ...client.ApplyOption) error {
+	m.ctrl.T.Helper()
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Apply", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Apply indicates an expected call of Apply.
+func (mr *MockWriterMockRecorder) Apply(arg0, arg1 any, arg2 ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Apply", reflect.TypeOf((*MockWriter)(nil).Apply), varargs...)
+}
+
 // Create mocks base method.
 func (m *MockWriter) Create(arg0 context.Context, arg1 client.Object, arg2 ...client.CreateOption) error {
 	m.ctrl.T.Helper()
@@ -543,6 +600,25 @@ func NewMockSubResourceClient(ctrl *gomock.Controller) *MockSubResourceClient {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockSubResourceClient) EXPECT() *MockSubResourceClientMockRecorder {
 	return m.recorder
+}
+
+// Apply mocks base method.
+func (m *MockSubResourceClient) Apply(arg0 context.Context, arg1 runtime.ApplyConfiguration, arg2 ...client.SubResourceApplyOption) error {
+	m.ctrl.T.Helper()
+	varargs := []any{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Apply", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Apply indicates an expected call of Apply.
+func (mr *MockSubResourceClientMockRecorder) Apply(arg0, arg1 any, arg2 ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Apply", reflect.TypeOf((*MockSubResourceClient)(nil).Apply), varargs...)
 }
 
 // Create mocks base method.
