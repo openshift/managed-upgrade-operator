@@ -1,3 +1,4 @@
+//go:build tools
 // +build tools
 
 // Place any runtime dependencies as imports in this file.
@@ -5,6 +6,6 @@
 package tools
 
 import (
-	_ "github.com/onsi/ginkgo"
+	_ "github.com/onsi/ginkgo/v2"
 	_ "sigs.k8s.io/controller-tools/cmd/controller-gen"
 )
