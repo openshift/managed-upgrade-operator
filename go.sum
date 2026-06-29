@@ -516,8 +516,8 @@ k8s.io/utils v0.0.0-20260210185600-b8788abfbbc2 h1:AZYQSJemyQB5eRxqcPky+/7EdBj0x
 k8s.io/utils v0.0.0-20260210185600-b8788abfbbc2/go.mod h1:xDxuJ0whA3d0I4mf/C4ppKHxXynQ+fxnkmQH0vTHnuk=
 sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.31.2 h1:jpcvIRr3GLoUoEKRkHKSmGjxb6lWwrBlJsXc+eUYQHM=
 sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.31.2/go.mod h1:Ve9uj1L+deCXFrPOk1LpFXqTg7LCFzFso6PA48q/XZw=
-sigs.k8s.io/controller-runtime v0.23.0 h1:Ubi7klJWiwEWqDY+odSVZiFA0aDSevOCXpa38yCSYu8=
-sigs.k8s.io/controller-runtime v0.23.0/go.mod h1:DBOIr9NsprUqCZ1ZhsuJ0wAnQSIxY/C6VjZbmLgw0j0=
+sigs.k8s.io/controller-runtime v0.21.0 h1:CYfjpEuicjUecRk+KAeyYh+ouUBn4llGyDYytIGcJS8=
+sigs.k8s.io/controller-runtime v0.21.0/go.mod h1:OSg14+F65eWqIu4DceX7k/+QRAbTTvxeQSNSOQpukWM=
 sigs.k8s.io/controller-tools v0.20.1 h1:gkfMt9YodI0K85oT8rVi80NTXO/kDmabKR5Ajn5GYxs=
 sigs.k8s.io/controller-tools v0.20.1/go.mod h1:b4qPmjGU3iZwqn34alUU5tILhNa9+VXK+J3QV0fT/uU=
 sigs.k8s.io/e2e-framework v0.5.0 h1:YLhk8R7EHuTFQAe6Fxy5eBzn5Vb+yamR5u8MH1Rq3cE=
