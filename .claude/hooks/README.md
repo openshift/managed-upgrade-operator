@@ -345,7 +345,7 @@ Update when new prek releases are available.
 Defined in `prek.toml` with immutable refs:
 - `rh-pre-commit-2.3.0`
 - `v8.18.0` (gitleaks)
-- `v2.0.2` (golangci-lint)
+- `v2.7.2` (golangci-lint)
 
 ## References
 
