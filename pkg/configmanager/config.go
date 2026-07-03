@@ -4,12 +4,13 @@ import (
 	"context"
 	"fmt"
 
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // ConfigManagerBuilder is an interface describing the functions of a cluster upgrader.
+//
 //go:generate mockgen -destination=mocks/configmanagerbuilder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/configmanager ConfigManagerBuilder
 type ConfigManagerBuilder interface {
 	New(client.Client, Target) ConfigManager
@@ -30,6 +31,7 @@ func NewBuilder() ConfigManagerBuilder {
 }
 
 // ConfigManager is an interface describing the functions of a cluster upgrader.
+//
 //go:generate mockgen -destination=mocks/configmanager.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/configmanager ConfigManager
 type ConfigManager interface {
 	Into(ConfigValidator) error
