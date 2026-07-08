@@ -18,17 +18,62 @@ cp ${HERE}/.codecov.yml $REPO_ROOT
 echo "Copying OWNERS_ALIASES to your repository root."
 cp -L ${HERE}/OWNERS_ALIASES $REPO_ROOT
 
-# Clean up srep-infra-cicd from .tekton/OWNERS if it exists
-TEKTON_OWNERS="${REPO_ROOT}/.tekton/OWNERS"
-if [[ -f "${TEKTON_OWNERS}" ]] && grep -q "srep-infra-cicd" "${TEKTON_OWNERS}"; then
-	echo "Removing srep-infra-cicd from .tekton/OWNERS..."
-	${SED?} -i '/srep-infra-cicd/d' "${TEKTON_OWNERS}"
-
-	# If no owners remain (ignoring section headers, comments, and blank lines), remove the file
-	if ! grep -qE "^\\s*-\\s+\\S" "${TEKTON_OWNERS}"; then
-		echo "Removing .tekton/OWNERS (no owners remain after cleanup)"
-		rm "${TEKTON_OWNERS}"
+# Migrate renamed/removed aliases in OWNERS files (one-time migration)
+OWNERS_UPDATED=()
+NEEDS_REVIEW=()
+while IFS= read -r -d '' owners_file; do
+	changed=false
+	if grep -q 'srep-functional-leads' "${owners_file}"; then
+		echo "Renaming srep-functional-leads -> rosa-staff-engineers in ${owners_file}"
+		${SED?} -i 's/srep-functional-leads/rosa-staff-engineers/g' "${owners_file}"
+		changed=true
 	fi
+	if grep -q 'srep-architects' "${owners_file}"; then
+		echo "Renaming srep-architects -> hp-architects in ${owners_file}"
+		${SED?} -i 's/srep-architects/hp-architects/g' "${owners_file}"
+		changed=true
+	fi
+	for stale in srep-team-leads sre-group-leads; do
+		if grep -q "${stale}" "${owners_file}"; then
+			echo "Removing ${stale} from ${owners_file}"
+			${SED?} -i "/${stale}/d" "${owners_file}"
+			changed=true
+		fi
+	done
+	for stale in srep-functional-team-security srep-infra-cicd; do
+		if grep -q "${stale}" "${owners_file}"; then
+			echo "WARNING: Removing ${stale} from ${owners_file} (alias no longer exists, no direct replacement)"
+			${SED?} -i "/${stale}/d" "${owners_file}"
+			NEEDS_REVIEW+=("${owners_file}: ${stale} was removed with no replacement. Please add appropriate reviewers/approvers.")
+			changed=true
+		fi
+	done
+	if [[ "${changed}" == "true" ]]; then
+		if ! grep -qE "^\s*-\s+\S" "${owners_file}"; then
+			echo "Removing ${owners_file} (no owners remain after cleanup)"
+			rm "${owners_file}"
+		fi
+		OWNERS_UPDATED+=("${owners_file}")
+	fi
+done < <(find "${REPO_ROOT}" -name 'OWNERS' -not -path '*/.git/*' -not -path '*/boilerplate/*' -print0)
+
+if [[ ${#OWNERS_UPDATED[@]} -gt 0 ]]; then
+	echo ""
+	echo "====================="
+	echo "NOTICE: Boilerplate updated the following OWNERS files to migrate stale aliases:"
+	for f in "${OWNERS_UPDATED[@]}"; do
+		echo "  - ${f}"
+	done
+	echo ""
+	echo "Please review these files to ensure the changes are correct."
+	if [[ ${#NEEDS_REVIEW[@]} -gt 0 ]]; then
+		echo ""
+		echo "ACTION REQUIRED:"
+		for msg in "${NEEDS_REVIEW[@]}"; do
+			echo "  - ${msg}"
+		done
+	fi
+	echo "====================="
 fi
 
 # Add dependabot configuration
@@ -115,6 +160,13 @@ ${SED?} "s/__NAMESPACE__/$IMAGE_NAMESPACE/; s/__NAME__/$IMAGE_NAME/; s/__TAG__/$
 # Add pre-commit hooks configuration (SREP-4485)
 echo "Copying pre-commit-config.yaml to .pre-commit-config.yaml"
 cp ${HERE}/pre-commit-config.yaml $REPO_ROOT/.pre-commit-config.yaml
+
+# Add agentic SDLC conformance check pipeline (ROSA-730)
+if [ -d "${REPO_ROOT}/.tekton" ]; then
+  AGENTIC_CHECK="${REPO_ROOT}/.tekton/${OPERATOR_NAME}-agentic-sdlc-check-pull-request.yaml"
+  echo "Generating agentic SDLC conformance check pipeline: $(basename ${AGENTIC_CHECK})"
+  ${SED?} "s/__OPERATOR_NAME__/${OPERATOR_NAME}/g" ${HERE}/agentic-sdlc-check-pull-request.yaml.tmpl > "${AGENTIC_CHECK}"
+fi
 
 # Check for pipeline files in .tekton directory and centralize them
 TEKTON_DIR="${REPO_ROOT}/.tekton"
