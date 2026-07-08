@@ -111,7 +111,7 @@ if [[ -f ${REPO_ROOT}/.gitignore ]]; then
   ${SED?} -i "/Dockerfile.olm-registry/d" ${REPO_ROOT}/.gitignore
 fi
 
-OPERATOR_NAME=$(sed -n 's/.*OperatorName .*"\([^"]*\)".*/\1/p' "${REPO_ROOT}/config/config.go")
+OPERATOR_NAME=$(${SED?} -n 's/.*OperatorName .*\=.*"\([^"]*\)".*/\1/p' "${REPO_ROOT}/config/config.go")
 
 if [[ ! -f ${REPO_ROOT}/config/metadata/additional-labels.txt ]]; then
   mkdir -p ${REPO_ROOT}/config/metadata
