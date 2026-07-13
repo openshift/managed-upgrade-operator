@@ -9,7 +9,7 @@ import (
 
 	sdk "github.com/openshift-online/ocm-sdk-go"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 )
@@ -125,8 +125,8 @@ var _ = Describe("OCM Agent Client with SDK", func() {
 		conn, err = sdk.NewConnectionBuilder().
 			URL(testServer.URL).
 			TokenURL(testServer.URL + "/token"). // Point to test server for token refresh
-			Tokens("test-token").                 // Add test token for authentication
-			Insecure(true).                       // Skip TLS verification for test server
+			Tokens("test-token").                // Add test token for authentication
+			Insecure(true).                      // Skip TLS verification for test server
 			Build()
 		Expect(err).To(BeNil())
 
