@@ -4,8 +4,6 @@ metadata:
   name: selectorsyncset-template
 
 parameters:
-  - name: CHANNEL
-    required: false
   - name: IMAGE_TAG
     required: true
   - name: REPO_NAME
@@ -14,14 +12,6 @@ parameters:
   - name: DISPLAY_NAME
     value: Managed Upgrade Operator
     required: true
-  - name: OCM_VPCE_SERVICE_NAME_EAST
-    required: true
-  - name: OCM_VPCE_SERVICE_NAME_WEST
-    required: true
-  - name: OCM_DOMAIN
-    required: true
-  - name: OCM_HOSTNAME
-    required: true   
   - name: PKO_IMAGE
     required: true
   - name: OPERATOR_IMAGE
@@ -64,105 +54,3 @@ objects:
             image: ${PKO_IMAGE}:${IMAGE_TAG}
             config:
               image: ${OPERATOR_IMAGE}:${IMAGE_TAG}
-
-  - apiVersion: hive.openshift.io/v1
-    kind: SelectorSyncSet
-    metadata:
-      name: sss-muo-vpce-east
-    spec:
-      clusterDeploymentSelector:
-        matchExpressions:
-        - key: api.openshift.com/fedramp
-          operator: In
-          values:
-          - "true"
-        - key: hive.openshift.io/cluster-region
-          operator: In
-          values:
-          - us-gov-east-1
-        - key: api.openshift.com/private-link
-          operator: In
-          values:
-          - "true"
-        - key: appsre-prod
-          operator: NotIn
-          values:
-          - "true"            
-        matchLabels:
-          api.openshift.com/managed: "true"
-      resourceApplyMode: Sync
-      resources:
-      - apiVersion: avo.openshift.io/v1alpha2
-        kind: VpcEndpoint
-        metadata:
-          name: managed-upgrade-operator
-          namespace: openshift-managed-upgrade-operator
-        spec:
-          serviceName: ${OCM_VPCE_SERVICE_NAME_EAST}
-          securityGroup:
-            useVpcCidr: true
-            ingressRules:
-              - fromPort: 443
-                toPort: 443
-                protocol: tcp
-          vpc:
-            autoDiscoverSubnets: true
-          customDns:
-            route53PrivateHostedZone:
-              autoDiscoverPrivateHostedZone: false
-              domainName: ${OCM_DOMAIN}
-              record:
-                hostname: ${OCM_HOSTNAME}
-                externalNameService:
-                  name: muo-vpce-svc
-
-  - apiVersion: hive.openshift.io/v1
-    kind: SelectorSyncSet
-    metadata:
-      name: sss-muo-vpce-west
-    spec:
-      clusterDeploymentSelector:
-        matchExpressions:
-        - key: api.openshift.com/fedramp
-          operator: In
-          values:
-          - "true"
-        - key: hive.openshift.io/cluster-region
-          operator: In
-          values:
-          - us-gov-west-1
-        - key: api.openshift.com/private-link
-          operator: In
-          values:
-          - "true"
-        - key: appsre-prod
-          operator: NotIn
-          values:
-          - "true"        
-        matchLabels:
-          api.openshift.com/managed: "true"
-      resourceApplyMode: Sync
-      resources:
-      - apiVersion: avo.openshift.io/v1alpha2
-        kind: VpcEndpoint
-        metadata:
-          name: managed-upgrade-operator
-          namespace: openshift-managed-upgrade-operator
-        spec:
-          serviceName: ${OCM_VPCE_SERVICE_NAME_WEST}
-          securityGroup:
-            useVpcCidr: true
-            ingressRules:
-              - fromPort: 443
-                toPort: 443
-                protocol: tcp
-          vpc:
-            autoDiscoverSubnets: true
-          customDns:
-            route53PrivateHostedZone:
-              autoDiscoverPrivateHostedZone: false
-              domainName: ${OCM_DOMAIN}
-              record:
-                hostname: ${OCM_HOSTNAME}
-                externalNameService:
-                  name: muo-vpce-svc
