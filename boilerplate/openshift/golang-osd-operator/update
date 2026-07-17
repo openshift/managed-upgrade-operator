@@ -167,22 +167,11 @@ if [ -d "${REPO_ROOT}/.tekton" ]; then
   echo "Generating agentic SDLC conformance check pipeline: $(basename ${AGENTIC_CHECK})"
   DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/upstream/HEAD 2>/dev/null || git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null || echo defaulting/to/master)
   DEFAULT_BRANCH=${DEFAULT_BRANCH##*/}
-  MAIN_TEKTON=$(ls "${REPO_ROOT}"/.tekton/${OPERATOR_NAME}*-pull-request.yaml 2>/dev/null | grep -v agentic | grep -v pko | grep -v e2e | head -1)
-  TENANT_NAMESPACE=${OPERATOR_NAME}-tenant
-  SERVICE_ACCOUNT=build-pipeline-${OPERATOR_NAME}
-  APP_NAME=${OPERATOR_NAME}
-  COMPONENT_NAME=${OPERATOR_NAME}
-  if [[ -n "${MAIN_TEKTON}" ]]; then
-    TENANT_NAMESPACE=$(grep 'namespace:' "${MAIN_TEKTON}" 2>/dev/null | head -1 | awk '{print $2}')
-    TENANT_NAMESPACE=${TENANT_NAMESPACE:-${OPERATOR_NAME}-tenant}
-    SERVICE_ACCOUNT=$(grep 'serviceAccountName:' "${MAIN_TEKTON}" 2>/dev/null | head -1 | awk '{print $2}')
-    SERVICE_ACCOUNT=${SERVICE_ACCOUNT:-build-pipeline-${OPERATOR_NAME}}
-    APP_NAME=$(grep 'appstudio.openshift.io/application:' "${MAIN_TEKTON}" 2>/dev/null | head -1 | awk '{print $2}')
-    APP_NAME=${APP_NAME:-${OPERATOR_NAME}}
-    COMPONENT_NAME=$(grep 'appstudio.openshift.io/component:' "${MAIN_TEKTON}" 2>/dev/null | head -1 | awk '{print $2}')
-    COMPONENT_NAME=${COMPONENT_NAME:-${OPERATOR_NAME}}
-  fi
-  ${SED?} "s/__OPERATOR_NAME__/${OPERATOR_NAME}/g; s/__DEFAULT_BRANCH__/${DEFAULT_BRANCH}/g; s/__TENANT_NAMESPACE__/${TENANT_NAMESPACE}/g; s/__SERVICE_ACCOUNT__/${SERVICE_ACCOUNT}/g; s/__APP_NAME__/${APP_NAME}/g; s/__COMPONENT_NAME__/${COMPONENT_NAME}/g" ${HERE}/agentic-sdlc-check-pull-request.yaml.tmpl > "${AGENTIC_CHECK}"
+  TENANT_NAMESPACE=$(grep -h 'namespace:' "${REPO_ROOT}"/.tekton/*-pull-request.yaml 2>/dev/null | grep -v agentic | head -1 | awk '{print $2}')
+  TENANT_NAMESPACE=${TENANT_NAMESPACE:-${OPERATOR_NAME}-tenant}
+  SERVICE_ACCOUNT=$(grep -h 'serviceAccountName:' "${REPO_ROOT}"/.tekton/${OPERATOR_NAME}*-pull-request.yaml 2>/dev/null | grep -v agentic | grep -v pko | grep -v e2e | head -1 | awk '{print $2}')
+  SERVICE_ACCOUNT=${SERVICE_ACCOUNT:-build-pipeline-${OPERATOR_NAME}}
+  ${SED?} "s/__OPERATOR_NAME__/${OPERATOR_NAME}/g; s/__DEFAULT_BRANCH__/${DEFAULT_BRANCH}/g; s/__TENANT_NAMESPACE__/${TENANT_NAMESPACE}/g; s/__SERVICE_ACCOUNT__/${SERVICE_ACCOUNT}/g" ${HERE}/agentic-sdlc-check-pull-request.yaml.tmpl > "${AGENTIC_CHECK}"
 fi
 
 # Check for pipeline files in .tekton directory and centralize them
