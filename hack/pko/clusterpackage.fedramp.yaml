@@ -29,7 +29,7 @@ objects:
         managed.openshift.io/gitHash: ${IMAGE_TAG}
         managed.openshift.io/gitRepoName: ${REPO_NAME}
         managed.openshift.io/osd: "true"
-      name: managed-upgrade-operator-pko
+      name: managed-upgrade-operator-stage
     spec:
       clusterDeploymentSelector:
         matchLabels:
