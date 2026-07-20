@@ -18,203 +18,13 @@ metadata:
   name: managed-upgrade-operator-agentic-sdlc-check
   namespace: managed-upgrade-operator-tenant
 spec:
+  params:
+    - name: git-url
+      value: '{{source_url}}'
+    - name: revision
+      value: '{{revision}}'
   taskRunTemplate:
     serviceAccountName: build-pipeline-managed-upgrade-operator
-  pipelineSpec:
-    tasks:
-      - name: clone-repository
-        params:
-          - name: url
-            value: '{{source_url}}'
-          - name: revision
-            value: '{{revision}}'
-        taskRef:
-          params:
-            - name: name
-              value: git-clone
-            - name: bundle
-              value: quay.io/konflux-ci/tekton-catalog/task-git-clone:0.1@sha256:39efcb7d049d84feccce65e589996a89b19ab7c9f504015c3792e3daee697da3
-            - name: kind
-              value: task
-          resolver: bundles
-        workspaces:
-          - name: output
-            workspace: workspace
-          - name: basic-auth
-            workspace: git-auth
-      - name: check-file-existence
-        runAfter:
-          - clone-repository
-        onError: continue
-        taskSpec:
-          steps:
-            - name: check-files
-              image: quay.io/konflux-ci/git-clone@sha256:09ac9c14392b5c2b8057f66cc4abfb8ce5d7214706318959d00908923a754434
-              workingDir: $(workspaces.source.path)/source
-              script: |
-                #!/usr/bin/env sh
-                set -eu
-
-                PASS=0
-                FAIL=0
-
-                pass() { echo "PASS: $1"; PASS=$((PASS + 1)); }
-                fail() { echo "FAIL: $1"; FAIL=$((FAIL + 1)); }
-
-                echo "=== Agentic SDLC Conformance: File Existence (ROSA-730) ==="
-                echo "Repository: $(basename $(pwd))"
-                echo "Date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-                echo ""
-
-                if [ -f "CLAUDE.md" ]; then pass "CLAUDE.md exists"; else fail "CLAUDE.md missing"; fi
-                if [ -f ".pre-commit-config.yaml" ]; then pass ".pre-commit-config.yaml exists"; else fail ".pre-commit-config.yaml missing"; fi
-                if [ -f ".codecov.yml" ]; then pass ".codecov.yml exists"; else fail ".codecov.yml missing"; fi
-                if [ -f "CONTRIBUTING.md" ]; then pass "CONTRIBUTING.md exists"; else fail "CONTRIBUTING.md missing"; fi
-                if [ -f "DEVELOPMENT.md" ]; then pass "DEVELOPMENT.md exists"; else fail "DEVELOPMENT.md missing"; fi
-                if [ -f "TESTING.md" ]; then pass "TESTING.md exists"; else fail "TESTING.md missing"; fi
-
-                if [ -f "CLAUDE.md" ]; then
-                  if [ -f ".claude/settings.json" ]; then pass ".claude/settings.json exists"; else fail ".claude/settings.json missing (CLAUDE.md present but no Claude hooks)"; fi
-                fi
-
-                if [ -d "boilerplate/openshift/golang-osd-operator" ]; then
-                  if [ -f "boilerplate/openshift/golang-osd-operator/golangci.yml" ]; then pass "golangci.yml exists (boilerplate convention)"; else fail "golangci.yml missing from boilerplate/openshift/golang-osd-operator/"; fi
-                elif [ -d "boilerplate/openshift/golang-lint" ]; then
-                  if [ -f "boilerplate/openshift/golang-lint/golangci.yml" ]; then pass "golangci.yml exists (golang-lint convention)"; else fail "golangci.yml missing from boilerplate/openshift/golang-lint/"; fi
-                else
-                  if [ -f ".golangci.yml" ] || [ -f ".golangci.yaml" ]; then pass "golangci config exists at repo root"; else fail "golangci config missing (no boilerplate dir and no root .golangci.yml/.yaml)"; fi
-                fi
-
-                echo ""
-                TOTAL=$((PASS + FAIL))
-                echo "File existence: $PASS / $TOTAL passed"
-                if [ "$FAIL" -gt 0 ]; then exit 1; fi
-          workspaces:
-            - name: source
-        workspaces:
-          - name: source
-            workspace: workspace
-      - name: check-content-validation
-        runAfter:
-          - clone-repository
-        onError: continue
-        taskSpec:
-          steps:
-            - name: check-content
-              image: quay.io/konflux-ci/git-clone@sha256:09ac9c14392b5c2b8057f66cc4abfb8ce5d7214706318959d00908923a754434
-              workingDir: $(workspaces.source.path)/source
-              script: |
-                #!/usr/bin/env sh
-                set -eu
-
-                PASS=0
-                FAIL=0
-                WARN=0
-
-                pass() { echo "PASS: $1"; PASS=$((PASS + 1)); }
-                fail() { echo "FAIL: $1"; FAIL=$((FAIL + 1)); }
-                warn() { echo "WARN: $1"; WARN=$((WARN + 1)); }
-
-                echo "=== Agentic SDLC Conformance: Content Validation (ROSA-730) ==="
-                echo "Repository: $(basename $(pwd))"
-                echo "Date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-                echo ""
-
-                # CLAUDE.md required sections (resolve one level of @ includes)
-                if [ -f "CLAUDE.md" ]; then
-                  check_files="CLAUDE.md"
-                  for ref in $(grep -oE '@[^ `]+' CLAUDE.md 2>/dev/null); do
-                    ref_file=$(echo "$ref" | sed 's/^@//')
-                    [ -f "$ref_file" ] && check_files="$check_files $ref_file"
-                  done
-                  claude_content=$(cat $(echo "$check_files" | tr ' ' '\n' | sort -u) 2>/dev/null)
-
-                  if echo "$claude_content" | grep -qiE '##.*(build commands|development commands|build|dev server)'; then
-                    pass "CLAUDE.md has build/development commands section"
-                  else
-                    fail "CLAUDE.md missing build/development commands section"
-                  fi
-
-                  if echo "$claude_content" | grep -qiE '##.*(agent rules|agents must|agent)'; then
-                    pass "CLAUDE.md has agent rules section"
-                  else
-                    warn "CLAUDE.md missing agent rules section (recommended heading: Agent Rules)"
-                  fi
-
-                  if echo "$claude_content" | grep -qiE '##.*(architecture|project overview|what this operator does|overview)'; then
-                    pass "CLAUDE.md has architecture/overview section"
-                  else
-                    fail "CLAUDE.md missing architecture/overview section"
-                  fi
-                else
-                  fail "CLAUDE.md not found — skipping content checks"
-                fi
-
-                # .codecov.yml patch coverage target
-                if [ -f ".codecov.yml" ]; then
-                  patch_target=$(grep -A5 'patch:' .codecov.yml | grep 'target:' | head -1 | grep -oE '[0-9]+' | head -1)
-                  if [ -n "$patch_target" ]; then
-                    if [ "$patch_target" -ge 50 ]; then
-                      pass ".codecov.yml patch coverage target is ${patch_target}% (>= 50%)"
-                    else
-                      fail ".codecov.yml patch coverage target is ${patch_target}% (should be >= 50%)"
-                    fi
-                  else
-                    warn ".codecov.yml patch coverage target could not be parsed"
-                  fi
-                fi
-
-                # .pre-commit-config.yaml required hooks
-                if [ -f ".pre-commit-config.yaml" ]; then
-                  pcf_content=$(cat .pre-commit-config.yaml)
-
-                  if echo "$pcf_content" | grep -q 'gitleaks'; then
-                    pass ".pre-commit-config.yaml includes gitleaks (secrets detection)"
-                  else
-                    fail ".pre-commit-config.yaml missing gitleaks hook"
-                  fi
-
-                  if echo "$pcf_content" | grep -q 'golangci-lint'; then
-                    pass ".pre-commit-config.yaml includes golangci-lint"
-                  else
-                    fail ".pre-commit-config.yaml missing golangci-lint hook"
-                  fi
-
-                  if echo "$pcf_content" | grep -qE '(check-yaml|check-merge-conflict)'; then
-                    pass ".pre-commit-config.yaml includes file hygiene hooks"
-                  else
-                    fail ".pre-commit-config.yaml missing file hygiene hooks (check-yaml or check-merge-conflict)"
-                  fi
-                fi
-
-                # Documentation files must not be stubs
-                for doc in CONTRIBUTING.md DEVELOPMENT.md TESTING.md; do
-                  if [ -f "$doc" ]; then
-                    line_count=$(wc -l < "$doc")
-                    if [ "$line_count" -gt 10 ]; then
-                      pass "$doc has substantive content (${line_count} lines)"
-                    else
-                      fail "$doc appears to be a stub (${line_count} lines, expected > 10)"
-                    fi
-                  fi
-                done
-
-                echo ""
-                TOTAL=$((PASS + FAIL + WARN))
-                echo "Content validation: $PASS passed, $FAIL failed, $WARN warnings out of $TOTAL checks"
-                if [ "$FAIL" -gt 0 ]; then
-                  echo ""
-                  echo "See ROSA-730 for agentic SDLC standards: https://issues.redhat.com/browse/ROSA-730"
-                  exit 1
-                fi
-          workspaces:
-            - name: source
-        workspaces:
-          - name: source
-            workspace: workspace
-    workspaces:
-      - name: workspace
-      - name: git-auth
   workspaces:
     - name: workspace
       volumeClaimTemplate:
@@ -227,4 +37,13 @@ spec:
     - name: git-auth
       secret:
         secretName: '{{ git_auth_secret }}'
+  pipelineRef:
+    resolver: git
+    params:
+      - name: url
+        value: https://github.com/openshift/boilerplate
+      - name: revision
+        value: master
+      - name: pathInRepo
+        value: pipelines/agentic-sdlc-check/pipeline.yaml
 status: {}
