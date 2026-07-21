@@ -8,7 +8,7 @@ COPY . .
 RUN make go-build
 
 ####
-FROM registry.access.redhat.com/ubi9/ubi-minimal:9.8-1784596070
+FROM registry.access.redhat.com/ubi9/ubi-minimal:1784092978
 
 ENV USER_UID=1001 \
     USER_NAME=managed-upgrade-operator
