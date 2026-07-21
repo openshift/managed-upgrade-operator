@@ -165,14 +165,15 @@ cp ${HERE}/pre-commit-config.yaml $REPO_ROOT/.pre-commit-config.yaml
 if [ -d "${REPO_ROOT}/.tekton" ]; then
   AGENTIC_CHECK="${REPO_ROOT}/.tekton/${OPERATOR_NAME}-agentic-sdlc-check-pull-request.yaml"
   echo "Generating agentic SDLC conformance check pipeline: $(basename ${AGENTIC_CHECK})"
-  DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/upstream/HEAD 2>/dev/null || git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null || echo defaulting/to/master)
-  DEFAULT_BRANCH=${DEFAULT_BRANCH##*/}
   MAIN_TEKTON=$(ls "${REPO_ROOT}"/.tekton/${OPERATOR_NAME}*-pull-request.yaml 2>/dev/null | grep -v agentic | grep -v pko | grep -v e2e | head -1)
+  DEFAULT_BRANCH="master"
   TENANT_NAMESPACE=${OPERATOR_NAME}-tenant
   SERVICE_ACCOUNT=build-pipeline-${OPERATOR_NAME}
   APP_NAME=${OPERATOR_NAME}
   COMPONENT_NAME=${OPERATOR_NAME}
   if [[ -n "${MAIN_TEKTON}" ]]; then
+    DEFAULT_BRANCH=$(grep -A1 -h 'on-cel-expression.*target_branch' "${REPO_ROOT}"/.tekton/*-pull-request.yaml 2>/dev/null | grep -v agentic | grep -oE '"(main|master)"' | head -1 | tr -d '"')
+    DEFAULT_BRANCH=${DEFAULT_BRANCH:-master}
     TENANT_NAMESPACE=$(grep 'namespace:' "${MAIN_TEKTON}" 2>/dev/null | head -1 | awk '{print $2}')
     TENANT_NAMESPACE=${TENANT_NAMESPACE:-${OPERATOR_NAME}-tenant}
     SERVICE_ACCOUNT=$(grep 'serviceAccountName:' "${MAIN_TEKTON}" 2>/dev/null | head -1 | awk '{print $2}')

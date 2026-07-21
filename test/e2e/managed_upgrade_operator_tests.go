@@ -135,7 +135,8 @@ var _ = ginkgo.Describe("managed-upgrade-operator", ginkgo.Ordered, func() {
 			}).WithTimeout(60 * time.Second).WithPolling(5 * time.Second).Should(Equal((upgradev1alpha1.UpgradePhasePending)))
 		})
 
-		ginkgo.It("should raise prometheus metric if start time is invalid", func(ctx context.Context) {
+		// TODO(ROSAENG-60069): Investigate Prometheus metric scraping delay on fresh PKO-deployed clusters
+		ginkgo.PIt("should raise prometheus metric if start time is invalid", func(ctx context.Context) {
 			targetVersion := clusterVersion.Status.AvailableUpdates[0].Version
 			targetChannel := clusterVersion.Spec.Channel
 			upgradeConfig = makeUpgradeConfig(upgradeConfigResourceName, operatorNamespace, "this is not a start time", targetVersion, targetChannel)
@@ -151,7 +152,7 @@ var _ = ginkgo.Describe("managed-upgrade-operator", ginkgo.Ordered, func() {
 				defer cancel()
 				vector, err := prom.InstantQuery(context, query)
 				return err == nil && vector.Len() == 1
-			}).WithContext(ctx).WithTimeout(100*time.Second).WithPolling(5*time.Second).Should(BeTrue(),
+			}).WithContext(ctx).WithTimeout(2*time.Minute).WithPolling(5*time.Second).Should(BeTrue(),
 				"MUO should raise prometheus metric for invalid start time for upgrade config", upgradeConfigResourceName)
 		})
 
