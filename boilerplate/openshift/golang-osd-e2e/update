@@ -111,6 +111,8 @@ EOF
 
 sed -e "s/\${OPERATOR_NAME}/${OPERATOR_NAME}/" $(dirname $0)/e2e-template.yml >"${E2E_SUITE_DIRECTORY}/e2e-template.yml"
 
+cp $(dirname $0)/gangway-bridge-template.yml "${E2E_SUITE_DIRECTORY}/gangway-bridge-template.yml"
+
 # todo: remove after file is renamed in ALL consumer repos
 if [ -f "${E2E_SUITE_DIRECTORY}/test-harness-template.yml" ]; then
   rm -f "${E2E_SUITE_DIRECTORY}/test-harness-template.yml"
