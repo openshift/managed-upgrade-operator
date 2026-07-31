@@ -7,6 +7,7 @@ package osde2etests
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/onsi/ginkgo/v2"
@@ -101,12 +102,27 @@ var _ = ginkgo.Describe("managed-upgrade-operator", ginkgo.Ordered, func() {
 	})
 
 	ginkgo.When("upgrade config is received,", func() {
+		var originalConfigData string
+
 		ginkgo.BeforeEach(func(ctx context.Context) {
+			ginkgo.By("Switching MUO config to LOCAL mode to prevent OCM sync")
+			var cm corev1.ConfigMap
+			err := k8s.Get(ctx, "managed-upgrade-operator-config", operatorNamespace, &cm)
+			Expect(err).NotTo(HaveOccurred(), "Could not get MUO configmap")
+			originalConfigData = cm.Data["config.yaml"]
+			localConfig := strings.Replace(originalConfigData, "source: OCM", "source: LOCAL", 1)
+			Expect(localConfig).To(ContainSubstring("source: LOCAL"), "Failed to switch config to LOCAL mode")
+			cm.Data["config.yaml"] = localConfig
+			err = k8s.Update(ctx, &cm)
+			Expect(err).NotTo(HaveOccurred(), "Could not update MUO configmap to LOCAL mode")
+
+			ginkgo.By("Waiting for MUO to pick up LOCAL config")
+			time.Sleep(5 * time.Second)
+
 			ginkgo.By("Retrieving clusterversion")
 			cfg, err := config.NewForConfig(k8s.GetConfig())
 			Expect(err).NotTo(HaveOccurred(), "Could not create k8s clientset")
 			clusterVersion, err = cfg.ConfigV1().ClusterVersions().Get(ctx, "version", metav1.GetOptions{})
-			// Validate clusterversion
 			Expect(err).NotTo(HaveOccurred())
 			Expect(clusterVersion).NotTo(BeNil())
 			skipIfNoUpdatesOrCurrentlyUpgrading(ctx, clusterVersion)
@@ -162,6 +178,16 @@ var _ = ginkgo.Describe("managed-upgrade-operator", ginkgo.Ordered, func() {
 				ginkgo.By("Cleaning up upgrade config")
 				err := k8s.Delete(ctx, &upgradeConfig)
 				Expect(err).NotTo(HaveOccurred(), "Could not clean up upgrade config")
+			}
+
+			if originalConfigData != "" {
+				ginkgo.By("Restoring MUO config to OCM mode")
+				var cm corev1.ConfigMap
+				err := k8s.Get(ctx, "managed-upgrade-operator-config", operatorNamespace, &cm)
+				Expect(err).NotTo(HaveOccurred(), "Could not get MUO configmap for restoration")
+				cm.Data["config.yaml"] = originalConfigData
+				err = k8s.Update(ctx, &cm)
+				Expect(err).NotTo(HaveOccurred(), "Could not restore MUO configmap to OCM mode")
 			}
 		})
 	})
