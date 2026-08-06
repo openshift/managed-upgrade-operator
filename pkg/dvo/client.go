@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	// CLUSTERS_V1_PATH is a path to the OCM clusters service
+	// METRICS_API_PATH is the path to the DVO metrics endpoint
 	METRICS_API_PATH = "/metrics"
 )
 
