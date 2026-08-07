@@ -3,9 +3,7 @@ package dvo
 import (
 	"fmt"
 	"io"
-	"net"
 	"net/http"
-	"time"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -40,24 +38,13 @@ type dvoClient struct {
 
 type dvoRoundTripper struct {
 	authorization util.AccessToken
+	transport     *http.Transport
 }
 
 func (drt *dvoRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	authVal := fmt.Sprintf("AccessToken %s:%s", drt.authorization.ClusterId, drt.authorization.PullSecret)
 	req.Header.Add("Authorization", authVal)
-	transport := http.Transport{
-		// Configure proxy support for Routes mode (when DVO is accessed externally)
-		// Respects HTTP_PROXY, HTTPS_PROXY, and NO_PROXY environment variables
-		Proxy: http.ProxyFromEnvironment,
-
-		// Configure timeouts for reliable DVO communication
-		DialContext: (&net.Dialer{
-			Timeout:   30 * time.Second, // Maximum time to establish TCP connection
-			KeepAlive: 30 * time.Second, // TCP keep-alive probe interval
-		}).DialContext,
-		TLSHandshakeTimeout: 30 * time.Second, // Maximum time for TLS handshake (increased from 5s for proxy environments)
-	}
-	return transport.RoundTrip(req)
+	return drt.transport.RoundTrip(req)
 }
 
 func (c *dvoClient) GetMetrics() ([]byte, error) {

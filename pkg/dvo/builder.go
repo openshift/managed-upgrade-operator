@@ -2,7 +2,9 @@ package dvo
 
 import (
 	"fmt"
+	"net"
 	"net/http"
+	"time"
 
 	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
 	"github.com/openshift/managed-upgrade-operator/util"
@@ -40,7 +42,20 @@ func (dcb *dvoClientBuilder) New(c client.Client) (DvoClient, error) {
 
 	// Set up the HTTP client using the token
 	httpClient := http.Client{
-		Transport: &dvoRoundTripper{authorization: *accessToken},
+		Transport: &dvoRoundTripper{
+			authorization: *accessToken,
+			transport: &http.Transport{
+				// Configure proxy support for Routes mode (when DVO is accessed externally)
+				// Respects HTTP_PROXY, HTTPS_PROXY, and NO_PROXY environment variables
+				Proxy: http.ProxyFromEnvironment,
+				// Configure timeouts for reliable DVO communication
+				DialContext: (&net.Dialer{
+					Timeout:   30 * time.Second, // Maximum time to establish TCP connection
+					KeepAlive: 30 * time.Second, // TCP keep-alive probe interval
+				}).DialContext,
+				TLSHandshakeTimeout: 30 * time.Second, // Maximum time for TLS handshake (increased from 5s for proxy environments)
+			},
+		},
 	}
 
 	// Create and return a new instance of dvoClient
