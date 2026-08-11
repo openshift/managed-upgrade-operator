@@ -1,11 +1,9 @@
 package dvo
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
-	"github.com/openshift/managed-upgrade-operator/util"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -32,15 +30,8 @@ func (dcb *dvoClientBuilder) New(c client.Client) (DvoClient, error) {
 		return nil, err
 	}
 
-	// Fetch the cluster AccessToken
-	accessToken, err := util.GetAccessToken(c)
-	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve cluster access token")
-	}
-
-	// Set up the HTTP client using the token
 	httpClient := http.Client{
-		Transport: &dvoRoundTripper{authorization: *accessToken},
+		Transport: newDvoTransport(),
 	}
 
 	// Create and return a new instance of dvoClient
