@@ -45,6 +45,9 @@ func isNotDaemonSet(pod corev1.Pod) bool {
 func containsMatchLabel(p corev1.Pod, pdbList *policyv1.PodDisruptionBudgetList) bool {
 	isPdbPod := false
 	for _, pdb := range pdbList.Items {
+		if pdb.Spec.Selector == nil {
+			continue
+		}
 		for mlKey, mlValue := range pdb.Spec.Selector.MatchLabels {
 			lValue, ok := p.Labels[mlKey]
 			if ok && lValue == mlValue {
