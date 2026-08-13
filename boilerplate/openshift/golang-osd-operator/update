@@ -76,30 +76,22 @@ if [[ ${#OWNERS_UPDATED[@]} -gt 0 ]]; then
 	echo "====================="
 fi
 
-# Add dependabot configuration
-mkdir -p $REPO_ROOT/.github
+# Remove Dependabot config previously shipped by boilerplate.
+# Konflux MintMaker owns dependency updates for operators; Dependabot duplicates that.
 TARGET_FILE="${REPO_ROOT}/.github/dependabot.yml"
-BOILERPLATE_FILE="${HERE}/dependabot.yml"
-
 if [[ -f "$TARGET_FILE" ]]; then
   if grep -q '# BEGIN boilerplate-managed' "$TARGET_FILE"; then
-    echo "Boilerplate-managed section already present in dependabot.yml, skipping append."
-  elif diff -q "$TARGET_FILE" "$BOILERPLATE_FILE" >/dev/null; then
-    echo "Wrapping existing dependabot.yml (which matches boilerplate) with boilerplate-managed markers..."
-    mv "$TARGET_FILE" "${TARGET_FILE}.bak"
-    {
-      echo "# BEGIN boilerplate-managed"
-      cat "${TARGET_FILE}.bak"
-      echo "# END boilerplate-managed"
-    } > "$TARGET_FILE"
-    rm -f "${TARGET_FILE}.bak"
+    echo "Removing boilerplate-managed .github/dependabot.yml (Konflux/MintMaker owns dependency updates)"
+    rm -f "$TARGET_FILE"
+  elif grep -qE 'package-ecosystem:[[:space:]]*"docker"' "$TARGET_FILE" \
+    && grep -q 'directory: "/build"' "$TARGET_FILE" \
+    && ! grep -qE 'package-ecosystem:[[:space:]]*("gomod"|gomod|"github-actions"|github-actions|"npm"|npm|"pip"|pip)' "$TARGET_FILE"; then
+    echo "Removing legacy boilerplate docker Dependabot config from .github/dependabot.yml"
+    rm -f "$TARGET_FILE"
   else
-    echo "[WARNING] dependabot.yml exists and differs from boilerplate template but has no boilerplate-managed markers."
-    echo "[WARNING] Please review manually to avoid config duplication."
+    echo "[WARNING] .github/dependabot.yml exists and may contain non-boilerplate config; not removing automatically."
+    echo "[WARNING] Review and remove Dependabot entries that duplicate Konflux/MintMaker if appropriate."
   fi
-else
-  echo "Copying boilerplate-managed dependabot.yml"
-  cp "$BOILERPLATE_FILE" "$TARGET_FILE"
 fi
 
 # Add olm-registry Dockerfile

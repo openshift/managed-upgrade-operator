@@ -76,4 +76,3 @@ make e2e-local GINKGO_FOCUS="reconciles required resources"
 - Use lease clusters for testing (check `#rosa-prow-info` for available clusters)
 - The operator must be deployed on the target cluster (via PKO or OLM)
 - If tests fail with "not found" errors, verify the operator is running: `oc get deployment -n <operator-namespace>`
-
