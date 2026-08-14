@@ -2,6 +2,7 @@ package drain
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	. "github.com/onsi/ginkgo"
@@ -23,6 +24,56 @@ var _ = Describe("Pod Predicates", func() {
 				},
 				Spec: corev1.PodSpec{},
 			}
+		})
+		Context("testing containsMatchLabel", func() {
+			It("does not panic when a PDB has a nil selector", func() {
+				pdbList := &policyv1.PodDisruptionBudgetList{
+					Items: []policyv1.PodDisruptionBudget{
+						{
+							Spec: policyv1.PodDisruptionBudgetSpec{
+								Selector: nil,
+							},
+						},
+					},
+				}
+				Expect(func() {
+					containsMatchLabel(pod, pdbList)
+				}).ShouldNot(Panic())
+				r := containsMatchLabel(pod, pdbList)
+				Expect(r).To(BeFalse())
+			})
+			It("returns true when pod labels match a PDB selector", func() {
+				pod.Labels = map[string]string{"app": "test"}
+				pdbList := &policyv1.PodDisruptionBudgetList{
+					Items: []policyv1.PodDisruptionBudget{
+						{
+							Spec: policyv1.PodDisruptionBudgetSpec{
+								Selector: &metav1.LabelSelector{
+									MatchLabels: map[string]string{"app": "test"},
+								},
+							},
+						},
+					},
+				}
+				r := containsMatchLabel(pod, pdbList)
+				Expect(r).To(BeTrue())
+			})
+			It("returns false when pod labels do not match any PDB selector", func() {
+				pod.Labels = map[string]string{"app": "other"}
+				pdbList := &policyv1.PodDisruptionBudgetList{
+					Items: []policyv1.PodDisruptionBudget{
+						{
+							Spec: policyv1.PodDisruptionBudgetSpec{
+								Selector: &metav1.LabelSelector{
+									MatchLabels: map[string]string{"app": "test"},
+								},
+							},
+						},
+					},
+				}
+				r := containsMatchLabel(pod, pdbList)
+				Expect(r).To(BeFalse())
+			})
 		})
 		Context("testing if pod namespace is allowed", func() {
 			It("allows pods with namespaces not in the ignore list", func() {
