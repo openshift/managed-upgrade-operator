@@ -2,12 +2,14 @@ package dvo
 
 import (
 	"net/http"
+	"os"
 
 	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // DvoClientBuilder enables implementation of a DVO client.
+//
 //go:generate mockgen -destination=mocks/builder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/dvo DvoClientBuilder
 type DvoClientBuilder interface {
 	New(c client.Client) (DvoClient, error)
@@ -26,6 +28,15 @@ func (dcb *dvoClientBuilder) New(c client.Client) (DvoClient, error) {
 
 	// Get the service URL for the deployment-validation-operator-metrics service
 	svcURL, err := metrics.NetworkTarget(c, "openshift-deployment-validation-operator", "deployment-validation-operator-metrics", "http-metrics")
+
+	// For local run of MUO via `make run`, it's expected that DVO_SVC_URL is set, after port-forwarding DVO metrics service
+	// e.g. port-forward command: `oc port-forward svc/deployment-validation-operator-metrics 53083:8383 -n openshift-deployment-validation-operator`
+	// e.g. dvoSVCULR: 127.0.0.1:53083
+	dvoSVCURL := os.Getenv("DVO_SVC_URL")
+	if dvoSVCURL != "" {
+		svcURL = dvoSVCURL
+	}
+
 	if err != nil {
 		return nil, err
 	}
