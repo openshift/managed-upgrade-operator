@@ -12,7 +12,13 @@ parameters:
     description: Seconds between status polls
   - name: TIMEOUT
     value: "7200"
-    description: Maximum seconds to wait for job completion
+    description: Maximum seconds to wait per attempt for job completion
+  - name: MAX_RETRIES
+    value: "1"
+    description: Number of times to retry the Prow job on failure before reporting failure
+  - name: ACTIVE_DEADLINE
+    value: "14430"
+    description: Kubernetes Job deadline in seconds (should exceed TIMEOUT * (MAX_RETRIES + 1))
   - name: JOB_ENVS
     value: ""
     description: Comma-separated KEY=VALUE pairs passed to the Prow job
@@ -29,7 +35,7 @@ objects:
       name: gangway-bridge-${IMAGE_TAG}-${JOBID}
     spec:
       backoffLimit: 0
-      activeDeadlineSeconds: ${{TIMEOUT}}
+      activeDeadlineSeconds: ${{ACTIVE_DEADLINE}}
       template:
         spec:
           automountServiceAccountToken: false
@@ -46,6 +52,13 @@ objects:
 
                   [[ "${TIMEOUT}" =~ ^[1-9][0-9]*$ ]] || { log "ERROR: TIMEOUT must be a positive integer"; exit 1; }
                   [[ "${POLL_INTERVAL}" =~ ^[1-9][0-9]*$ ]] || { log "ERROR: POLL_INTERVAL must be a positive integer"; exit 1; }
+                  [[ "${MAX_RETRIES}" =~ ^[0-9]+$ ]] || { log "ERROR: MAX_RETRIES must be a non-negative integer"; exit 1; }
+
+                  REQUIRED_DEADLINE=$(( (MAX_RETRIES + 1) * TIMEOUT + (MAX_RETRIES * 30) ))
+                  if [[ "${ACTIVE_DEADLINE}" -lt "${REQUIRED_DEADLINE}" ]]; then
+                    log "ERROR: ACTIVE_DEADLINE (${ACTIVE_DEADLINE}s) is less than the minimum required for ${MAX_RETRIES} retries with TIMEOUT=${TIMEOUT}s (need at least ${REQUIRED_DEADLINE}s)"
+                    exit 1
+                  fi
 
                   BODY='{"job_execution_type":"1"}'
                   if [[ -n "${JOB_ENVS:-}" ]]; then
@@ -53,21 +66,47 @@ objects:
                     BODY=$(jq -cn --argjson e "$ENVS" '{"job_execution_type":"1","pod_spec_options":{"envs":$e}}')
                   fi
 
-                  RESP=$(curl -sfSL --retry 3 --retry-delay 10 -X POST -H "Authorization: Bearer ${GANGWAY_TOKEN}" -H "Content-Type: application/json" -d "${BODY}" "${GW}/${JOB_NAME}")
-                  ID=$(echo "$RESP" | jq -re .id)
-                  PROW_URL="https://prow.ci.openshift.org/view/gs/test-platform-results/logs/${JOB_NAME}/${ID}"
-                  log "Triggered ${JOB_NAME} -> ${ID}"
-                  log "Prow logs: ${PROW_URL}"
+                  trigger_and_poll() {
+                    if ! RESP=$(curl -sfSL --max-time 60 --retry 3 --retry-delay 10 -X POST -H "Authorization: Bearer ${GANGWAY_TOKEN}" -H "Content-Type: application/json" -d "${BODY}" "${GW}/${JOB_NAME}"); then
+                      log "Failed to trigger ${JOB_NAME}"
+                      return 1
+                    fi
+                    if ! ID=$(echo "$RESP" | jq -re .id); then
+                      log "Gangway did not return a valid execution ID"
+                      return 1
+                    fi
+                    PROW_URL="https://prow.ci.openshift.org/view/gs/test-platform-results/logs/${JOB_NAME}/${ID}"
+                    log "Triggered ${JOB_NAME} -> ${ID}"
+                    log "Prow logs: ${PROW_URL}"
 
-                  END=$((SECONDS + ${TIMEOUT}))
-                  while [[ $SECONDS -lt $END ]]; do
-                    sleep "${POLL_INTERVAL}"
-                    S=$(curl -sfSL -H "Authorization: Bearer ${GANGWAY_TOKEN}" "${GW}/${ID}" | jq -r .job_status) || S=UNKNOWN
-                    log "${S} ($((SECONDS))s)"
-                    case $S in SUCCESS) log "Prow logs: ${PROW_URL}"; exit 0;; FAILURE|ABORTED|ERROR) log "Prow logs: ${PROW_URL}"; exit 1;; esac
+                    END=$((SECONDS + ${TIMEOUT}))
+                    while [[ $SECONDS -lt $END ]]; do
+                      sleep "${POLL_INTERVAL}"
+                      S=$(curl -sfSL --max-time 30 -H "Authorization: Bearer ${GANGWAY_TOKEN}" "${GW}/${ID}" | jq -r .job_status) || S=UNKNOWN
+                      log "${S} ($((SECONDS))s)"
+                      case $S in
+                        SUCCESS) log "Prow logs: ${PROW_URL}"; return 0;;
+                        FAILURE|ABORTED|ERROR) log "Prow logs: ${PROW_URL}"; return 1;;
+                      esac
+                    done
+                    log "Prow logs: ${PROW_URL}"
+                    log "Timeout"; return 1
+                  }
+
+                  ATTEMPT=0
+                  while true; do
+                    ATTEMPT=$((ATTEMPT + 1))
+                    log "Attempt ${ATTEMPT} of $((MAX_RETRIES + 1))"
+                    if trigger_and_poll; then
+                      exit 0
+                    fi
+                    if [[ $ATTEMPT -gt $MAX_RETRIES ]]; then
+                      log "All attempts exhausted"
+                      exit 1
+                    fi
+                    log "Retrying in 30s..."
+                    sleep 30
                   done
-                  log "Prow logs: ${PROW_URL}"
-                  log "Timeout"; exit 1
               env:
                 - name: JOB_NAME
                   value: ${JOB_NAME}
@@ -82,6 +121,10 @@ objects:
                   value: ${TIMEOUT}
                 - name: JOB_ENVS
                   value: ${JOB_ENVS}
+                - name: MAX_RETRIES
+                  value: ${MAX_RETRIES}
+                - name: ACTIVE_DEADLINE
+                  value: ${ACTIVE_DEADLINE}
               resources:
                 requests:
                   cpu: "50m"
