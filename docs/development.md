@@ -157,15 +157,15 @@ Regardless of how you choose to run the operator, before doing so ensure the `Up
 $ oc create -f deploy/crds/upgrade.managed.openshift.io_upgradeconfigs_crd.yaml
 ```
 
-MUO by defaults uses in the internal services to contact prometheus and alertmanager. This enables the use of a firewall to prevent egress calls however increases local development complexity slightly. 
+MUO by defaults uses in the internal services to contact prometheus and alertmanager. This enables the use of a firewall to prevent egress calls however increases local development complexity slightly.
 
-There are now three main modes that MUO can be ran in. 
+There are now three main modes that MUO can be ran in.
 
-1. Run in a container in cluster. 
-2. Run locally using port-forwards and `/etc/hosts` entries to replicate production environment. 
-3. Run locally using Routes to access services. This is not true production however is the most simple for local development. 
+1. Run in a container in cluster.
+2. Run locally using port-forwards and `/etc/hosts` entries to replicate production environment.
+3. Run locally using Routes to access services. This is not true production however is the most simple for local development.
 
-Modes 2 and 3 can be executed via the `Makefile` optionally setting the `$OPERATOR_NAMESPACE` as explored in the next section. 
+Modes 2 and 3 can be executed via the `Makefile` optionally setting the `$OPERATOR_NAMESPACE` as explored in the next section.
 
 ```
 run                              Wrapper around operator sdk run. Requires OPERATOR_NAMESPACE to be set. See run-standard for defaults.
@@ -204,7 +204,7 @@ example: ./development/port-forwards $CONTEXT
 $ ./development/port-forwards $CONTEXT
 ```
 
-The operator can then be ran as follows. 
+The operator can then be ran as follows.
 
 ```
 $ oc login $(oc get infrastructures cluster -o json | jq -r '.status.apiServerURL') --token $(oc -n openshift-managed-upgrade-operator serviceaccounts get-token managed-upgrade-operator)
@@ -217,25 +217,25 @@ You don't have any projects. Contact your system administrator to request a proj
 Then if you are using the standard namespace
 
 ```
-$ make run-standard
+OPERATOR_NAMESPACE="openshift-managed-upgrade-operator" WATCH_NAMESPACE="" DVO_SVC_URL="127.0.0.1:53083" go run ./main.go
 ```
 
-Else you can provide your own. 
+Else you can provide your own.
 
 
 ```
-$ OPERATOR_NAMESPACE=managed-upgrade-operator make run
+OPERATOR_NAMESPACE="openshift-managed-upgrade-operator-test" WATCH_NAMESPACE="" DVO_SVC_URL="127.0.0.1:53083" go run ./main.go
 ```
 
 ### Run using cluster routes
 
-Run locally using standard namespace and cluster routes. 
+Run locally using standard namespace and cluster routes.
 
 ```
 $ make run-standard-routes
 ```
 
-Run locally using custom namespace and cluster routes. 
+Run locally using custom namespace and cluster routes.
 
 ```
 $ OPERATOR_NAMESPACE=managed-upgrade-operator make run-routes
@@ -255,8 +255,8 @@ $ make docker-build IMG=quay.io/<QUAY_USERNAME>/managed-upgrade-operator:latest
 podman push quay.io/<QUAY_USERNAME>/managed-upgrade-operator:latest
 ```
 
-- Login to `oc` [as admin](https://github.com/openshift/ops-sop/blob/master/v4/howto/break-glass-kubeadmin.md#for-clusters-with-public-api) 
-  
+- Login to `oc` [as admin](https://github.com/openshift/ops-sop/blob/master/v4/howto/break-glass-kubeadmin.md#for-clusters-with-public-api)
+
 - Ensure no other instances of managed-upgrade-operator are actively running on your cluster, as they may conflict. If MUO is already deployed on the cluster scale the deployment down to 0:
 
 ```shell
@@ -341,12 +341,12 @@ $ oc apply -f test/deploy/upgrade.managed.openshift.io_v1alpha1_upgradeconfig_cr
 
 ```shell
 oc get upgrade -n test-managed-upgrade-operator
-``` 
+```
 
 - Inspect `upgradeConfig`:
 
 ```shell
-oc describe upgrade -n test-managed-upgrade-operator managed-upgrade-config 
+oc describe upgrade -n test-managed-upgrade-operator managed-upgrade-config
 ```
 
 - It can be useful to monitor the events in `test-managed-upgrade-operator` namespace during the upgrade:

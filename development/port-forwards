@@ -15,7 +15,7 @@ do
         echo "example: ${0##} \$CONTEXT"
 		echo
         exit 1
-    fi 
+    fi
 done
 
 OC=$(which oc)
@@ -32,6 +32,8 @@ then
 	sudo -- sh -c "echo 127.0.0.1 prometheus-k8s.openshift-monitoring.svc.cluster.local alertmanager-main.openshift-monitoring.svc.cluster.local >> /etc/hosts"
 fi
 
-# Setup prometheus and alertmanager port-forwards
+# Setup prometheus, alertmanager and DVO metrics port-forwards.
+# Note: DVO metrics port 53083 can be chaned to any local port avaiable. If changed, make sure to include the correct port when run
 while true; do $OC port-forward -n openshift-monitoring svc/prometheus-k8s 9091:9091;done &
 while true; do $OC port-forward -n openshift-monitoring svc/alertmanager-main 9094:9094;done &
+while true; do $OC port-forward -n openshift-deployment-validation-operator svc/deployment-validation-operator-metrics 53083:8383;done &
