@@ -213,11 +213,18 @@ Logged into "https://$API_URL:6443" as "system:serviceaccount:openshift-managed-
 
 You don't have any projects. Contact your system administrator to request a project.
 ```
+Note:
+> You might need to remove the webhook _sre-regular-user-validation_
+```oc delete validatingwebhookconfigurations sre-regular-user-validation``` \
+> For local run of MUO via `make run`, it's expected that DVO_SVC_URL is set, after port-forwarding DVO metrics service \
+>>e.g. port-forward command: `oc port-forward svc/deployment-validation-operator-metrics 53083:8383 -n openshift-deployment-validation-operator` \
+>>e.g. dvoSVCULR: 127.0.0.1:53083
 
 Then if you are using the standard namespace
 
 ```
-OPERATOR_NAMESPACE="openshift-managed-upgrade-operator" WATCH_NAMESPACE="" DVO_SVC_URL="127.0.0.1:53083" go run ./main.go
+export DVO_SVC_URL="127.0.0.1:53083"
+make run
 ```
 
 Else you can provide your own.
