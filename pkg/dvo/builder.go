@@ -39,7 +39,7 @@ func (dcb *dvoClientBuilder) New(c client.Client) (DvoClient, error) {
 	}
 
 	httpClient := http.Client{
-		Transport: newDvoTransport(),
+		Transport: dvoTransport(),
 	}
 
 	// Create and return a new instance of dvoClient

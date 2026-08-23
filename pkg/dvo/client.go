@@ -31,7 +31,7 @@ type dvoClient struct {
 	httpClient http.Client
 }
 
-func newDvoTransport() *http.Transport {
+func dvoTransport() *http.Transport {
 	return &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
 		DialContext: (&net.Dialer{

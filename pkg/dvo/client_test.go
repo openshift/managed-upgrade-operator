@@ -62,7 +62,7 @@ deployment_validation_operator_total 42
 		It("returns an error when the server is unreachable", func() {
 			client = &dvoClient{
 				dvoBaseUrl: "127.0.0.1:1",
-				httpClient: http.Client{Transport: newDvoTransport()},
+				httpClient: http.Client{Transport: dvoTransport()},
 			}
 
 			_, err := client.GetMetrics()
@@ -86,9 +86,9 @@ deployment_validation_operator_total 42
 		})
 	})
 
-	Context("newDvoTransport", func() {
+	Context("dvoTransport", func() {
 		It("returns a transport with proxy support configured", func() {
-			transport := newDvoTransport()
+			transport := dvoTransport()
 			Expect(transport).ToNot(BeNil())
 			Expect(transport.Proxy).ToNot(BeNil())
 			Expect(transport.TLSHandshakeTimeout.Seconds()).To(Equal(float64(30)))
