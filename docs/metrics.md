@@ -125,3 +125,69 @@ managed_upgrade_condition_workers_upgraded_timestamp
 managed_upgrade_condition_post_upgrade_healthcheck_timestamp
 
 ```
+
+## Adding New Metrics
+
+All changes are in `pkg/metrics/metrics.go` unless noted.
+
+### 1. Define the metric
+
+```go
+// Counter (use _total suffix)
+var metricExample = prometheus.NewCounterVec(prometheus.CounterOpts{
+    Subsystem: metricsTag,
+    Name:      "example_total",
+    Help:      "Description",
+}, []string{nameLabel})
+
+// Histogram (use _seconds suffix for durations)
+var metricExampleDuration = prometheus.NewHistogramVec(prometheus.HistogramOpts{
+    Subsystem: metricsTag,
+    Name:      "example_duration_seconds",
+    Help:      "Description",
+    Buckets:   prometheus.DefBuckets,
+}, []string{nameLabel})
+
+// Gauge
+var metricExampleGauge = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+    Subsystem: metricsTag,
+    Name:      "example_value",
+    Help:      "Description",
+}, []string{nameLabel})
+```
+
+### 2. Register in init()
+
+```go
+metrics.Registry.MustRegister(metricExample)
+```
+
+For gauges that reset between upgrades, add to `ephemeralMetrics` slice instead.
+
+### 3. Add to Metrics interface
+
+```go
+UpdateMetricExample(upgradeConfigName string)
+```
+
+### 4. Implement on Counter struct
+
+```go
+func (c *Counter) UpdateMetricExample(upgradeConfigName string) {
+    metricExample.With(prometheus.Labels{nameLabel: upgradeConfigName}).Inc()
+}
+```
+
+### 5. Call from code
+
+```go
+metricsClient.UpdateMetricExample(instance.Name)
+```
+
+### 6. Regenerate mocks and verify
+
+```bash
+make generate
+make run-standard-routes
+curl -s http://localhost:8383/metrics | grep example
+```
