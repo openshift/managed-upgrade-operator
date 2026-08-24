@@ -1,15 +1,15 @@
 package dvo
 
 import (
-	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
-	"github.com/openshift/managed-upgrade-operator/util"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // DvoClientBuilder enables implementation of a DVO client.
+//
 //go:generate mockgen -destination=mocks/builder.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/dvo DvoClientBuilder
 type DvoClientBuilder interface {
 	New(c client.Client) (DvoClient, error)
@@ -28,19 +28,18 @@ func (dcb *dvoClientBuilder) New(c client.Client) (DvoClient, error) {
 
 	// Get the service URL for the deployment-validation-operator-metrics service
 	svcURL, err := metrics.NetworkTarget(c, "openshift-deployment-validation-operator", "deployment-validation-operator-metrics", "http-metrics")
+	// Override svcURL for DVO, when environment variable is set
+	dvoSVCURL := os.Getenv("DVO_SVC_URL")
+	if dvoSVCURL != "" {
+		svcURL = dvoSVCURL
+	}
+
 	if err != nil {
 		return nil, err
 	}
 
-	// Fetch the cluster AccessToken
-	accessToken, err := util.GetAccessToken(c)
-	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve cluster access token")
-	}
-
-	// Set up the HTTP client using the token
 	httpClient := http.Client{
-		Transport: &dvoRoundTripper{authorization: *accessToken},
+		Transport: dvoTransport(),
 	}
 
 	// Create and return a new instance of dvoClient

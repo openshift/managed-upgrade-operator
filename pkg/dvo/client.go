@@ -8,18 +8,11 @@ import (
 	"time"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"github.com/openshift/managed-upgrade-operator/util"
 )
 
 const (
 	// CLUSTERS_V1_PATH is a path to the OCM clusters service
 	METRICS_API_PATH = "/metrics"
-)
-
-var (
-	// ErrClusterIdNotFound is an error describing the cluster ID can not be found
-	ErrClusterIdNotFound = fmt.Errorf("OCM did not return a valid cluster ID: pull-secret may be invalid OR cluster's owner is disabled/banned in OCM")
 )
 
 // DvoClient enables an implementation of a DVO client
@@ -38,26 +31,15 @@ type dvoClient struct {
 	httpClient http.Client
 }
 
-type dvoRoundTripper struct {
-	authorization util.AccessToken
-}
-
-func (drt *dvoRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
-	authVal := fmt.Sprintf("AccessToken %s:%s", drt.authorization.ClusterId, drt.authorization.PullSecret)
-	req.Header.Add("Authorization", authVal)
-	transport := http.Transport{
-		// Configure proxy support for Routes mode (when DVO is accessed externally)
-		// Respects HTTP_PROXY, HTTPS_PROXY, and NO_PROXY environment variables
+func dvoTransport() *http.Transport {
+	return &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
-
-		// Configure timeouts for reliable DVO communication
 		DialContext: (&net.Dialer{
-			Timeout:   30 * time.Second, // Maximum time to establish TCP connection
-			KeepAlive: 30 * time.Second, // TCP keep-alive probe interval
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
 		}).DialContext,
-		TLSHandshakeTimeout: 30 * time.Second, // Maximum time for TLS handshake (increased from 5s for proxy environments)
+		TLSHandshakeTimeout: 30 * time.Second,
 	}
-	return transport.RoundTrip(req)
 }
 
 func (c *dvoClient) GetMetrics() ([]byte, error) {
