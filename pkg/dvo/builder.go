@@ -3,6 +3,7 @@ package dvo
 import (
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/openshift/managed-upgrade-operator/pkg/metrics"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -39,6 +40,7 @@ func (dcb *dvoClientBuilder) New(c client.Client) (DvoClient, error) {
 	}
 
 	httpClient := http.Client{
+		Timeout:   30 * time.Second,
 		Transport: dvoTransport(),
 	}
 
