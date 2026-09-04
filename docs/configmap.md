@@ -6,6 +6,7 @@
   - [How to use it](#how-to-use-it)
     - [For OSD](#for-osd)
     - [For ARO](#for-aro)
+    - [For BM](#for-bm)
   - [Configurable knobs](#configurable-knobs)
     - [configManager](#configmanager)
     - [maintenance](#maintenance)
@@ -31,6 +32,10 @@ Maintained in the [managed-cluster-config](https://github.com/openshift/managed-
 Maintained in the [ARO-RP](https://github.com/Azure/ARO-RP) repository:
 - https://github.com/Azure/ARO-RP/blob/master/pkg/operator/controllers/muo/staticresources/config.yaml
 
+### For BM cluster
+
+Maintained in your own individual cluster-config repository, but the BM upgrades are driven from a local `UpgradeConfig` on the cluster. Set `upgradeType: BM` and `configManager.source: LOCAL`. Extra worker scaling is not part of this upgrader, set `capacityReservation: false` on the `UpgradeConfig`.
+
 ## Configurable knobs
 
 #### upgradeType
@@ -40,6 +45,7 @@ This defines which upgrader MUO should use to upgrade the cluster.
 Valid options are:
 - [ARO](https://github.com/openshift/managed-upgrade-operator/blob/master/pkg/upgraders/aroupgrader.go)
 - [OSD](https://github.com/openshift/managed-upgrade-operator/blob/master/pkg/upgraders/osdupgrader.go)
+- [BM](https://github.com/openshift/managed-upgrade-operator/blob/master/pkg/upgraders/bmupgrader.go)
 
 If this field is not present or is an empty value, the ARO upgrader is used by default.
 
@@ -109,7 +115,7 @@ Example:
 
 #### upgradeWindow
 
-The `upgradeWindow` section is used to control the `managed-upgrade-operator`'s behaviour in relation to the upgrade window within which an upgrade should take place.   
+The `upgradeWindow` section is used to control the `managed-upgrade-operator`'s behaviour in relation to the upgrade window within which an upgrade should take place.  
 
 | Key | Description                                                                                                                                                                                               |
 | --- |-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
