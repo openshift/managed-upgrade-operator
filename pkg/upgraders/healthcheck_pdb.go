@@ -54,7 +54,7 @@ func checkPodDisruptionBudgets(c client.Client, logger logr.Logger) ([]PDBDetail
 	}
 
 	for _, pdb := range pdbList.Items {
-		if !strings.HasPrefix(pdb.Namespace, "openshift-*") || checkNamespaceExistsInArray(namespaceException, pdb.Namespace) {
+		if !strings.HasPrefix(pdb.Namespace, "openshift-") || checkNamespaceExistsInArray(namespaceException, pdb.Namespace) {
 			pdbDetail := PDBDetails{}
 			pdbDetail.Name = pdb.Name
 			pdbDetail.Namespace = pdb.Namespace
