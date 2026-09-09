@@ -305,6 +305,24 @@ func checkUpgradeSource(uc *upgradev1alpha1.UpgradeConfig) (string, error) {
 func (c *clusterVersionClient) runUpgradeWithImage(cv *configv1.ClusterVersion, uc *upgradev1alpha1.UpgradeConfig) (bool, error) {
 	desired := uc.Spec.Desired
 
+	// When a desired channel is set alongside the image, keep the cluster's
+	// channel in sync so cross-minor image-based upgrades don't leave the
+	// cluster on the old channel.
+	if desired.Channel != "" && cv.Spec.Channel != desired.Channel {
+		logger.Info(fmt.Sprintf("Setting ClusterVersion to Channel %s", desired.Channel))
+		desiredChannel := []byte(fmt.Sprintf(`{"spec":{"channel":"%s"}}`, desired.Channel))
+		err := c.client.Patch(context.TODO(), cv, client.RawPatch(types.MergePatchType, desiredChannel))
+		if err != nil {
+			return false, err
+		}
+
+		// Retrieve the updated version
+		cv, err = c.GetClusterVersion()
+		if err != nil {
+			return false, err
+		}
+	}
+
 	if cv.Spec.DesiredUpdate == nil || cv.Spec.DesiredUpdate.Image != desired.Image {
 		logger.Info(fmt.Sprintf("Setting ClusterVersion to Image %s", desired.Image))
 		desiredImage := []byte(fmt.Sprintf(`{"spec":{"desiredUpdate":{"image":"%s","version":null}}}`, desired.Image))

@@ -381,6 +381,39 @@ var _ = Describe("ClusterVersion client and utils", func() {
 					Expect(hasCommenced).To(BeTrue())
 				})
 			})
+			Context("When the clusterversion channel differs from the upgradeconfig and image is set", func() {
+				It("Updates the channel before setting the desired image", func() {
+					clusterVersion := configv1.ClusterVersion{
+						Spec: configv1.ClusterVersionSpec{
+							Channel: "stable-4.20",
+							DesiredUpdate: &configv1.Update{
+								Version: "Some version",
+							},
+						},
+					}
+					upgradeConfig.Spec.Desired.Channel = "stable-4.21"
+					upgradeConfig.Spec.Desired.Image = "quay.io/test/test-image"
+					channelPatch := client.RawPatch(types.MergePatchType, []byte(fmt.Sprintf(`{"spec":{"channel":"%s"}}`, upgradeConfig.Spec.Desired.Channel)))
+					imagePatch := client.RawPatch(types.MergePatchType, []byte(fmt.Sprintf(`{"spec":{"desiredUpdate":{"image":"%s","version":null}}}`, upgradeConfig.Spec.Desired.Image)))
+					gomock.InOrder(
+						mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, clusterVersion).Return(nil),
+						mockKubeClient.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+							func(ctx context.Context, cv *configv1.ClusterVersion, p client.Patch, po ...client.PatchOption) error {
+								Expect(reflect.DeepEqual(p, channelPatch)).To(BeTrue())
+								return nil
+							}),
+						mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, clusterVersion).Return(nil),
+						mockKubeClient.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+							func(ctx context.Context, cv *configv1.ClusterVersion, p client.Patch, po ...client.PatchOption) error {
+								Expect(reflect.DeepEqual(p, imagePatch)).To(BeTrue())
+								return nil
+							}),
+					)
+					result, err := cvClient.EnsureDesiredConfig(upgradeConfig)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(result).To(BeTrue())
+				})
+			})
 		})
 	})
 
