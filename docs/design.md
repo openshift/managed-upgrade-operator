@@ -28,7 +28,7 @@ For the purpose of upgrading a cluster, an `UpgradeConfig` resource _must_ be co
 
 | Item | Definition | Example |
 | ---- | ---------- | ------- |
-| `type` | The cluster upgrader to use when upgrading (valid values: `OSD`, `ARO`)| `OSD` |  
+| `type` | The cluster upgrader to use when upgrading (valid values: `OSD`, `ARO`, `BM`)| `OSD` |  
 | `upgradeAt` | Timestamp indicating when the upgrade can commence (ISO-8601)| `2020-05-01T12:00:00Z` |
 | `PDBForceDrainTimeout` | Duration in minutes that a PDB-blocked node is allowed to drain before a drain is forced | `120` |
 | `desired.version` | The desired OCP release to upgrade to | `4.4.6` |
@@ -88,25 +88,25 @@ A fully-populated example of an `UpgradeConfig` status is included below:
   status:
     history:
     - phase: Upgraded
-      version: 4.3.26              
-      startTime: "2020-07-05T01:35:36Z"      
-      completeTime: "2020-07-05T03:15:37Z"                                                     
-      conditions:            
+      version: 4.3.26  
+      startTime: "2020-07-05T01:35:36Z"  
+      completeTime: "2020-07-05T03:15:37Z"  
+      conditions:  
       - completeTime: "2020-07-05T03:15:36Z"
         lastProbeTime: "2020-07-05T03:15:36Z"
-        lastTransitionTime: "2020-07-05T03:15:36Z"                                             
-        message: ScaleUpExtraNodes succeed                                                     
+        lastTransitionTime: "2020-07-05T03:15:36Z"  
+        message: ScaleUpExtraNodes succeed  
         reason: ScaleUpExtraNodes succeed  
         startTime: "2020-07-05T03:15:36Z"
-        status: "True"                   
+        status: "True"  
         type: ScaleUpExtraNodes
       - completeTime: "2020-07-05T03:15:36Z"
         lastProbeTime: "2020-07-05T03:15:36Z"
-        lastTransitionTime: "2020-07-05T03:15:36Z"                                             
-        message: PreHealthCheck succeed                                                        
-        reason: PreHealthCheck succeed                                                         
-        startTime: "2020-07-05T03:15:36Z"                                                      
-        status: "True"                   
+        lastTransitionTime: "2020-07-05T03:15:36Z"  
+        message: PreHealthCheck succeed  
+        reason: PreHealthCheck succeed  
+        startTime: "2020-07-05T03:15:36Z"  
+        status: "True"  
         type: PreHealthCheck
 ```
 
