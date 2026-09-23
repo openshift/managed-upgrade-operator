@@ -247,7 +247,7 @@ func (s *ocmClient) PostServiceLog(sl *ServiceLog, description string) error {
 	if sl.Severity != "" {
 		builder.Severity(sl.Severity)
 	} else {
-		builder.Severity(servicelogsv1.SeverityInfo)
+		builder.Severity(servicelogsv1.SeverityLow)
 	}
 	// We set standard fields here which are common across different ServiceLogs sent
 	builder.InternalOnly(SERVICELOG_INTERNAL_ONLY)
