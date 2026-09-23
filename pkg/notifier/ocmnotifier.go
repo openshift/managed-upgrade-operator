@@ -68,15 +68,15 @@ var stateMap = map[MuoState]OcmState{
 
 var (
 	// ServiceLogStateControlPlaneStarted defines the summary for control and worker plane upgrade starting servicelog
-	ServiceLogStateControlPlaneStarted = ServiceLogState{Severity: servicelogsv1.SeverityInfo, Summary: "Cluster is starting with control and worker plane upgrade"}
+	ServiceLogStateControlPlaneStarted = ServiceLogState{Severity: servicelogsv1.SeverityLow, Summary: "Cluster is starting with control and worker plane upgrade"}
 	// ServiceLogStateControlPlaneFinished defines the summary for control plane upgrade finished servicelog
-	ServiceLogStateControlPlaneFinished = ServiceLogState{Severity: servicelogsv1.SeverityInfo, Summary: "Cluster has finished control plane upgrade"}
+	ServiceLogStateControlPlaneFinished = ServiceLogState{Severity: servicelogsv1.SeverityLow, Summary: "Cluster has finished control plane upgrade"}
 	// ServiceLogStateWorkerPlaneFinished defines the summary for worker plane upgrade finished servicelog
-	ServiceLogStateWorkerPlaneFinished = ServiceLogState{Severity: servicelogsv1.SeverityInfo, Summary: "Cluster has finished with worker plane upgrade"}
+	ServiceLogStateWorkerPlaneFinished = ServiceLogState{Severity: servicelogsv1.SeverityLow, Summary: "Cluster has finished with worker plane upgrade"}
 	//ServiceLogStateHealthCheckSL defines the summary for finished cluster healthcheck
-	ServiceLogStateHealthCheckSL = ServiceLogState{Severity: servicelogsv1.SeverityInfo, Summary: "Cluster has encountered healthcheck failure during upgrade"}
+	ServiceLogStateHealthCheckSL = ServiceLogState{Severity: servicelogsv1.SeverityLow, Summary: "Cluster has encountered healthcheck failure during upgrade"}
 	//ServiceLogStatePreHealthCheckSL defines the summary for finished cluster pre-upgrade healthcheck
-	ServiceLogStatePreHealthCheckSL = ServiceLogState{Severity: servicelogsv1.SeverityInfo, Summary: "Cluster has encountered pre-upgrade healthcheck failure"}
+	ServiceLogStatePreHealthCheckSL = ServiceLogState{Severity: servicelogsv1.SeverityLow, Summary: "Cluster has encountered pre-upgrade healthcheck failure"}
 )
 
 // ServiceLogState type defines the ServiceLog metadata
