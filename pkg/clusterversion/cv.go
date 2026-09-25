@@ -22,6 +22,7 @@ var (
 )
 
 const (
+	UpgradeWithArchitecture   = "UpgradeWithArchitecture"
 	UpgradeWithImage          = "UpgradeWithImage"
 	UpgradeWithChannelVersion = "UpgradeWithChannelVersion"
 )
@@ -88,6 +89,8 @@ func (c *clusterVersionClient) EnsureDesiredConfig(uc *upgradev1alpha1.UpgradeCo
 		return false, err
 	}
 	switch upgradeSource {
+	case UpgradeWithArchitecture:
+		return c.runUpgradeWithArchitecture(clusterVersion, uc)
 	// Use image to upgrade if the spec.desired.image is present
 	case UpgradeWithImage:
 		triggered, err := c.runUpgradeWithImage(clusterVersion, uc)
@@ -137,6 +140,10 @@ func (c *clusterVersionClient) HasDegradedOperators() (*HasDegradedOperatorsResu
 }
 
 func (c *clusterVersionClient) HasUpgradeCompleted(cv *configv1.ClusterVersion, uc *upgradev1alpha1.UpgradeConfig) bool {
+	if uc.Spec.Desired.Architecture != "" {
+		history := GetHistoryForUpdate(cv, uc.Spec.Desired)
+		return history != nil && history.State == configv1.CompletedUpdate
+	}
 	isCompleted := false
 	for _, c := range cv.Status.History {
 		if c.Version == uc.Spec.Desired.Version {
@@ -156,6 +163,9 @@ func isEqualVersion(cv *configv1.ClusterVersion, uc *upgradev1alpha1.UpgradeConf
 
 // GetPrecedingVersion returns the version the upgradeConfig is upgrading from
 func GetPrecedingVersion(clusterVersion *configv1.ClusterVersion, uc *upgradev1alpha1.UpgradeConfig) string {
+	if uc.Spec.Desired.Architecture != "" {
+		return clusterVersion.Status.Desired.Version
+	}
 	if clusterVersion.Status.Desired.Version == uc.Spec.Desired.Version {
 		for _, clusterVersionHistory := range clusterVersion.Status.History {
 			if clusterVersionHistory.State == configv1.CompletedUpdate &&
@@ -187,6 +197,8 @@ func (c *clusterVersionClient) HasUpgradeCommenced(uc *upgradev1alpha1.UpgradeCo
 		return false, err
 	}
 	switch upgradeSource {
+	case UpgradeWithArchitecture:
+		return isEqualArchitecture(clusterVersion, uc), nil
 	// When using image to upgrade
 	case UpgradeWithImage:
 		if !isEqualImage(clusterVersion, uc) {
@@ -231,6 +243,22 @@ func GetHistory(clusterVersion *configv1.ClusterVersion, version string) *config
 		}
 	}
 
+	return nil
+}
+
+// GetHistoryForUpdate selects the payload history for an architecture migration.
+func GetHistoryForUpdate(cv *configv1.ClusterVersion, desired upgradev1alpha1.Update) *configv1.UpdateHistory {
+	if desired.Architecture == "" {
+		return GetHistory(cv, desired.Version)
+	}
+	// Older entries at the same version can describe the single-architecture payload.
+	if cv.Status.Desired.Architecture != desired.Architecture || cv.Status.Desired.Version != desired.Version || len(cv.Status.History) == 0 {
+		return nil
+	}
+	latest := cv.Status.History[0]
+	if latest.Version == desired.Version && latest.Image != "" && latest.Image == cv.Status.Desired.Image {
+		return &latest
+	}
 	return nil
 }
 
@@ -292,6 +320,12 @@ func GetCurrentVersionMinusOne(clusterVersion *configv1.ClusterVersion) (string,
 
 // check if we are using image or channel + version to upgrade
 func checkUpgradeSource(uc *upgradev1alpha1.UpgradeConfig) (string, error) {
+	if uc.Spec.Desired.Architecture != "" {
+		if uc.Spec.Desired.Architecture != configv1.ClusterVersionArchitectureMulti || uc.Spec.Desired.Image != "" || uc.Spec.Desired.Version == "" {
+			return "", fmt.Errorf("architecture migration requires architecture Multi, a version, and no image")
+		}
+		return UpgradeWithArchitecture, nil
+	}
 	if uc.Spec.Desired.Image != "" {
 		return UpgradeWithImage, nil
 	}
@@ -307,7 +341,7 @@ func (c *clusterVersionClient) runUpgradeWithImage(cv *configv1.ClusterVersion, 
 
 	if cv.Spec.DesiredUpdate == nil || cv.Spec.DesiredUpdate.Image != desired.Image {
 		logger.Info(fmt.Sprintf("Setting ClusterVersion to Image %s", desired.Image))
-		desiredImage := []byte(fmt.Sprintf(`{"spec":{"desiredUpdate":{"image":"%s","version":null}}}`, desired.Image))
+		desiredImage := []byte(fmt.Sprintf(`{"spec":{"desiredUpdate":{"image":"%s","version":null,"architecture":null}}}`, desired.Image))
 		err := c.client.Patch(context.TODO(), cv, client.RawPatch(types.MergePatchType, desiredImage))
 		if err != nil {
 			return false, err
@@ -356,12 +390,41 @@ func (c *clusterVersionClient) runUpgradeWithChannelVersion(cv *configv1.Cluster
 	}
 
 	cv.Spec.Overrides = []configv1.ComponentOverride{}
-	desiredVersion := []byte(fmt.Sprintf(`{"spec":{"desiredUpdate":{"version":"%s","image":null}}}`, desired.Version))
+	desiredVersion := []byte(fmt.Sprintf(`{"spec":{"desiredUpdate":{"version":"%s","image":null,"architecture":null}}}`, desired.Version))
 	if image != "" {
-		desiredVersion = []byte(fmt.Sprintf(`{"spec":{"desiredUpdate":{"version":"%s","image":"%s"}}}`, desired.Version, image))
+		desiredVersion = []byte(fmt.Sprintf(`{"spec":{"desiredUpdate":{"version":"%s","image":"%s","architecture":null}}}`, desired.Version, image))
 	}
 	err := c.client.Patch(context.TODO(), cv, client.RawPatch(types.MergePatchType, desiredVersion))
 	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+// isEqualArchitecture checks the request, rather than the version alone.
+func isEqualArchitecture(cv *configv1.ClusterVersion, uc *upgradev1alpha1.UpgradeConfig) bool {
+	return isEqualVersion(cv, uc) && cv.Spec.DesiredUpdate.Architecture == uc.Spec.Desired.Architecture &&
+		cv.Spec.DesiredUpdate.Image == "" && (uc.Spec.Desired.Channel == "" || cv.Spec.Channel == uc.Spec.Desired.Channel)
+}
+
+func (c *clusterVersionClient) runUpgradeWithArchitecture(cv *configv1.ClusterVersion, uc *upgradev1alpha1.UpgradeConfig) (bool, error) {
+	if isEqualArchitecture(cv, uc) {
+		return true, nil
+	}
+	// Wait for an existing rollout to complete before migrating its payload.
+	if len(cv.Status.History) == 0 || cv.Status.History[0].State != configv1.CompletedUpdate {
+		return false, nil
+	}
+	// Pass the request to CVO, which determines the migration payload.
+	original := cv.DeepCopy()
+	if uc.Spec.Desired.Channel != "" {
+		cv.Spec.Channel = uc.Spec.Desired.Channel
+	}
+	cv.Spec.DesiredUpdate = &configv1.Update{
+		Architecture: configv1.ClusterVersionArchitectureMulti,
+		Version:      uc.Spec.Desired.Version,
+	}
+	if err := c.client.Patch(context.TODO(), cv, client.MergeFrom(original)); err != nil {
 		return false, err
 	}
 	return true, nil

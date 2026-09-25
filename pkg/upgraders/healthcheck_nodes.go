@@ -24,7 +24,7 @@ func ManuallyCordonedNodes(metricsClient metrics.Metrics, machinery machinery.Ma
 	}
 
 	// Get current upgrade state
-	history := ug.Status.History.GetHistory(ug.Spec.Desired.Version)
+	history := ug.Status.History.GetHistoryForUpdate(ug.Spec.Desired)
 	state := string(history.Phase)
 
 	// Get the list of worker nodes
@@ -66,7 +66,7 @@ func NodeUnschedulableTaints(metricsClient metrics.Metrics, machinery machinery.
 	cops := &client.ListOptions{}
 
 	// Get current upgrade state
-	history := ug.Status.History.GetHistory(ug.Spec.Desired.Version)
+	history := ug.Status.History.GetHistoryForUpdate(ug.Spec.Desired)
 	state := string(history.Phase)
 
 	// Get the list of worker nodes
