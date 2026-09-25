@@ -125,6 +125,28 @@ done(End reconcile)
 classDef highlight fill:#f96
 ```
 
+### Migrating to multi-architecture
+
+Set `spec.desired.architecture` to `Multi` and specify the current ClusterVersion's
+`status.desired.version` for a migration equivalent to `oc adm upgrade --to-multi-arch`.
+Omit `image`; `channel` is optional. CVO validates and resolves the release payload.
+Use the local upgrade policy provider when managing the UpgradeConfig directly.
+
+```yaml
+apiVersion: upgrade.managed.openshift.io/v1alpha1
+kind: UpgradeConfig
+metadata:
+  name: managed-upgrade-config
+  namespace: openshift-managed-upgrade-operator
+spec:
+  type: OSD
+  upgradeAt: "2026-09-26T02:00:00Z" # Set the desired start time.
+  PDBForceDrainTimeout: 60
+  desired:
+    version: "4.18.1" # Replace with the cluster's current version.
+    architecture: Multi
+```
+
 ### UpgradeConfig validation
 
 The `UpgradeConfig` validation process has two main forms of validation:

@@ -59,7 +59,7 @@ func newUpgradeCondition(reason, msg string, conditionType upgradev1alpha1.Upgra
 // that a given step has commenced execution.
 // If the UpgradeCondition already exists, no action is taken.
 func setConditionStart(step UpgradeStep, upgradeConfig *upgradev1alpha1.UpgradeConfig) {
-	history := upgradeConfig.Status.History.GetHistory(upgradeConfig.Spec.Desired.Version)
+	history := upgradeConfig.Status.History.GetHistoryForUpdate(upgradeConfig.Spec.Desired)
 	c := history.Conditions.GetCondition(upgradev1alpha1.UpgradeConditionType(step.String()))
 	// Only set the condition if it doesn't already exist - the start time should already appear
 	if c == nil {
@@ -76,7 +76,7 @@ func setConditionStart(step UpgradeStep, upgradeConfig *upgradev1alpha1.UpgradeC
 // setConditionInProgress adds or updates an UpgradeCondition in the UpgradeConfig indicating
 // that a given step is currently executing.
 func setConditionInProgress(step UpgradeStep, message string, upgradeConfig *upgradev1alpha1.UpgradeConfig) {
-	history := upgradeConfig.Status.History.GetHistory(upgradeConfig.Spec.Desired.Version)
+	history := upgradeConfig.Status.History.GetHistoryForUpdate(upgradeConfig.Spec.Desired)
 	c := history.Conditions.GetCondition(upgradev1alpha1.UpgradeConditionType(step.String()))
 	if c != nil {
 		c.Message = message
@@ -91,7 +91,7 @@ func setConditionInProgress(step UpgradeStep, message string, upgradeConfig *upg
 // setConditionComplete adds or updates an UpgradeCondition in the UpgradeConfig indicating
 // that a given step has completed.
 func setConditionComplete(step UpgradeStep, upgradeConfig *upgradev1alpha1.UpgradeConfig) {
-	history := upgradeConfig.Status.History.GetHistory(upgradeConfig.Spec.Desired.Version)
+	history := upgradeConfig.Status.History.GetHistoryForUpdate(upgradeConfig.Spec.Desired)
 	c := history.Conditions.GetCondition(upgradev1alpha1.UpgradeConditionType(step.String()))
 	if c != nil {
 		c.Reason = fmt.Sprintf("%s done", step.String())
