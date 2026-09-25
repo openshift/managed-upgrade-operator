@@ -2,8 +2,10 @@ package clusterversion
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"reflect"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -52,7 +54,7 @@ var _ = Describe("ClusterVersion client and utils", func() {
 					ObjectMeta: metav1.ObjectMeta{Name: OSD_CV_NAME},
 				}).Return(nil),
 			)
-			clusterVersion, err := cvClient.GetClusterVersion()
+			clusterVersion, err := cvClient.GetClusterVersion(context.Background())
 			Expect(clusterVersion).To(Not(BeNil()))
 			Expect(clusterVersion.Name).To(Equal(OSD_CV_NAME))
 			Expect(err).Should(BeNil())
@@ -64,7 +66,7 @@ var _ = Describe("ClusterVersion client and utils", func() {
 					Group: configv1.GroupName, Resource: "ClusterVersion"}, OSD_CV_NAME),
 				),
 			)
-			clusterVersion, err := cvClient.GetClusterVersion()
+			clusterVersion, err := cvClient.GetClusterVersion(context.Background())
 			Expect(clusterVersion).To(BeNil())
 			Expect(err).Should(Not(BeNil()))
 		})
@@ -79,7 +81,7 @@ var _ = Describe("ClusterVersion client and utils", func() {
 						},
 					}).Return(nil),
 				)
-				hasCommenced, err := cvClient.HasUpgradeCommenced(upgradeConfig)
+				hasCommenced, err := cvClient.HasUpgradeCommenced(context.Background(), upgradeConfig)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(hasCommenced).To(BeTrue())
 			})
@@ -114,7 +116,7 @@ var _ = Describe("ClusterVersion client and utils", func() {
 								return nil
 							}),
 					)
-					isCompleted, err := cvClient.EnsureDesiredConfig(upgradeConfig)
+					isCompleted, err := cvClient.EnsureDesiredConfig(context.Background(), upgradeConfig)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(isCompleted).To(BeTrue())
 				})
@@ -160,7 +162,7 @@ var _ = Describe("ClusterVersion client and utils", func() {
 								return nil
 							}),
 					)
-					isCompleted, err := cvClient.EnsureDesiredConfig(upgradeConfig)
+					isCompleted, err := cvClient.EnsureDesiredConfig(context.Background(), upgradeConfig)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(isCompleted).To(BeTrue())
 				})
@@ -191,7 +193,7 @@ var _ = Describe("ClusterVersion client and utils", func() {
 								return nil
 							}),
 					)
-					isCompleted, err := cvClient.EnsureDesiredConfig(upgradeConfig)
+					isCompleted, err := cvClient.EnsureDesiredConfig(context.Background(), upgradeConfig)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(isCompleted).To(BeTrue())
 				})
@@ -224,7 +226,7 @@ var _ = Describe("ClusterVersion client and utils", func() {
 								return nil
 							}),
 					)
-					isCompleted, err := cvClient.EnsureDesiredConfig(upgradeConfig)
+					isCompleted, err := cvClient.EnsureDesiredConfig(context.Background(), upgradeConfig)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(isCompleted).To(BeTrue())
 				})
@@ -332,7 +334,7 @@ var _ = Describe("ClusterVersion client and utils", func() {
 								return nil
 							}),
 					)
-					result, err := cvClient.EnsureDesiredConfig(upgradeConfig)
+					result, err := cvClient.EnsureDesiredConfig(context.Background(), upgradeConfig)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(result).To(BeTrue())
 				})
@@ -357,7 +359,7 @@ var _ = Describe("ClusterVersion client and utils", func() {
 								return nil
 							}),
 					)
-					result, err := cvClient.EnsureDesiredConfig(upgradeConfig)
+					result, err := cvClient.EnsureDesiredConfig(context.Background(), upgradeConfig)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(result).To(BeTrue())
 				})
@@ -376,7 +378,7 @@ var _ = Describe("ClusterVersion client and utils", func() {
 					gomock.InOrder(
 						mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, clusterVersion).Return(nil),
 					)
-					hasCommenced, err := cvClient.HasUpgradeCommenced(upgradeConfig)
+					hasCommenced, err := cvClient.HasUpgradeCommenced(context.Background(), upgradeConfig)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(hasCommenced).To(BeTrue())
 				})
@@ -399,23 +401,211 @@ var _ = Describe("ClusterVersion client and utils", func() {
 						mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, clusterVersion).Return(nil),
 						mockKubeClient.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
 							func(ctx context.Context, cv *configv1.ClusterVersion, p client.Patch, po ...client.PatchOption) error {
-								Expect(reflect.DeepEqual(p, channelPatch)).To(BeTrue())
+								Expect(p).To(Equal(channelPatch), "the first patch must change only the channel before requesting the image")
 								return nil
 							}),
 						mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, clusterVersion).Return(nil),
 						mockKubeClient.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
 							func(ctx context.Context, cv *configv1.ClusterVersion, p client.Patch, po ...client.PatchOption) error {
-								Expect(reflect.DeepEqual(p, imagePatch)).To(BeTrue())
+								Expect(p).To(Equal(imagePatch), "after refreshing the channel, the second patch must set the image and clear the version")
 								return nil
 							}),
 					)
-					result, err := cvClient.EnsureDesiredConfig(upgradeConfig)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(result).To(BeTrue())
+					result, err := cvClient.EnsureDesiredConfig(context.Background(), upgradeConfig)
+					Expect(err).NotTo(HaveOccurred(), "updating the channel followed by the desired image should succeed")
+					Expect(result).To(BeTrue(), "a successful channel and image update should report the upgrade triggered")
 				})
 			})
 		})
 	})
+
+	for _, source := range []string{UpgradeWithImage, UpgradeWithChannelVersion} {
+		Context("EnsureDesiredConfig using "+source, func() {
+			var initial, refreshed configv1.ClusterVersion
+			var updatePatch client.Patch
+
+			BeforeEach(func() {
+				upgradeConfig.Spec.Desired.Channel = "stable-4.21"
+				upgradeConfig.Spec.Desired.Version = "4.21.1"
+				upgradeConfig.Spec.Desired.Image = ""
+				updatePatch = client.RawPatch(types.MergePatchType, []byte(`{"spec":{"desiredUpdate":{"version":"4.21.1","image":null}}}`))
+				if source == UpgradeWithImage {
+					upgradeConfig.Spec.Desired.Image = "quay.io/test/test-image"
+					updatePatch = client.RawPatch(types.MergePatchType, []byte(`{"spec":{"desiredUpdate":{"image":"quay.io/test/test-image","version":null}}}`))
+				}
+				initial = configv1.ClusterVersion{
+					ObjectMeta: metav1.ObjectMeta{Name: OSD_CV_NAME, ResourceVersion: "1"},
+					Spec:       configv1.ClusterVersionSpec{Channel: "stable-4.20"},
+				}
+				refreshed = *initial.DeepCopy()
+				refreshed.ResourceVersion = "2"
+				refreshed.Spec.Channel = upgradeConfig.Spec.Desired.Channel
+				refreshed.Status.AvailableUpdates = []configv1.Release{{
+					Version: upgradeConfig.Spec.Desired.Version,
+					Image:   "quay.io/test/test-image",
+				}}
+			})
+
+			for _, tc := range []struct {
+				name, channel string
+			}{
+				{"quotes", `stable-"4.21"`},
+				{"backslashes", `stable-\4.21\`},
+				{"newline", "stable-4.21\nnext-line"},
+				{"JSON field injection", `stable-4.21","desiredUpdate":{"image":"injected"},"upstream":"https://attacker.invalid`},
+			} {
+				It("preserves channel strings containing "+tc.name+" without patching other fields", func() {
+					upgradeConfig.Spec.Desired.Channel = tc.channel
+					refreshed.Spec.Channel = tc.channel
+					gomock.InOrder(
+						mockKubeClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Name: OSD_CV_NAME}, gomock.Any()).SetArg(2, initial).Return(nil),
+						mockKubeClient.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+							func(ctx context.Context, cv *configv1.ClusterVersion, p client.Patch, _ ...client.PatchOption) error {
+								Expect(p.Type()).To(Equal(types.MergePatchType), "the channel update must remain a JSON merge patch")
+								data, err := p.Data(cv)
+								Expect(err).NotTo(HaveOccurred(), "channel patch bytes should be available for %s", tc.name)
+								var decoded map[string]interface{}
+								Expect(json.Unmarshal(data, &decoded)).To(Succeed(), "channel patch must be valid JSON for %s: %s", tc.name, data)
+								Expect(decoded).To(Equal(map[string]interface{}{
+									"spec": map[string]interface{}{"channel": tc.channel},
+								}), "the patch must preserve the exact channel string and contain no injected or unrelated fields")
+								return nil
+							}),
+						mockKubeClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Name: OSD_CV_NAME}, gomock.Any()).SetArg(2, refreshed).Return(nil),
+						mockKubeClient.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+							func(ctx context.Context, cv *configv1.ClusterVersion, p client.Patch, _ ...client.PatchOption) error {
+								Expect(cv.ResourceVersion).To(Equal(refreshed.ResourceVersion), "the desired update must use the ClusterVersion fetched after the channel patch")
+								Expect(p).To(Equal(updatePatch), "only after patching and refreshing the channel should the desired image or version be set")
+								return nil
+							}),
+					)
+					triggered, err := cvClient.EnsureDesiredConfig(context.Background(), upgradeConfig)
+					Expect(err).NotTo(HaveOccurred(), "encoding %s in the channel must not break the upgrade request", tc.name)
+					Expect(triggered).To(BeTrue(), "both ordered patches should complete for channels containing %s", tc.name)
+				})
+			}
+
+			for _, earlierParent := range []bool{false, true} {
+				It(fmt.Sprintf("shares one bounded deadline across GET/PATCH/GET/PATCH (earlier parent: %t)", earlierParent), func() {
+					parent := context.Background()
+					var parentDeadline time.Time
+					if earlierParent {
+						parentDeadline = time.Now().Add(10 * time.Second)
+						var cancel context.CancelFunc
+						parent, cancel = context.WithDeadline(parent, parentDeadline)
+						defer cancel()
+					}
+					started := time.Now()
+					var deadline time.Time
+					var contexts []context.Context
+					observe := func(ctx context.Context, stage string) {
+						got, ok := ctx.Deadline()
+						Expect(ok).To(BeTrue(), "%s must have a bounded API deadline", stage)
+						Expect(ctx.Err()).NotTo(HaveOccurred(), "%s must receive a live context, not the canceled context from the preceding GET", stage)
+						if len(contexts) == 0 {
+							deadline = got
+							if earlierParent {
+								Expect(got).To(Equal(parentDeadline), "the initial GET must respect the earlier parent deadline")
+							} else {
+								Expect(got.Before(started.Add(clusterVersionAPITimeout))).To(BeFalse(), "the initial GET should receive the full aggregate API budget")
+								Expect(got.After(time.Now().Add(clusterVersionAPITimeout))).To(BeFalse(), "the API deadline must not exceed the configured timeout")
+							}
+						}
+						Expect(got).To(Equal(deadline), "%s must share the initial deadline rather than restart the API timeout", stage)
+						contexts = append(contexts, ctx)
+					}
+					gomock.InOrder(
+						mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+							func(ctx context.Context, _ types.NamespacedName, cv *configv1.ClusterVersion, _ ...client.GetOption) error {
+								observe(ctx, "initial GET")
+								*cv = initial
+								return nil
+							}),
+						mockKubeClient.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+							func(ctx context.Context, _ client.Object, _ client.Patch, _ ...client.PatchOption) error {
+								observe(ctx, "channel PATCH")
+								return nil
+							}),
+						mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+							func(ctx context.Context, _ types.NamespacedName, cv *configv1.ClusterVersion, _ ...client.GetOption) error {
+								observe(ctx, "refresh GET")
+								*cv = refreshed
+								return nil
+							}),
+						mockKubeClient.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+							func(ctx context.Context, _ client.Object, _ client.Patch, _ ...client.PatchOption) error {
+								observe(ctx, "final PATCH")
+								return nil
+							}),
+					)
+					triggered, err := cvClient.EnsureDesiredConfig(parent, upgradeConfig)
+					Expect(err).NotTo(HaveOccurred(), "all four API operations should succeed within the shared deadline")
+					Expect(triggered).To(BeTrue(), "the bounded request should complete the desired update")
+					Expect(contexts).To(HaveLen(4), "each API operation must be checked for the aggregate deadline")
+					for i, ctx := range contexts {
+						Expect(ctx.Err()).To(MatchError(context.Canceled), "API context %d should be released when the request returns", i)
+					}
+					Expect(parent.Err()).NotTo(HaveOccurred(), "releasing API contexts must not cancel the caller's context")
+				})
+			}
+
+			for _, tc := range []struct {
+				stage  int
+				cancel bool
+			}{
+				{1, true}, {2, true},
+				{0, false}, {1, false}, {2, false}, {3, false},
+			} {
+				stages := []string{"initial GET", "channel PATCH", "refresh GET", "final PATCH"}
+				It(fmt.Sprintf("stops at %s failure without subsequent writes (cancellation: %t)", stages[tc.stage], tc.cancel), func() {
+					parent, cancel := context.WithCancel(context.Background())
+					defer cancel()
+					var wantErr error = errors.NewServiceUnavailable("ClusterVersion API unavailable")
+					if tc.cancel {
+						wantErr = context.Canceled
+					}
+					fail := func(ctx context.Context) error {
+						if tc.cancel {
+							cancel()
+							Expect(ctx.Done()).To(BeClosed(), "%s must observe cancellation of the actual parent context", stages[tc.stage])
+							Expect(ctx.Err()).To(MatchError(context.Canceled), "%s must receive the caller's cancellation", stages[tc.stage])
+							return ctx.Err()
+						}
+						return wantErr
+					}
+					// Register only calls through the failure; any later read or write is unexpected.
+					var calls []interface{}
+					for stage := 0; stage <= tc.stage; stage++ {
+						if stage == 0 || stage == 2 {
+							calls = append(calls, mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+								func(ctx context.Context, _ types.NamespacedName, cv *configv1.ClusterVersion, _ ...client.GetOption) error {
+									if stage == tc.stage {
+										return fail(ctx)
+									}
+									*cv = initial
+									if stage == 2 {
+										*cv = refreshed
+									}
+									return nil
+								}))
+						} else {
+							calls = append(calls, mockKubeClient.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+								func(ctx context.Context, _ client.Object, _ client.Patch, _ ...client.PatchOption) error {
+									if stage == tc.stage {
+										return fail(ctx)
+									}
+									return nil
+								}))
+						}
+					}
+					gomock.InOrder(calls...)
+					triggered, err := cvClient.EnsureDesiredConfig(parent, upgradeConfig)
+					Expect(err).To(MatchError(wantErr), "%s failure must be returned to the caller", stages[tc.stage])
+					Expect(triggered).To(BeFalse(), "%s failure must not report a triggered upgrade", stages[tc.stage])
+				})
+			}
+		})
+	}
 
 	Describe("GetPrecedingVersion", func() {
 		var (

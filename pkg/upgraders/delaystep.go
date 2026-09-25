@@ -14,7 +14,7 @@ import (
 // upgrade within a configurable amount of time.
 func (c *osdUpgrader) UpgradeDelayedCheck(ctx context.Context, logger logr.Logger) (bool, error) {
 
-	upgradeCommenced, err := c.cvClient.HasUpgradeCommenced(c.upgradeConfig)
+	upgradeCommenced, err := c.cvClient.HasUpgradeCommenced(ctx, c.upgradeConfig)
 	if err != nil {
 		return false, err
 	}

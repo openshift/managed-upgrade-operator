@@ -105,7 +105,7 @@ var _ = Describe("UpgradeDelayedCheckStep", func() {
 					})
 					It("will not notify as delayed", func() {
 						gomock.InOrder(
-							mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
+							mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any(), gomock.Any()).Return(false, nil),
 						)
 						result, err := upgrader.UpgradeDelayedCheck(context.TODO(), logger)
 						Expect(err).NotTo(HaveOccurred())
@@ -114,7 +114,7 @@ var _ = Describe("UpgradeDelayedCheckStep", func() {
 				})
 				It("will send a notification", func() {
 					gomock.InOrder(
-						mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
+						mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any(), gomock.Any()).Return(false, nil),
 						mockEMClient.EXPECT().Notify(notifier.MuoStateDelayed).Return(nil),
 					)
 
@@ -125,7 +125,7 @@ var _ = Describe("UpgradeDelayedCheckStep", func() {
 				It("will fail if a notification can't be sent", func() {
 					fakeError := fmt.Errorf("fake error")
 					gomock.InOrder(
-						mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
+						mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any(), gomock.Any()).Return(false, nil),
 						mockEMClient.EXPECT().Notify(notifier.MuoStateDelayed).Return(fakeError),
 					)
 					result, err := upgrader.UpgradeDelayedCheck(context.TODO(), logger)
@@ -144,7 +144,7 @@ var _ = Describe("UpgradeDelayedCheckStep", func() {
 					}
 				})
 				It("will not send a notification", func() {
-					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil)
+					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any(), gomock.Any()).Return(false, nil)
 					result, err := upgrader.UpgradeDelayedCheck(context.TODO(), logger)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(result).To(BeTrue())
@@ -156,7 +156,7 @@ var _ = Describe("UpgradeDelayedCheckStep", func() {
 				upgradeConfig.Spec.UpgradeAt = time.Now().Add(-1 * time.Hour).Format(time.RFC3339)
 			})
 			It("will not send a notification", func() {
-				mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(true, nil)
+				mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any(), gomock.Any()).Return(true, nil)
 				result, err := upgrader.UpgradeDelayedCheck(context.TODO(), logger)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(BeTrue())

@@ -91,7 +91,7 @@ var _ = Describe("AvailabilityCheckStep", func() {
 	Context("When running the external-dependency-availability-check phase", func() {
 		It("return true if all dependencies are available", func() {
 			gomock.InOrder(
-				mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
+				mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any(), gomock.Any()).Return(false, nil),
 				mockAC.EXPECT().AvailabilityCheck().Return(nil),
 			)
 
@@ -102,7 +102,7 @@ var _ = Describe("AvailabilityCheckStep", func() {
 		It("return false if any of the dependencies are not available", func() {
 			fakeErr := fmt.Errorf("fake error")
 			gomock.InOrder(
-				mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
+				mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any(), gomock.Any()).Return(false, nil),
 				mockAC.EXPECT().AvailabilityCheck().Return(fakeErr),
 			)
 
@@ -112,7 +112,7 @@ var _ = Describe("AvailabilityCheckStep", func() {
 		})
 		It("will not perform availability checking if the cluster is upgrading", func() {
 			gomock.InOrder(
-				mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(true, nil),
+				mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any(), gomock.Any()).Return(true, nil),
 			)
 			result, err := upgrader.ExternalDependencyAvailabilityCheck(context.TODO(), logger)
 			Expect(err).NotTo(HaveOccurred())

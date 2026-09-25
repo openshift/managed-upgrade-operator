@@ -11,7 +11,7 @@ import (
 
 // ExternalDependencyAvailabilityCheck validates that external dependencies of the upgrade are available.
 func (c *clusterUpgrader) ExternalDependencyAvailabilityCheck(ctx context.Context, logger logr.Logger) (bool, error) {
-	upgradeCommenced, err := c.cvClient.HasUpgradeCommenced(c.upgradeConfig)
+	upgradeCommenced, err := c.cvClient.HasUpgradeCommenced(ctx, c.upgradeConfig)
 	if err != nil {
 		return false, err
 	}

@@ -127,7 +127,7 @@ var _ = Describe("WorkerStep", func() {
 					mockMachineryClient.EXPECT().IsUpgrading(gomock.Any(), "worker").Return(&machinery.UpgradingResult{IsUpgrading: false}, nil),
 					mockMaintClient.EXPECT().IsActive(),
 					mockEMClient.EXPECT().Notify(gomock.Any()),
-					mockCVClient.EXPECT().GetClusterId(),
+					mockCVClient.EXPECT().GetClusterId(gomock.Any()),
 					mockMetricsClient.EXPECT().UpdateMetricWorkernodeUpgradeCompletedTimestamp(gomock.Any(), upgradeConfig.Name, upgradeConfig.Spec.Desired.Version, gomock.Any()),
 					mockMetricsClient.EXPECT().ResetMetricUpgradeWorkerTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version),
 				)
