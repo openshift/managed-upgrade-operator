@@ -96,7 +96,7 @@ func (u *osdUpgrader) UpgradeCluster(ctx context.Context, upgradeConfig *upgrade
 	u.upgradeConfig = upgradeConfig
 
 	// OSD upgrader enforces a 'failure' policy if the upgrade does not commence within a time period
-	if cancelUpgrade, _ := shouldFailUpgrade(u.cvClient, u.config, u.upgradeConfig); cancelUpgrade {
+	if cancelUpgrade, _ := shouldFailUpgrade(ctx, u.cvClient, u.config, u.upgradeConfig); cancelUpgrade {
 		return performUpgradeFailure(u.client, u.metrics, u.scaler, u.notifier, u.upgradeConfig, logger)
 	}
 
@@ -115,8 +115,8 @@ func (u *osdUpgrader) HealthCheck(ctx context.Context, upgradeConfig *upgradev1a
 // where it should be treated as failed.
 // If the cluster should fail its upgrade a condition of 'true' is returned.
 // Any error encountered in making this decision is returned.
-func shouldFailUpgrade(cvClient cv.ClusterVersion, cfg *upgraderConfig, upgradeConfig *upgradev1alpha1.UpgradeConfig) (bool, error) {
-	commenced, err := cvClient.HasUpgradeCommenced(upgradeConfig)
+func shouldFailUpgrade(ctx context.Context, cvClient cv.ClusterVersion, cfg *upgraderConfig, upgradeConfig *upgradev1alpha1.UpgradeConfig) (bool, error) {
+	commenced, err := cvClient.HasUpgradeCommenced(ctx, upgradeConfig)
 	if err != nil {
 		return false, err
 	}

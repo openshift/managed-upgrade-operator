@@ -10,6 +10,7 @@
 package mocks
 
 import (
+	context "context"
 	reflect "reflect"
 
 	v1 "github.com/openshift/api/config/v1"
@@ -42,47 +43,47 @@ func (m *MockClusterVersion) EXPECT() *MockClusterVersionMockRecorder {
 }
 
 // EnsureDesiredConfig mocks base method.
-func (m *MockClusterVersion) EnsureDesiredConfig(arg0 *v1alpha1.UpgradeConfig) (bool, error) {
+func (m *MockClusterVersion) EnsureDesiredConfig(arg0 context.Context, arg1 *v1alpha1.UpgradeConfig) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnsureDesiredConfig", arg0)
+	ret := m.ctrl.Call(m, "EnsureDesiredConfig", arg0, arg1)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // EnsureDesiredConfig indicates an expected call of EnsureDesiredConfig.
-func (mr *MockClusterVersionMockRecorder) EnsureDesiredConfig(arg0 any) *gomock.Call {
+func (mr *MockClusterVersionMockRecorder) EnsureDesiredConfig(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureDesiredConfig", reflect.TypeOf((*MockClusterVersion)(nil).EnsureDesiredConfig), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureDesiredConfig", reflect.TypeOf((*MockClusterVersion)(nil).EnsureDesiredConfig), arg0, arg1)
 }
 
 // GetClusterId mocks base method.
-func (m *MockClusterVersion) GetClusterId() string {
+func (m *MockClusterVersion) GetClusterId(arg0 context.Context) string {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetClusterId")
+	ret := m.ctrl.Call(m, "GetClusterId", arg0)
 	ret0, _ := ret[0].(string)
 	return ret0
 }
 
 // GetClusterId indicates an expected call of GetClusterId.
-func (mr *MockClusterVersionMockRecorder) GetClusterId() *gomock.Call {
+func (mr *MockClusterVersionMockRecorder) GetClusterId(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClusterId", reflect.TypeOf((*MockClusterVersion)(nil).GetClusterId))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClusterId", reflect.TypeOf((*MockClusterVersion)(nil).GetClusterId), arg0)
 }
 
 // GetClusterVersion mocks base method.
-func (m *MockClusterVersion) GetClusterVersion() (*v1.ClusterVersion, error) {
+func (m *MockClusterVersion) GetClusterVersion(arg0 context.Context) (*v1.ClusterVersion, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetClusterVersion")
+	ret := m.ctrl.Call(m, "GetClusterVersion", arg0)
 	ret0, _ := ret[0].(*v1.ClusterVersion)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetClusterVersion indicates an expected call of GetClusterVersion.
-func (mr *MockClusterVersionMockRecorder) GetClusterVersion() *gomock.Call {
+func (mr *MockClusterVersionMockRecorder) GetClusterVersion(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClusterVersion", reflect.TypeOf((*MockClusterVersion)(nil).GetClusterVersion))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClusterVersion", reflect.TypeOf((*MockClusterVersion)(nil).GetClusterVersion), arg0)
 }
 
 // HasDegradedOperators mocks base method.
@@ -101,18 +102,18 @@ func (mr *MockClusterVersionMockRecorder) HasDegradedOperators() *gomock.Call {
 }
 
 // HasUpgradeCommenced mocks base method.
-func (m *MockClusterVersion) HasUpgradeCommenced(arg0 *v1alpha1.UpgradeConfig) (bool, error) {
+func (m *MockClusterVersion) HasUpgradeCommenced(arg0 context.Context, arg1 *v1alpha1.UpgradeConfig) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HasUpgradeCommenced", arg0)
+	ret := m.ctrl.Call(m, "HasUpgradeCommenced", arg0, arg1)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // HasUpgradeCommenced indicates an expected call of HasUpgradeCommenced.
-func (mr *MockClusterVersionMockRecorder) HasUpgradeCommenced(arg0 any) *gomock.Call {
+func (mr *MockClusterVersionMockRecorder) HasUpgradeCommenced(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasUpgradeCommenced", reflect.TypeOf((*MockClusterVersion)(nil).HasUpgradeCommenced), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasUpgradeCommenced", reflect.TypeOf((*MockClusterVersion)(nil).HasUpgradeCommenced), arg0, arg1)
 }
 
 // HasUpgradeCompleted mocks base method.
