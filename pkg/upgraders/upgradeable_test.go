@@ -123,8 +123,8 @@ var _ = Describe("UpgradableCheckStep", func() {
 			DescribeTable("will not perform upgrade",
 				func(infraConfig *configv1.Infrastructure, kbArticleNumber int) {
 					gomock.InOrder(
-						mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
-						mockCVClient.EXPECT().GetClusterVersion().Return(currentClusterVersion, nil),
+						mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any(), gomock.Any()).Return(false, nil),
+						mockCVClient.EXPECT().GetClusterVersion(gomock.Any()).Return(currentClusterVersion, nil),
 						mockKubeClient.EXPECT().Get(gomock.Any(), types.NamespacedName{Name: "cluster"}, gomock.Any()).SetArg(2, *infraConfig),
 					)
 					result, err := upgrader.IsUpgradeable(context.TODO(), logger)
@@ -141,8 +141,8 @@ var _ = Describe("UpgradableCheckStep", func() {
 			})
 			It("will perform upgrade", func() {
 				gomock.InOrder(
-					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
-					mockCVClient.EXPECT().GetClusterVersion().Return(currentClusterVersion, nil),
+					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any(), gomock.Any()).Return(false, nil),
+					mockCVClient.EXPECT().GetClusterVersion(gomock.Any()).Return(currentClusterVersion, nil),
 				)
 				result, err := upgrader.IsUpgradeable(context.TODO(), logger)
 				Expect(err).ToNot(HaveOccurred())
@@ -156,8 +156,8 @@ var _ = Describe("UpgradableCheckStep", func() {
 			})
 			It("will perform upgrade", func() {
 				gomock.InOrder(
-					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
-					mockCVClient.EXPECT().GetClusterVersion().Return(currentClusterVersion, nil),
+					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any(), gomock.Any()).Return(false, nil),
+					mockCVClient.EXPECT().GetClusterVersion(gomock.Any()).Return(currentClusterVersion, nil),
 				)
 				result, err := upgrader.IsUpgradeable(context.TODO(), logger)
 				Expect(err).ToNot(HaveOccurred())

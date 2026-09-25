@@ -13,7 +13,7 @@ import (
 )
 
 func (c *clusterUpgrader) IsUpgradeable(ctx context.Context, logger logr.Logger) (bool, error) {
-	upgradeCommenced, err := c.cvClient.HasUpgradeCommenced(c.upgradeConfig)
+	upgradeCommenced, err := c.cvClient.HasUpgradeCommenced(ctx, c.upgradeConfig)
 	if err != nil {
 		return false, err
 	}
@@ -22,7 +22,7 @@ func (c *clusterUpgrader) IsUpgradeable(ctx context.Context, logger logr.Logger)
 		return true, nil
 	}
 
-	clusterVersion, err := c.cvClient.GetClusterVersion()
+	clusterVersion, err := c.cvClient.GetClusterVersion(ctx)
 	if err != nil {
 		return false, err
 	}

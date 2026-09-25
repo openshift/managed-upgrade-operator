@@ -304,7 +304,7 @@ func upgradeInProgress(uc *upgradev1alpha1.UpgradeConfig, cvClient cv.ClusterVer
 	}
 
 	// Then check CVO
-	version, err := cvClient.GetClusterVersion()
+	version, err := cvClient.GetClusterVersion(context.Background())
 	if err != nil {
 		return false, fmt.Errorf("can't determine cluster version")
 	}
