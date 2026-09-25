@@ -96,7 +96,11 @@ func (u *osdUpgrader) UpgradeCluster(ctx context.Context, upgradeConfig *upgrade
 	u.upgradeConfig = upgradeConfig
 
 	// OSD upgrader enforces a 'failure' policy if the upgrade does not commence within a time period
-	if cancelUpgrade, _ := shouldFailUpgrade(ctx, u.cvClient, u.config, u.upgradeConfig); cancelUpgrade {
+	cancelUpgrade, err := shouldFailUpgrade(ctx, u.cvClient, u.config, u.upgradeConfig)
+	if err != nil {
+		return upgradev1alpha1.UpgradePhaseUpgrading, err
+	}
+	if cancelUpgrade {
 		return performUpgradeFailure(u.client, u.metrics, u.scaler, u.notifier, u.upgradeConfig, logger)
 	}
 
