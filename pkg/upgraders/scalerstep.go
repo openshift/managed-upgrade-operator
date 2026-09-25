@@ -23,7 +23,7 @@ func (c *clusterUpgrader) EnsureExtraUpgradeWorkers(ctx context.Context, logger 
 		return false, configErr
 	}
 
-	upgradeCommenced, err := c.cvClient.HasUpgradeCommenced(c.upgradeConfig)
+	upgradeCommenced, err := c.cvClient.HasUpgradeCommenced(ctx, c.upgradeConfig)
 	if err != nil {
 		return false, err
 	}

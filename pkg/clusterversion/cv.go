@@ -2,8 +2,10 @@ package clusterversion
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sort"
+	"time"
 
 	"github.com/go-logr/logr"
 	configv1 "github.com/openshift/api/config/v1"
@@ -24,18 +26,19 @@ var (
 const (
 	UpgradeWithImage          = "UpgradeWithImage"
 	UpgradeWithChannelVersion = "UpgradeWithChannelVersion"
+	clusterVersionAPITimeout  = 30 * time.Second
 )
 
 // ClusterVersion interface enables implementations of the ClusterVersion
 
 //go:generate mockgen -destination=mocks/mockClusterVersion.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/clusterversion ClusterVersion
 type ClusterVersion interface {
-	GetClusterVersion() (*configv1.ClusterVersion, error)
-	HasUpgradeCommenced(*upgradev1alpha1.UpgradeConfig) (bool, error)
-	EnsureDesiredConfig(uc *upgradev1alpha1.UpgradeConfig) (bool, error)
+	GetClusterVersion(context.Context) (*configv1.ClusterVersion, error)
+	HasUpgradeCommenced(context.Context, *upgradev1alpha1.UpgradeConfig) (bool, error)
+	EnsureDesiredConfig(ctx context.Context, uc *upgradev1alpha1.UpgradeConfig) (bool, error)
 	HasUpgradeCompleted(*configv1.ClusterVersion, *upgradev1alpha1.UpgradeConfig) bool
 	HasDegradedOperators() (*HasDegradedOperatorsResult, error)
-	GetClusterId() string
+	GetClusterId(context.Context) string
 }
 
 // ClusterVersionBuilder returns a ClusterVersion interface
@@ -66,9 +69,12 @@ func (cvb *clusterVersionClientBuilder) New(c client.Client) ClusterVersion {
 }
 
 // GetClusterVersion gets the ClusterVersion CR
-func (c *clusterVersionClient) GetClusterVersion() (*configv1.ClusterVersion, error) {
+func (c *clusterVersionClient) GetClusterVersion(ctx context.Context) (*configv1.ClusterVersion, error) {
+	ctx, cancel := context.WithTimeout(ctx, clusterVersionAPITimeout)
+	defer cancel()
+
 	cv := &configv1.ClusterVersion{}
-	err := c.client.Get(context.TODO(), types.NamespacedName{Name: OSD_CV_NAME}, cv)
+	err := c.client.Get(ctx, types.NamespacedName{Name: OSD_CV_NAME}, cv)
 	if err != nil {
 		return nil, err
 	}
@@ -76,8 +82,12 @@ func (c *clusterVersionClient) GetClusterVersion() (*configv1.ClusterVersion, er
 	return cv, err
 }
 
-func (c *clusterVersionClient) EnsureDesiredConfig(uc *upgradev1alpha1.UpgradeConfig) (bool, error) {
-	clusterVersion, err := c.GetClusterVersion()
+func (c *clusterVersionClient) EnsureDesiredConfig(ctx context.Context, uc *upgradev1alpha1.UpgradeConfig) (bool, error) {
+	// Share one deadline across the read, channel patch, refresh, and update patch.
+	ctx, cancel := context.WithTimeout(ctx, clusterVersionAPITimeout)
+	defer cancel()
+
+	clusterVersion, err := c.GetClusterVersion(ctx)
 	if err != nil {
 		return false, err
 	}
@@ -90,14 +100,14 @@ func (c *clusterVersionClient) EnsureDesiredConfig(uc *upgradev1alpha1.UpgradeCo
 	switch upgradeSource {
 	// Use image to upgrade if the spec.desired.image is present
 	case UpgradeWithImage:
-		triggered, err := c.runUpgradeWithImage(clusterVersion, uc)
+		triggered, err := c.runUpgradeWithImage(ctx, clusterVersion, uc)
 		if err != nil {
 			return false, err
 		}
 		return triggered, err
 	// Use version + channel if image is not present
 	case UpgradeWithChannelVersion:
-		triggered, err := c.runUpgradeWithChannelVersion(clusterVersion, uc)
+		triggered, err := c.runUpgradeWithChannelVersion(ctx, clusterVersion, uc)
 		if err != nil {
 			return false, err
 		}
@@ -174,9 +184,9 @@ func isEqualImage(cv *configv1.ClusterVersion, uc *upgradev1alpha1.UpgradeConfig
 }
 
 // HasUpgradeCommenced checks if the upgrade has commenced based on version or image
-func (c *clusterVersionClient) HasUpgradeCommenced(uc *upgradev1alpha1.UpgradeConfig) (bool, error) {
+func (c *clusterVersionClient) HasUpgradeCommenced(ctx context.Context, uc *upgradev1alpha1.UpgradeConfig) (bool, error) {
 
-	clusterVersion, err := c.GetClusterVersion()
+	clusterVersion, err := c.GetClusterVersion(ctx)
 	if err != nil {
 		return false, err
 	}
@@ -211,8 +221,8 @@ func (c *clusterVersionClient) HasUpgradeCommenced(uc *upgradev1alpha1.UpgradeCo
 
 // GetClusterId returns the cluster id from the ClusterVersion object
 // This is used to enrich metrics with the cluster id label
-func (c *clusterVersionClient) GetClusterId() string {
-	cv, err := c.GetClusterVersion()
+func (c *clusterVersionClient) GetClusterId(ctx context.Context) string {
+	cv, err := c.GetClusterVersion(ctx)
 	if err != nil {
 		return "unknown"
 	}
@@ -302,13 +312,36 @@ func checkUpgradeSource(uc *upgradev1alpha1.UpgradeConfig) (string, error) {
 	return "", fmt.Errorf("cannot find the correct upgrade spec source")
 }
 
-func (c *clusterVersionClient) runUpgradeWithImage(cv *configv1.ClusterVersion, uc *upgradev1alpha1.UpgradeConfig) (bool, error) {
+func (c *clusterVersionClient) runUpgradeWithImage(ctx context.Context, cv *configv1.ClusterVersion, uc *upgradev1alpha1.UpgradeConfig) (bool, error) {
 	desired := uc.Spec.Desired
+
+	// When a desired channel is set alongside the image, keep the cluster's
+	// channel in sync so cross-minor image-based upgrades don't leave the
+	// cluster on the old channel.
+	if desired.Channel != "" && cv.Spec.Channel != desired.Channel {
+		logger.Info(fmt.Sprintf("Setting ClusterVersion to Channel %s", desired.Channel))
+		desiredChannel, err := json.Marshal(map[string]map[string]string{
+			"spec": {"channel": desired.Channel},
+		})
+		if err != nil {
+			return false, err
+		}
+		err = c.client.Patch(ctx, cv, client.RawPatch(types.MergePatchType, desiredChannel))
+		if err != nil {
+			return false, err
+		}
+
+		// Retrieve the updated version
+		cv, err = c.GetClusterVersion(ctx)
+		if err != nil {
+			return false, err
+		}
+	}
 
 	if cv.Spec.DesiredUpdate == nil || cv.Spec.DesiredUpdate.Image != desired.Image {
 		logger.Info(fmt.Sprintf("Setting ClusterVersion to Image %s", desired.Image))
 		desiredImage := []byte(fmt.Sprintf(`{"spec":{"desiredUpdate":{"image":"%s","version":null}}}`, desired.Image))
-		err := c.client.Patch(context.TODO(), cv, client.RawPatch(types.MergePatchType, desiredImage))
+		err := c.client.Patch(ctx, cv, client.RawPatch(types.MergePatchType, desiredImage))
 		if err != nil {
 			return false, err
 		}
@@ -316,19 +349,24 @@ func (c *clusterVersionClient) runUpgradeWithImage(cv *configv1.ClusterVersion, 
 	return true, nil
 }
 
-func (c *clusterVersionClient) runUpgradeWithChannelVersion(cv *configv1.ClusterVersion, uc *upgradev1alpha1.UpgradeConfig) (bool, error) {
+func (c *clusterVersionClient) runUpgradeWithChannelVersion(ctx context.Context, cv *configv1.ClusterVersion, uc *upgradev1alpha1.UpgradeConfig) (bool, error) {
 	desired := uc.Spec.Desired
 
 	if cv.Spec.Channel != desired.Channel {
 		logger.Info(fmt.Sprintf("Setting ClusterVersion to Channel %s Version %s", desired.Channel, desired.Version))
-		desiredChannel := []byte(fmt.Sprintf(`{"spec":{"channel":"%s"}}`, desired.Channel))
-		err := c.client.Patch(context.TODO(), cv, client.RawPatch(types.MergePatchType, desiredChannel))
+		desiredChannel, err := json.Marshal(map[string]map[string]string{
+			"spec": {"channel": desired.Channel},
+		})
+		if err != nil {
+			return false, err
+		}
+		err = c.client.Patch(ctx, cv, client.RawPatch(types.MergePatchType, desiredChannel))
 		if err != nil {
 			return false, err
 		}
 
 		// Retrieve the updated version
-		cv, err = c.GetClusterVersion()
+		cv, err = c.GetClusterVersion(ctx)
 		if err != nil {
 			return false, err
 		}
@@ -360,7 +398,7 @@ func (c *clusterVersionClient) runUpgradeWithChannelVersion(cv *configv1.Cluster
 	if image != "" {
 		desiredVersion = []byte(fmt.Sprintf(`{"spec":{"desiredUpdate":{"version":"%s","image":"%s"}}}`, desired.Version, image))
 	}
-	err := c.client.Patch(context.TODO(), cv, client.RawPatch(types.MergePatchType, desiredVersion))
+	err := c.client.Patch(ctx, cv, client.RawPatch(types.MergePatchType, desiredVersion))
 	if err != nil {
 		return false, err
 	}

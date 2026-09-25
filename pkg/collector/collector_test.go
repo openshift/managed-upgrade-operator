@@ -125,7 +125,7 @@ var _ = Describe("Upgrade Conditions Collector", func() {
 				It("collects metrics based on availability of conditions", func() {
 					gomock.InOrder(
 						mockUpgradeConfigManager.EXPECT().Get().Return(&upgradeConfig, nil),
-						mockCVClient.EXPECT().GetClusterVersion().Return(&cv, nil),
+						mockCVClient.EXPECT().GetClusterVersion(gomock.Any()).Return(&cv, nil),
 					)
 					source_version, err := clusterversion.GetCurrentVersionMinusOne(&cv)
 					metricCount := promtestutil.CollectAndCount(upgradeCollector)

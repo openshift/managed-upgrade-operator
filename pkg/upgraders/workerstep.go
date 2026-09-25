@@ -38,7 +38,7 @@ func (c *clusterUpgrader) AllWorkersUpgraded(ctx context.Context, logger logr.Lo
 		logger.Error(err, "failed to notify worker plane upgrade completion")
 		return false, err
 	}
-	clusterid := c.cvClient.GetClusterId()
+	clusterid := c.cvClient.GetClusterId(ctx)
 	c.metrics.UpdateMetricWorkernodeUpgradeCompletedTimestamp(clusterid, c.upgradeConfig.Name, c.upgradeConfig.Spec.Desired.Version, time.Now())
 
 	c.metrics.ResetMetricUpgradeWorkerTimeout(c.upgradeConfig.Name, c.upgradeConfig.Spec.Desired.Version)

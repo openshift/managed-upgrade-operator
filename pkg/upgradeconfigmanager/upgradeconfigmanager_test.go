@@ -147,7 +147,7 @@ var _ = Describe("UpgradeConfigManager", func() {
 				},
 			}
 			gomock.InOrder(
-				mockCVClient.EXPECT().GetClusterVersion().Return(cv, nil),
+				mockCVClient.EXPECT().GetClusterVersion(gomock.Any()).Return(cv, nil),
 			)
 			inprogress, err := upgradeInProgress(&upgradeConfig, mockCVClient)
 			Expect(err).To(BeNil())
@@ -182,7 +182,7 @@ var _ = Describe("UpgradeConfigManager", func() {
 				},
 			}
 			gomock.InOrder(
-				mockCVClient.EXPECT().GetClusterVersion().Return(cv, nil),
+				mockCVClient.EXPECT().GetClusterVersion(gomock.Any()).Return(cv, nil),
 			)
 			inprogress, err := upgradeInProgress(&upgradeConfig, mockCVClient)
 			Expect(err).To(BeNil())
@@ -205,7 +205,7 @@ var _ = Describe("UpgradeConfigManager", func() {
 				},
 			}
 			gomock.InOrder(
-				mockCVClient.EXPECT().GetClusterVersion().Return(cv, nil),
+				mockCVClient.EXPECT().GetClusterVersion(gomock.Any()).Return(cv, nil),
 			)
 			inprogress, err := upgradeInProgress(&upgradeConfig, mockCVClient)
 			Expect(err).To(BeNil())
@@ -228,7 +228,7 @@ var _ = Describe("UpgradeConfigManager", func() {
 				},
 			}
 			gomock.InOrder(
-				mockCVClient.EXPECT().GetClusterVersion().Return(cv, nil),
+				mockCVClient.EXPECT().GetClusterVersion(gomock.Any()).Return(cv, nil),
 			)
 			inprogress, err := upgradeInProgress(&upgradeConfig, mockCVClient)
 			Expect(err).To(BeNil())
