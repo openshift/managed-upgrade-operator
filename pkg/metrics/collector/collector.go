@@ -79,7 +79,7 @@ func (uc *UpgradeCollector) collectUpgradeMetrics(ch chan<- prometheus.Metric) {
 	)
 
 	if upgradeConfig.Status.History != nil {
-		history := upgradeConfig.Status.History.GetHistory(upgradeConfig.Spec.Desired.Version)
+		history := upgradeConfig.Status.History.GetHistoryForUpdate(upgradeConfig.Spec.Desired)
 		if history != nil {
 			if history.StartTime != nil {
 				// Set started state value
@@ -127,7 +127,7 @@ func (uc *UpgradeCollector) collectUpgradeMetrics(ch chan<- prometheus.Metric) {
 				return
 			}
 
-			cvHistory := cv.GetHistory(clusterVersion, upgradeConfig.Spec.Desired.Version)
+			cvHistory := cv.GetHistoryForUpdate(clusterVersion, upgradeConfig.Spec.Desired)
 			if cvHistory != nil {
 				// Set control plane started state value
 				ch <- prometheus.MustNewConstMetric(

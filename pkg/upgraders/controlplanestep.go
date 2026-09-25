@@ -63,7 +63,7 @@ func (c *clusterUpgrader) ControlPlaneUpgraded(ctx context.Context, logger logr.
 		return true, nil
 	}
 
-	history := cv.GetHistory(clusterVersion, c.upgradeConfig.Spec.Desired.Version)
+	history := cv.GetHistoryForUpdate(clusterVersion, c.upgradeConfig.Spec.Desired)
 	var upgradeStartTime time.Time
 	if history != nil && !history.StartedTime.IsZero() {
 		upgradeStartTime = history.StartedTime.Time

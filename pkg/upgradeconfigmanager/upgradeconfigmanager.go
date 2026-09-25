@@ -294,7 +294,7 @@ func durationWithJitter(t time.Duration, factor float64) time.Duration {
 func upgradeInProgress(uc *upgradev1alpha1.UpgradeConfig, cvClient cv.ClusterVersion) (bool, error) {
 	// First check all the UpgradeConfigs
 	phase := getCurrentUpgradeConfigPhase(uc)
-	history := uc.Status.History.GetHistory(uc.Spec.Desired.Version)
+	history := uc.Status.History.GetHistoryForUpdate(uc.Spec.Desired)
 	if phase == upgradev1alpha1.UpgradePhaseUpgrading && history != nil {
 		for _, condition := range history.Conditions {
 			if condition.Status == corev1.ConditionTrue {
@@ -322,7 +322,7 @@ func getCurrentUpgradeConfigPhase(uc *upgradev1alpha1.UpgradeConfig) upgradev1al
 	var history upgradev1alpha1.UpgradeHistory
 	found := false
 	for _, h := range uc.Status.History {
-		if h.Version == uc.Spec.Desired.Version {
+		if h.Version == uc.Spec.Desired.Version && h.Architecture == uc.Spec.Desired.Architecture {
 			history = h
 			found = true
 		}
