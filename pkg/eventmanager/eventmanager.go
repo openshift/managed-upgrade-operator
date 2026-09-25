@@ -208,7 +208,7 @@ func createFailureDescription(uc *v1alpha1.UpgradeConfig) string {
 	// Default failure message
 	var description = fmt.Sprintf(UPGRADE_PRECHECK_FAILED_DESC, uc.Spec.Desired.Version)
 
-	history := uc.Status.History.GetHistory(uc.Spec.Desired.Version)
+	history := uc.Status.History.GetHistoryForUpdate(uc.Spec.Desired)
 	// Handle a missing history
 	if history == nil {
 		return description
@@ -254,7 +254,7 @@ func createDelayedDescription(uc *v1alpha1.UpgradeConfig) string {
 	// Default delayed message
 	var description = fmt.Sprintf(UPGRADE_DEFAULT_DELAY_DESC, uc.Spec.Desired.Version)
 
-	history := uc.Status.History.GetHistory(uc.Spec.Desired.Version)
+	history := uc.Status.History.GetHistoryForUpdate(uc.Spec.Desired)
 	// Handle a missing history
 	if history == nil {
 		return description

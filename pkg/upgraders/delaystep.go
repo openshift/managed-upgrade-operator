@@ -25,7 +25,7 @@ func (c *osdUpgrader) UpgradeDelayedCheck(ctx context.Context, logger logr.Logge
 	}
 
 	// Get the managed upgrade start time from the upgrade config history
-	h := c.upgradeConfig.Status.History.GetHistory(c.upgradeConfig.Spec.Desired.Version)
+	h := c.upgradeConfig.Status.History.GetHistoryForUpdate(c.upgradeConfig.Spec.Desired)
 	if h == nil {
 		logger.Info(fmt.Sprintf("no history found for version %s in UpgradeConfig yet, will retry", c.upgradeConfig.Spec.Desired.Version))
 		return false, nil

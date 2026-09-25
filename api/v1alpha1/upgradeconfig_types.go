@@ -3,6 +3,7 @@ package v1alpha1
 import (
 	"time"
 
+	configv1 "github.com/openshift/api/config/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -64,6 +65,10 @@ type UpgradeHistories []UpgradeHistory
 
 // UpgradeHistory record history of upgrade
 type UpgradeHistory struct {
+	// Architecture requested by this upgrade.
+	// +optional
+	Architecture configv1.ClusterVersionArchitecture `json:"architecture,omitempty"`
+
 	//Desired version of this upgrade
 	Version string `json:"version,omitempty"`
 
@@ -209,6 +214,10 @@ type UpgradeConfigList struct {
 
 // Update represents a release go gonna upgraded to
 type Update struct {
+	// Architecture requests Multi. CVO resolves the migration payload. Image must be omitted.
+	// +optional
+	Architecture configv1.ClusterVersionArchitecture `json:"architecture,omitempty"`
+
 	// Version of openshift release
 	// +kubebuilder:validation:Type=string
 	// +optional
@@ -352,10 +361,20 @@ func (histories UpgradeHistories) GetHistory(version string) *UpgradeHistory {
 	return nil
 }
 
+// GetHistoryForUpdate distinguishes architecture migrations from version upgrades.
+func (histories UpgradeHistories) GetHistoryForUpdate(desired Update) *UpgradeHistory {
+	for _, history := range histories {
+		if history.Version == desired.Version && history.Architecture == desired.Architecture {
+			return &history
+		}
+	}
+	return nil
+}
+
 // SetHistory appends new history to current
 func (histories *UpgradeHistories) SetHistory(history UpgradeHistory) {
 	for i, h := range *histories {
-		if h.Version == history.Version {
+		if h.Version == history.Version && h.Architecture == history.Architecture {
 			(*histories)[i] = history
 			return
 		}

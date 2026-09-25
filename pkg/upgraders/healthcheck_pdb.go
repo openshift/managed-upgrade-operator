@@ -22,7 +22,7 @@ var namespaceException = []string{"openshift-logging", "openshift-redhat-marketp
 func HealthCheckPDB(metricsClient metrics.Metrics, c client.Client, dvo dvo.DvoClientBuilder, ug *upgradev1alpha1.UpgradeConfig, logger logr.Logger, version string) ([]PDBDetails, bool, error) {
 
 	// Get current cluster version and upgrade state info
-	history := ug.Status.History.GetHistory(ug.Spec.Desired.Version)
+	history := ug.Status.History.GetHistoryForUpdate(ug.Spec.Desired)
 	state := string(history.Phase)
 
 	pdbDetails, reason, err := checkPodDisruptionBudgets(c, logger)
