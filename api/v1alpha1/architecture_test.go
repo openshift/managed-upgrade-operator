@@ -22,3 +22,25 @@ func TestArchitectureHistory(t *testing.T) {
 		t.Fatal("version history changed")
 	}
 }
+
+func TestValidateArchitecture(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		desired Update
+		valid   bool
+	}{
+		{"omitted", Update{}, true},
+		{"image upgrade", Update{Image: "release-image"}, true},
+		{"migration", Update{Architecture: "Multi", Version: "4.18.1"}, true},
+		{"unsupported architecture", Update{Architecture: "amd64", Version: "4.18.1"}, false},
+		{"missing version", Update{Architecture: "Multi"}, false},
+		{"conflicting image", Update{Architecture: "Multi", Version: "4.18.1", Image: "release-image"}, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.desired.ValidateArchitecture()
+			if (err == nil) != tc.valid {
+				t.Fatalf("valid = %v, want %v; error: %v", err == nil, tc.valid, err)
+			}
+		})
+	}
+}
