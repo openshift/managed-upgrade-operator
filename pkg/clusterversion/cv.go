@@ -321,8 +321,8 @@ func GetCurrentVersionMinusOne(clusterVersion *configv1.ClusterVersion) (string,
 // check if we are using image or channel + version to upgrade
 func checkUpgradeSource(uc *upgradev1alpha1.UpgradeConfig) (string, error) {
 	if uc.Spec.Desired.Architecture != "" {
-		if uc.Spec.Desired.Architecture != configv1.ClusterVersionArchitectureMulti || uc.Spec.Desired.Image != "" || uc.Spec.Desired.Version == "" {
-			return "", fmt.Errorf("architecture migration requires architecture Multi, a version, and no image")
+		if err := uc.Spec.Desired.ValidateArchitecture(); err != nil {
+			return "", err
 		}
 		return UpgradeWithArchitecture, nil
 	}
