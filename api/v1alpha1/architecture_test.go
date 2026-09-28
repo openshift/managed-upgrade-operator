@@ -32,12 +32,15 @@ func TestValidateArchitecture(t *testing.T) {
 		{"omitted", Update{}, true},
 		{"image upgrade", Update{Image: "release-image"}, true},
 		{"migration", Update{Architecture: "Multi", Version: "4.18.1"}, true},
+		{"same channel", Update{Architecture: "Multi", Version: "4.18.1", Channel: "stable-4.18"}, true},
+		{"different channel", Update{Architecture: "Multi", Version: "4.18.1", Channel: "fast-4.18"}, false},
+		{"version upgrade changes channel", Update{Version: "4.19.1", Channel: "stable-4.19"}, true},
 		{"unsupported architecture", Update{Architecture: "amd64", Version: "4.18.1"}, false},
 		{"missing version", Update{Architecture: "Multi"}, false},
 		{"conflicting image", Update{Architecture: "Multi", Version: "4.18.1", Image: "release-image"}, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			err := tc.desired.ValidateArchitecture()
+			err := tc.desired.ValidateArchitecture("stable-4.18")
 			if (err == nil) != tc.valid {
 				t.Fatalf("valid = %v, want %v; error: %v", err == nil, tc.valid, err)
 			}

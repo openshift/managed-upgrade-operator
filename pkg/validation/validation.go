@@ -100,11 +100,10 @@ func (v *validator) IsValidUpgradeConfig(c client.Client, uC *upgradev1alpha1.Up
 	ucChannel := uC.Spec.Desired.Channel
 
 	if uC.Spec.Desired.Architecture != "" {
-		if err := uC.Spec.Desired.ValidateArchitecture(); err != nil {
+		if err := uC.Spec.Desired.ValidateArchitecture(cV.Spec.Channel); err != nil {
 			return ValidatorResult{Message: err.Error()}, nil //nolint:nilerr // Invalid requests are reported through ValidatorResult.
 		}
-		// Use CVO's version/payload validation without imposing a same-version
-		// or same-channel restriction. CVO resolves the migration payload.
+		// Use CVO's version/payload validation. CVO resolves the migration payload.
 		candidate := cV.DeepCopy()
 		candidate.Spec.DesiredUpdate = &configv1.Update{Architecture: uC.Spec.Desired.Architecture, Version: ucVersion}
 		for _, validationErr := range cvovalidation.ValidateClusterVersion(candidate) {
