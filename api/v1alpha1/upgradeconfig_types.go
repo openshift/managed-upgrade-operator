@@ -1,6 +1,7 @@
 package v1alpha1
 
 import (
+	"errors"
 	"time"
 
 	configv1 "github.com/openshift/api/config/v1"
@@ -228,6 +229,15 @@ type Update struct {
 	// Image reference used for upgrades
 	// +optional
 	Image string `json:"image,omitempty"`
+}
+
+// ValidateArchitecture checks the field combination for an architecture request.
+// Updates without an architecture are validated by their image or version path.
+func (u Update) ValidateArchitecture() error {
+	if u.Architecture != "" && (u.Architecture != configv1.ClusterVersionArchitectureMulti || u.Version == "" || u.Image != "") {
+		return errors.New("architecture migration requires Multi, a version, and no image")
+	}
+	return nil
 }
 
 // IsTrue Condition whether the condition status is "True".
