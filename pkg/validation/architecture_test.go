@@ -24,12 +24,12 @@ func TestArchitectureMigrationValidation(t *testing.T) {
 		{"different available version", upgradev1alpha1.Update{Architecture: "Multi", Version: "4.18.2", Channel: "stable-4.18"}, true},
 		{"unavailable target", upgradev1alpha1.Update{Architecture: "Multi", Version: "4.18.3", Channel: "stable-4.18"}, false},
 		{"downgrade", upgradev1alpha1.Update{Architecture: "Multi", Version: "4.18.0", Channel: "stable-4.18"}, false},
-		{"different version and channel", upgradev1alpha1.Update{Architecture: "Multi", Version: "4.18.2", Channel: "fast-4.18"}, true},
+		{"different version and channel", upgradev1alpha1.Update{Architecture: "Multi", Version: "4.18.2", Channel: "fast-4.18"}, false},
 		{"invalid version", upgradev1alpha1.Update{Architecture: "Multi", Version: "invalid"}, false},
 		{"missing version", upgradev1alpha1.Update{Architecture: "Multi"}, false},
 		{"different version without channel", upgradev1alpha1.Update{Architecture: "Multi", Version: "4.18.2"}, true},
 		{"image conflict", upgradev1alpha1.Update{Architecture: "Multi", Version: "4.18.1", Image: "invalid"}, false},
-		{"different channel", upgradev1alpha1.Update{Architecture: "Multi", Version: "4.18.1", Channel: "stable-4.19"}, true},
+		{"different channel", upgradev1alpha1.Update{Architecture: "Multi", Version: "4.18.1", Channel: "stable-4.19"}, false},
 		{"invalid architecture", upgradev1alpha1.Update{Architecture: "amd64", Version: "4.18.1"}, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

@@ -231,11 +231,14 @@ type Update struct {
 	Image string `json:"image,omitempty"`
 }
 
-// ValidateArchitecture checks the field combination for an architecture request.
+// ValidateArchitecture checks an architecture request against the current channel.
 // Updates without an architecture are validated by their image or version path.
-func (u Update) ValidateArchitecture() error {
+func (u Update) ValidateArchitecture(currentChannel string) error {
 	if u.Architecture != "" && (u.Architecture != configv1.ClusterVersionArchitectureMulti || u.Version == "" || u.Image != "") {
 		return errors.New("architecture migration requires Multi, a version, and no image")
+	}
+	if u.Architecture != "" && u.Channel != "" && u.Channel != currentChannel {
+		return errors.New("architecture migration requires channel to be omitted or match the current cluster channel")
 	}
 	return nil
 }
