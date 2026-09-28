@@ -129,7 +129,8 @@ classDef highlight fill:#f96
 
 Set `spec.desired.architecture` to `Multi` and specify the current ClusterVersion's
 `status.desired.version` for a migration equivalent to `oc adm upgrade --to-multi-arch`.
-Omit `image`; `channel` is optional. CVO validates and resolves the release payload.
+Omit `image`; `channel` must be omitted or match the current cluster channel.
+CVO validates and resolves the release payload.
 Use the local upgrade policy provider when managing the UpgradeConfig directly.
 
 ```yaml

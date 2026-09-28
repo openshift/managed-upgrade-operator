@@ -45,9 +45,9 @@ func TestArchitectureMigration(t *testing.T) {
 		if started, err := c.HasUpgradeCommenced(uc); err != nil || !started {
 			t.Fatalf("migration not recognized: %v, %v", started, err)
 		}
-		// A different version and channel are passed through for CVO to resolve.
+		// A different version in the current channel is passed through for CVO to resolve.
 		uc.Spec.Desired.Version = "4.18.2"
-		uc.Spec.Desired.Channel = "fast-4.18"
+		uc.Spec.Desired.Channel = "stable-4.18"
 		if done, err := c.EnsureDesiredConfig(uc); err != nil || !done {
 			t.Fatalf("request not passed to CVO: %v, %v", done, err)
 		}
@@ -55,25 +55,26 @@ func TestArchitectureMigration(t *testing.T) {
 			t.Fatal(err)
 		}
 		want.Version = "4.18.2"
-		if !reflect.DeepEqual(*cv.Spec.DesiredUpdate, want) || cv.Spec.Channel != "fast-4.18" {
+		if !reflect.DeepEqual(*cv.Spec.DesiredUpdate, want) || cv.Spec.Channel != "stable-4.18" {
 			t.Fatalf("requested version/channel not preserved: %+v", cv.Spec)
 		}
 		if started, err := c.HasUpgradeCommenced(uc); err != nil || !started {
 			t.Fatalf("request not recognized: %v, %v", started, err)
 		}
-		// A channel-only change must not be mistaken for an already submitted request.
-		uc.Spec.Desired.Channel = "stable-4.18"
-		if started, err := c.HasUpgradeCommenced(uc); err != nil || started {
-			t.Fatalf("channel change ignored: %v, %v", started, err)
+		// Reject a changed channel even if the version and architecture already match.
+		before := cv.Spec.DeepCopy()
+		uc.Spec.Desired.Channel = "fast-4.18"
+		if started, err := c.HasUpgradeCommenced(uc); err == nil || started {
+			t.Fatalf("channel change accepted: %v, %v", started, err)
 		}
-		if done, err := c.EnsureDesiredConfig(uc); err != nil || !done {
-			t.Fatalf("channel change failed: %v, %v", done, err)
+		if done, err := c.EnsureDesiredConfig(uc); err == nil || done {
+			t.Fatalf("channel change accepted: %v, %v", done, err)
 		}
 		if err := kube.Get(context.Background(), types.NamespacedName{Name: OSD_CV_NAME}, cv); err != nil {
 			t.Fatal(err)
 		}
-		if cv.Spec.Channel != "stable-4.18" {
-			t.Fatalf("channel not updated: %s", cv.Spec.Channel)
+		if !reflect.DeepEqual(&cv.Spec, before) {
+			t.Fatalf("rejected request changed ClusterVersion: %+v", cv.Spec)
 		}
 	}
 }

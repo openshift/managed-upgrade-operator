@@ -84,7 +84,7 @@ func (c *clusterVersionClient) EnsureDesiredConfig(uc *upgradev1alpha1.UpgradeCo
 	}
 
 	// Check which upgrade spec source we are going to use
-	upgradeSource, err := checkUpgradeSource(uc)
+	upgradeSource, err := checkUpgradeSource(uc, clusterVersion.Spec.Channel)
 	if err != nil {
 		return false, err
 	}
@@ -192,7 +192,7 @@ func (c *clusterVersionClient) HasUpgradeCommenced(uc *upgradev1alpha1.UpgradeCo
 	}
 
 	// Check which upgrade spec source we are going to use
-	upgradeSource, err := checkUpgradeSource(uc)
+	upgradeSource, err := checkUpgradeSource(uc, clusterVersion.Spec.Channel)
 	if err != nil {
 		return false, err
 	}
@@ -319,9 +319,9 @@ func GetCurrentVersionMinusOne(clusterVersion *configv1.ClusterVersion) (string,
 }
 
 // check if we are using image or channel + version to upgrade
-func checkUpgradeSource(uc *upgradev1alpha1.UpgradeConfig) (string, error) {
+func checkUpgradeSource(uc *upgradev1alpha1.UpgradeConfig, currentChannel string) (string, error) {
 	if uc.Spec.Desired.Architecture != "" {
-		if err := uc.Spec.Desired.ValidateArchitecture(); err != nil {
+		if err := uc.Spec.Desired.ValidateArchitecture(currentChannel); err != nil {
 			return "", err
 		}
 		return UpgradeWithArchitecture, nil
@@ -417,9 +417,6 @@ func (c *clusterVersionClient) runUpgradeWithArchitecture(cv *configv1.ClusterVe
 	}
 	// Pass the request to CVO, which determines the migration payload.
 	original := cv.DeepCopy()
-	if uc.Spec.Desired.Channel != "" {
-		cv.Spec.Channel = uc.Spec.Desired.Channel
-	}
 	cv.Spec.DesiredUpdate = &configv1.Update{
 		Architecture: configv1.ClusterVersionArchitectureMulti,
 		Version:      uc.Spec.Desired.Version,
