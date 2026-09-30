@@ -27,15 +27,13 @@ const (
 
 var _ = Describe("OCM Agent Client with SDK", func() {
 	var (
-		mockCtrl           *gomock.Controller
-		testServer         *httptest.Server
-		conn               *sdk.Connection
-		oc                 ocmClient
-		policyArchitecture string
+		mockCtrl   *gomock.Controller
+		testServer *httptest.Server
+		conn       *sdk.Connection
+		oc         ocmClient
 	)
 
 	BeforeEach(func() {
-		policyArchitecture = ""
 		mockCtrl = gomock.NewController(GinkgoT())
 
 		// Create test HTTP server that mimics ocm-agent responses
@@ -63,22 +61,20 @@ var _ = Describe("OCM Agent Client with SDK", func() {
 
 			case r.URL.Path == fmt.Sprintf("/api/clusters_mgmt/v1/clusters/%s/upgrade_policies", TEST_CLUSTER_ID) && r.Method == http.MethodGet:
 				// Return upgrade policies list
-				policy := map[string]interface{}{
-					"id":            TEST_POLICY_ID_MANUAL,
-					"schedule_type": "manual",
-					"upgrade_type":  TEST_UPGRADEPOLICY_UPGRADETYPE,
-					"version":       TEST_UPGRADEPOLICY_VERSION,
-					"cluster_id":    TEST_CLUSTER_ID,
-				}
-				if policyArchitecture != "" {
-					policy["architecture"] = policyArchitecture
-				}
 				response := map[string]interface{}{
 					"kind":  "UpgradePolicyList",
 					"page":  1,
 					"size":  1,
 					"total": 1,
-					"items": []map[string]interface{}{policy},
+					"items": []map[string]interface{}{
+						{
+							"id":            TEST_POLICY_ID_MANUAL,
+							"schedule_type": "manual",
+							"upgrade_type":  TEST_UPGRADEPOLICY_UPGRADETYPE,
+							"version":       TEST_UPGRADEPOLICY_VERSION,
+							"cluster_id":    TEST_CLUSTER_ID,
+						},
+					},
 				}
 				if err := json.NewEncoder(w).Encode(response); err != nil {
 					GinkgoT().Errorf("Failed to encode mock response: %v", err)
@@ -163,30 +159,16 @@ var _ = Describe("OCM Agent Client with SDK", func() {
 	})
 
 	Context("When getting upgrade policies via ocm-agent", func() {
-		It("returns upgrade policies without architecture unchanged", func() {
+		It("returns SDK upgrade policies list response", func() {
 			result, err := oc.GetClusterUpgradePolicies(TEST_CLUSTER_ID)
 			Expect(err).To(BeNil())
 			Expect(result).ToNot(BeNil())
-			Expect(result.Total).To(Equal(1))
-			Expect(len(result.Items)).To(Equal(1))
+			Expect(result.Total()).To(Equal(1))
+			Expect(result.Items().Len()).To(Equal(1))
 
-			policy := result.Items[0]
+			policy := result.Items().Get(0)
 			Expect(policy.ID()).To(Equal(TEST_POLICY_ID_MANUAL))
 			Expect(policy.Version()).To(Equal(TEST_UPGRADEPOLICY_VERSION))
-			Expect(policy.Architecture).To(BeEmpty())
-		})
-	})
-
-	Context("When getting migration policies", func() {
-		It("preserves architecture from the OCM response", func() {
-			for _, architecture := range []string{"Multi", "multi"} {
-				policyArchitecture = architecture
-				result, err := oc.GetClusterUpgradePolicies(TEST_CLUSTER_ID)
-				Expect(err).To(BeNil())
-				Expect(result.Items).To(HaveLen(1))
-				Expect(result.Items[0].Architecture).To(Equal(architecture))
-				Expect(result.Items[0].Version()).To(Equal(TEST_UPGRADEPOLICY_VERSION))
-			}
 		})
 	})
 
