@@ -49,6 +49,26 @@ The OCM Policy provider queries the [OCM Cluster Service API](https://api.opensh
 
 To be considered, an upgrade policy must NOT be in a state of either `pending` (meaning it is not scheduled), `completed` (meaning it has finished) or `cancelled` (meaning it should not execute).
 
+When Cluster Services supplies `architecture: "Multi"` (also accepted as `"multi"`),
+MUO creates an UpgradeConfig with `spec.desired.architecture: Multi` and the policy's
+version. For a single-to-Multi migration, that version must match the cluster's
+current version. MUO omits the desired channel to preserve the cluster's existing
+channel. Policies without architecture retain the normal version-upgrade behavior;
+other architecture values are rejected. Both direct OCM and OCM-agent policy
+responses preserve this field through a compatibility type until the SDK exposes it.
+
+Example migration policy fields, assuming the cluster currently runs `4.18.1`:
+
+```json
+{
+  "schedule_type": "manual",
+  "upgrade_type": "OSD",
+  "version": "4.18.1",
+  "architecture": "Multi",
+  "next_run": "2026-09-29T12:00:00Z"
+}
+```
+
 Authentication to the Cluster Service API is performed using the cluster's `cloud.openshift.com` pull secret. This is retrieved by MUO from the `openshift-config/pull-secret` Secret.
 
 #### Local policy provider

@@ -100,7 +100,7 @@ func (v *validator) IsValidUpgradeConfig(c client.Client, uC *upgradev1alpha1.Up
 	ucChannel := uC.Spec.Desired.Channel
 
 	if uC.Spec.Desired.Architecture != "" {
-		if err := uC.Spec.Desired.ValidateArchitecture(cV.Spec.Channel); err != nil {
+		if err := uC.Spec.Desired.ValidateArchitecture(cV); err != nil {
 			return ValidatorResult{Message: err.Error()}, nil //nolint:nilerr // Invalid requests are reported through ValidatorResult.
 		}
 		// Use CVO's version/payload validation. CVO resolves the migration payload.

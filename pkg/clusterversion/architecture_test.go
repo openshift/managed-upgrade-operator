@@ -45,22 +45,22 @@ func TestArchitectureMigration(t *testing.T) {
 		if started, err := c.HasUpgradeCommenced(uc); err != nil || !started {
 			t.Fatalf("migration not recognized: %v, %v", started, err)
 		}
-		// A different version in the current channel is passed through for CVO to resolve.
+		// A single-to-Multi migration cannot also change the version.
+		beforeVersionChange := cv.Spec.DeepCopy()
 		uc.Spec.Desired.Version = "4.18.2"
-		uc.Spec.Desired.Channel = "stable-4.18"
-		if done, err := c.EnsureDesiredConfig(uc); err != nil || !done {
-			t.Fatalf("request not passed to CVO: %v, %v", done, err)
+		if done, err := c.EnsureDesiredConfig(uc); err == nil || done {
+			t.Fatalf("version change accepted: %v, %v", done, err)
+		}
+		if started, err := c.HasUpgradeCommenced(uc); err == nil || started {
+			t.Fatalf("version change recognized as commenced: %v, %v", started, err)
 		}
 		if err := kube.Get(context.Background(), types.NamespacedName{Name: OSD_CV_NAME}, cv); err != nil {
 			t.Fatal(err)
 		}
-		want.Version = "4.18.2"
-		if !reflect.DeepEqual(*cv.Spec.DesiredUpdate, want) || cv.Spec.Channel != "stable-4.18" {
-			t.Fatalf("requested version/channel not preserved: %+v", cv.Spec)
+		if !reflect.DeepEqual(&cv.Spec, beforeVersionChange) {
+			t.Fatalf("rejected version change modified ClusterVersion: %+v", cv.Spec)
 		}
-		if started, err := c.HasUpgradeCommenced(uc); err != nil || !started {
-			t.Fatalf("request not recognized: %v, %v", started, err)
-		}
+		uc.Spec.Desired.Version = "4.18.1"
 		// Reject a changed channel even if the version and architecture already match.
 		before := cv.Spec.DeepCopy()
 		uc.Spec.Desired.Channel = "fast-4.18"
