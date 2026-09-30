@@ -2,7 +2,6 @@ package ocm
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/url"
 	"path"
@@ -51,7 +50,7 @@ var (
 //go:generate mockgen -destination=mocks/client.go -package=mocks github.com/openshift/managed-upgrade-operator/pkg/ocm OcmClient
 type OcmClient interface {
 	GetCluster() (*cmv1.Cluster, error)
-	GetClusterUpgradePolicies(clusterId string) (*UpgradePolicyList, error)
+	GetClusterUpgradePolicies(clusterId string) (*cmv1.UpgradePoliciesListResponse, error)
 	GetClusterUpgradePolicyState(policyId string, clusterId string) (*cmv1.UpgradePolicyState, error)
 	PostServiceLog(sl *ServiceLog, description string) error
 	SetState(value string, description string, policyId string, clusterId string) error
@@ -127,21 +126,24 @@ func (s *ocmClient) GetCluster() (*cmv1.Cluster, error) {
 	return cluster, nil
 }
 
-// Queries and returns the Upgrade Policy from Cluster Services using the SDK connection
-func (s *ocmClient) GetClusterUpgradePolicies(clusterId string) (*UpgradePolicyList, error) {
+// Queries and returns the Upgrade Policy from Cluster Services using SDK typed API
+func (s *ocmClient) GetClusterUpgradePolicies(clusterId string) (*cmv1.UpgradePoliciesListResponse, error) {
 
-	// Preserve architecture, which is not exposed by the pinned typed SDK.
-	response, err := s.conn.Get().
-		Path(path.Join("/api/clusters_mgmt/v1/clusters", clusterId, "upgrade_policies")).
-		Parameter("page", 1).
-		Parameter("size", 1).
+	// Use SDK typed API to get upgrade policies
+	response, err := s.conn.ClustersMgmt().V1().
+		Clusters().
+		Cluster(clusterId).
+		UpgradePolicies().
+		List().
+		Page(1).
+		Size(1).
 		Send()
 
 	if err != nil {
 		return nil, fmt.Errorf("can't pull upgrade policies for cluster %s: %w", clusterId, err)
 	}
 
-	operationId := response.Header(OPERATION_ID_HEADER)
+	operationId := response.Header().Get(OPERATION_ID_HEADER)
 	statusCode := response.Status()
 
 	// Construct full URL for logging
@@ -158,11 +160,7 @@ func (s *ocmClient) GetClusterUpgradePolicies(clusterId string) (*UpgradePolicyL
 
 	log.Info(fmt.Sprintf("request to '%v' received response code %v from OCM upgrade policy service, operation id: '%v'", upUrl.String(), statusCode, operationId))
 
-	var policies UpgradePolicyList
-	if err := json.Unmarshal(response.Bytes(), &policies); err != nil {
-		return nil, fmt.Errorf("can't decode upgrade policies for cluster %s: %w", clusterId, err)
-	}
-	return &policies, nil
+	return response, nil
 }
 
 // Send a notification of state using SDK typed API with builder pattern

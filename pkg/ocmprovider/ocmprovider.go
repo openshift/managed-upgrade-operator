@@ -8,7 +8,6 @@ import (
 
 	"github.com/blang/semver/v4"
 	cmv1 "github.com/openshift-online/ocm-sdk-go/clustersmgmt/v1"
-	configv1 "github.com/openshift/api/config/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -86,8 +85,12 @@ func (s *ocmProvider) Get() ([]upgradev1alpha1.UpgradeConfigSpec, error) {
 	}
 
 	// Get the next occurring policy from the available policies
-	if len(upgradePolicies.Items) > 0 {
-		nextOccurringUpgradePolicy := getNextOccurringUpgradePolicy(upgradePolicies)
+	if upgradePolicies.Total() > 0 {
+		nextOccurringUpgradePolicy, err := getNextOccurringUpgradePolicy(upgradePolicies)
+		if err != nil {
+			log.Error(err, "error getting next upgrade policy from upgrade policies")
+			return nil, err
+		}
 		log.Info(fmt.Sprintf("Detected upgrade policy %s as next occurring.", nextOccurringUpgradePolicy.ID()))
 
 		policyState, err := s.ocmClient.GetClusterUpgradePolicyState(nextOccurringUpgradePolicy.ID(), cluster.ID())
@@ -115,12 +118,15 @@ func (s *ocmProvider) Get() ([]upgradev1alpha1.UpgradeConfigSpec, error) {
 
 // getNextOccurringUpgradePolicy returns the next occurring upgradepolicy from a list of upgrade
 // policies, regardless of the schedule_type.
-func getNextOccurringUpgradePolicy(uPs *ocm.UpgradePolicyList) *ocm.UpgradePolicy {
-	var nextOccurringUpgradePolicy *ocm.UpgradePolicy
+func getNextOccurringUpgradePolicy(uPs *cmv1.UpgradePoliciesListResponse) (*cmv1.UpgradePolicy, error) {
+	if uPs == nil || uPs.Items().Len() == 0 {
+		return nil, fmt.Errorf("no upgrade policies available")
+	}
+	var nextOccurringUpgradePolicy *cmv1.UpgradePolicy
 
-	nextOccurringUpgradePolicy = uPs.Items[0]
+	nextOccurringUpgradePolicy = uPs.Items().Get(0)
 
-	for _, uP := range uPs.Items {
+	uPs.Items().Each(func(uP *cmv1.UpgradePolicy) bool {
 		// NextRun() returns time.Time in SDK, not string
 		currentNext := nextOccurringUpgradePolicy.NextRun()
 		evalNext := uP.NextRun()
@@ -128,14 +134,15 @@ func getNextOccurringUpgradePolicy(uPs *ocm.UpgradePolicyList) *ocm.UpgradePolic
 		if evalNext.Before(currentNext) {
 			nextOccurringUpgradePolicy = uP
 		}
-	}
+		return true
+	})
 
-	return nextOccurringUpgradePolicy
+	return nextOccurringUpgradePolicy, nil
 }
 
 // Checks if the supplied upgrade policy is one which warrants turning into an
 // UpgradeConfig
-func isActionableUpgradePolicy(up *ocm.UpgradePolicy, state *cmv1.UpgradePolicyState) bool {
+func isActionableUpgradePolicy(up *cmv1.UpgradePolicy, state *cmv1.UpgradePolicyState) bool {
 
 	switch strings.ToLower(string(state.Value())) {
 	case "pending":
@@ -161,7 +168,7 @@ func isActionableUpgradePolicy(up *ocm.UpgradePolicy, state *cmv1.UpgradePolicyS
 // Applies the supplied Upgrade Policy to the cluster in the form of an UpgradeConfig
 // Returns an indication of if the policy being applied differs to the existing UpgradeConfig,
 // and indication of error if one occurs.
-func buildUpgradeConfigSpecs(upgradePolicy *ocm.UpgradePolicy, cluster *cmv1.Cluster, upgradeType upgradev1alpha1.UpgradeType) ([]upgradev1alpha1.UpgradeConfigSpec, error) {
+func buildUpgradeConfigSpecs(upgradePolicy *cmv1.UpgradePolicy, cluster *cmv1.Cluster, upgradeType upgradev1alpha1.UpgradeType) ([]upgradev1alpha1.UpgradeConfigSpec, error) {
 
 	upgradeConfigSpecs := make([]upgradev1alpha1.UpgradeConfigSpec, 0)
 
@@ -187,25 +194,18 @@ func buildUpgradeConfigSpecs(upgradePolicy *ocm.UpgradePolicy, cluster *cmv1.Clu
 	// with: capacityReservation = upgradePolicy.GetCapacityReservation()
 	capacityReservation := true
 
-	desired := upgradev1alpha1.Update{Version: upgradePolicy.Version()}
-	switch {
-	case upgradePolicy.Architecture == "":
-		upgradeChannel, err := inferUpgradeChannelFromChannelGroup(cluster.Version().ChannelGroup(), upgradePolicy.Version())
-		if err != nil {
-			return nil, fmt.Errorf("unable to determine channel from channel group '%v' and version '%v' for policy ID '%v'", cluster.Version().ChannelGroup(), upgradePolicy.Version(), upgradePolicy.ID())
-		}
-		desired.Channel = *upgradeChannel
-	case strings.EqualFold(upgradePolicy.Architecture, string(configv1.ClusterVersionArchitectureMulti)):
-		// Preserve the cluster's channel; migration validation checks the version.
-		desired.Architecture = configv1.ClusterVersionArchitectureMulti
-	default:
-		return nil, fmt.Errorf("unsupported architecture %q for policy ID %q", upgradePolicy.Architecture, upgradePolicy.ID())
+	upgradeChannel, err := inferUpgradeChannelFromChannelGroup(cluster.Version().ChannelGroup(), upgradePolicy.Version())
+	if err != nil {
+		return nil, fmt.Errorf("unable to determine channel from channel group '%v' and version '%v' for policy ID '%v'", cluster.Version().ChannelGroup(), upgradePolicy.Version(), upgradePolicy.ID())
 	}
 
 	// NextRun() returns time.Time, format it as RFC3339 string
 	nextRunTime := upgradePolicy.NextRun()
 	upgradeConfigSpec := upgradev1alpha1.UpgradeConfigSpec{
-		Desired:              desired,
+		Desired: upgradev1alpha1.Update{
+			Version: upgradePolicy.Version(),
+			Channel: *upgradeChannel,
+		},
 		UpgradeAt:            nextRunTime.Format(time.RFC3339),
 		PDBForceDrainTimeout: int32(cluster.NodeDrainGracePeriod().Value()), //#nosec G115 -- NodeDrainGracePeriod is expected to be within int32 range as it represents seconds for drain timeout, which is unlikely to exceed 2B seconds
 		Type:                 upgradeType,

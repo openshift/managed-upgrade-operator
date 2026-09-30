@@ -132,8 +132,7 @@ Set `spec.desired.architecture` to `Multi` and specify the current ClusterVersio
 A single-to-Multi migration cannot also change the version.
 Omit `image`; `channel` must be omitted or match the current cluster channel.
 CVO validates and resolves the release payload.
-Use the local upgrade policy provider when managing the UpgradeConfig directly;
-OCM policy mapping is described in the [provider documentation](upgradeconfigmanager.md#ocm-policy-provider).
+Use the local upgrade policy provider when managing the UpgradeConfig directly.
 
 ```yaml
 apiVersion: upgrade.managed.openshift.io/v1alpha1
