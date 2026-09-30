@@ -21,13 +21,13 @@ func TestArchitectureMigrationValidation(t *testing.T) {
 	}{
 		{"same version without graph edge", upgradev1alpha1.Update{Architecture: "Multi", Version: "4.18.1"}, true},
 		{"same channel", upgradev1alpha1.Update{Architecture: "Multi", Version: "4.18.1", Channel: "stable-4.18"}, true},
-		{"different available version", upgradev1alpha1.Update{Architecture: "Multi", Version: "4.18.2", Channel: "stable-4.18"}, true},
+		{"different available version", upgradev1alpha1.Update{Architecture: "Multi", Version: "4.18.2", Channel: "stable-4.18"}, false},
 		{"unavailable target", upgradev1alpha1.Update{Architecture: "Multi", Version: "4.18.3", Channel: "stable-4.18"}, false},
 		{"downgrade", upgradev1alpha1.Update{Architecture: "Multi", Version: "4.18.0", Channel: "stable-4.18"}, false},
 		{"different version and channel", upgradev1alpha1.Update{Architecture: "Multi", Version: "4.18.2", Channel: "fast-4.18"}, false},
 		{"invalid version", upgradev1alpha1.Update{Architecture: "Multi", Version: "invalid"}, false},
 		{"missing version", upgradev1alpha1.Update{Architecture: "Multi"}, false},
-		{"different version without channel", upgradev1alpha1.Update{Architecture: "Multi", Version: "4.18.2"}, true},
+		{"different version without channel", upgradev1alpha1.Update{Architecture: "Multi", Version: "4.18.2"}, false},
 		{"image conflict", upgradev1alpha1.Update{Architecture: "Multi", Version: "4.18.1", Image: "invalid"}, false},
 		{"different channel", upgradev1alpha1.Update{Architecture: "Multi", Version: "4.18.1", Channel: "stable-4.19"}, false},
 		{"invalid architecture", upgradev1alpha1.Update{Architecture: "amd64", Version: "4.18.1"}, false},
@@ -43,7 +43,7 @@ func TestArchitectureMigrationValidation(t *testing.T) {
 }
 
 func TestArchitectureMigrationRejectsAmbiguousCVOPayload(t *testing.T) {
-	cv := &configv1.ClusterVersion{Status: configv1.ClusterVersionStatus{AvailableUpdates: []configv1.Release{
+	cv := &configv1.ClusterVersion{Status: configv1.ClusterVersionStatus{Desired: configv1.Release{Version: "4.18.1", Architecture: configv1.ClusterVersionArchitectureMulti}, AvailableUpdates: []configv1.Release{
 		{Version: "4.18.2", Image: "first"}, {Version: "4.18.2", Image: "second"},
 	}}}
 	uc := &upgradev1alpha1.UpgradeConfig{

@@ -94,7 +94,7 @@ func (c *clusterVersionClient) EnsureDesiredConfig(ctx context.Context, uc *upgr
 	}
 
 	// Check which upgrade spec source we are going to use
-	upgradeSource, err := checkUpgradeSource(uc, clusterVersion.Spec.Channel)
+	upgradeSource, err := checkUpgradeSource(uc, clusterVersion)
 	if err != nil {
 		return false, err
 	}
@@ -202,7 +202,7 @@ func (c *clusterVersionClient) HasUpgradeCommenced(ctx context.Context, uc *upgr
 	}
 
 	// Check which upgrade spec source we are going to use
-	upgradeSource, err := checkUpgradeSource(uc, clusterVersion.Spec.Channel)
+	upgradeSource, err := checkUpgradeSource(uc, clusterVersion)
 	if err != nil {
 		return false, err
 	}
@@ -329,9 +329,9 @@ func GetCurrentVersionMinusOne(clusterVersion *configv1.ClusterVersion) (string,
 }
 
 // check if we are using image or channel + version to upgrade
-func checkUpgradeSource(uc *upgradev1alpha1.UpgradeConfig, currentChannel string) (string, error) {
+func checkUpgradeSource(uc *upgradev1alpha1.UpgradeConfig, cv *configv1.ClusterVersion) (string, error) {
 	if uc.Spec.Desired.Architecture != "" {
-		if err := uc.Spec.Desired.ValidateArchitecture(currentChannel); err != nil {
+		if err := uc.Spec.Desired.ValidateArchitecture(cv); err != nil {
 			return "", err
 		}
 		return UpgradeWithArchitecture, nil
