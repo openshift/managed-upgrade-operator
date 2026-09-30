@@ -105,20 +105,24 @@ func (s *ocmClient) GetCluster() (*cmv1.Cluster, error) {
 	return cluster, nil
 }
 
-// Queries and returns the Upgrade Policy from Cluster Services via ocm-agent using the SDK connection
-func (s *ocmClient) GetClusterUpgradePolicies(clusterId string) (*ocm.UpgradePolicyList, error) {
-	// Preserve architecture, which is not exposed by the pinned typed SDK.
-	response, err := s.conn.Get().
-		Path(path.Join("/api/clusters_mgmt/v1/clusters", clusterId, "upgrade_policies")).
-		Parameter("page", 1).
-		Parameter("size", 1).
+// Queries and returns the Upgrade Policy from Cluster Services via ocm-agent using SDK typed API
+func (s *ocmClient) GetClusterUpgradePolicies(clusterId string) (*cmv1.UpgradePoliciesListResponse, error) {
+	// Try using SDK typed API - the connection is already pointing at ocm-agent
+	// ocm-agent should proxy to OCM and return compatible responses
+	response, err := s.conn.ClustersMgmt().V1().
+		Clusters().
+		Cluster(clusterId).
+		UpgradePolicies().
+		List().
+		Page(1).
+		Size(1).
 		Send()
 
 	if err != nil {
 		return nil, fmt.Errorf("can't pull upgrade policies for cluster %s: %w", clusterId, err)
 	}
 
-	operationId := response.Header(OPERATION_ID_HEADER)
+	operationId := response.Header().Get(OPERATION_ID_HEADER)
 	statusCode := response.Status()
 
 	// Construct full URL for logging
@@ -139,11 +143,7 @@ func (s *ocmClient) GetClusterUpgradePolicies(clusterId string) (*ocm.UpgradePol
 		log.Info(fmt.Sprintf("request to '%v' received response code %v from OCM upgrade policy service, operation id: '%v'", apiUrl.String(), statusCode, operationId))
 	}
 
-	var policies ocm.UpgradePolicyList
-	if err := json.Unmarshal(response.Bytes(), &policies); err != nil {
-		return nil, fmt.Errorf("can't decode upgrade policies for cluster %s: %w", clusterId, err)
-	}
-	return &policies, nil
+	return response, nil
 }
 
 // Send a notification of state using SDK typed API
