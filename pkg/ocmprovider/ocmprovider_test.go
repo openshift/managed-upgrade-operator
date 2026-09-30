@@ -81,16 +81,6 @@ var _ = Describe("OCM Provider", func() {
 		})
 	})
 
-	// TODO: Rewrite these tests using httptest.Server approach
-	// The SDK migration changed return types to *cmv1.UpgradePoliciesListResponse
-	// which cannot be manually constructed in mocks - they must come from HTTP responses.
-	// See pkg/ocm/client_test.go for examples of the httptest.Server pattern.
-	Context("SDK-based tests requiring conversion", func() {
-		It("need to be rewritten with httptest.Server", func() {
-			Skip("These tests require conversion to httptest.Server approach after SDK migration. See pkg/ocm/client_test.go for pattern.")
-		})
-	})
-
 	Context("Checking if an upgrade policy is actionable with provider errors", func() {
 		It("Errors if the provider is unavailable", func() {
 			gomock.InOrder(

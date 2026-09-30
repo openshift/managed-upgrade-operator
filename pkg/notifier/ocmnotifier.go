@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	cmv1 "github.com/openshift-online/ocm-sdk-go/clustersmgmt/v1"
 	servicelogsv1 "github.com/openshift-online/ocm-sdk-go/servicelogs/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -182,16 +181,16 @@ func (s *ocmNotifier) getPolicyIdForUpgradeConfig(clusterId string) (*string, er
 	// Find the policy that matches our UC
 	foundPolicy := false
 	policyId := ""
-	policies.Items().Each(func(policy *cmv1.UpgradePolicy) bool {
+	for _, policy := range policies.Items {
 		// NextRun() returns time.Time, format it for comparison with UpgradeAt string
 		nextRunStr := policy.NextRun().Format(time.RFC3339)
-		if policy.Version() == uc.Spec.Desired.Version && nextRunStr == uc.Spec.UpgradeAt {
+		if policy.Version() == uc.Spec.Desired.Version && nextRunStr == uc.Spec.UpgradeAt &&
+			strings.EqualFold(policy.Architecture, string(uc.Spec.Desired.Architecture)) {
 			foundPolicy = true
 			policyId = policy.ID()
-			return false // Stop iteration
+			break
 		}
-		return true
-	})
+	}
 
 	if !foundPolicy {
 		return nil, fmt.Errorf("no policy matches the current UpgradeConfig")
