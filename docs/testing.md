@@ -27,6 +27,33 @@ find .
 
 * You can run the tests using `make test` or `go test ./...`
 
+## Multi-architecture migration E2E test
+
+The `architecture-migration` test creates a `managed-upgrade-config` with
+`architecture: Multi` at the cluster's current version. It checks the history
+created by the controller, the resulting ClusterVersion migration request, and
+completion reported by both CVO and MUO. It does not patch ClusterVersion itself.
+
+This test starts a real migration and is disabled unless
+`RUN_ARCHITECTURE_MIGRATION_E2E=true`. Use a disposable, healthy single-architecture
+cluster with the updated MUO and CRD installed, a multi-architecture release
+available in its current channel, and no existing UpgradeConfig or rollout.
+Configure MUO's `configManager.source` as `LOCAL` with
+`localConfigName: managed-upgrade-config` before running it. The test does not
+change the operator configuration or bypass its health checks.
+
+```sh
+RUN_ARCHITECTURE_MIGRATION_E2E=true \
+DISABLE_JUNIT_REPORT=true \
+KUBECONFIG=/path/to/test-cluster/kubeconfig \
+go test -tags=osde2e ./test/e2e -timeout 3h30m \
+  -args -ginkgo.label-filter=architecture-migration -ginkgo.v
+```
+
+The test deletes its UpgradeConfig after successful completion. If the migration
+fails or times out, it leaves the resource for MUO to continue reconciling and for
+diagnosis. It does not roll back the cluster architecture.
+
 ## Writing tests
 
 ### Mocking interfaces
@@ -34,13 +61,13 @@ find .
 #### Basic Mock knowledge and process
 This project makes use of [`GoMock`](https://github.com/golang/mock) to mock service interfaces. This comes with the `mockgen` utility which can be used to generate or re-generate mock interfaces that can be used to simulate the behaviour of an external dependency.
 
-Once installed, an interface can be mocked by running: 
+Once installed, an interface can be mocked by running:
 
 ```
 mockgen -s=/path/to/file_containing_interface.go > /path/to/output_mock_file.go
 ```
 
-However, it is considered good practice to include a [go generate](https://golang.org/pkg/cmd/go/internal/generate/) directive above the interface which defines the specific `mockgen` command that will generate your mocked interface. 
+However, it is considered good practice to include a [go generate](https://golang.org/pkg/cmd/go/internal/generate/) directive above the interface which defines the specific `mockgen` command that will generate your mocked interface.
 
 Internal interfaces including `pkg/maintenance/maintenance.go` and `pkg/controller/upgradeconfig/cluster_upgrader.go` are mocked using this method. When making changes to these packages, you should re-generate the mocks to ensure they too are updated. This can be performed manually by running `go generate /path/to/file.go` or for the whole project via `make generate`.
 

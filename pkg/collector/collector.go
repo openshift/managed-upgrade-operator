@@ -330,7 +330,7 @@ func (uc *UpgradeCollector) collectUpgradeConditions(ch chan<- prometheus.Metric
 		return err
 	}
 
-	h := upgradeConfig.Status.History.GetHistory(upgradeConfig.Spec.Desired.Version)
+	h := upgradeConfig.Status.History.GetHistoryForUpdate(upgradeConfig.Spec.Desired)
 	if h == nil {
 		return fmt.Errorf("no upgrade history yet")
 	}
@@ -413,7 +413,7 @@ func collectCondition(c *upgradev1alpha1.UpgradeCondition, promDesc *prometheus.
 }
 
 func (uc *UpgradeCollector) collectSpec(ucfg *upgradev1alpha1.UpgradeConfig, cvV string, ch chan<- prometheus.Metric) error {
-	h := ucfg.Status.History.GetHistory(ucfg.Spec.Desired.Version)
+	h := ucfg.Status.History.GetHistoryForUpdate(ucfg.Spec.Desired)
 	if h == nil {
 		return fmt.Errorf("not able to fetch upgrade history")
 	}
@@ -442,7 +442,7 @@ func (uc *UpgradeCollector) collectSpec(ucfg *upgradev1alpha1.UpgradeConfig, cvV
 }
 
 func (uc *UpgradeCollector) collectStatus(ucfg *upgradev1alpha1.UpgradeConfig, cvV string, ch chan<- prometheus.Metric) error {
-	h := ucfg.Status.History.GetHistory(ucfg.Spec.Desired.Version)
+	h := ucfg.Status.History.GetHistoryForUpdate(ucfg.Spec.Desired)
 	if h == nil {
 		return fmt.Errorf("not able to fetch upgrade history")
 	}

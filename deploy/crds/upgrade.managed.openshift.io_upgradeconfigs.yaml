@@ -77,6 +77,13 @@ spec:
               desired:
                 description: Specify the desired OpenShift release
                 properties:
+                  architecture:
+                    description: Architecture requests Multi. CVO resolves the migration
+                      payload. Image must be omitted.
+                    enum:
+                    - Multi
+                    - ""
+                    type: string
                   channel:
                     description: Channel used for upgrades
                     type: string
@@ -111,6 +118,12 @@ spec:
                 items:
                   description: UpgradeHistory record history of upgrade
                   properties:
+                    architecture:
+                      description: Architecture requested by this upgrade.
+                      enum:
+                      - Multi
+                      - ""
+                      type: string
                     completeTime:
                       format: date-time
                       type: string

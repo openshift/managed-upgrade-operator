@@ -97,7 +97,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 		return reconcile.Result{}, err
 	}
 
-	history := instance.Status.History.GetHistory(instance.Spec.Desired.Version)
+	history := instance.Status.History.GetHistoryForUpdate(instance.Spec.Desired)
 	if history == nil {
 		precedingVersion := clusterversion.GetPrecedingVersion(clusterVersion, instance)
 
@@ -109,12 +109,14 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 			// If CVO is currently set to the version of the UC, then we need to be in an Upgrading phase, at minimum.
 			// We also won't know the actual start time, so picking now will just have to do
 			history = &upgradev1alpha1.UpgradeHistory{
+				Architecture:     instance.Spec.Desired.Architecture,
 				PrecedingVersion: precedingVersion,
 				Version:          instance.Spec.Desired.Version,
 				Phase:            upgradev1alpha1.UpgradePhaseUpgrading,
 				StartTime:        &metav1.Time{Time: time.Now()}}
 		} else {
 			history = &upgradev1alpha1.UpgradeHistory{
+				Architecture:     instance.Spec.Desired.Architecture,
 				PrecedingVersion: precedingVersion,
 				Version:          instance.Spec.Desired.Version,
 				Phase:            upgradev1alpha1.UpgradePhaseNew}
@@ -299,7 +301,7 @@ func (r *ReconcileUpgradeConfig) upgradeCluster(upgrader cub.ClusterUpgrader, uc
 	phase, err := upgrader.UpgradeCluster(context.TODO(), uc, logger)
 	me = multierror.Append(err, me)
 
-	history := uc.Status.History.GetHistory(uc.Spec.Desired.Version)
+	history := uc.Status.History.GetHistoryForUpdate(uc.Spec.Desired)
 	history.Phase = phase
 	if phase == upgradev1alpha1.UpgradePhaseUpgraded {
 		history.CompleteTime = &metav1.Time{Time: time.Now()}

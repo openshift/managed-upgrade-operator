@@ -126,7 +126,7 @@ func shouldFailUpgrade(cvClient cv.ClusterVersion, cfg *upgraderConfig, upgradeC
 	}
 
 	// Get the managed upgrade start time from upgrade config history
-	h := upgradeConfig.Status.History.GetHistory(upgradeConfig.Spec.Desired.Version)
+	h := upgradeConfig.Status.History.GetHistoryForUpdate(upgradeConfig.Spec.Desired)
 	if h == nil {
 		return false, nil
 	}
@@ -142,7 +142,7 @@ func shouldFailUpgrade(cvClient cv.ClusterVersion, cfg *upgraderConfig, upgradeC
 // performUpgradeFailure carries out routines related to moving to an upgrade-failed state
 func performUpgradeFailure(c client.Client, metricsClient metrics.Metrics, s scaler.Scaler, nc eventmanager.EventManager, upgradeConfig *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (upgradev1alpha1.UpgradePhase, error) {
 	// Set up return condition
-	h := upgradeConfig.Status.History.GetHistory(upgradeConfig.Spec.Desired.Version)
+	h := upgradeConfig.Status.History.GetHistoryForUpdate(upgradeConfig.Spec.Desired)
 	condition := &upgradev1alpha1.UpgradeCondition{
 		Type:    "FailedUpgrade",
 		Status:  corev1.ConditionFalse,

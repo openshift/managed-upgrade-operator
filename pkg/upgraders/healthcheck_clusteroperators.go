@@ -15,7 +15,7 @@ import (
 // error is reported.
 func ClusterOperators(metricsClient metrics.Metrics, cvClient cv.ClusterVersion, ug *upgradev1alpha1.UpgradeConfig, logger logr.Logger, version string) (bool, error) {
 	// Get current upgrade state
-	history := ug.Status.History.GetHistory(ug.Spec.Desired.Version)
+	history := ug.Status.History.GetHistoryForUpdate(ug.Spec.Desired)
 	state := string(history.Phase)
 
 	result, err := cvClient.HasDegradedOperators()
