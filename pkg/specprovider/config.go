@@ -54,7 +54,7 @@ func (cfg *SpecProviderConfig) IsValid() error {
 	}
 
 	switch upgradev1alpha1.UpgradeType(cfg.UpgradeType) {
-	case upgradev1alpha1.ARO, upgradev1alpha1.OSD, "":
+	case upgradev1alpha1.ARO, upgradev1alpha1.OSD, upgradev1alpha1.BM, "":
 		// An empty upgrade type is fine
 		break
 	default:
