@@ -1,5 +1,11 @@
 export KONFLUX_BUILDS=true
 FIPS_ENABLED=true
+# Go 1.24+ native FIPS (GOFIPS140) conflicts with GOEXPERIMENT=boringcrypto
+# used by boilerplate. Ensure GOFIPS140=off to allow the boringcrypto experiment.
+# The export covers recipe commands; initializing GOENV ensures $(shell ...) calls
+# in standard.mk also pass GOFIPS140=off on the command line.
+export GOFIPS140=off
+GOENV = GOFIPS140=off
 
 include boilerplate/generated-includes.mk
 
