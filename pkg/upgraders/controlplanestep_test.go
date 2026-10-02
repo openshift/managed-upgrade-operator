@@ -88,7 +88,7 @@ var _ = Describe("ControlPlaneStep", func() {
 		Context("When the clusterversion can't be fetched", func() {
 			It("Indicates an error", func() {
 				fakeError := fmt.Errorf("fake error")
-				mockCVClient.EXPECT().GetClusterVersion().Return(nil, fakeError)
+				mockCVClient.EXPECT().GetClusterVersion(gomock.Any()).Return(nil, fakeError)
 				result, err := upgrader.ControlPlaneUpgraded(context.TODO(), logger)
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(Equal(fakeError))
@@ -100,7 +100,7 @@ var _ = Describe("ControlPlaneStep", func() {
 			It("Should report error", func() {
 				fakeError := fmt.Errorf("fake notification error")
 				gomock.InOrder(
-					mockCVClient.EXPECT().GetClusterVersion().Return(nil, nil),
+					mockCVClient.EXPECT().GetClusterVersion(gomock.Any()).Return(nil, nil),
 					mockCVClient.EXPECT().HasUpgradeCompleted(gomock.Any(), gomock.Any()).Return(true),
 					mockEMClient.EXPECT().Notify(gomock.Any()).Return(fakeError),
 				)
@@ -125,11 +125,11 @@ var _ = Describe("ControlPlaneStep", func() {
 			})
 			It("Flags the control plane as upgraded", func() {
 				gomock.InOrder(
-					mockCVClient.EXPECT().GetClusterVersion().Return(clusterVersion, nil),
+					mockCVClient.EXPECT().GetClusterVersion(gomock.Any()).Return(clusterVersion, nil),
 					mockCVClient.EXPECT().HasUpgradeCompleted(gomock.Any(), gomock.Any()).Return(true),
 					mockEMClient.EXPECT().Notify(gomock.Any()),
 					mockMetricsClient.EXPECT().ResetMetricUpgradeControlPlaneTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version),
-					mockCVClient.EXPECT().GetClusterId(),
+					mockCVClient.EXPECT().GetClusterId(gomock.Any()),
 					mockMetricsClient.EXPECT().UpdateMetricControlplaneUpgradeCompletedTimestamp(gomock.Any(), upgradeConfig.Name, gomock.Any(), gomock.Any()),
 					mockMetricsClient.EXPECT().UpdateMetricWorkernodeUpgradeStartedTimestamp(gomock.Any(), upgradeConfig.Name, gomock.Any(), gomock.Any()),
 				)
@@ -158,7 +158,7 @@ var _ = Describe("ControlPlaneStep", func() {
 				})
 				It("Sets the upgrade timeout flag", func() {
 					gomock.InOrder(
-						mockCVClient.EXPECT().GetClusterVersion().Return(clusterVersion, nil),
+						mockCVClient.EXPECT().GetClusterVersion(gomock.Any()).Return(clusterVersion, nil),
 						mockCVClient.EXPECT().HasUpgradeCompleted(gomock.Any(), gomock.Any()).Return(false),
 						mockMetricsClient.EXPECT().UpdateMetricUpgradeControlPlaneTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version),
 					)
@@ -174,7 +174,7 @@ var _ = Describe("ControlPlaneStep", func() {
 				})
 				It("Does not set the upgrade timeout flag", func() {
 					gomock.InOrder(
-						mockCVClient.EXPECT().GetClusterVersion().Return(clusterVersion, nil),
+						mockCVClient.EXPECT().GetClusterVersion(gomock.Any()).Return(clusterVersion, nil),
 						mockCVClient.EXPECT().HasUpgradeCompleted(gomock.Any(), gomock.Any()).Return(false),
 					)
 					result, err := upgrader.ControlPlaneUpgraded(context.TODO(), logger)
@@ -198,7 +198,7 @@ var _ = Describe("ControlPlaneStep", func() {
 			})
 			It("Sets the appropriate metric", func() {
 				gomock.InOrder(
-					mockCVClient.EXPECT().GetClusterVersion().Return(clusterVersion, nil),
+					mockCVClient.EXPECT().GetClusterVersion(gomock.Any()).Return(clusterVersion, nil),
 					mockCVClient.EXPECT().HasUpgradeCompleted(gomock.Any(), gomock.Any()).Return(false),
 					mockMetricsClient.EXPECT().UpdateMetricUpgradeControlPlaneTimeout(upgradeConfig.Name, upgradeConfig.Spec.Desired.Version),
 				)
@@ -215,7 +215,7 @@ var _ = Describe("ControlPlaneStep", func() {
 				fakeError := fmt.Errorf("a fake error")
 				gomock.InOrder(
 					mockMetricsClient.EXPECT().UpdateMetricUpgradeWindowNotBreached(gomock.Any()),
-					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, fakeError),
+					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any(), gomock.Any()).Return(false, fakeError),
 				)
 				result, err := upgrader.CommenceUpgrade(context.TODO(), logger)
 				Expect(err).To(HaveOccurred())
@@ -229,11 +229,11 @@ var _ = Describe("ControlPlaneStep", func() {
 				fakeError := fmt.Errorf("fake error")
 				gomock.InOrder(
 					mockMetricsClient.EXPECT().UpdateMetricUpgradeWindowNotBreached(gomock.Any()),
-					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
+					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any(), gomock.Any()).Return(false, nil),
 					mockEMClient.EXPECT().Notify(gomock.Any()),
-					mockCVClient.EXPECT().GetClusterId(),
+					mockCVClient.EXPECT().GetClusterId(gomock.Any()),
 					mockMetricsClient.EXPECT().UpdateMetricControlplaneUpgradeStartedTimestamp(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()),
-					mockCVClient.EXPECT().EnsureDesiredConfig(gomock.Any()).Return(false, fakeError),
+					mockCVClient.EXPECT().EnsureDesiredConfig(gomock.Any(), gomock.Any()).Return(false, fakeError),
 				)
 				result, err := upgrader.CommenceUpgrade(context.TODO(), logger)
 				Expect(err).To(HaveOccurred())
@@ -247,7 +247,7 @@ var _ = Describe("ControlPlaneStep", func() {
 				fakeError := fmt.Errorf("fake notification error")
 				gomock.InOrder(
 					mockMetricsClient.EXPECT().UpdateMetricUpgradeWindowNotBreached(gomock.Any()),
-					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
+					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any(), gomock.Any()).Return(false, nil),
 					mockEMClient.EXPECT().Notify(gomock.Any()).Return(fakeError),
 				)
 				result, err := upgrader.CommenceUpgrade(context.TODO(), logger)
@@ -257,18 +257,20 @@ var _ = Describe("ControlPlaneStep", func() {
 		})
 
 		Context("When clusterversion is upgraded to desired version", func() {
-			It("Should return the control plane upgrade completion with no error", func() {
+			It("forwards the supplied context to ClusterVersion methods and returns completion", func() {
+				ctx, cancel := context.WithCancel(context.Background())
+				defer cancel()
 				gomock.InOrder(
 					mockMetricsClient.EXPECT().UpdateMetricUpgradeWindowNotBreached(gomock.Any()),
-					mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(false, nil),
+					mockCVClient.EXPECT().HasUpgradeCommenced(ctx, upgradeConfig).Return(false, nil),
 					mockEMClient.EXPECT().Notify(gomock.Any()),
-					mockCVClient.EXPECT().GetClusterId(),
+					mockCVClient.EXPECT().GetClusterId(ctx),
 					mockMetricsClient.EXPECT().UpdateMetricControlplaneUpgradeStartedTimestamp(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()),
-					mockCVClient.EXPECT().EnsureDesiredConfig(gomock.Any()).Return(true, nil),
+					mockCVClient.EXPECT().EnsureDesiredConfig(ctx, upgradeConfig).Return(true, nil),
 				)
-				result, err := upgrader.CommenceUpgrade(context.TODO(), logger)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(result).To(BeTrue())
+				result, err := upgrader.CommenceUpgrade(ctx, logger)
+				Expect(err).ToNot(HaveOccurred(), "commencing an upgrade with the supplied context should succeed")
+				Expect(result).To(BeTrue(), "the desired configuration should be applied successfully")
 			})
 
 		})
@@ -278,7 +280,7 @@ var _ = Describe("ControlPlaneStep", func() {
 		It("will not re-perform commencing an upgrade", func() {
 			gomock.InOrder(
 				mockMetricsClient.EXPECT().UpdateMetricUpgradeWindowNotBreached(gomock.Any()),
-				mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(true, nil),
+				mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any(), gomock.Any()).Return(true, nil),
 			)
 			result, err := upgrader.CommenceUpgrade(context.TODO(), logger)
 			Expect(err).NotTo(HaveOccurred())
@@ -291,7 +293,7 @@ var _ = Describe("ControlPlaneStep", func() {
 		It("will abort the commencing of an upgrade", func() {
 			gomock.InOrder(
 				mockMetricsClient.EXPECT().UpdateMetricUpgradeWindowNotBreached(gomock.Any()),
-				mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any()).Return(true, fakeError),
+				mockCVClient.EXPECT().HasUpgradeCommenced(gomock.Any(), gomock.Any()).Return(true, fakeError),
 			)
 			result, err := upgrader.CommenceUpgrade(context.TODO(), logger)
 			Expect(err).To(HaveOccurred())

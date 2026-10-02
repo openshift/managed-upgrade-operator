@@ -21,7 +21,7 @@ type PDBDetails struct {
 
 // PreUpgradeHealthCheck performs cluster healthy check
 func (c *clusterUpgrader) PreUpgradeHealthCheck(ctx context.Context, logger logr.Logger) (bool, error) {
-	upgradeCommenced, err := c.cvClient.HasUpgradeCommenced(c.upgradeConfig)
+	upgradeCommenced, err := c.cvClient.HasUpgradeCommenced(ctx, c.upgradeConfig)
 	if err != nil {
 		return false, err
 	}
@@ -30,7 +30,7 @@ func (c *clusterUpgrader) PreUpgradeHealthCheck(ctx context.Context, logger logr
 		return true, nil
 	}
 
-	version := getCurrentVersion(c.cvClient, logger)
+	version := getCurrentVersion(ctx, c.cvClient, logger)
 
 	// Based on the "PreHealthCheck" featuregate, we invoke the legacy healthchecks for clusteroperator and critical alerts
 	// which will not be tied to the notifications but only log the error and set metric.
@@ -136,7 +136,7 @@ func (c *clusterUpgrader) PreUpgradeHealthCheck(ctx context.Context, logger logr
 
 // PostUpgradeHealthCheck performs cluster healthy check
 func (c *clusterUpgrader) PostUpgradeHealthCheck(ctx context.Context, logger logr.Logger) (bool, error) {
-	version := getCurrentVersion(c.cvClient, logger)
+	version := getCurrentVersion(ctx, c.cvClient, logger)
 	ok, err := CriticalAlerts(c.metrics, c.config, c.upgradeConfig, logger, version)
 	if err != nil || !ok {
 		return false, err
@@ -155,9 +155,9 @@ func (c *clusterUpgrader) PostUpgradeHealthCheck(ctx context.Context, logger log
 	return true, nil
 }
 
-func getCurrentVersion(cvClient cv.ClusterVersion, logger logr.Logger) string {
+func getCurrentVersion(ctx context.Context, cvClient cv.ClusterVersion, logger logr.Logger) string {
 
-	clusterVersion, err := cvClient.GetClusterVersion()
+	clusterVersion, err := cvClient.GetClusterVersion(ctx)
 	if err != nil {
 		// GetVersion failed should not block the upgrade
 		logger.Error(err, "Get cluster version failed")

@@ -92,7 +92,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 
 	// Get current ClusterVersion
 	cvClient := r.CvClientBuilder.New(r.Client)
-	clusterVersion, err := cvClient.GetClusterVersion()
+	clusterVersion, err := cvClient.GetClusterVersion(ctx)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -101,7 +101,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 	if history == nil {
 		precedingVersion := clusterversion.GetPrecedingVersion(clusterVersion, instance)
 
-		upgraded, err := cvClient.HasUpgradeCommenced(instance)
+		upgraded, err := cvClient.HasUpgradeCommenced(ctx, instance)
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not tell if cluster was upgrading: %v", err)
 		}
@@ -257,7 +257,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 			}
 
 			reqLogger.Info(fmt.Sprintf("Cluster is commencing %s upgrade.", instance.Spec.Type), "time", now)
-			return r.upgradeCluster(upgrader, instance, reqLogger)
+			return r.upgradeCluster(ctx, upgrader, instance, reqLogger)
 		}
 
 		history.Phase = upgradev1alpha1.UpgradePhasePending
@@ -278,7 +278,7 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 
 	case upgradev1alpha1.UpgradePhaseUpgrading:
 		reqLogger.Info("Cluster detected as already upgrading.")
-		return r.upgradeCluster(upgrader, instance, reqLogger)
+		return r.upgradeCluster(ctx, upgrader, instance, reqLogger)
 	case upgradev1alpha1.UpgradePhaseUpgraded:
 		reqLogger.Info("Cluster is already upgraded")
 		err = reportUpgradeMetrics(metricsClient, instance.Name, history.PrecedingVersion, instance.Spec.Desired.Version, history.StartTime.Time, history.CompleteTime.Time)
@@ -293,10 +293,10 @@ func (r *ReconcileUpgradeConfig) Reconcile(ctx context.Context, request reconcil
 	return reconcile.Result{}, nil
 }
 
-func (r *ReconcileUpgradeConfig) upgradeCluster(upgrader cub.ClusterUpgrader, uc *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (reconcile.Result, error) {
+func (r *ReconcileUpgradeConfig) upgradeCluster(ctx context.Context, upgrader cub.ClusterUpgrader, uc *upgradev1alpha1.UpgradeConfig, logger logr.Logger) (reconcile.Result, error) {
 	me := &multierror.Error{}
 
-	phase, err := upgrader.UpgradeCluster(context.TODO(), uc, logger)
+	phase, err := upgrader.UpgradeCluster(ctx, uc, logger)
 	me = multierror.Append(err, me)
 
 	history := uc.Status.History.GetHistory(uc.Spec.Desired.Version)
@@ -305,7 +305,7 @@ func (r *ReconcileUpgradeConfig) upgradeCluster(upgrader cub.ClusterUpgrader, uc
 		history.CompleteTime = &metav1.Time{Time: time.Now()}
 	}
 	uc.Status.History.SetHistory(*history)
-	err = r.Client.Status().Update(context.TODO(), uc)
+	err = r.Client.Status().Update(ctx, uc)
 	me = multierror.Append(err, me)
 
 	return reconcile.Result{RequeueAfter: 1 * time.Minute}, me.ErrorOrNil()

@@ -18,7 +18,7 @@ func (c *clusterUpgrader) CommenceUpgrade(ctx context.Context, logger logr.Logge
 	// We can reset the window breached metric if we're commencing
 	c.metrics.UpdateMetricUpgradeWindowNotBreached(c.upgradeConfig.Name)
 
-	upgradeCommenced, err := c.cvClient.HasUpgradeCommenced(c.upgradeConfig)
+	upgradeCommenced, err := c.cvClient.HasUpgradeCommenced(ctx, c.upgradeConfig)
 	if err != nil {
 		return false, err
 	}
@@ -31,10 +31,10 @@ func (c *clusterUpgrader) CommenceUpgrade(ctx context.Context, logger logr.Logge
 	if err != nil {
 		return false, err
 	}
-	clusterid := c.cvClient.GetClusterId()
+	clusterid := c.cvClient.GetClusterId(ctx)
 	c.metrics.UpdateMetricControlplaneUpgradeStartedTimestamp(clusterid, c.upgradeConfig.Name, c.upgradeConfig.Spec.Desired.Version, time.Now())
 
-	isComplete, err := c.cvClient.EnsureDesiredConfig(c.upgradeConfig)
+	isComplete, err := c.cvClient.EnsureDesiredConfig(ctx, c.upgradeConfig)
 	if err != nil {
 		logger.Info("clusterversion has not been updated to desired version, will retry on next reconcile")
 		return false, err
@@ -45,7 +45,7 @@ func (c *clusterUpgrader) CommenceUpgrade(ctx context.Context, logger logr.Logge
 
 // ControlPlaneUpgraded checks whether control plane is upgraded. The ClusterVersion reports when cvo and master nodes are upgraded.
 func (c *clusterUpgrader) ControlPlaneUpgraded(ctx context.Context, logger logr.Logger) (bool, error) {
-	clusterVersion, err := c.cvClient.GetClusterVersion()
+	clusterVersion, err := c.cvClient.GetClusterVersion(ctx)
 	if err != nil {
 		return false, err
 	}
@@ -57,7 +57,7 @@ func (c *clusterUpgrader) ControlPlaneUpgraded(ctx context.Context, logger logr.
 			return false, err
 		}
 		c.metrics.ResetMetricUpgradeControlPlaneTimeout(c.upgradeConfig.Name, c.upgradeConfig.Spec.Desired.Version)
-		clusterid := c.cvClient.GetClusterId()
+		clusterid := c.cvClient.GetClusterId(ctx)
 		c.metrics.UpdateMetricControlplaneUpgradeCompletedTimestamp(clusterid, c.upgradeConfig.Name, c.upgradeConfig.Spec.Desired.Version, time.Now())
 		c.metrics.UpdateMetricWorkernodeUpgradeStartedTimestamp(clusterid, c.upgradeConfig.Name, c.upgradeConfig.Spec.Desired.Version, time.Now())
 		return true, nil
