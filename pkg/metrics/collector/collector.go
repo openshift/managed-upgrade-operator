@@ -1,6 +1,7 @@
 package collector
 
 import (
+	"context"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -122,7 +123,7 @@ func (uc *UpgradeCollector) collectUpgradeMetrics(ch chan<- prometheus.Metric) {
 				)
 			}
 
-			clusterVersion, err := uc.cvClient.GetClusterVersion()
+			clusterVersion, err := uc.cvClient.GetClusterVersion(context.Background())
 			if err != nil {
 				return
 			}
