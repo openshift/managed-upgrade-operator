@@ -1,6 +1,7 @@
 package collector
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -307,7 +308,7 @@ func (uc *UpgradeCollector) collectUpgradeConditions(ch chan<- prometheus.Metric
 		return fmt.Errorf("unable to find UpgradeConfig: %v", err)
 	}
 
-	clusterVersion, err := uc.cvClient.GetClusterVersion()
+	clusterVersion, err := uc.cvClient.GetClusterVersion(context.Background())
 	if err != nil {
 		return err
 	}
