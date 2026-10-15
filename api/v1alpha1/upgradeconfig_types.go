@@ -15,6 +15,8 @@ const (
 	OSD UpgradeType = "OSD"
 	// ARO is a type of upgrade
 	ARO UpgradeType = "ARO"
+	// BM is a type of upgrade for self-managed bare metal clusters
+	BM UpgradeType = "BM"
 )
 
 // FeatureGate type defines the feature that managed-upgrade-operator should enable/disable when deployed.
@@ -43,7 +45,7 @@ type UpgradeConfigSpec struct {
 	// The maximum grace period granted to a node whose drain is blocked by a Pod Disruption Budget, before that drain is forced. Measured in minutes. The minimum accepted value is 0 and in this case it will trigger force drain after the expectedNodeDrainTime lapsed.
 	PDBForceDrainTimeout int32 `json:"PDBForceDrainTimeout"`
 
-	// +kubebuilder:validation:Enum={"OSD","ARO"}
+	// +kubebuilder:validation:Enum={"OSD","ARO","BM"}
 	// Type indicates the ClusterUpgrader implementation to use to perform an upgrade of the cluster
 	Type UpgradeType `json:"type"`
 
