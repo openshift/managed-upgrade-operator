@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	cmv1 "github.com/openshift-online/ocm-sdk-go/clustersmgmt/v1"
 	"github.com/openshift/managed-upgrade-operator/pkg/ocm"
 	mockOcm "github.com/openshift/managed-upgrade-operator/pkg/ocm/mocks"
 	"github.com/openshift/managed-upgrade-operator/util/mocks"
@@ -42,6 +43,14 @@ var _ = Describe("OCM Provider", func() {
 
 	AfterEach(func() {
 		mockCtrl.Finish()
+	})
+
+	It("returns an error when selecting from an empty policy list", func() {
+		for _, policies := range []*cmv1.UpgradePoliciesListResponse{nil, {}} {
+			policy, err := getNextOccurringUpgradePolicy(policies)
+			Expect(err).To(HaveOccurred())
+			Expect(policy).To(BeNil())
+		}
 	})
 
 	Context("Inferring the upgrade channel", func() {

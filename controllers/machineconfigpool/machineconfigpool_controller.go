@@ -61,7 +61,7 @@ func (r *ReconcileMachineConfigPool) Reconcile(ctx context.Context, request reco
 	}
 
 	if uc.Status.History != nil {
-		history := uc.Status.History.GetHistory(uc.Spec.Desired.Version)
+		history := uc.Status.History.GetHistoryForUpdate(uc.Spec.Desired)
 		if history != nil && history.Phase == upgradev1alpha1.UpgradePhaseUpgrading {
 			if instance.Status.UpdatedMachineCount == 0 {
 				if history.WorkerStartTime == nil {

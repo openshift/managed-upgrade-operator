@@ -119,6 +119,9 @@ func (s *ocmProvider) Get() ([]upgradev1alpha1.UpgradeConfigSpec, error) {
 // getNextOccurringUpgradePolicy returns the next occurring upgradepolicy from a list of upgrade
 // policies, regardless of the schedule_type.
 func getNextOccurringUpgradePolicy(uPs *cmv1.UpgradePoliciesListResponse) (*cmv1.UpgradePolicy, error) {
+	if uPs == nil || uPs.Items().Len() == 0 {
+		return nil, fmt.Errorf("no upgrade policies available")
+	}
 	var nextOccurringUpgradePolicy *cmv1.UpgradePolicy
 
 	nextOccurringUpgradePolicy = uPs.Items().Get(0)
