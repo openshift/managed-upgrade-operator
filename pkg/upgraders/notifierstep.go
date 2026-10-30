@@ -13,7 +13,7 @@ import (
 func (c *clusterUpgrader) SendStartedNotification(ctx context.Context, logger logr.Logger) (bool, error) {
 
 	// No need to send started notifications if we're in the upgrading phase
-	upgradeCommenced, err := c.cvClient.HasUpgradeCommenced(c.upgradeConfig)
+	upgradeCommenced, err := c.cvClient.HasUpgradeCommenced(ctx, c.upgradeConfig)
 	if err != nil {
 		return false, err
 	}
@@ -26,7 +26,7 @@ func (c *clusterUpgrader) SendStartedNotification(ctx context.Context, logger lo
 		return false, err
 	}
 
-	clusterid := c.cvClient.GetClusterId()
+	clusterid := c.cvClient.GetClusterId(ctx)
 
 	// Update the metrics with the upgrade started timestamp
 	c.metrics.UpdateMetricUpgradeStartedTimestamp(clusterid, c.upgradeConfig.Name, c.upgradeConfig.Spec.Desired.Version, time.Now())
@@ -40,7 +40,7 @@ func (c *clusterUpgrader) SendCompletedNotification(ctx context.Context, logger 
 	if err != nil {
 		return false, err
 	}
-	clusterid := c.cvClient.GetClusterId()
+	clusterid := c.cvClient.GetClusterId(ctx)
 	// Update the metrics with the upgrade finished timestamp
 	c.metrics.UpdateMetricUpgradeCompletedTimestamp(clusterid, c.upgradeConfig.Name, c.upgradeConfig.Spec.Desired.Version, time.Now())
 	return true, nil
