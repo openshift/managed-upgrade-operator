@@ -41,6 +41,10 @@ spec:
             path: tls-ca-bundle.pem
           name: trusted-ca-bundle
         name: trusted-ca-bundle
+      - name: preflight-tls
+        secret:
+          secretName: muo-preflight-tls
+          optional: true
       containers:
       - name: managed-upgrade-operator
         image: '{{ .config.image }}'
@@ -89,5 +93,8 @@ spec:
         volumeMounts:
         - mountPath: /etc/pki/ca-trust/extracted/pem
           name: trusted-ca-bundle
+          readOnly: true
+        - mountPath: /etc/preflight-tls
+          name: preflight-tls
           readOnly: true
         terminationMessagePolicy: FallbackToLogsOnError

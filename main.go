@@ -322,6 +322,20 @@ func main() {
 	log.Info("Starting UpgradeConfig manager")
 	go ucMgr.StartSync(stopCh)
 
+	// Start the preflight HTTP service (non-fatal: TLS certs may not be present yet).
+	// Accessible via the Kubernetes API server proxy without port-forwarding:
+	//   kubectl get --raw /api/v1/namespaces/openshift-managed-upgrade-operator/services/https:managed-upgrade-operator-preflight:8443/proxy/api/v1/preflight-checks
+	go func() {
+		httpSrv := &preflight.PreflightHTTPServer{
+			Client:    mgr.GetClient(),
+			Namespace: operatorNS,
+			Logger:    setupLog.WithName("preflight-http"),
+		}
+		if err := httpSrv.Start(stopCh); err != nil {
+			setupLog.Info("Preflight HTTP service unavailable", "reason", err.Error())
+		}
+	}()
+
 	setupLog.Info("starting manager")
 	if err := mgr.Start(stopCh); err != nil {
 		setupLog.Error(err, "problem running manager")
