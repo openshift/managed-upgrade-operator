@@ -57,6 +57,7 @@ import (
 	muocfg "github.com/openshift/managed-upgrade-operator/config"
 	"github.com/openshift/managed-upgrade-operator/controllers/machineconfigpool"
 	"github.com/openshift/managed-upgrade-operator/controllers/nodekeeper"
+	"github.com/openshift/managed-upgrade-operator/controllers/preflight"
 	"github.com/openshift/managed-upgrade-operator/controllers/upgradeconfig"
 	cv "github.com/openshift/managed-upgrade-operator/pkg/clusterversion"
 	"github.com/openshift/managed-upgrade-operator/pkg/collector"
@@ -223,6 +224,30 @@ func main() {
 		os.Exit(1)
 	}
 
+	// TODO: Once the UpgradePreflightCheck controller is tested and proven stable in
+	// production, promote this to os.Exit(1) so that a startup failure causes the pod
+	// to restart and triggers on-call alerting, consistent with the other controllers.
+	// Until then the startup failure is intentionally non-fatal so a broken preflight
+	// controller cannot crash the operator or disrupt in-flight upgrades.
+	// Enable the controller at runtime (no restart needed) by adding "PreflightController"
+	// to featureGate.enabled in the managed-upgrade-operator-config ConfigMap.
+	if err = (&preflight.ReconcileUpgradePreflightCheck{
+		Client:               mgr.GetClient(),
+		Scheme:               mgr.GetScheme(),
+		MetricsClientBuilder: metrics.NewBuilder(),
+		CvClientBuilder:      cv.NewBuilder(),
+		Machinery:            machinery.NewMachinery(),
+		ConfigManagerBuilder: configmanager.NewBuilder(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err,
+			"UpgradePreflightCheck controller failed to start — on-demand preflight checks will be unavailable. "+
+				"Investigate the error above and fix the controller. "+
+				"Existing upgrade paths are not affected.",
+			"controller", "UpgradePreflightCheck",
+		)
+		// Intentionally not os.Exit(1): this controller is experimental.
+	}
+
 	ctx := context.TODO()
 
 	// Get a config to talk to the apiserver
@@ -296,6 +321,20 @@ func main() {
 	}
 	log.Info("Starting UpgradeConfig manager")
 	go ucMgr.StartSync(stopCh)
+
+	// Start the preflight HTTP service (non-fatal: TLS certs may not be present yet).
+	// Accessible via the Kubernetes API server proxy without port-forwarding:
+	//   kubectl get --raw /api/v1/namespaces/openshift-managed-upgrade-operator/services/https:managed-upgrade-operator-preflight:8443/proxy/api/v1/preflight-checks
+	go func() {
+		httpSrv := &preflight.PreflightHTTPServer{
+			Client:    mgr.GetClient(),
+			Namespace: operatorNS,
+			Logger:    setupLog.WithName("preflight-http"),
+		}
+		if err := httpSrv.Start(stopCh); err != nil {
+			setupLog.Info("Preflight HTTP service unavailable", "reason", err.Error())
+		}
+	}()
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(stopCh); err != nil {
