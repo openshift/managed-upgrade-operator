@@ -35,6 +35,8 @@ rules:
   - upgradeconfigs
   - upgrade
   - upgradeconfigs/status
+  - upgradepreflightchecks
+  - upgradepreflightchecks/status
   verbs:
   - create
   - delete
@@ -43,6 +45,18 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - authentication.k8s.io
+  resources:
+  - tokenreviews
+  verbs:
+  - create
+- apiGroups:
+  - authorization.k8s.io
+  resources:
+  - subjectaccessreviews
+  verbs:
+  - create
 - apiGroups:
   - config.openshift.io
   resources:
