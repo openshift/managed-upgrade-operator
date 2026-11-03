@@ -93,6 +93,7 @@ spec:
                 enum:
                 - OSD
                 - ARO
+                - BM
                 type: string
               upgradeAt:
                 description: Specify the upgrade start time

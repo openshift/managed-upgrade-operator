@@ -195,6 +195,7 @@ MUO has multiple implementations of the upgrade engine which provide their own c
 
 - [OSD](../../pkg/upgraders/osdupgrader.go)
 - [ARO](../../pkg/upgraders/aroupgrader.go)
+- [BM](../../pkg/upgraders/bmupgrader.go)
 
 MUO [decides](../../pkg/upgraders/builder.go) which upgrader to use based upon the `upgradeType` [configuration](../design.md#configuration).
 
@@ -254,6 +255,12 @@ To integrate your step into the upgrader process, you should:
 - Define a [condition name](../../api/v1alpha1/upgradeconfig_types.go) constant if you want the step to be reported in the `UpgradeConfig` conditions, and if [metrics](../../pkg/collector/collector.go) on it should be collected.
 
 - Add it to the `steps` of whichever upgrader should run it, ie the [OSD upgrader](../../pkg/upgraders/osdupgrader.go), in the specific position order that it should be executed as part of the upgrade process.
+
+### BM Upgrader
+
+The [BM upgrader](../../pkg/upgraders/bmupgrader.go) follows the ARO sequence without extra-worker scaling. It does not talk to OCM, does not expire upgrades that miss the upgrade window, and does not run FedRAMP post-upgrade procedures.
+
+It does run `IsUpgradeable` (the CVO `Upgradeable` condition) before health checks, then maintenance windows, `CommenceUpgrade` against ClusterVersion, worker drain/upgrade, and post-upgrade health checks.
 
 ### OSD Upgrader
 
