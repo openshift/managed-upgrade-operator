@@ -396,7 +396,7 @@ var _ = Describe("ClusterVersion client and utils", func() {
 					upgradeConfig.Spec.Desired.Channel = "stable-4.21"
 					upgradeConfig.Spec.Desired.Image = "quay.io/test/test-image"
 					channelPatch := client.RawPatch(types.MergePatchType, []byte(fmt.Sprintf(`{"spec":{"channel":"%s"}}`, upgradeConfig.Spec.Desired.Channel)))
-					imagePatch := client.RawPatch(types.MergePatchType, []byte(fmt.Sprintf(`{"spec":{"desiredUpdate":{"image":"%s","version":null}}}`, upgradeConfig.Spec.Desired.Image)))
+					imagePatch := client.RawPatch(types.MergePatchType, []byte(fmt.Sprintf(`{"spec":{"desiredUpdate":{"image":"%s","version":null,"architecture":null}}}`, upgradeConfig.Spec.Desired.Image)))
 					gomock.InOrder(
 						mockKubeClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).SetArg(2, clusterVersion).Return(nil),
 						mockKubeClient.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
@@ -428,10 +428,10 @@ var _ = Describe("ClusterVersion client and utils", func() {
 				upgradeConfig.Spec.Desired.Channel = "stable-4.21"
 				upgradeConfig.Spec.Desired.Version = "4.21.1"
 				upgradeConfig.Spec.Desired.Image = ""
-				updatePatch = client.RawPatch(types.MergePatchType, []byte(`{"spec":{"desiredUpdate":{"version":"4.21.1","image":null}}}`))
+				updatePatch = client.RawPatch(types.MergePatchType, []byte(`{"spec":{"desiredUpdate":{"version":"4.21.1","image":null,"architecture":null}}}`))
 				if source == UpgradeWithImage {
 					upgradeConfig.Spec.Desired.Image = "quay.io/test/test-image"
-					updatePatch = client.RawPatch(types.MergePatchType, []byte(`{"spec":{"desiredUpdate":{"image":"quay.io/test/test-image","version":null}}}`))
+					updatePatch = client.RawPatch(types.MergePatchType, []byte(`{"spec":{"desiredUpdate":{"image":"quay.io/test/test-image","version":null,"architecture":null}}}`))
 				}
 				initial = configv1.ClusterVersion{
 					ObjectMeta: metav1.ObjectMeta{Name: OSD_CV_NAME, ResourceVersion: "1"},

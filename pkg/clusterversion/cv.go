@@ -100,7 +100,7 @@ func (c *clusterVersionClient) EnsureDesiredConfig(ctx context.Context, uc *upgr
 	}
 	switch upgradeSource {
 	case UpgradeWithArchitecture:
-		return c.runUpgradeWithArchitecture(clusterVersion, uc)
+		return c.runUpgradeWithArchitecture(ctx, clusterVersion, uc)
 	// Use image to upgrade if the spec.desired.image is present
 	case UpgradeWithImage:
 		triggered, err := c.runUpgradeWithImage(ctx, clusterVersion, uc)
@@ -445,7 +445,7 @@ func isEqualArchitecture(cv *configv1.ClusterVersion, uc *upgradev1alpha1.Upgrad
 		cv.Spec.DesiredUpdate.Image == "" && (uc.Spec.Desired.Channel == "" || cv.Spec.Channel == uc.Spec.Desired.Channel)
 }
 
-func (c *clusterVersionClient) runUpgradeWithArchitecture(cv *configv1.ClusterVersion, uc *upgradev1alpha1.UpgradeConfig) (bool, error) {
+func (c *clusterVersionClient) runUpgradeWithArchitecture(ctx context.Context, cv *configv1.ClusterVersion, uc *upgradev1alpha1.UpgradeConfig) (bool, error) {
 	if isEqualArchitecture(cv, uc) {
 		return true, nil
 	}
@@ -459,7 +459,7 @@ func (c *clusterVersionClient) runUpgradeWithArchitecture(cv *configv1.ClusterVe
 		Architecture: configv1.ClusterVersionArchitectureMulti,
 		Version:      uc.Spec.Desired.Version,
 	}
-	if err := c.client.Patch(context.TODO(), cv, client.MergeFrom(original)); err != nil {
+	if err := c.client.Patch(ctx, cv, client.MergeFrom(original)); err != nil {
 		return false, err
 	}
 	return true, nil

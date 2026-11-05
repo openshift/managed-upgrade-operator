@@ -27,11 +27,11 @@ func TestArchitectureMigration(t *testing.T) {
 		kube := fake.NewClientBuilder().WithScheme(scheme).WithObjects(cv).Build()
 		c := NewCVClient(kube)
 		uc := &upgradev1alpha1.UpgradeConfig{Spec: upgradev1alpha1.UpgradeConfigSpec{Desired: upgradev1alpha1.Update{Version: "4.18.1", Architecture: configv1.ClusterVersionArchitectureMulti}}}
-		if started, err := c.HasUpgradeCommenced(uc); err != nil || started {
+		if started, err := c.HasUpgradeCommenced(context.Background(), uc); err != nil || started {
 			t.Fatalf("migration prematurely commenced: %v, %v", started, err)
 		}
 		for i := 0; i < 2; i++ {
-			if done, err := c.EnsureDesiredConfig(uc); err != nil || !done {
+			if done, err := c.EnsureDesiredConfig(context.Background(), uc); err != nil || !done {
 				t.Fatalf("request failed: %v, %v", done, err)
 			}
 		}
@@ -42,16 +42,16 @@ func TestArchitectureMigration(t *testing.T) {
 		if cv.Spec.DesiredUpdate == nil || !reflect.DeepEqual(*cv.Spec.DesiredUpdate, want) || cv.Spec.Channel != "stable-4.18" {
 			t.Fatalf("unexpected spec: %+v", cv.Spec)
 		}
-		if started, err := c.HasUpgradeCommenced(uc); err != nil || !started {
+		if started, err := c.HasUpgradeCommenced(context.Background(), uc); err != nil || !started {
 			t.Fatalf("migration not recognized: %v, %v", started, err)
 		}
 		// A single-to-Multi migration cannot also change the version.
 		beforeVersionChange := cv.Spec.DeepCopy()
 		uc.Spec.Desired.Version = "4.18.2"
-		if done, err := c.EnsureDesiredConfig(uc); err == nil || done {
+		if done, err := c.EnsureDesiredConfig(context.Background(), uc); err == nil || done {
 			t.Fatalf("version change accepted: %v, %v", done, err)
 		}
-		if started, err := c.HasUpgradeCommenced(uc); err == nil || started {
+		if started, err := c.HasUpgradeCommenced(context.Background(), uc); err == nil || started {
 			t.Fatalf("version change recognized as commenced: %v, %v", started, err)
 		}
 		if err := kube.Get(context.Background(), types.NamespacedName{Name: OSD_CV_NAME}, cv); err != nil {
@@ -64,10 +64,10 @@ func TestArchitectureMigration(t *testing.T) {
 		// Reject a changed channel even if the version and architecture already match.
 		before := cv.Spec.DeepCopy()
 		uc.Spec.Desired.Channel = "fast-4.18"
-		if started, err := c.HasUpgradeCommenced(uc); err == nil || started {
+		if started, err := c.HasUpgradeCommenced(context.Background(), uc); err == nil || started {
 			t.Fatalf("channel change accepted: %v, %v", started, err)
 		}
-		if done, err := c.EnsureDesiredConfig(uc); err == nil || done {
+		if done, err := c.EnsureDesiredConfig(context.Background(), uc); err == nil || done {
 			t.Fatalf("channel change accepted: %v, %v", done, err)
 		}
 		if err := kube.Get(context.Background(), types.NamespacedName{Name: OSD_CV_NAME}, cv); err != nil {
@@ -107,7 +107,7 @@ func TestArchitectureMigrationWaitsForExistingRollout(t *testing.T) {
 	uc := &upgradev1alpha1.UpgradeConfig{Spec: upgradev1alpha1.UpgradeConfigSpec{Desired: upgradev1alpha1.Update{Version: "4.18.1", Architecture: "Multi"}}}
 	for _, history := range [][]configv1.UpdateHistory{nil, {{Version: "4.18.1", State: configv1.PartialUpdate}}} {
 		cv := &configv1.ClusterVersion{Status: configv1.ClusterVersionStatus{Desired: configv1.Release{Version: "4.18.1"}, History: history}}
-		if done, err := (&clusterVersionClient{}).runUpgradeWithArchitecture(cv, uc); err != nil || done {
+		if done, err := (&clusterVersionClient{}).runUpgradeWithArchitecture(context.Background(), cv, uc); err != nil || done {
 			t.Fatalf("migration did not wait for existing rollout: %v, %v", done, err)
 		}
 	}
