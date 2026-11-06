@@ -10,8 +10,10 @@ import (
 	"net/http"
 	"net/url"
 	"runtime"
+	"strings"
 	"time"
 
+	cvovalidation "github.com/openshift/cluster-version-operator/lib/validation"
 	"github.com/openshift/cluster-version-operator/pkg/cincinnati"
 	"github.com/openshift/cluster-version-operator/pkg/clusterconditions"
 	"github.com/openshift/managed-upgrade-operator/config"
@@ -96,6 +98,22 @@ func (v *validator) IsValidUpgradeConfig(c client.Client, uC *upgradev1alpha1.Up
 	ucImage := uC.Spec.Desired.Image
 	ucVersion := uC.Spec.Desired.Version
 	ucChannel := uC.Spec.Desired.Channel
+
+	if uC.Spec.Desired.Architecture != "" {
+		if err := uC.Spec.Desired.ValidateArchitecture(cV); err != nil {
+			return ValidatorResult{Message: err.Error()}, nil //nolint:nilerr // Invalid requests are reported through ValidatorResult.
+		}
+		// Use CVO's version/payload validation. CVO resolves the migration payload.
+		candidate := cV.DeepCopy()
+		candidate.Spec.DesiredUpdate = &configv1.Update{Architecture: uC.Spec.Desired.Architecture, Version: ucVersion}
+		for _, validationErr := range cvovalidation.ValidateClusterVersion(candidate) {
+			// Only the desired update is supplied by this UpgradeConfig.
+			if strings.HasPrefix(validationErr.Field, "spec.desiredUpdate") {
+				return ValidatorResult{Message: fmt.Sprintf("UpgradeConfig %s: CVO validation failed: %s", client.ObjectKeyFromObject(uC), validationErr)}, nil
+			}
+		}
+		return validationPassed, nil
+	}
 
 	// Validate the spec.desired.image if it is specified
 	// Write the spec.desired.version from the image version since we need the version in the history
@@ -344,7 +362,7 @@ func updateImageVersion(c client.Client, v string, upgradeConfig *upgradev1alpha
 	}
 
 	// Update the version in UpgradeConfig.Status.History
-	history := upgradeConfig.Status.History.GetHistory(upgradeConfig.Spec.Desired.Version)
+	history := upgradeConfig.Status.History.GetHistoryForUpdate(upgradeConfig.Spec.Desired)
 	if history == nil {
 		for _, h := range upgradeConfig.Status.History {
 			if h.Phase == upgradev1alpha1.UpgradePhaseNew {

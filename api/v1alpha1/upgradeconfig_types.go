@@ -1,8 +1,10 @@
 package v1alpha1
 
 import (
+	"errors"
 	"time"
 
+	configv1 "github.com/openshift/api/config/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -64,6 +66,10 @@ type UpgradeHistories []UpgradeHistory
 
 // UpgradeHistory record history of upgrade
 type UpgradeHistory struct {
+	// Architecture requested by this upgrade.
+	// +optional
+	Architecture configv1.ClusterVersionArchitecture `json:"architecture,omitempty"`
+
 	//Desired version of this upgrade
 	Version string `json:"version,omitempty"`
 
@@ -209,6 +215,10 @@ type UpgradeConfigList struct {
 
 // Update represents a release go gonna upgraded to
 type Update struct {
+	// Architecture requests Multi. CVO resolves the migration payload. Image must be omitted.
+	// +optional
+	Architecture configv1.ClusterVersionArchitecture `json:"architecture,omitempty"`
+
 	// Version of openshift release
 	// +kubebuilder:validation:Type=string
 	// +optional
@@ -219,6 +229,24 @@ type Update struct {
 	// Image reference used for upgrades
 	// +optional
 	Image string `json:"image,omitempty"`
+}
+
+// ValidateArchitecture checks an architecture request against the current cluster version.
+// Updates without an architecture are validated by their image or version path.
+func (u Update) ValidateArchitecture(cv *configv1.ClusterVersion) error {
+	if u.Architecture == "" {
+		return nil
+	}
+	if u.Architecture != configv1.ClusterVersionArchitectureMulti || u.Version == "" || u.Image != "" {
+		return errors.New("architecture migration requires Multi, a version, and no image")
+	}
+	if cv.Status.Desired.Architecture != configv1.ClusterVersionArchitectureMulti && u.Version != cv.Status.Desired.Version {
+		return errors.New("single-to-Multi migration requires the current cluster version")
+	}
+	if u.Channel != "" && u.Channel != cv.Spec.Channel {
+		return errors.New("architecture migration requires channel to be omitted or match the current cluster channel")
+	}
+	return nil
 }
 
 // IsTrue Condition whether the condition status is "True".
@@ -352,10 +380,20 @@ func (histories UpgradeHistories) GetHistory(version string) *UpgradeHistory {
 	return nil
 }
 
+// GetHistoryForUpdate distinguishes architecture migrations from version upgrades.
+func (histories UpgradeHistories) GetHistoryForUpdate(desired Update) *UpgradeHistory {
+	for _, history := range histories {
+		if history.Version == desired.Version && history.Architecture == desired.Architecture {
+			return &history
+		}
+	}
+	return nil
+}
+
 // SetHistory appends new history to current
 func (histories *UpgradeHistories) SetHistory(history UpgradeHistory) {
 	for i, h := range *histories {
-		if h.Version == history.Version {
+		if h.Version == history.Version && h.Architecture == history.Architecture {
 			(*histories)[i] = history
 			return
 		}
