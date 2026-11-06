@@ -454,6 +454,7 @@ func (c *clusterVersionClient) runUpgradeWithArchitecture(ctx context.Context, c
 		return false, nil
 	}
 	// Pass the request to CVO, which determines the migration payload.
+	logger.Info("Setting ClusterVersion architecture", "architecture", configv1.ClusterVersionArchitectureMulti, "version", uc.Spec.Desired.Version)
 	original := cv.DeepCopy()
 	cv.Spec.DesiredUpdate = &configv1.Update{
 		Architecture: configv1.ClusterVersionArchitectureMulti,
