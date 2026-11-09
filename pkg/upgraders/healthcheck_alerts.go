@@ -26,7 +26,7 @@ func CriticalAlerts(metricsClient metrics.Metrics, cfg *upgraderConfig, ug *upgr
 	}
 
 	// Get current upgrade state
-	history := ug.Status.History.GetHistory(ug.Spec.Desired.Version)
+	history := ug.Status.History.GetHistoryForUpdate(ug.Spec.Desired)
 	state := string(history.Phase)
 
 	healthCheckQuery := `ALERTS{alertstate="firing",severity="critical",namespace=~"^openshift.*|^kube-.*|^default$"` + ignoredNamespaceQuery + icQuery + "}"

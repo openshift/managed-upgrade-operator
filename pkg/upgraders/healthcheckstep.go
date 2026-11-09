@@ -51,7 +51,7 @@ func (c *clusterUpgrader) PreUpgradeHealthCheck(ctx context.Context, logger logr
 
 		healthCheckFailed := []string{}
 		var pdbDetails []PDBDetails
-		history := c.upgradeConfig.Status.History.GetHistory(c.upgradeConfig.Spec.Desired.Version)
+		history := c.upgradeConfig.Status.History.GetHistoryForUpdate(c.upgradeConfig.Spec.Desired)
 		state := string(history.Phase)
 
 		ok, err := CriticalAlerts(c.metrics, c.config, c.upgradeConfig, logger, version)
@@ -106,7 +106,7 @@ func (c *clusterUpgrader) PreUpgradeHealthCheck(ctx context.Context, logger logr
 			result := strings.Join(healthCheckFailed, ",")
 			logger.Info(fmt.Sprintf("Upgrade may delay due to following PreHealthCheck failure: %s", result))
 
-			switch history := c.upgradeConfig.Status.History.GetHistory(c.upgradeConfig.Spec.Desired.Version); history.Phase {
+			switch history := c.upgradeConfig.Status.History.GetHistoryForUpdate(c.upgradeConfig.Spec.Desired); history.Phase {
 			case upgradev1alpha1.UpgradePhaseNew:
 				err := c.notifier.NotifyResult(notifier.MuoStatePreHealthCheckSL, result)
 				if err != nil {
@@ -125,6 +125,9 @@ func (c *clusterUpgrader) PreUpgradeHealthCheck(ctx context.Context, logger logr
 					}
 				}
 				return true, nil
+			case upgradev1alpha1.UpgradePhasePending, upgradev1alpha1.UpgradePhaseUpgraded,
+				upgradev1alpha1.UpgradePhaseFailed, upgradev1alpha1.UpgradePhaseUnknown:
+				// Health-check notifications are only sent in New and Upgrading.
 			case " ":
 				logger.Info(fmt.Sprintf("upgradeconfig history doesn't exist for version: %s", c.upgradeConfig.Spec.Desired.Version))
 			}
