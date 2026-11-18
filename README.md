@@ -83,3 +83,22 @@ spec:
   desired:
     image: "quay.io/openshift-release-dev/ocp-release@sha256:783a2c963f35ccab38e82e6a8c7fa954c3a4551e07d2f43c06098828dd986ed4"
 ```
+
+### Example 3 - BM upgrade using a local UpgradeConfig
+
+BM upgrades are scheduled with a local `UpgradeConfig` (`configManager.source: LOCAL`). But extra worker capacity is not reserved.
+
+```yaml
+apiVersion: upgrade.managed.openshift.io/v1alpha1
+kind: UpgradeConfig
+metadata:
+  name: managed-upgrade-config
+spec:
+  type: "BM"
+  upgradeAt: "2026-08-23T13:12:00Z"
+  PDBForceDrainTimeout: 60
+  capacityReservation: false
+  desired:
+    channel: "stable-4.21"
+    version: "4.21.12"
+```
