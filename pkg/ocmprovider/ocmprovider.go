@@ -8,6 +8,7 @@ import (
 
 	"github.com/blang/semver/v4"
 	cmv1 "github.com/openshift-online/ocm-sdk-go/clustersmgmt/v1"
+	configv1 "github.com/openshift/api/config/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -194,18 +195,28 @@ func buildUpgradeConfigSpecs(upgradePolicy *cmv1.UpgradePolicy, cluster *cmv1.Cl
 	// with: capacityReservation = upgradePolicy.GetCapacityReservation()
 	capacityReservation := true
 
-	upgradeChannel, err := inferUpgradeChannelFromChannelGroup(cluster.Version().ChannelGroup(), upgradePolicy.Version())
-	if err != nil {
-		return nil, fmt.Errorf("unable to determine channel from channel group '%v' and version '%v' for policy ID '%v'", cluster.Version().ChannelGroup(), upgradePolicy.Version(), upgradePolicy.ID())
+	desired := upgradev1alpha1.Update{
+		Version:      upgradePolicy.Version(),
+		Architecture: configv1.ClusterVersionArchitecture(upgradePolicy.Architecture()),
+	}
+	switch desired.Architecture {
+	case "":
+		upgradeChannel, err := inferUpgradeChannelFromChannelGroup(cluster.Version().ChannelGroup(), upgradePolicy.Version())
+		if err != nil {
+			return nil, fmt.Errorf("unable to determine channel from channel group '%v' and version '%v' for policy ID '%v'", cluster.Version().ChannelGroup(), upgradePolicy.Version(), upgradePolicy.ID())
+		}
+		desired.Channel = *upgradeChannel
+	case configv1.ClusterVersionArchitectureMulti:
+		// Preserve the cluster's channel during migration. CVO resolves the
+		// multi-architecture payload for the requested version.
+	default:
+		return nil, fmt.Errorf("unsupported architecture %q for policy ID %q", desired.Architecture, upgradePolicy.ID())
 	}
 
 	// NextRun() returns time.Time, format it as RFC3339 string
 	nextRunTime := upgradePolicy.NextRun()
 	upgradeConfigSpec := upgradev1alpha1.UpgradeConfigSpec{
-		Desired: upgradev1alpha1.Update{
-			Version: upgradePolicy.Version(),
-			Channel: *upgradeChannel,
-		},
+		Desired:              desired,
 		UpgradeAt:            nextRunTime.Format(time.RFC3339),
 		PDBForceDrainTimeout: int32(cluster.NodeDrainGracePeriod().Value()), //#nosec G115 -- NodeDrainGracePeriod is expected to be within int32 range as it represents seconds for drain timeout, which is unlikely to exceed 2B seconds
 		Type:                 upgradeType,

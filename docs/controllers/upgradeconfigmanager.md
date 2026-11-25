@@ -51,6 +51,14 @@ To be considered, an upgrade policy must NOT be in a state of either `pending` (
 
 Authentication to the Cluster Service API is performed using the cluster's `cloud.openshift.com` pull secret. This is retrieved by MUO from the `openshift-config/pull-secret` Secret.
 
+An OCM policy with `architecture: "Multi"` maps to
+`spec.desired.architecture: Multi` in the UpgradeConfig. MUO preserves the policy's
+version and schedule and leaves the desired channel and image unset, allowing CVO
+to resolve the multi-architecture payload without changing the cluster channel.
+A single-to-Multi migration must target the current cluster version. Policies
+without an architecture retain the ordinary version-upgrade behavior, including
+channel inference. Unsupported architecture values are rejected.
+
 #### Local policy provider
 
 The Local policy provider is essentially a no-op provider that treats a local `UpgradeConfig` custom resource as the "provider" of the cluster's upgrade policy. It translates the on-cluster `UpgradeConfig`, if any, into an upgrade policy, which in turn would be translated back into an `UpgradeConfig` (with no change).

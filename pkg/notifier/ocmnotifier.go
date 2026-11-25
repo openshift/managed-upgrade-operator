@@ -185,7 +185,9 @@ func (s *ocmNotifier) getPolicyIdForUpgradeConfig(clusterId string) (*string, er
 	policies.Items().Each(func(policy *cmv1.UpgradePolicy) bool {
 		// NextRun() returns time.Time, format it for comparison with UpgradeAt string
 		nextRunStr := policy.NextRun().Format(time.RFC3339)
-		if policy.Version() == uc.Spec.Desired.Version && nextRunStr == uc.Spec.UpgradeAt {
+		if policy.Version() == uc.Spec.Desired.Version &&
+			string(policy.Architecture()) == string(uc.Spec.Desired.Architecture) &&
+			nextRunStr == uc.Spec.UpgradeAt {
 			foundPolicy = true
 			policyId = policy.ID()
 			return false // Stop iteration
