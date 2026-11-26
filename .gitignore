@@ -82,6 +82,9 @@ tags
 .idea/*
 # Output of the go coverage tool
 *.out
+### ASDF version file ###
+.tool-versions
+
 
 # Local manifest creation
 manifests

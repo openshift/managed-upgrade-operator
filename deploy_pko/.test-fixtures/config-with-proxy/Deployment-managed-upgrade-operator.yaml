@@ -53,8 +53,8 @@ spec:
             memory: 100Mi
             ephemeral-storage: 30Ki
           limits:
-            cpu: 50m
-            memory: 200Mi
+            cpu: 200m
+            memory: 1000Mi
         env:
         - name: WATCH_NAMESPACE
           valueFrom:
