@@ -35,14 +35,16 @@ const (
 
 var _ = Describe("OCM Client with SDK", func() {
 	var (
-		mockCtrl       *gomock.Controller
-		mockKubeClient *mocks.MockClient
-		testServer     *httptest.Server
-		conn           *sdk.Connection
-		oc             ocmClient
+		mockCtrl            *gomock.Controller
+		mockKubeClient      *mocks.MockClient
+		testServer          *httptest.Server
+		conn                *sdk.Connection
+		oc                  ocmClient
+		includeArchitecture bool
 	)
 
 	BeforeEach(func() {
+		includeArchitecture = true
 		mockCtrl = gomock.NewController(GinkgoT())
 		mockKubeClient = mocks.NewMockClient(mockCtrl)
 
@@ -81,21 +83,23 @@ var _ = Describe("OCM Client with SDK", func() {
 			case r.URL.Path == fmt.Sprintf("/api/clusters_mgmt/v1/clusters/%s/upgrade_policies", TEST_CLUSTER_ID) && r.Method == http.MethodGet:
 				// Return upgrade policies list
 				nextRun, _ := time.Parse(time.RFC3339, "2020-06-20T00:00:00Z")
+				policy := map[string]interface{}{
+					"id":            TEST_POLICY_ID_MANUAL,
+					"schedule_type": "manual",
+					"upgrade_type":  TEST_UPGRADEPOLICY_UPGRADETYPE,
+					"version":       TEST_UPGRADEPOLICY_VERSION,
+					"next_run":      nextRun.Format(time.RFC3339),
+					"cluster_id":    TEST_CLUSTER_ID,
+				}
+				if includeArchitecture {
+					policy["architecture"] = "Multi"
+				}
 				response := map[string]interface{}{
 					"kind":  "UpgradePolicyList",
 					"page":  1,
 					"size":  1,
 					"total": 1,
-					"items": []map[string]interface{}{
-						{
-							"id":            TEST_POLICY_ID_MANUAL,
-							"schedule_type": "manual",
-							"upgrade_type":  TEST_UPGRADEPOLICY_UPGRADETYPE,
-							"version":       TEST_UPGRADEPOLICY_VERSION,
-							"next_run":      nextRun.Format(time.RFC3339),
-							"cluster_id":    TEST_CLUSTER_ID,
-						},
-					},
+					"items": []map[string]interface{}{policy},
 				}
 				if err := json.NewEncoder(w).Encode(response); err != nil {
 					GinkgoT().Errorf("Failed to encode mock response: %v", err)
@@ -192,6 +196,22 @@ var _ = Describe("OCM Client with SDK", func() {
 	})
 
 	Context("When getting upgrade policies", func() {
+		It("returns an ordinary upgrade policy when architecture is omitted", func() {
+			includeArchitecture = false
+			result, err := oc.GetClusterUpgradePolicies(TEST_CLUSTER_ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).NotTo(BeNil())
+			Expect(result.Total()).To(Equal(1))
+			Expect(result.Items().Len()).To(Equal(1))
+
+			policy := result.Items().Get(0)
+			Expect(policy.ID()).To(Equal(TEST_POLICY_ID_MANUAL))
+			Expect(policy.Version()).To(Equal(TEST_UPGRADEPOLICY_VERSION))
+			Expect(string(policy.Architecture())).To(BeEmpty())
+			_, present := policy.GetArchitecture()
+			Expect(present).To(BeFalse())
+		})
+
 		It("returns SDK upgrade policies list response", func() {
 			result, err := oc.GetClusterUpgradePolicies(TEST_CLUSTER_ID)
 			Expect(err).To(BeNil())
@@ -202,6 +222,7 @@ var _ = Describe("OCM Client with SDK", func() {
 			policy := result.Items().Get(0)
 			Expect(policy.ID()).To(Equal(TEST_POLICY_ID_MANUAL))
 			Expect(policy.Version()).To(Equal(TEST_UPGRADEPOLICY_VERSION))
+			Expect(string(policy.Architecture())).To(Equal("Multi"))
 		})
 	})
 
